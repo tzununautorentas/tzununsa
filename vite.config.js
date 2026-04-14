@@ -1,5 +1,5 @@
 import { defineConfig }
-/** @jsx React.createElement */
+/** @jsxRuntime classic */
 import React, { useState, useEffect } from "react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
