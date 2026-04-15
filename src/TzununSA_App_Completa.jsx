@@ -532,7 +532,7 @@ function PageFacturacion({showToast,empId}){
   );
 }
 
-// ══ LA BANCA ═════════════════════════════════════════════════════════════════
+// ══ BANCA ═════════════════════════════════════════════════════════════════
 function PageBanca({showToast,empId}){
   const [cuentas,setCuentas]=useState([]);const [movs,setMovs]=useState([]);const [cuentaAct,setCuentaAct]=useState(null);const [loading,setLoading]=useState(true);const [showForm,setShowForm]=useState(false);const [editMov,setEditMov]=useState(null);const [filtroT,setFiltroT]=useState("todos");const [filtroC,setFiltroC]=useState("todos");const [saving,setSaving]=useState(false);
   const [f,setF]=useState({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});
