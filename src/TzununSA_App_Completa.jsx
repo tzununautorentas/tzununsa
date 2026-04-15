@@ -37,7 +37,7 @@ const EST_VEH={disponible:{c:T.acc,bg:T.accDim,l:"Disponible"},rentado:{c:T.blue
 const EST_RES={pendiente:{c:T.mut,bg:"#1E293B",l:"Pendiente"},confirmada:{c:T.acc,bg:T.accDim,l:"Confirmada"},en_curso:{c:T.blue,bg:T.blueDim,l:"En curso"},completada:{c:T.acc,bg:T.accDim,l:"Completada"},cancelada:{c:T.red,bg:T.redDim,l:"Cancelada"}};
 const EST_FAC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},emitida:{c:T.blue,bg:T.blueDim,l:"Emitida"},certificada:{c:T.acc,bg:T.accDim,l:"Certificada"},pagada:{c:T.acc,bg:T.accDim,l:"Pagada"},anulada:{c:T.red,bg:T.redDim,l:"Anulada"}};
 const FLUJO_RES={pendiente:[{v:"confirmada",l:"✓ Confirmar",s:"primary"},{v:"cancelada",l:"✗",s:"danger"}],confirmada:[{v:"en_curso",l:"▶ Iniciar",s:"blue"},{v:"cancelada",l:"✗",s:"danger"}],en_curso:[{v:"completada",l:"✓ Completar",s:"primary"},{v:"cancelada",l:"✗",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"↺",s:"ghost"}]};
-const CAT_GASTO=["combustible","mantenimiento","seguros","salarios","impuestos","servicios","llantas","repuestos","oficina","otros"];
+const CAT_GASTO=["combustible","peajes","hospedaje","alimentacion","mantenimiento","seguros","Seguro Médico","IGSS", "salarios","impuestos","servicios", "Car Wash","llantas","repuestos","oficina","Servicio de Télefono e Internet","Gastos Varios","Gastos Jurídicos","otros"];
 const CAT_COLOR={combustible:T.sec,mantenimiento:T.blue,seguros:T.purple,salarios:T.green,impuestos:T.red,servicios:T.acc,llantas:T.blue,repuestos:T.sec,oficina:T.mut,otros:T.sub};
 
 // ══ DASHBOARD ═══════════════════════════════════════════════════════════════
