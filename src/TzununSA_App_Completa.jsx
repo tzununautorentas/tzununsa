@@ -664,6 +664,501 @@ function PageCompras({showToast,empId}){
     </div>
   );
 }
+// ══ REPORTES ══════════════════════════════════════════════════════════════════
+function PageReportes({showToast,empId}){
+/** @jsxRuntime classic */
+/** @jsx React.createElement */
+import React, { useState, useEffect } from "react";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+
+const SB="https://fmijbpatkddkbxlkfoza.supabase.co";
+const SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaWpicGF0a2Rka2J4bGtmb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTQ3NDAsImV4cCI6MjA5MDQ5MDc0MH0.zEVmDgLUQWv9gnQrJggGhAmTuqRcQyhGbMvcL_i8joA";
+const H={apikey:SK,Authorization:`Bearer ${SK}`,"Content-Type":"application/json"};
+
+const T={bg:"#0A0F1E",surf:"#111827",card:"#162032",bord:"#1E3A5F",acc:"#00D4AA",accDim:"#00D4AA22",sec:"#F59E0B",secDim:"#F59E0B22",red:"#EF4444",redDim:"#EF444422",blue:"#3B82F6",blueDim:"#3B82F622",purple:"#A855F7",purpleDim:"#A855F722",txt:"#F1F5F9",mut:"#64748B",sub:"#94A3B8"};
+const fmt=n=>new Intl.NumberFormat("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const fmtD=s=>{if(!s)return"—";try{return new Date(s+"T12:00:00").toLocaleDateString("es-GT",{day:"2-digit",month:"short",year:"numeric"});}catch{return s;}};
+
+const S={
+  card:{background:T.card,border:`1px solid ${T.bord}`,borderRadius:14,padding:18},
+  btn:v=>({padding:"8px 14px",borderRadius:8,border:v==="ghost"?`1px solid ${T.bord}`:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:v==="primary"?T.acc:v==="danger"?T.red:v==="blue"?T.blue:v==="green"?"#22C55E":v==="warn"?T.sec:T.card,color:v==="primary"||v==="green"?"#0A0F1E":T.txt}),
+  th:{textAlign:"left",fontSize:11,color:T.mut,padding:"6px 10px",fontWeight:600,background:T.surf},
+  td:{padding:"9px 10px",borderTop:`1px solid ${T.bord}22`,fontSize:12},
+};
+
+async function dbGet(t,q=""){try{const r=await fetch(`${SB}/rest/v1/${t}?order=created_at.desc${q}`,{headers:H});return r.json();}catch{return[];}}
+
+// ── EXPORTAR EXCEL (CSV) ──────────────────────────────────────────────────────
+function exportCSV(filename, headers, rows){
+  const bom="\uFEFF";
+  const csv=bom+[headers.join(","),...rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=filename+".csv";a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── IMPRIMIR TABLA ────────────────────────────────────────────────────────────
+function imprimirTabla(titulo, headers, rows){
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${titulo}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:20px;color:#1E293B}
+    h2{color:#1B2D5C;margin-bottom:4px}
+    p{color:#64748B;font-size:12px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{background:#1B2D5C;color:#fff;padding:8px 10px;text-align:left}
+    td{padding:7px 10px;border-bottom:1px solid #E2E8F0}
+    tr:nth-child(even){background:#F8FAFC}
+    .total{font-weight:bold;background:#E1F5EE!important}
+    @media print{button{display:none}}
+  </style></head><body>
+  <h2>Tz'unun AutoRentas — ${titulo}</h2>
+  <p>Generado: ${new Date().toLocaleDateString("es-GT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</p>
+  <table><thead><tr>${headers.map(h=>"<th>"+h+"</th>").join("")}</tr></thead>
+  <tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+(v||"—")+"</td>").join("")+"</tr>").join("")}</tbody>
+  </table>
+  <script>window.onload=()=>window.print();</script>
+  </body></html>`;
+  const w=window.open("","_blank");
+  w.document.write(html);w.document.close();
+}
+
+// ── KPI CARD ──────────────────────────────────────────────────────────────────
+function KpiCard({icon,label,value,sub,color,bg}){
+  return (
+    <div style={{...S.card,position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:color}}/>
+      <div style={{width:38,height:38,borderRadius:9,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:10}}>{icon}</div>
+      <div style={{fontSize:22,fontWeight:800,color}}>{value}</div>
+      <div style={{fontSize:11,color:T.mut,marginTop:2}}>{label}</div>
+      {sub&&<div style={{fontSize:11,color:T.sub,marginTop:2}}>{sub}</div>}
+    </div>
+  );
+}
+
+function CustomTooltip({active,payload,label}){
+  if(!active||!payload?.length)return null;
+  return <div style={{background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,padding:"10px 14px",fontSize:11}}>
+    <div style={{color:T.sub,marginBottom:4}}>{label}</div>
+    {payload.map((p,i)=><div key={i} style={{color:p.color,fontWeight:600}}>{p.name}: Q {fmt(p.value)}</div>)}
+  </div>;
+}
+
+// ── REPORTE: VENTAS ───────────────────────────────────────────────────────────
+function ReporteVentas({data}){
+  const {reservas,cotizaciones,facturas} = data;
+
+  const meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const chartMensual=meses.map((mes,i)=>({
+    mes,
+    Reservas: Math.round(reservas.filter(r=>new Date(r.fecha_inicio||r.created_at).getMonth()===i&&r.estado!=="cancelada").reduce((s,r)=>s+(parseFloat(r.monto)||0),0)),
+    Cotizaciones: Math.round(cotizaciones.filter(co=>new Date(co.created_at).getMonth()===i&&co.estado!=="rechazada").reduce((s,co)=>s+(parseFloat(co.total_gtq)||0),0)),
+  })).filter(x=>x.Reservas>0||x.Cotizaciones>0);
+
+  const totalRes=reservas.filter(r=>r.estado!=="cancelada").reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+  const totalCot=cotizaciones.filter(c=>c.estado!=="rechazada").reduce((s,c)=>s+(parseFloat(c.total_gtq)||0),0);
+  const totalFac=facturas.filter(f=>!["anulada","borrador"].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.total)||0),0);
+
+  const tablaRows=reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>[
+    r.numero||"—",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
+    r.vehiculo_nombre||"—",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
+    `Q ${fmt(r.anticipo)}`,`Q ${fmt(r.saldo)}`,r.estado
+  ]);
+
+  const exportar=()=>exportCSV("Reporte_Ventas_TzununSA",
+    ["N° Reserva","Cliente","Tipo","Vehículo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
+    tablaRows
+  );
+  const imprimir=()=>imprimirTabla("Reporte de Ventas",
+    ["N° Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"],
+    tablaRows
+  );
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
+        <KpiCard icon="📅" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="📋" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
+        <KpiCard icon="🧾" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
+      </div>
+
+      <div style={{...S.card,marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales — Reservas vs Cotizaciones</div>
+        {chartMensual.length>0?(
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={chartMensual}>
+              <XAxis dataKey="mes" tick={{fill:T.sub,fontSize:10}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/>
+              <Tooltip content={<CustomTooltip/>}/>
+              <Legend wrapperStyle={{fontSize:11}}/>
+              <Bar dataKey="Reservas" fill={T.acc} radius={[4,4,0,0]}/>
+              <Bar dataKey="Cotizaciones" fill={T.blue} radius={[4,4,0,0]}/>
+            </BarChart>
+          </ResponsiveContainer>
+        ):<div style={{textAlign:"center",padding:32,color:T.sub}}>Sin datos suficientes</div>}
+      </div>
+
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button onClick={exportar} style={{...S.btn("green")}}>⬇ Exportar Excel (.csv)</button>
+        <button onClick={imprimir} style={{...S.btn("ghost")}}>🖨️ Imprimir</button>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Reservas</div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
+            <thead><tr>{["N° Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>(
+                <tr key={r.id}>
+                  <td style={{...S.td,fontFamily:"monospace",color:T.acc}}>{r.numero}</td>
+                  <td style={{...S.td,fontWeight:600}}>{r.cliente_nombre}</td>
+                  <td style={S.td}>{r.tipo==="renta"?"🔑 Renta":"🗺 Traslado"}</td>
+                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"—"}</td>
+                  <td style={{...S.td,color:T.sub,whiteSpace:"nowrap"}}>{fmtD(r.fecha_inicio)}</td>
+                  <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.monto)}</td>
+                  <td style={{...S.td,color:T.acc}}>Q {fmt(r.anticipo)}</td>
+                  <td style={{...S.td,color:parseFloat(r.saldo)>0?T.sec:T.acc}}>Q {fmt(r.saldo)}</td>
+                  <td style={S.td}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:r.estado==="completada"?T.accDim:T.secDim,color:r.estado==="completada"?T.acc:T.sec}}>{r.estado}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── REPORTE: FLOTA ────────────────────────────────────────────────────────────
+function ReporteFlota({data}){
+  const {vehiculos,reservas} = data;
+
+  const flotaData=vehiculos.map(v=>{
+    const resV=reservas.filter(r=>r.vehiculo_nombre===`${v.marca} ${v.modelo}`||r.vehiculo_nombre?.includes(v.modelo));
+    const ingresos=resV.filter(r=>r.estado!=="cancelada").reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+    const viajes=resV.length;
+    return {...v,ingresos,viajes};
+  });
+
+  const chartFlota=flotaData.map(v=>({nombre:`${v.marca} ${v.modelo}`,Ingresos:Math.round(v.ingresos),Viajes:v.viajes}));
+  const pieData=[
+    {name:"Disponible",value:vehiculos.filter(v=>v.estado==="disponible").length,color:T.acc},
+    {name:"Rentado",value:vehiculos.filter(v=>v.estado==="rentado").length,color:T.blue},
+    {name:"Mantenimiento",value:vehiculos.filter(v=>v.estado==="mantenimiento").length,color:T.sec},
+  ].filter(x=>x.value>0);
+
+  const tablaRows=flotaData.map(v=>[v.placa,`${v.marca} ${v.modelo}`,v.tipo,v.anio,(v.km_actual||0).toLocaleString()+" km",v.viajes,`Q ${fmt(v.ingresos)}`,v.estado]);
+  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Vehículo","Tipo","Año","Km","Viajes","Ingresos","Estado"],tablaRows);
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        <div style={S.card}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por vehículo</div>
+          {chartFlota.some(x=>x.Ingresos>0)?(
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={chartFlota} layout="vertical">
+                <XAxis type="number" tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/>
+                <YAxis type="category" dataKey="nombre" tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} width={120}/>
+                <Tooltip content={<CustomTooltip/>}/>
+                <Bar dataKey="Ingresos" fill={T.acc} radius={[0,4,4,0]}/>
+              </BarChart>
+            </ResponsiveContainer>
+          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por vehículo</div>}
+        </div>
+        <div style={S.card}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Estado actual de flota</div>
+          {pieData.length>0?(
+            <>
+              <ResponsiveContainer width="100%" height={130}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={58} dataKey="value" paddingAngle={3}>
+                    {pieData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                  </Pie>
+                  <Tooltip/>
+                </PieChart>
+              </ResponsiveContainer>
+              {pieData.map((e,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:e.color}}/><span style={{color:T.sub}}>{e.name}</span></div>
+                  <span style={{fontWeight:700,color:e.color}}>{e.value} veh.</span>
+                </div>
+              ))}
+            </>
+          ):<div style={{textAlign:"center",padding:24,color:T.sub}}>Sin datos</div>}
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button onClick={exportar} style={{...S.btn("green")}}>⬇ Exportar Excel (.csv)</button>
+        <button onClick={imprimir} style={{...S.btn("ghost")}}>🖨️ Imprimir</button>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Flota</div>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr>{["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {flotaData.map(v=>(
+              <tr key={v.id}>
+                <td style={{...S.td,fontFamily:"monospace",color:T.acc,fontWeight:700}}>{v.placa}</td>
+                <td style={{...S.td,fontWeight:600}}>{v.marca} {v.modelo}</td>
+                <td style={S.td}>{v.tipo}</td>
+                <td style={{...S.td,color:T.sub}}>{v.anio}</td>
+                <td style={S.td}>{(v.km_actual||0).toLocaleString()} km</td>
+                <td style={{...S.td,color:T.blue,fontWeight:600}}>{v.viajes}</td>
+                <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(v.ingresos)}</td>
+                <td style={S.td}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:v.estado==="disponible"?T.accDim:v.estado==="rentado"?T.blueDim:T.secDim,color:v.estado==="disponible"?T.acc:v.estado==="rentado"?T.blue:T.sec}}>{v.estado}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── REPORTE: GASTOS ───────────────────────────────────────────────────────────
+function ReporteGastos({data}){
+  const {gastos} = data;
+  const CAT_COLOR={combustible:T.sec,mantenimiento:T.blue,seguros:T.purple,salarios:"#22C55E",impuestos:T.red,servicios:T.acc,otros:T.sub};
+
+  const porCat=[...new Set(gastos.map(g=>g.categoria))].map(cat=>({
+    cat,
+    total:gastos.filter(g=>g.categoria===cat).reduce((s,g)=>s+(parseFloat(g.total)||0),0),
+    count:gastos.filter(g=>g.categoria===cat).length,
+    pagados:gastos.filter(g=>g.categoria===cat&&g.estado==="pagado").reduce((s,g)=>s+(parseFloat(g.total)||0),0),
+  })).sort((a,b)=>b.total-a.total);
+
+  const totalGastos=gastos.reduce((s,g)=>s+(parseFloat(g.total)||0),0);
+  const totalPend=gastos.filter(g=>g.estado==="pendiente").reduce((s,g)=>s+(parseFloat(g.total)||0),0);
+  const pieData=porCat.map(c=>({name:c.cat,value:Math.round(c.total),color:CAT_COLOR[c.cat]||T.mut}));
+
+  const meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const chartMensual=meses.map((mes,i)=>({
+    mes,
+    Gastos:Math.round(gastos.filter(g=>new Date(g.fecha).getMonth()===i).reduce((s,g)=>s+(parseFloat(g.total)||0),0)),
+  })).filter(x=>x.Gastos>0);
+
+  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"—",g.estado]);
+  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categoría","Descripción","Monto","IVA","Total","Método pago","Referencia","Estado"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categoría","Descripción","Monto","IVA","Total","Estado"],tablaRows);
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+        <KpiCard icon="💸" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
+        <KpiCard icon="✅" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="⏳" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        <div style={S.card}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categoría</div>
+          {porCat.map(({cat,total,count})=>(
+            <div key={cat} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:CAT_COLOR[cat]||T.mut}}/>
+                  <span style={{fontSize:12,color:T.sub}}>{cat} ({count})</span>
+                </div>
+                <span style={{fontSize:12,fontWeight:600}}>Q {fmt(total)}</span>
+              </div>
+              <div style={{background:T.surf,borderRadius:4,height:5,overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:4,background:CAT_COLOR[cat]||T.mut,width:`${totalGastos>0?Math.round((total/totalGastos)*100):0}%`}}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={S.card}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos mensuales</div>
+          {chartMensual.length>0?(
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={chartMensual}>
+                <XAxis dataKey="mes" tick={{fill:T.sub,fontSize:10}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/>
+                <Tooltip content={<CustomTooltip/>}/>
+                <Line type="monotone" dataKey="Gastos" stroke={T.red} strokeWidth={2} dot={{fill:T.red,r:4}}/>
+              </LineChart>
+            </ResponsiveContainer>
+          ):<div style={{textAlign:"center",padding:32,color:T.sub}}>Sin datos</div>}
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button onClick={exportar} style={{...S.btn("green")}}>⬇ Exportar Excel (.csv)</button>
+        <button onClick={imprimir} style={{...S.btn("ghost")}}>🖨️ Imprimir</button>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Gastos</div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
+            <thead><tr>{["Fecha","Categoría","Descripción","Monto","IVA","Total","Método","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {gastos.map(g=>(
+                <tr key={g.id}>
+                  <td style={{...S.td,whiteSpace:"nowrap",color:T.sub}}>{fmtD(g.fecha)}</td>
+                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:(CAT_COLOR[g.categoria]||T.mut)+"22",color:CAT_COLOR[g.categoria]||T.mut}}>{g.categoria}</span></td>
+                  <td style={{...S.td,maxWidth:200}}><div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:195}}>{g.descripcion}</div></td>
+                  <td style={S.td}>Q {fmt(g.monto)}</td>
+                  <td style={S.td}>Q {fmt(g.iva)}</td>
+                  <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(g.total)}</td>
+                  <td style={{...S.td,color:T.sub,fontSize:11}}>{g.metodo_pago}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"—"}</td>
+                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}</span></td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{background:T.surf}}>
+                <td colSpan={5} style={{padding:"9px 10px",fontSize:12,fontWeight:700,color:T.sub}}>TOTAL</td>
+                <td style={{padding:"9px 10px",fontWeight:800,color:T.red,fontSize:13}}>Q {fmt(totalGastos)}</td>
+                <td colSpan={3}/>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── REPORTE: CLIENTES ─────────────────────────────────────────────────────────
+function ReporteClientes({data}){
+  const {clientes,reservas,cotizaciones} = data;
+
+  const clientesData=clientes.map(c=>{
+    const resC=reservas.filter(r=>r.cliente_nombre===c.nombre&&r.estado!=="cancelada");
+    const cotC=cotizaciones.filter(co=>co.cliente_nombre===c.nombre&&co.estado!=="rechazada");
+    const ingresos=resC.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+    return {...c,reservas:resC.length,cotizaciones:cotC.length,ingresos};
+  }).sort((a,b)=>b.ingresos-a.ingresos);
+
+  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"—",c.telefono||"—",c.email||"—",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
+  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Teléfono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos"],tablaRows);
+
+  const TC={empresa:{c:T.sec,bg:T.secDim},gobierno:{c:T.blue,bg:T.blueDim},persona:{c:T.acc,bg:T.accDim}};
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+        <KpiCard icon="👥" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="🏢" label="Empresas" value={clientes.filter(c=>c.tipo==="empresa").length} color={T.sec} bg={T.secDim}/>
+        <KpiCard icon="🏛️" label="Gobierno/ONG" value={clientes.filter(c=>c.tipo==="gobierno").length} color={T.blue} bg={T.blueDim}/>
+        <KpiCard icon="👤" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
+      </div>
+
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button onClick={exportar} style={{...S.btn("green")}}>⬇ Exportar Excel (.csv)</button>
+        <button onClick={imprimir} style={{...S.btn("ghost")}}>🖨️ Imprimir</button>
+      </div>
+
+      <div style={S.card}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Clientes por ingresos generados</div>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {clientesData.map((c,i)=>{
+              const tc=TC[c.tipo]||TC.empresa;
+              return (
+                <tr key={c.id} style={{background:i===0?T.accDim:"transparent"}}>
+                  <td style={{...S.td,fontWeight:600}}>{i===0&&"🥇 "}{c.nombre}</td>
+                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:tc.bg,color:tc.c}}>{c.tipo}</span></td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"—"}</td>
+                  <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
+                  <td style={{...S.td,fontWeight:600,color:T.blue,textAlign:"center"}}>{c.reservas}</td>
+                  <td style={{...S.td,fontWeight:600,color:T.purple,textAlign:"center"}}>{c.cotizaciones}</td>
+                  <td style={{...S.td,fontWeight:700,color:c.ingresos>0?T.acc:T.mut}}>Q {fmt(c.ingresos)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── APP PRINCIPAL ─────────────────────────────────────────────────────────────
+export default function App(){
+  const [tab,setTab]=useState("ventas");
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [periodo,setPeriodo]=useState("todo");
+
+  useEffect(()=>{loadAll();},[]);
+
+  const loadAll=async()=>{
+    setLoading(true);
+    const [vehiculos,reservas,cotizaciones,facturas,gastos,clientes,movimientos]=await Promise.all([
+      dbGet("vehiculos",""),dbGet("reservas",""),dbGet("cotizaciones",""),
+      dbGet("facturas",""),dbGet("gastos",""),dbGet("clientes",""),
+      dbGet("movimientos_bancarios",""),
+    ]);
+    setData({
+      vehiculos:Array.isArray(vehiculos)?vehiculos:[],
+      reservas:Array.isArray(reservas)?reservas:[],
+      cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],
+      facturas:Array.isArray(facturas)?facturas:[],
+      gastos:Array.isArray(gastos)?gastos:[],
+      clientes:Array.isArray(clientes)?clientes:[],
+      movimientos:Array.isArray(movimientos)?movimientos:[],
+    });
+    setLoading(false);
+  };
+
+  const TABS=[
+    {id:"ventas",   icon:"📊",label:"Ventas y Reservas"},
+    {id:"flota",    icon:"🚗",label:"Flota"},
+    {id:"gastos",   icon:"💸",label:"Gastos"},
+    {id:"clientes", icon:"👥",label:"Clientes"},
+  ];
+
+  return (
+    <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:T.bg,color:T.txt,minHeight:"100vh"}}>
+      <div style={{background:T.surf,borderBottom:`1px solid ${T.bord}`,padding:"12px 22px",display:"flex",alignItems:"center",gap:14}}>
+        <div style={{width:36,height:36,borderRadius:9,background:"linear-gradient(135deg,#00D4AA,#3B82F6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🐦</div>
+        <div>
+          <div style={{fontSize:15,fontWeight:800,color:T.acc}}>Tz'unun AutoRentas</div>
+          <div style={{fontSize:10,color:T.mut}}>Reportes e Informes — {new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})}</div>
+        </div>
+        <button onClick={loadAll} style={{...S.btn("ghost"),marginLeft:"auto",fontSize:12}}>↺ Actualizar datos</button>
+      </div>
+
+      {/* Sub-nav */}
+      <div style={{background:T.surf,borderBottom:`1px solid ${T.bord}`,padding:"0 22px",display:"flex",gap:2}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"11px 16px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{padding:22}}>
+        {loading?(
+          <div style={{textAlign:"center",padding:60,color:T.sub}}>
+            <div style={{fontSize:32,marginBottom:12}}>📊</div>
+            <div style={{fontSize:14}}>Cargando datos desde Supabase...</div>
+          </div>
+        ):data&&(
+          <>
+            {tab==="ventas"   && <ReporteVentas   data={data}/>}
+            {tab==="flota"    && <ReporteFlota     data={data}/>}
+            {tab==="gastos"   && <ReporteGastos    data={data}/>}
+            {tab==="clientes" && <ReporteClientes  data={data}/>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 // ══ CONFIGURACIÓN ════════════════════════════════════════════════════════════
 function PageConfiguracion({showToast}){
