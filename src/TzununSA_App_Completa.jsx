@@ -31,6 +31,131 @@ const EST_VEH={disponible:{c:T.acc,bg:T.accDim,l:"Disponible"},rentado:{c:T.blue
 const EST_FAC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},emitida:{c:T.blue,bg:T.blueDim,l:"Emitida"},certificada:{c:T.acc,bg:T.accDim,l:"Certificada"},pagada:{c:T.acc,bg:T.accDim,l:"Pagada"},parcial:{c:T.sec,bg:T.secDim,l:"Pago parcial"},anulada:{c:T.red,bg:T.redDim,l:"Anulada"}};
 const FLUJO_RES={pendiente:[{v:"confirmada",l:"✓ Confirmar",s:"primary"},{v:"cancelada",l:"✗",s:"danger"}],confirmada:[{v:"en_curso",l:"▶ Iniciar",s:"blue"},{v:"cancelada",l:"✗",s:"danger"}],en_curso:[{v:"completada",l:"✓ Completar",s:"primary"},{v:"cancelada",l:"✗",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"↺",s:"ghost"}]};
 
+// ═══════════════════════════════════════════════════════════════
+// AUTENTICACIÓN — Login con Supabase Auth
+// ═══════════════════════════════════════════════════════════════
+const USERS_ALLOWED = [
+  "oscar@tzununautorentas.com",
+  "empleado1@tzununautorentas.com",
+  "empleado2@tzununautorentas.com",
+  "empleado3@tzununautorentas.com",
+  "empleado4@tzununautorentas.com",
+];
+
+async function sbSignIn(email, password) {
+  const r = await fetch(`${SB}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: SK, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return r.json();
+}
+
+async function sbSignOut(token) {
+  await fetch(`${SB}/auth/v1/logout`, {
+    method: "POST",
+    headers: { apikey: SK, Authorization: `Bearer ${token}` },
+  });
+}
+
+async function sbGetUser(token) {
+  const r = await fetch(`${SB}/auth/v1/user`, {
+    headers: { apikey: SK, Authorization: `Bearer ${token}` },
+  });
+  return r.json();
+}
+
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError("Ingresa tu correo y contraseña");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const data = await sbSignIn(email.trim(), password);
+      if (data.access_token) {
+        localStorage.setItem("tzunun_token", data.access_token);
+        localStorage.setItem("tzunun_user", JSON.stringify({ email: data.user?.email, name: data.user?.user_metadata?.name || data.user?.email }));
+        onLogin(data.access_token, data.user);
+      } else {
+        setError("Correo o contraseña incorrectos");
+      }
+    } catch {
+      setError("Error de conexión. Verifica tu internet.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: T.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>🐦</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: T.acc }}>Tz'unun AutoRentas</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gestión Integral</div>
+        </div>
+
+        {/* Card login */}
+        <div style={{ background: T.card, border: `1px solid ${T.bord}`, borderRadius: 16, padding: 32 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.txt, marginBottom: 24, textAlign: "center" }}>Iniciar sesión</div>
+
+          {error && (
+            <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>
+              ❌ {error}
+            </div>
+          )}
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CORREO ELECTRÓNICO</label>
+            <input
+              style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="tu@tzununautorentas.com"
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CONTRASEÑA</label>
+            <input
+              style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
+              type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+            />
+          </div>
+
+          <button
+            onClick={handleLogin}
+            disabled={loading}
+            style={{ width: "100%", padding: "13px", background: loading ? T.mut : T.acc, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#0A0F1E", cursor: loading ? "not-allowed" : "pointer" }}
+          >
+            {loading ? "Verificando..." : "Entrar →"}
+          </button>
+
+          <div style={{ marginTop: 20, padding: "12px 14px", background: T.surf, borderRadius: 8, fontSize: 12, color: T.sub }}>
+            <div style={{ fontWeight: 600, color: T.mut, marginBottom: 4 }}>¿PRIMER ACCESO?</div>
+            Ve a Supabase → Authentication → Users → Invite user y agrega el correo de cada empleado. Ellos recibirán un correo para crear su contraseña.
+          </div>
+        </div>
+
+        <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: T.mut }}>
+          TzununSA · Acceso exclusivo para personal autorizado
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 // ═══ COTIZACIONES ═══
 
@@ -95,7 +220,7 @@ function generarPDF(d){
   doc.setFillColor(...TEAL); doc.rect(0,0,W,3,"F");
   try{ doc.addImage("data:image/png;base64,"+LOGO_B64,"PNG",18,8,70,70); }catch(e){}
   doc.setTextColor(...WHITE); doc.setFontSize(17); doc.setFont("helvetica","bold");
-  doc.text("TZ\'UNUN AUTORENTAS",100,34);
+  doc.text("TZ'UNUN AUTORENTAS",100,34);
   doc.setTextColor(0,212,170); doc.setFontSize(8); doc.setFont("helvetica","normal");
   doc.text("MÁS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS  ★  ★",100,48);
   doc.setTextColor(148,163,184); doc.setFontSize(7.5);
@@ -128,7 +253,7 @@ function generarPDF(d){
   doc.setTextColor(27,45,92); doc.setFontSize(9); doc.setFont("helvetica","bold");
   doc.text((d.saludo||"Estimados señores de "+d.cliente)+":",32,y+13);
   doc.setTextColor(...DKGRAY); doc.setFontSize(7.8); doc.setFont("helvetica","normal");
-  const intro="En Transportes Tz\'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de vehículos, viajes de turismo y traslado de personas en Guatemala y Centroamérica. Con mucho gusto le presentamos la siguiente cotización:";
+  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de vehículos, viajes de turismo y traslado de personas en Guatemala y Centroamérica. Con mucho gusto le presentamos la siguiente cotización:";
   const introL=doc.splitTextToSize(intro,W-88);
   introL.slice(0,3).forEach((ln,i)=>doc.text(ln,32,y+25+(i*9)));
   y+=58;
@@ -228,7 +353,7 @@ function generarPDF(d){
   doc.setTextColor(0,200,150); doc.text("Banco Industrial",380,y+22);
   doc.setTextColor(...DKGRAY); doc.setFont("helvetica","normal"); doc.setFontSize(7.2);
   doc.text("Cta. Monetaria No. 853-000016-8",380,y+31);
-  doc.text("A nombre de: Transportes Tz\'unun",380,y+39);
+  doc.text("A nombre de: Transportes Tz'unun",380,y+39);
   doc.setDrawColor(203,213,225); doc.line(380,y+43,W-26,y+43);
   doc.setTextColor(0,200,150); doc.setFontSize(7.5); doc.setFont("helvetica","bold");
   doc.text("Banrural",380,y+52);
@@ -251,7 +376,7 @@ function generarPDF(d){
   doc.setFillColor(...NAVY); doc.rect(0,HP-36,W,36,"F");
   doc.setFillColor(...TEAL); doc.rect(0,HP-36,W,2,"F");
   doc.setTextColor(148,163,184); doc.setFontSize(6.5); doc.setFont("helvetica","normal");
-  doc.text("TZ\'UNUN AUTORENTAS  —  Más comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
+  doc.text("TZ'UNUN AUTORENTAS  —  Más comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas   |   Guatemala",W/2,HP-11,{align:"center"});
 
   return doc;
@@ -3019,7 +3144,7 @@ function PageFacturacion({showToast,empId}){
       </div>
       {loading?<Spinner/>:filtered.length===0?<Empty icon="🧾" msg="Sin facturas"/>:(
         <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Factura","Cliente","Total","Anticipo","Saldo","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>{filtered.map(r=>{const e=EST_FAC[r.estado]||EST_FAC.borrador;const saldo=parseFloat(r.saldo_pendiente)||0;const ant=parseFloat(r.anticipo_aplicado)||0;return<tr key={r.id}><td style={S.td}><div style={{fontFamily:"monospace",fontSize:11,color:T.acc,fontWeight:700}}>{r.numero}</div><div style={{fontSize:10,color:T.mut}}>{fmtD(r.fecha_emision)}</div>{r.numero_autorizacion&&<div style={{fontSize:9,color:T.acc}}>✓ DTE</div>}{r.motivo_anulacion&&<div style={{fontSize:9,color:T.red}}>⚠ {r.motivo_anulacion.slice(0,20)}</div>}</td><td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{r.nombre_receptor}</div><div style={{fontSize:10,color:T.mut}}>{r.nit_receptor}</div></td><td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.total)}</td><td style={{...S.td,color:ant>0?T.acc:T.mut,fontSize:12}}>{ant>0?"Q "+fmt(ant):"—"}</td><td style={{...S.td,fontWeight:700,color:saldo>0?T.sec:T.acc}}>{r.estado==="anulada"?"—":"Q "+fmt(saldo)}</td><td style={S.td}><Badge color={e.c} bg={e.bg} label={e.l} small/></td><td style={S.td}><div style={{display:"flex",flexDirection:"column",gap:4,minWidth:90}}>{r.estado==="emitida"&&<button onClick={()=>{setAuthFac(r);setAuthId("");}} style={{...S.btn("blue"),padding:"3px 7px",fontSize:10,width:"100%"}}>🔐 DTE</button>}{["emitida","certificada","parcial"].includes(r.estado)&&<button onClick={()=>setMPago(r)} style={{...S.btn("primary"),padding:"3px 7px",fontSize:10,width:"100%"}}>💰 Pago</button>}{r.estado!=="anulada"&&<button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),padding:"3px 7px",fontSize:10,width:"100%"}}>✏️</button>}{!["anulada","pagada"].includes(r.estado)&&<button onClick={()=>setMAnular(r)} style={{...S.btn("danger"),padding:"3px 7px",fontSize:10,width:"100%"}}>🚫</button>}</div></td></tr>;})}
+        <tbody>{filtered.map(r=>{const e=EST_FAC[r.estado]||EST_FAC.borrador;const saldo=parseFloat(r.saldo_pendiente)||0;const ant=parseFloat(r.anticipo_aplicado)||0;return <tr key={r.id}><td style={S.td}><div style={{fontFamily:"monospace",fontSize:11,color:T.acc,fontWeight:700}}>{r.numero}</div><div style={{fontSize:10,color:T.mut}}>{fmtD(r.fecha_emision)}</div>{r.numero_autorizacion&&<div style={{fontSize:9,color:T.acc}}>✓ DTE</div>}{r.motivo_anulacion&&<div style={{fontSize:9,color:T.red}}>⚠ {r.motivo_anulacion.slice(0,20)}</div>}</td><td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{r.nombre_receptor}</div><div style={{fontSize:10,color:T.mut}}>{r.nit_receptor}</div></td><td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.total)}</td><td style={{...S.td,color:ant>0?T.acc:T.mut,fontSize:12}}>{ant>0?"Q "+fmt(ant):"—"}</td><td style={{...S.td,fontWeight:700,color:saldo>0?T.sec:T.acc}}>{r.estado==="anulada"?"—":"Q "+fmt(saldo)}</td><td style={S.td}><Badge color={e.c} bg={e.bg} label={e.l} small/></td><td style={S.td}><div style={{display:"flex",flexDirection:"column",gap:4,minWidth:90}}>{r.estado==="emitida"&&<button onClick={()=>{setAuthFac(r);setAuthId("");}} style={{...S.btn("blue"),padding:"3px 7px",fontSize:10,width:"100%"}}>🔐 DTE</button>}{["emitida","certificada","parcial"].includes(r.estado)&&<button onClick={()=>setMPago(r)} style={{...S.btn("primary"),padding:"3px 7px",fontSize:10,width:"100%"}}>💰 Pago</button>}{r.estado!=="anulada"&&<button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),padding:"3px 7px",fontSize:10,width:"100%"}}>✏️</button>}{!["anulada","pagada"].includes(r.estado)&&<button onClick={()=>setMAnular(r)} style={{...S.btn("danger"),padding:"3px 7px",fontSize:10,width:"100%"}}>🚫</button>}</div></td></tr>;})}
         </tbody></table></div>
       )}
     </div>
@@ -3223,6 +3348,14 @@ export default function App(){
   const [toast,setToast]=useState(null);
   const [empId,setEmpId]=useState(null);
   const [sideOpen,setSideOpen]=useState(true);
+  const [token,setToken]=useState(()=>localStorage.getItem("tzunun_token")||null);
+  const [user,setUser]=useState(()=>{try{return JSON.parse(localStorage.getItem("tzunun_user"))||null;}catch{return null;}});
+
+  const handleLogin=(tk,usr)=>{setToken(tk);setUser({email:usr?.email,name:usr?.user_metadata?.name||usr?.email});};
+  const handleLogout=async()=>{if(token)await sbSignOut(token);localStorage.removeItem("tzunun_token");localStorage.removeItem("tzunun_user");setToken(null);setUser(null);};
+
+  if(!token) return <LoginScreen onLogin={handleLogin}/>;
+
   useEffect(()=>{dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0])setEmpId(d[0].id);});},[]);
   const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500);};
   const NAV=[
@@ -3281,7 +3414,11 @@ export default function App(){
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{background:T.surf,borderBottom:`1px solid ${T.bord}`,padding:"10px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
           <div style={{fontSize:14,fontWeight:700}}>{curNav?.icon} {curNav?.label}</div>
-          <div style={{marginLeft:"auto",fontSize:11,color:T.mut}}>{new Date().toLocaleDateString("es-GT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</div>
+          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:14}}>
+            {user&&<div style={{fontSize:12,color:T.sub}}>👤 {user.email}</div>}
+            <div style={{fontSize:11,color:T.mut}}>{new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})}</div>
+            <button onClick={handleLogout} style={{background:"transparent",border:`1px solid ${T.bord}`,borderRadius:7,padding:"4px 10px",fontSize:11,color:T.sub,cursor:"pointer"}}>Salir 🚪</button>
+          </div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:20}}>
           {toast&&<Toast msg={toast.msg} type={toast.type}/>}
