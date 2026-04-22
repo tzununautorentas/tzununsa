@@ -31,6 +31,36 @@ const EST_VEH={disponible:{c:T.acc,bg:T.accDim,l:"Disponible"},rentado:{c:T.blue
 const EST_FAC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},emitida:{c:T.blue,bg:T.blueDim,l:"Emitida"},certificada:{c:T.acc,bg:T.accDim,l:"Certificada"},pagada:{c:T.acc,bg:T.accDim,l:"Pagada"},parcial:{c:T.sec,bg:T.secDim,l:"Pago parcial"},anulada:{c:T.red,bg:T.redDim,l:"Anulada"}};
 const FLUJO_RES={pendiente:[{v:"confirmada",l:"✓ Confirmar",s:"primary"},{v:"cancelada",l:"✗",s:"danger"}],confirmada:[{v:"en_curso",l:"▶ Iniciar",s:"blue"},{v:"cancelada",l:"✗",s:"danger"}],en_curso:[{v:"completada",l:"✓ Completar",s:"primary"},{v:"cancelada",l:"✗",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"↺",s:"ghost"}]};
 
+// ═══ TABLA DE RUTAS Y DISTANCIAS (de tarifario Tz'unun) ═══
+const RUTAS_GT=[
+  {d:"Antigua Guatemala",km:40,dias:1},{d:"Baja Verapaz",km:165,dias:1},
+  {d:"Champerico",km:230,dias:1},{d:"Chichicastenango",km:150,dias:1},
+  {d:"Chimaltenango",km:110,dias:1},{d:"Chiquimula",km:180,dias:1},
+  {d:"Cobán",km:215,dias:2},{d:"Coatepéque",km:225,dias:1},
+  {d:"El Estor Izabal",km:590,dias:4},{d:"El Progreso",km:135,dias:1},
+  {d:"Esquipulas",km:215,dias:1},{d:"Escuintla",km:68,dias:1},
+  {d:"Flores Petén",km:520,dias:2},{d:"Frontera Mesilla",km:320,dias:1},
+  {d:"Huehuetenango",km:275,dias:3},{d:"Irtra Retalhuleu",km:190,dias:1},
+  {d:"Ixcán Quiché",km:385,dias:3},{d:"Izabal",km:245,dias:1},
+  {d:"Jalapa",km:112,dias:1},{d:"Jutiapa",km:205,dias:2},
+  {d:"Livingston",km:300,dias:1},{d:"Monterrico",km:140,dias:3},
+  {d:"Panajachel",km:140,dias:1},{d:"Petén (Flores)",km:525,dias:3},
+  {d:"Puerto Barrios",km:315,dias:3},{d:"Quetzaltenango",km:210,dias:2},
+  {d:"Quiché (Sta. Cruz)",km:269,dias:1},{d:"Quiriguá",km:215,dias:1},
+  {d:"Rabinal Baja Verapaz",km:185,dias:1},{d:"Retalhuleu",km:200,dias:1},
+  {d:"Río Dulce",km:300,dias:1},{d:"Río Hondo Zacapa",km:145,dias:1},
+  {d:"Ruinas Copán Honduras",km:235,dias:1},{d:"Sacatepéquez",km:45,dias:1},
+  {d:"San José / Iztapa",km:115,dias:1},{d:"San Lucas Sacatepéquez",km:25,dias:1},
+  {d:"San Marcos",km:284,dias:1},{d:"San Pedro La Laguna",km:180,dias:3},
+  {d:"Santa Rosa",km:57,dias:1},{d:"Semuc Champey",km:300,dias:2},
+  {d:"Sololá",km:145,dias:1},{d:"Suchitepéquez",km:164,dias:1},
+  {d:"Tecpán",km:93,dias:1},{d:"Tikal Petén",km:536,dias:4},
+  {d:"Totonicapán",km:185,dias:2},{d:"Zacapa",km:160,dias:1},
+  {d:"Nebaj Quiché",km:235,dias:2},{d:"Chisec Alta Verapaz",km:350,dias:1},
+  {d:"Playa El Tunco El Salvador",km:275,dias:2},{d:"Suchitoto El Salvador",km:253,dias:2},
+  {d:"Jocotan Chiquimula",km:210,dias:1},{d:"Zacualpa Quiché",km:210,dias:2},
+];
+
 // ═══════════════════════════════════════════════════════════════
 // AUTENTICACIÓN — Login con Supabase Auth
 // ═══════════════════════════════════════════════════════════════
@@ -277,6 +307,7 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
 }
 
 function generarPDF(d){
+  if(!window.jspdf){alert("PDF no disponible. Recarga la página e intenta de nuevo.");return null;}
   const {jsPDF} = window.jspdf;
   if(!jsPDF){alert("jsPDF no cargó. Intenta de nuevo en unos segundos.");return;}
   const doc = new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
@@ -553,7 +584,8 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
     };
   });
   const [saving,setSaving]=useState(false);
-  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+
+  const [mostrarTC,setMostrarTC]=useState(true);  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const fileRef=useRef(null);
   const [imgPreview,setImgPreview]=useState(null);
 
@@ -2198,7 +2230,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
 
 // ═══ CLIENTES Y FLOTA ═══
 
-function PageClientes({showToast}){
+function PageClientes({showToast,empId}){
   const EMPTY_C = {nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""};
   const [rows,setRows]     = useState([]);
   const [loading,setLoading] = useState(true);
@@ -2207,8 +2239,8 @@ function PageClientes({showToast}){
   const [empresa,setEmpresa] = useState(null);
   const [editId,setEditId] = useState(null);
 
-  const load = async()=>{ setLoading(true); const d=await db.get("clientes"); setRows(Array.isArray(d)?d:[]); setLoading(false); };
-  useEffect(()=>{ db.get("empresas").then(e=>{if(e&&e[0])setEmpresa(e[0]);}); load(); },[]);
+  const load = async()=>{ setLoading(true); const d=await dbGet("clientes",''); setRows(Array.isArray(d)?d:[]); setLoading(false); };
+  useEffect(()=>{ dbGet("empresas",'').then(e=>{if(e&&e[0])setEmpresa(e[0]);}); load(); },[]);
 
   const sf = (k,v) => setForm(p=>({...p,[k]:v}));
 
@@ -2217,14 +2249,14 @@ function PageClientes({showToast}){
     setSaving(true);
     try{
       const p={...form,empresa_id:empresa?.id||null};
-      if(editId){ await db.update("clientes",editId,p); showToast("Cliente actualizado ✔"); }
-      else{ await db.insert("clientes",p); showToast("Cliente guardado ✔"); }
+      if(editId){ await dbUpd("clientes",editId,p); showToast("Cliente actualizado ✔"); }
+      else{ await dbIns("clientes",p); showToast("Cliente guardado ✔"); }
       setForm(null); setEditId(null); load();
     }catch(e){ showToast("Error al guardar","error"); }
     setSaving(false);
   };
 
-  const del = async(id)=>{ if(!confirm("¿Eliminar cliente?"))return; await db.del("clientes",id); showToast("Eliminado"); load(); };
+  const del = async(id)=>{ if(!confirm("¿Eliminar cliente?"))return; await dbDel("clientes",id); showToast("Eliminado"); load(); };
   const editar = (c)=>{ setForm({nombre:c.nombre,tipo:c.tipo||"empresa",nit:c.nit||"",direccion:c.direccion||"",telefono:c.telefono||"",email:c.email||""}); setEditId(c.id); };
 
   const TIPOS = [{v:"empresa",l:"🏢 Empresa"},{v:"gobierno",l:"🏛️ Gobierno/ONG"},{v:"persona",l:"👤 Persona"}];
@@ -2238,16 +2270,16 @@ function PageClientes({showToast}){
             <button onClick={()=>{setForm(null);setEditId(null);}} style={S.btn("ghost")}>← Volver</button>
           </div>
           <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-            <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.input} value={form.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del cliente"/></Fld>
+            <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={form.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del cliente"/></Fld>
             <Fld label="TIPO DE CLIENTE">
               <select style={S.sel} value={form.tipo} onChange={e=>sf("tipo",e.target.value)}>
                 {TIPOS.map(t=><option key={t.v} value={t.v}>{t.l}</option>)}
               </select>
             </Fld>
-            <Fld label="NIT"><input style={S.input} value={form.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
-            <Fld label="TELÉFONO"><input style={S.input} value={form.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
-            <Fld label="EMAIL"><input style={S.input} type="email" value={form.email} onChange={e=>sf("email",e.target.value)} placeholder="contacto@empresa.com"/></Fld>
-            <Fld label="DIRECCIÓN" span2><input style={S.input} value={form.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección completa"/></Fld>
+            <Fld label="NIT"><input style={S.inp} value={form.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
+            <Fld label="TELÉFONO"><input style={S.inp} value={form.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
+            <Fld label="EMAIL"><input style={S.inp} type="email" value={form.email} onChange={e=>sf("email",e.target.value)} placeholder="contacto@empresa.com"/></Fld>
+            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={form.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección completa"/></Fld>
             <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:4}}>
               <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar cliente"}</button>
               <button onClick={()=>{setForm(null);setEditId(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
@@ -2291,7 +2323,7 @@ function PageClientes({showToast}){
   );
 }
 
-function PageFlota({showToast}){
+function PageFlota({showToast,empId}){
   const EMPTY_V = {placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0};
   const [rows,setRows]     = useState([]);
   const [loading,setLoading] = useState(true);
@@ -2300,8 +2332,8 @@ function PageFlota({showToast}){
   const [empresa,setEmpresa] = useState(null);
   const [editId,setEditId] = useState(null);
 
-  const load = async()=>{ setLoading(true); const d=await db.get("vehiculos"); setRows(Array.isArray(d)?d:[]); setLoading(false); };
-  useEffect(()=>{ db.get("empresas").then(e=>{if(e&&e[0])setEmpresa(e[0]);}); load(); },[]);
+  const load = async()=>{ setLoading(true); const d=await dbGet("vehiculos",''); setRows(Array.isArray(d)?d:[]); setLoading(false); };
+  useEffect(()=>{ dbGet("empresas",'').then(e=>{if(e&&e[0])setEmpresa(e[0]);}); load(); },[]);
 
   const sf = (k,v) => setForm(p=>({...p,[k]:v}));
 
@@ -2310,15 +2342,15 @@ function PageFlota({showToast}){
     setSaving(true);
     try{
       const p={...form,empresa_id:empresa?.id||null,km_actual:parseInt(form.km_actual)||0,anio:parseInt(form.anio)||2024};
-      if(editId){ await db.update("vehiculos",editId,p); showToast("Vehículo actualizado ✔"); }
-      else{ await db.insert("vehiculos",p); showToast("Vehículo registrado ✔"); }
+      if(editId){ await dbUpd("vehiculos",editId,p); showToast("Vehículo actualizado ✔"); }
+      else{ await dbIns("vehiculos",p); showToast("Vehículo registrado ✔"); }
       setForm(null); setEditId(null); load();
     }catch(e){ showToast("Error al guardar","error"); }
     setSaving(false);
   };
 
-  const cambiarEstado = async(id,estado)=>{ await db.update("vehiculos",id,{estado}); showToast(`Estado → ${estado}`); load(); };
-  const del = async(id)=>{ if(!confirm("¿Eliminar vehículo?"))return; await db.del("vehiculos",id); showToast("Eliminado"); load(); };
+  const cambiarEstado = async(id,estado)=>{ await dbUpd("vehiculos",id,{estado}); showToast(`Estado → ${estado}`); load(); };
+  const del = async(id)=>{ if(!confirm("¿Eliminar vehículo?"))return; await dbDel("vehiculos",id); showToast("Eliminado"); load(); };
   const editar = (v)=>{ setForm({placa:v.placa,marca:v.marca||"",modelo:v.modelo||"",anio:v.anio||2024,tipo:v.tipo||"SUV",estado:v.estado||"disponible",km_actual:v.km_actual||0}); setEditId(v.id); };
 
   const EST = { disponible:{c:T.accent,bg:T.accentDim,l:"Disponible"}, rentado:{c:T.blue,bg:T.blueDim,l:"Rentado"}, mantenimiento:{c:T.second,bg:T.secondDim,l:"Mantenim."} };
@@ -2333,10 +2365,10 @@ function PageFlota({showToast}){
             <button onClick={()=>{setForm(null);setEditId(null);}} style={S.btn("ghost")}>← Volver</button>
           </div>
           <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-            <Fld label="PLACA"><input style={S.input} value={form.placa} onChange={e=>sf("placa",e.target.value.toUpperCase())} placeholder="P-000-ABC"/></Fld>
-            <Fld label="AÑO"><input style={S.input} type="number" value={form.anio} onChange={e=>sf("anio",e.target.value)}/></Fld>
-            <Fld label="MARCA"><input style={S.input} value={form.marca} onChange={e=>sf("marca",e.target.value)} placeholder="Toyota, Hyundai..."/></Fld>
-            <Fld label="MODELO"><input style={S.input} value={form.modelo} onChange={e=>sf("modelo",e.target.value)} placeholder="Hilux, Land Cruiser..."/></Fld>
+            <Fld label="PLACA"><input style={S.inp} value={form.placa} onChange={e=>sf("placa",e.target.value.toUpperCase())} placeholder="P-000-ABC"/></Fld>
+            <Fld label="AÑO"><input style={S.inp} type="number" value={form.anio} onChange={e=>sf("anio",e.target.value)}/></Fld>
+            <Fld label="MARCA"><input style={S.inp} value={form.marca} onChange={e=>sf("marca",e.target.value)} placeholder="Toyota, Hyundai..."/></Fld>
+            <Fld label="MODELO"><input style={S.inp} value={form.modelo} onChange={e=>sf("modelo",e.target.value)} placeholder="Hilux, Land Cruiser..."/></Fld>
             <Fld label="TIPO">
               <select style={S.sel} value={form.tipo} onChange={e=>sf("tipo",e.target.value)}>
                 {["Sedán","SUV","Pickup","Van","Bus","Microbús"].map(t=><option key={t} value={t}>{t}</option>)}
@@ -2349,7 +2381,7 @@ function PageFlota({showToast}){
                 <option value="mantenimiento">🟡 Mantenimiento</option>
               </select>
             </Fld>
-            <Fld label="KILOMETRAJE ACTUAL" span2><input style={S.input} type="number" value={form.km_actual} onChange={e=>sf("km_actual",e.target.value)} placeholder="0"/></Fld>
+            <Fld label="KILOMETRAJE ACTUAL" span2><input style={S.inp} type="number" value={form.km_actual} onChange={e=>sf("km_actual",e.target.value)} placeholder="0"/></Fld>
             <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:4}}>
               <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar vehículo"}</button>
               <button onClick={()=>{setForm(null);setEditId(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
@@ -2501,7 +2533,7 @@ function PageReservas({showToast,empId}){
 function PageCalculadora({showToast,empId}){
   const [tab,setTab]=useState("renta");
   const [cli,setCli]=useState("");const [selVeh,setSelVeh]=useState(null);const [dias,setDias]=useState(1);const [custom,setCustom]=useState("");const [iva,setIva]=useState(5);const [pago,setPago]=useState("efectivo");const [exch,setExch]=useState(7.70);const [notas,setNotas]=useState("");const [saving,setSaving]=useState(false);
-  const [tf,setTf]=useState({cliente:"",dias:1,veh:0,pil:0,hos:0,ali:0,galon:0,kpg:12,kmi:0,kmr:0,varios:0,iva:5,pago:"efectivo",exch:7.70,dept:"",muni:"",notas:""});
+  const [tf,setTf]=useState({cliente:"",dias:1,veh:0,pil:0,hos:0,ali:0,galon:0,kpg:12,kmi:0,kmr:0,varios:0,iva:5,pago:"efectivo",exch:7.70,dept:"",muni:"",notas:"",ruta:""});
   const stf=(k,v)=>setTf(p=>({...p,[k]:v}));
   const tarifaFn=(v,d)=>{if(!v||d===0)return 0;if(d>=30)return v.mes;if(d>=8)return v.sem;return v.dia;};
   const rate=custom>0?parseFloat(custom):(selVeh?tarifaFn(selVeh,dias):0);
@@ -2531,7 +2563,8 @@ function PageCalculadora({showToast,empId}){
               <Fld label="PRECIO PERSONALIZADO"><input style={S.inp} type="number" value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Vacío = catálogo"/></Fld>
               <Fld label="IVA"><select style={S.sel} value={iva} onChange={e=>setIva(parseInt(e.target.value))}><option value={12}>12% General</option><option value={5}>5% Pequeño Cont.</option><option value={0}>Sin IVA</option></select></Fld>
               <Fld label="TASA CAMBIO GTQ=1USD"><input style={S.inp} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/></Fld>
-              <Fld label="MÉTODO PAGO"><div style={{display:"flex",gap:8}}><button onClick={()=>setPago("efectivo")} style={{...S.btn(pago==="efectivo"?"primary":"ghost"),flex:1,fontSize:12}}>💵 Efectivo</button><button onClick={()=>setPago("tarjeta")} style={{...S.btn(pago==="tarjeta"?"warn":"ghost"),flex:1,fontSize:12}}>💳 Tarjeta</button></div></Fld>
+              <Fld label="MÉTODO DE PAGO"><div style={{display:"flex",gap:8}}><button onClick={()=>setPago("efectivo")} style={{...S.btn(pago==="efectivo"?"primary":"ghost"),flex:1,fontSize:12}}>💵 Efectivo/Depósito</button><button onClick={()=>setPago("tarjeta")} style={{...S.btn(pago==="tarjeta"?"warn":"ghost"),flex:1,fontSize:12}}>💳 Tarjeta</button></div></Fld>
+              <Fld label="¿MOSTRAR PRECIO CON TARJETA EN PDF?"><div style={{display:"flex",alignItems:"center",gap:10,paddingTop:6}}><input type="checkbox" checked={mostrarTC} onChange={e=>setMostrarTC(e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/><span style={{fontSize:13,color:T.sub}}>Incluir precio con tarjeta en la cotización PDF</span></div></Fld>
               <Fld label="NOTAS"><textarea style={{...S.inp,minHeight:44,resize:"vertical"}} value={notas} onChange={e=>setNotas(e.target.value)}/></Fld>
             </div>
           ):(
@@ -2545,6 +2578,16 @@ function PageCalculadora({showToast,empId}){
               <Fld label="ALIMENT./DÍA"><input style={S.inp} type="number" value={tf.ali} onChange={e=>stf("ali",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="PRECIO/GALÓN"><input style={S.inp} type="number" value={tf.galon} onChange={e=>stf("galon",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="KM/GALÓN"><input style={S.inp} type="number" value={tf.kpg} onChange={e=>stf("kpg",e.target.value)} placeholder="12"/></Fld>
+              <Fld label="DESTINO (tabla de rutas)" span2>
+                <select style={S.sel} value={tf.ruta||""} onChange={e=>{
+                  const r=RUTAS_GT.find(x=>x.d===e.target.value);
+                  if(r){stf("ruta",r.d);stf("kmi",r.km);stf("kmr",r.km);stf("dias",r.dias);}
+                  else stf("ruta",e.target.value);
+                }}>
+                  <option value="">Seleccionar destino (o ingresa km manualmente)</option>
+                  {RUTAS_GT.map(r=><option key={r.d} value={r.d}>{r.d} — {r.km} km · {r.dias} día{r.dias>1?"s":""}</option>)}
+                </select>
+              </Fld>
               <Fld label="KM IDA"><input style={S.inp} type="number" value={tf.kmi} onChange={e=>stf("kmi",e.target.value)} placeholder="0"/></Fld>
               <Fld label="KM REGRESO"><input style={S.inp} type="number" value={tf.kmr} onChange={e=>stf("kmr",e.target.value)} placeholder="0"/></Fld>
               <Fld label="DEPTO"><select style={S.sel} value={tf.dept} onChange={e=>{stf("dept",e.target.value);stf("muni","");}}><option value="">Seleccionar...</option>{Object.keys(GT).map(d=><option key={d} value={d}>{d}</option>)}</select></Fld>
@@ -2910,7 +2953,16 @@ export default function App(){
     return <LoginScreen onLogin={handleLogin}/>;
   }
 
-  useEffect(()=>{dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0])setEmpId(d[0].id);});},[]);
+  useEffect(()=>{
+    dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0])setEmpId(d[0].id);});
+    // Load jsPDF dynamically
+    if(!window.jspdf){
+      const s=document.createElement("script");
+      s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      s.onload=()=>console.log("jsPDF loaded");
+      document.head.appendChild(s);
+    }
+  },[]);
   const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500);};
   const NAV=[
     {id:"sep1",label:"PRINCIPAL",sep:true},
@@ -2982,3 +3034,5 @@ export default function App(){
     </div>
   );
 }
+
+// jsPDF loaded via CDN in index.html
