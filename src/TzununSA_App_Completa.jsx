@@ -65,6 +65,76 @@ async function sbGetUser(token) {
   return r.json();
 }
 
+
+// ── PANTALLA: CREAR/CAMBIAR CONTRASEÑA (desde link de invitación) ─────────────
+async function sbSetPassword(token, newPassword) {
+  const r = await fetch(`${SB}/auth/v1/user`, {
+    method: "PUT",
+    headers: { apikey: SK, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ password: newPassword }),
+  });
+  return r.json();
+}
+
+function SetPasswordScreen({ token, onDone }) {
+  const [pwd, setPwd] = useState("");
+  const [pwd2, setPwd2] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSet = async () => {
+    if (pwd.length < 8) { setError("La contraseña debe tener al menos 8 caracteres"); return; }
+    if (pwd !== pwd2) { setError("Las contraseñas no coinciden"); return; }
+    setLoading(true); setError("");
+    const data = await sbSetPassword(token, pwd);
+    if (data.id) {
+      setMsg("✅ Contraseña creada. Ya puedes iniciar sesión.");
+      setTimeout(onDone, 2000);
+    } else {
+      setError("Error al guardar. Pide una nueva invitación.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: T.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>🐦</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.acc }}>Crear contraseña</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Tz'unun AutoRentas — Primer acceso</div>
+        </div>
+        <div style={{ background: T.card, border: `1px solid ${T.bord}`, borderRadius: 16, padding: 32 }}>
+          {msg ? (
+            <div style={{ textAlign: "center", fontSize: 16, color: T.acc, padding: 20 }}>{msg}</div>
+          ) : (
+            <>
+              {error && <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>❌ {error}</div>}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>NUEVA CONTRASEÑA (mínimo 8 caracteres)</label>
+                <input style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                  type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="••••••••" />
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CONFIRMAR CONTRASEÑA</label>
+                <input style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                  type="password" value={pwd2} onChange={e => setPwd2(e.target.value)} placeholder="••••••••"
+                  onKeyDown={e => e.key === "Enter" && handleSet()} />
+              </div>
+              <button onClick={handleSet} disabled={loading}
+                style={{ width: "100%", padding: "13px", background: loading ? T.mut : T.acc, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#0A0F1E", cursor: loading ? "not-allowed" : "pointer" }}>
+                {loading ? "Guardando..." : "Crear contraseña →"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -2816,11 +2886,29 @@ export default function App(){
   const [sideOpen,setSideOpen]=useState(true);
   const [token,setToken]=useState(()=>localStorage.getItem("tzunun_token")||null);
   const [user,setUser]=useState(()=>{try{return JSON.parse(localStorage.getItem("tzunun_user"))||null;}catch{return null;}});
+  const [inviteToken,setInviteToken]=useState(null);
+  const [authMode,setAuthMode]=useState("login"); // login | setpassword
+
+  // Check URL for invite/recovery token from Supabase email
+  useEffect(()=>{
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace('#',''));
+    const accessToken = params.get('access_token');
+    const type = params.get('type');
+    if(accessToken && (type==='invite' || type==='recovery' || type==='signup')){
+      setInviteToken(accessToken);
+      setAuthMode('setpassword');
+      window.history.replaceState(null,'',window.location.pathname);
+    }
+  },[]);
 
   const handleLogin=(tk,usr)=>{setToken(tk);setUser({email:usr?.email,name:usr?.user_metadata?.name||usr?.email});};
   const handleLogout=async()=>{if(token)await sbSignOut(token);localStorage.removeItem("tzunun_token");localStorage.removeItem("tzunun_user");setToken(null);setUser(null);};
 
-  if(!token) return <LoginScreen onLogin={handleLogin}/>;
+  if(!token){
+    if(authMode==='setpassword' && inviteToken) return <SetPasswordScreen token={inviteToken} onDone={()=>{setAuthMode('login');setInviteToken(null);}}/>;
+    return <LoginScreen onLogin={handleLogin}/>;
+  }
 
   useEffect(()=>{dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0])setEmpId(d[0].id);});},[]);
   const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500);};
