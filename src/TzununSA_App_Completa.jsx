@@ -342,7 +342,10 @@ function generarPDF(d){
   doc.setTextColor(...GRAY); doc.setFontSize(8); doc.setFont("helvetica","bold");
   doc.text("FACTURAR A:",22,y); y+=12;
   doc.setTextColor(30,41,59); doc.setFontSize(12); doc.setFont("helvetica","bold");
-  doc.text(d.cliente,22,y); y+=11;
+  // Client name with auto-wrap for long names
+  const clientLines = doc.splitTextToSize(d.cliente||"", 180);
+  doc.text(clientLines, 14, 72);
+  const clientH = clientLines.length * 7;
   doc.setTextColor(...GRAY); doc.setFontSize(8); doc.setFont("helvetica","normal");
   if(d.nit) doc.text("NIT: "+d.nit+(d.dir_cliente?"   |   "+d.dir_cliente:""),22,y);
   y+=8;
@@ -443,7 +446,7 @@ function generarPDF(d){
     "• Se requiere copia de DPI del responsable del grupo.",
     "• Anticipo del 75% para confirmar el servicio.",
     d.con_piloto?"• Combustible incluido según el recorrido acordado.":"• Vehículo entregado con tanque lleno — devolver lleno.",
-    "• El vehículo debe devolverse lavado (recargo Q.75.00 si no).",
+    "• El vehículo debe devolverse limpio (recargo Q.75.00 si no cumple).",
     "• El saldo restante se cancela al finalizar el servicio.",
   ];
   doc.setFontSize(7.2); doc.setFont("helvetica","normal"); doc.setTextColor(...DKGRAY);
@@ -1878,6 +1881,16 @@ function ModProveedores({empId,showToast}){
 
 // ═══ RESERVAS ═══
 
+
+// ── Estado inicial para FormReserva ──────────────────────────────────────────
+const EMPTY={
+  cliente_nombre:"",tipo:"renta",vehiculo_nombre:"",conductor_nombre:"",
+  fecha_inicio:"",fecha_fin:"",hora_recogida:"08:00",origen:"",destino:"",
+  departamento:"",municipio:"",anticipo:"",notas:"",iva:5,pago:"efectivo",
+  exch:7.70,con_tc:false
+};
+
+
 function FormReserva({initial,onSave,onCancel,empId}){
   const [f,setF]=useState(()=>{
     if(initial){
@@ -2563,6 +2576,88 @@ function PageConfiguracion({showToast}){
 // ═══ MANTENIMIENTO DE VEHÍCULOS ═══════════════════════════════════════════════
 
 
+
+// ── Buscador de clientes con autocompletado ───────────────────────────────────
+function ClienteBuscador({value,onChange,empId}){
+  const [clientes,setClientes]=useState([]);
+  const [open,setOpen]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [showNew,setShowNew]=useState(false);
+  const [newNombre,setNewNombre]=useState("");
+  const [newTipo,setNewTipo]=useState("empresa");
+  const ref=useRef(null);
+
+  useEffect(()=>{
+    dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));
+  },[]);
+
+  useEffect(()=>{
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+
+  const filtered=value.length>0?clientes.filter(c=>c.nombre.toLowerCase().includes(value.toLowerCase())):clientes.slice(0,8);
+
+  const agregarCliente=async()=>{
+    if(!newNombre.trim())return;
+    setSaving(true);
+    const r=await dbIns("clientes",{nombre:newNombre,tipo:newTipo,empresa_id:empId});
+    if(r&&!r.error){
+      onChange(newNombre);
+      setClientes(p=>[...p,{nombre:newNombre,tipo:newTipo}]);
+      setShowNew(false);setNewNombre("");setOpen(false);
+    }
+    setSaving(false);
+  };
+
+  return(
+    <div ref={ref} style={{position:"relative"}}>
+      <input
+        style={S.inp} value={value}
+        onChange={e=>{onChange(e.target.value);setOpen(true);setShowNew(false);}}
+        onFocus={()=>setOpen(true)}
+        placeholder="Escribe para buscar cliente..."
+      />
+      {open&&(
+        <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:"1px solid "+T.bord,borderRadius:8,zIndex:100,maxHeight:220,overflowY:"auto",marginTop:2}}>
+          {filtered.map((c,i)=>(
+            <div key={i} onClick={()=>{onChange(c.nombre);setOpen(false);}}
+              style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:"1px solid "+T.bord+"33",display:"flex",justifyContent:"space-between",alignItems:"center"}}
+              onMouseEnter={e=>e.currentTarget.style.background=T.surf}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <span>{c.nombre}</span>
+              <span style={{fontSize:10,color:T.mut}}>{c.tipo}</span>
+            </div>
+          ))}
+          {filtered.length===0&&<div style={{padding:"8px 12px",fontSize:12,color:T.mut}}>No encontrado</div>}
+          {/* Agregar nuevo */}
+          {!showNew?(
+            <div onClick={()=>{setShowNew(true);setNewNombre(value);}}
+              style={{padding:"8px 12px",cursor:"pointer",fontSize:12,color:T.acc,fontWeight:600,borderTop:"1px solid "+T.bord,display:"flex",alignItems:"center",gap:6}}>
+              <span>+</span> Agregar nuevo cliente
+            </div>
+          ):(
+            <div style={{padding:10,borderTop:"1px solid "+T.bord}}>
+              <input style={{...S.inp,marginBottom:6,fontSize:12}} value={newNombre} onChange={e=>setNewNombre(e.target.value)} placeholder="Nombre del cliente"/>
+              <select style={{...S.sel,marginBottom:6,fontSize:12}} value={newTipo} onChange={e=>setNewTipo(e.target.value)}>
+                <option value="empresa">Empresa</option>
+                <option value="gobierno">Gobierno/ONG</option>
+                <option value="persona">Persona</option>
+              </select>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={agregarCliente} disabled={saving} style={{...S.btn("primary"),flex:1,fontSize:11,padding:"6px"}}>{saving?"...":"✔ Guardar"}</button>
+                <button onClick={()=>setShowNew(false)} style={{...S.btn("ghost"),flex:1,fontSize:11,padding:"6px"}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function PageCalculadora({showToast,empId}){
   const [tab,setTab]=useState("renta");
   const [cli,setCli]=useState("");
@@ -2625,7 +2720,9 @@ function PageCalculadora({showToast,empId}){
         <div style={S.card}>
           {tab==="renta"?(
             <div style={{display:"grid",gap:11}}>
-              <Fld label="CLIENTE"><input style={S.inp} value={cli} onChange={e=>setCli(e.target.value)} placeholder="Nombre del cliente"/></Fld>
+              <Fld label="CLIENTE">
+                <ClienteBuscador value={cli} onChange={setCli} empId={empId}/>
+              </Fld>
               <Fld label="DÍAS"><input style={S.inp} type="number" min="1" value={dias} onChange={e=>setDias(Math.max(1,parseInt(e.target.value)||1))}/></Fld>
               <Fld label="VEHÍCULO">
                 <select style={S.sel} value={selVeh?.id||""} onChange={e=>setSelVeh(CATALOGO.find(v=>v.id===e.target.value)||null)}>
@@ -2654,7 +2751,9 @@ function PageCalculadora({showToast,empId}){
             </div>
           ):(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-              <Fld label="CLIENTE" span2><input style={S.inp} value={tf.cliente} onChange={e=>stf("cliente",e.target.value)} placeholder="Nombre del cliente"/></Fld>
+              <Fld label="CLIENTE" span2>
+                <ClienteBuscador value={tf.cliente} onChange={v=>stf("cliente",v)} empId={empId}/>
+              </Fld>
               <Fld label="DESTINO (tabla de rutas)" span2>
                 <select style={S.sel} value={tf.ruta} onChange={e=>{
                   const r=RUTAS_GT.find(x=>x.d===e.target.value);
@@ -2946,12 +3045,92 @@ function PageFlota({showToast,empId}){
   );
 }
 
+
+// ── Vista Calendario de Reservas ─────────────────────────────────────────────
+function CalendarioReservas({rows,onNewReserva,onEdit}){
+  const [mes,setMes]=useState(new Date());
+  const DIAS=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+  const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const EST_C={pendiente:"#64748B",confirmada:"#00D4AA",en_curso:"#3B82F6",completada:"#22C55E",cancelada:"#EF4444"};
+
+  const year=mes.getFullYear();
+  const month=mes.getMonth();
+  const firstDay=new Date(year,month,1);
+  const lastDay=new Date(year,month+1,0);
+  // Start from Monday
+  let startDow=firstDay.getDay(); // 0=Sun
+  startDow=startDow===0?6:startDow-1; // convert to Mon=0
+  const totalCells=Math.ceil((startDow+lastDay.getDate())/7)*7;
+
+  const getReservasForDay=(day)=>{
+    const dateStr=`${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    return rows.filter(r=>{
+      if(!r.fecha_inicio) return false;
+      const fi=r.fecha_inicio.slice(0,10);
+      const ff=r.fecha_fin?r.fecha_fin.slice(0,10):fi;
+      return fi<=dateStr && dateStr<=ff;
+    });
+  };
+
+  const cells=[];
+  for(let i=0;i<totalCells;i++){
+    const dayNum=i-startDow+1;
+    const isValid=dayNum>=1&&dayNum<=lastDay.getDate();
+    const isToday=isValid&&new Date().toDateString()===new Date(year,month,dayNum).toDateString();
+    const dayReservas=isValid?getReservasForDay(dayNum):[];
+    cells.push({dayNum,isValid,isToday,dayReservas});
+  }
+
+  return(
+    <div style={S.card}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <button onClick={()=>setMes(new Date(year,month-1,1))} style={{...S.btn("ghost"),padding:"4px 12px"}}>‹</button>
+        <div style={{fontSize:16,fontWeight:700}}>{MESES[month]} {year}</div>
+        <button onClick={()=>setMes(new Date(year,month+1,1))} style={{...S.btn("ghost"),padding:"4px 12px"}}>›</button>
+      </div>
+      {/* Day headers */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:2}}>
+        {DIAS.map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:700,color:"#64748B",padding:"4px 0"}}>{d}</div>)}
+      </div>
+      {/* Calendar cells */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {cells.map((cell,idx)=>(
+          <div key={idx} style={{minHeight:80,background:cell.isToday?T.accDim:cell.isValid?T.surf:"transparent",borderRadius:6,padding:4,border:cell.isToday?"1px solid "+T.acc:"1px solid transparent"}}>
+            {cell.isValid&&(
+              <>
+                <div style={{fontSize:12,fontWeight:cell.isToday?700:400,color:cell.isToday?T.acc:T.sub,marginBottom:3}}>{cell.dayNum}</div>
+                {cell.dayReservas.slice(0,3).map(r=>(
+                  <div key={r.id} onClick={()=>onEdit&&onEdit(r)} style={{fontSize:9,fontWeight:600,background:(EST_C[r.estado]||"#64748B")+"33",color:EST_C[r.estado]||"#64748B",borderLeft:"2px solid "+(EST_C[r.estado]||"#64748B"),padding:"1px 4px",borderRadius:2,marginBottom:1,cursor:"pointer",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={r.cliente_nombre+" — "+r.vehiculo_nombre}>
+                    {r.cliente_nombre?.split(" ")[0]} {r.vehiculo_nombre?.split(" ")[0]||""}
+                  </div>
+                ))}
+                {cell.dayReservas.length>3&&<div style={{fontSize:9,color:T.mut}}>+{cell.dayReservas.length-3} más</div>}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:12,display:"flex",gap:12,flexWrap:"wrap"}}>
+        {[["Pendiente","#64748B"],["Confirmada","#00D4AA"],["En curso","#3B82F6"],["Completada","#22C55E"],["Cancelada","#EF4444"]].map(([l,c])=>(
+          <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
+            <div style={{width:10,height:10,borderRadius:2,background:c+"44",border:"1px solid "+c}}/>
+            <span style={{color:T.sub}}>{l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 function PageReservas({showToast,empId}){
   const [rows,setRows]=useState([]);
   const [loading,setLoading]=useState(true);
   const [vista,setVista]=useState("lista");
   const [editItem,setEditItem]=useState(null);
   const [filtro,setFiltro]=useState("todas");
+  const [viewMode,setViewMode]=useState("lista"); // lista | calendario
   const load=async()=>{setLoading(true);const d=await dbGet("reservas","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   useEffect(()=>{load();},[]);
   const chEst=async(id,estado)=>{
@@ -2989,10 +3168,13 @@ function PageReservas({showToast,empId}){
             {f==="en_curso"?"En curso":f.charAt(0).toUpperCase()+f.slice(1)}
           </button>
         ))}
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
+        <button onClick={()=>setViewMode(viewMode==="lista"?"calendario":"lista")} style={{...S.btn("ghost"),fontSize:11}}>{viewMode==="lista"?"📅 Ver calendario":"📋 Ver lista"}</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>↺</button>
         <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva reserva</button>
       </div>
-      {loading?<Spinner/>:filtered.length===0?<Empty icon="📭" msg="Sin reservas" action="+ Nueva reserva" onAction={()=>setVista("form")}/>:(
+      {viewMode==="calendario"?(
+        <CalendarioReservas rows={rows} onEdit={r=>{setEditItem(r);setVista("form");}}/>
+      ):(loading?<Spinner/>:filtered.length===0?<Empty icon="📭" msg="Sin reservas" action="+ Nueva reserva" onAction={()=>setVista("form")}/>:(
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {filtered.map(r=>{
             const e=EST_RES[r.estado]||EST_RES.pendiente;
@@ -3020,7 +3202,7 @@ function PageReservas({showToast,empId}){
             );
           })}
         </div>
-      )}
+      ))}
     </div>
   );
 }
