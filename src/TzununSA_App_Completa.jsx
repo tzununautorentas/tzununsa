@@ -2230,221 +2230,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
 
 // ═══ CLIENTES Y FLOTA ═══
 
-function PageClientes({showToast,empId}){
-  const EMPTY_C = {nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""};
-  const [rows,setRows]     = useState([]);
-  const [loading,setLoading] = useState(true);
-  const [form,setForm]     = useState(null); // null=lista, {}=nuevo/editar
-  const [saving,setSaving] = useState(false);
-  const [empresa,setEmpresa] = useState(null);
-  const [editId,setEditId] = useState(null);
 
-  const load = async()=>{ setLoading(true); const d=await dbGet("clientes",''); setRows(Array.isArray(d)?d:[]); setLoading(false); };
-  useEffect(()=>{ dbGet("empresas",'').then(e=>{if(e&&e[0])setEmpresa(e[0]);}); load(); },[]);
-
-  const sf = (k,v) => setForm(p=>({...p,[k]:v}));
-
-  const guardar = async()=>{
-    if(!form.nombre.trim()){showToast("El nombre es requerido","error");return;}
-    setSaving(true);
-    try{
-      const p={...form,empresa_id:empresa?.id||null};
-      if(editId){ await dbUpd("clientes",editId,p); showToast("Cliente actualizado ✔"); }
-      else{ await dbIns("clientes",p); showToast("Cliente guardado ✔"); }
-      setForm(null); setEditId(null); load();
-    }catch(e){ showToast("Error al guardar","error"); }
-    setSaving(false);
-  };
-
-  const del = async(id)=>{ if(!confirm("¿Eliminar cliente?"))return; await dbDel("clientes",id); showToast("Eliminado"); load(); };
-  const editar = (c)=>{ setForm({nombre:c.nombre,tipo:c.tipo||"empresa",nit:c.nit||"",direccion:c.direccion||"",telefono:c.telefono||"",email:c.email||""}); setEditId(c.id); };
-
-  const TIPOS = [{v:"empresa",l:"🏢 Empresa"},{v:"gobierno",l:"🏛️ Gobierno/ONG"},{v:"persona",l:"👤 Persona"}];
-
-  return (
-    <div>
-      {form!==null?(
-        <div style={{maxWidth:680}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:16,fontWeight:700}}>{editId?"✏️ Editar cliente":"➕ Nuevo cliente"}</div>
-            <button onClick={()=>{setForm(null);setEditId(null);}} style={S.btn("ghost")}>← Volver</button>
-          </div>
-          <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-            <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={form.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del cliente"/></Fld>
-            <Fld label="TIPO DE CLIENTE">
-              <select style={S.sel} value={form.tipo} onChange={e=>sf("tipo",e.target.value)}>
-                {TIPOS.map(t=><option key={t.v} value={t.v}>{t.l}</option>)}
-              </select>
-            </Fld>
-            <Fld label="NIT"><input style={S.inp} value={form.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
-            <Fld label="TELÉFONO"><input style={S.inp} value={form.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
-            <Fld label="EMAIL"><input style={S.inp} type="email" value={form.email} onChange={e=>sf("email",e.target.value)} placeholder="contacto@empresa.com"/></Fld>
-            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={form.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección completa"/></Fld>
-            <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:4}}>
-              <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar cliente"}</button>
-              <button onClick={()=>{setForm(null);setEditId(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
-            </div>
-          </div>
-        </div>
-      ):(
-        <>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:16,fontWeight:700}}>👥 Directorio de Clientes</div>
-            <button onClick={()=>setForm(EMPTY_C)} style={S.btn("primary")}>➕ Nuevo cliente</button>
-          </div>
-          <div style={S.card}>
-            {loading?<Spinner/>:rows.length===0?(
-              <div style={{textAlign:"center",padding:40,color:T.muted}}>
-                <div style={{fontSize:32,marginBottom:8}}>👥</div>
-                No hay clientes registrados.
-                <br/><button onClick={()=>setForm(EMPTY_C)} style={{...S.btn("primary"),marginTop:14}}>Agregar primer cliente</button>
-              </div>
-            ):(
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Email","Acciones"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {rows.map(c=>(
-                    <tr key={c.id}>
-                      <td style={{...S.td,fontWeight:600}}>{c.nombre}</td>
-                      <td style={S.td}><Badge color={c.tipo==="gobierno"?T.purple:c.tipo==="persona"?T.blue:T.second} bg={c.tipo==="gobierno"?T.purpleDim:c.tipo==="persona"?T.blueDim:T.secondDim} label={c.tipo==="gobierno"?"🏛️ Gobierno":c.tipo==="persona"?"👤 Persona":"🏢 Empresa"}/></td>
-                      <td style={{...S.td,fontFamily:"monospace",fontSize:12,color:T.muted}}>{c.nit||"—"}</td>
-                      <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
-                      <td style={{...S.td,color:T.sub,fontSize:12}}>{c.email||"—"}</td>
-                      <td style={S.td}><div style={{display:"flex",gap:6}}><button onClick={()=>editar(c)} style={{...S.btn("ghost"),padding:"4px 10px",fontSize:11}}>✏️ Editar</button><button onClick={()=>del(c.id)} style={{...S.btn("danger"),padding:"4px 10px",fontSize:11}}>🗑️</button></div></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function PageFlota({showToast,empId}){
-  const EMPTY_V = {placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0};
-  const [rows,setRows]     = useState([]);
-  const [loading,setLoading] = useState(true);
-  const [form,setForm]     = useState(null);
-  const [saving,setSaving] = useState(false);
-  const [empresa,setEmpresa] = useState(null);
-  const [editId,setEditId] = useState(null);
-
-  const load = async()=>{ setLoading(true); const d=await dbGet("vehiculos",''); setRows(Array.isArray(d)?d:[]); setLoading(false); };
-  useEffect(()=>{ dbGet("empresas",'').then(e=>{if(e&&e[0])setEmpresa(e[0]);}); load(); },[]);
-
-  const sf = (k,v) => setForm(p=>({...p,[k]:v}));
-
-  const guardar = async()=>{
-    if(!form.placa.trim()){showToast("La placa es requerida","error");return;}
-    setSaving(true);
-    try{
-      const p={...form,empresa_id:empresa?.id||null,km_actual:parseInt(form.km_actual)||0,anio:parseInt(form.anio)||2024};
-      if(editId){ await dbUpd("vehiculos",editId,p); showToast("Vehículo actualizado ✔"); }
-      else{ await dbIns("vehiculos",p); showToast("Vehículo registrado ✔"); }
-      setForm(null); setEditId(null); load();
-    }catch(e){ showToast("Error al guardar","error"); }
-    setSaving(false);
-  };
-
-  const cambiarEstado = async(id,estado)=>{ await dbUpd("vehiculos",id,{estado}); showToast(`Estado → ${estado}`); load(); };
-  const del = async(id)=>{ if(!confirm("¿Eliminar vehículo?"))return; await dbDel("vehiculos",id); showToast("Eliminado"); load(); };
-  const editar = (v)=>{ setForm({placa:v.placa,marca:v.marca||"",modelo:v.modelo||"",anio:v.anio||2024,tipo:v.tipo||"SUV",estado:v.estado||"disponible",km_actual:v.km_actual||0}); setEditId(v.id); };
-
-  const EST = { disponible:{c:T.accent,bg:T.accentDim,l:"Disponible"}, rentado:{c:T.blue,bg:T.blueDim,l:"Rentado"}, mantenimiento:{c:T.second,bg:T.secondDim,l:"Mantenim."} };
-  const resumen = { disponible:rows.filter(r=>r.estado==="disponible").length, rentado:rows.filter(r=>r.estado==="rentado").length, mantenimiento:rows.filter(r=>r.estado==="mantenimiento").length };
-
-  return (
-    <div>
-      {form!==null?(
-        <div style={{maxWidth:680}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:16,fontWeight:700}}>{editId?"✏️ Editar vehículo":"➕ Registrar vehículo"}</div>
-            <button onClick={()=>{setForm(null);setEditId(null);}} style={S.btn("ghost")}>← Volver</button>
-          </div>
-          <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-            <Fld label="PLACA"><input style={S.inp} value={form.placa} onChange={e=>sf("placa",e.target.value.toUpperCase())} placeholder="P-000-ABC"/></Fld>
-            <Fld label="AÑO"><input style={S.inp} type="number" value={form.anio} onChange={e=>sf("anio",e.target.value)}/></Fld>
-            <Fld label="MARCA"><input style={S.inp} value={form.marca} onChange={e=>sf("marca",e.target.value)} placeholder="Toyota, Hyundai..."/></Fld>
-            <Fld label="MODELO"><input style={S.inp} value={form.modelo} onChange={e=>sf("modelo",e.target.value)} placeholder="Hilux, Land Cruiser..."/></Fld>
-            <Fld label="TIPO">
-              <select style={S.sel} value={form.tipo} onChange={e=>sf("tipo",e.target.value)}>
-                {["Sedán","SUV","Pickup","Van","Bus","Microbús"].map(t=><option key={t} value={t}>{t}</option>)}
-              </select>
-            </Fld>
-            <Fld label="ESTADO">
-              <select style={S.sel} value={form.estado} onChange={e=>sf("estado",e.target.value)}>
-                <option value="disponible">✅ Disponible</option>
-                <option value="rentado">🔵 Rentado</option>
-                <option value="mantenimiento">🟡 Mantenimiento</option>
-              </select>
-            </Fld>
-            <Fld label="KILOMETRAJE ACTUAL" span2><input style={S.inp} type="number" value={form.km_actual} onChange={e=>sf("km_actual",e.target.value)} placeholder="0"/></Fld>
-            <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:4}}>
-              <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar vehículo"}</button>
-              <button onClick={()=>{setForm(null);setEditId(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
-            </div>
-          </div>
-        </div>
-      ):(
-        <>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:16,fontWeight:700}}>🚗 Gestión de Flota</div>
-            <button onClick={()=>setForm(EMPTY_V)} style={S.btn("primary")}>➕ Registrar vehículo</button>
-          </div>
-
-          {/* Resumen */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:16}}>
-            {[{l:"Disponibles",n:resumen.disponible,c:T.accent,bg:T.accentDim},{l:"Rentados",n:resumen.rentado,c:T.blue,bg:T.blueDim},{l:"Mantenimiento",n:resumen.mantenimiento,c:T.second,bg:T.secondDim}].map((s,i)=>(
-              <div key={i} style={{background:s.bg,border:`1px solid ${s.c}44`,borderRadius:12,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
-                <div style={{fontSize:28,fontWeight:800,color:s.c}}>{s.n}</div>
-                <div style={{fontSize:12,color:T.sub}}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={S.card}>
-            {loading?<Spinner/>:rows.length===0?(
-              <div style={{textAlign:"center",padding:40,color:T.muted}}>
-                <div style={{fontSize:32,marginBottom:8}}>🚗</div>
-                No hay vehículos registrados.
-                <br/><button onClick={()=>setForm(EMPTY_V)} style={{...S.btn("primary"),marginTop:14}}>Registrar primer vehículo</button>
-              </div>
-            ):(
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>{["Vehículo","Placa","Tipo","Kilometraje","Estado","Cambiar estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {rows.map(v=>{
-                    const est=EST[v.estado]||EST.disponible;
-                    return(
-                      <tr key={v.id}>
-                        <td style={S.td}><div style={{fontWeight:600}}>{v.marca} {v.modelo}</div><div style={{fontSize:11,color:T.muted}}>{v.anio}</div></td>
-                        <td style={{...S.td,fontFamily:"monospace",color:T.accent}}>{v.placa}</td>
-                        <td style={S.td}>{v.tipo}</td>
-                        <td style={S.td}>{(v.km_actual||0).toLocaleString()} km</td>
-                        <td style={S.td}><Badge color={est.c} bg={est.bg} label={est.l}/></td>
-                        <td style={S.td}>
-                          <select style={{...S.sel,width:"auto",padding:"4px 8px",fontSize:12}} value={v.estado} onChange={e=>cambiarEstado(v.id,e.target.value)}>
-                            <option value="disponible">✅ Disponible</option>
-                            <option value="rentado">🔵 Rentado</option>
-                            <option value="mantenimiento">🟡 Mantenimiento</option>
-                          </select>
-                        </td>
-                        <td style={S.td}><div style={{display:"flex",gap:6}}><button onClick={()=>editar(v)} style={{...S.btn("ghost"),padding:"4px 10px",fontSize:11}}>✏️</button><button onClick={()=>del(v.id)} style={{...S.btn("danger"),padding:"4px 10px",fontSize:11}}>🗑️</button></div></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ═══ DASHBOARD ═══
 function PageDashboard(){
@@ -2490,158 +2276,8 @@ function PageDashboard(){
 }
 
 // ═══ RESERVAS PAGE ═══
-function PageReservas({showToast,empId}){
-  const [rows,setRows]=useState([]);const [loading,setLoading]=useState(true);const [vista,setVista]=useState("lista");const [editItem,setEditItem]=useState(null);const [filtro,setFiltro]=useState("todas");
-  const load=async()=>{setLoading(true);const d=await dbGet("reservas");setRows(Array.isArray(d)?d:[]);setLoading(false);};
-  useEffect(()=>{load();},[]);
-  const chEst=async(id,estado)=>{await dbUpd("reservas",id,{estado});showToast(`→ ${estado}`);load();};
-  const del=async id=>{if(!confirm("¿Eliminar?"))return;await dbDel("reservas",id);showToast("Eliminada");load();};
-  const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro);
-  if(vista==="form")return <FormReserva initial={editItem} empId={empId} onSave={()=>{setVista("lista");setEditItem(null);load();showToast(editItem?"Actualizada ✔":"Guardada ✔");}} onCancel={()=>{setVista("lista");setEditItem(null);}}/>;
-  return(
-    <div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
-        {[{l:"Total",v:rows.length,c:T.acc},{l:"Pendientes",v:rows.filter(r=>r.estado==="pendiente").length,c:T.mut},{l:"Confirmadas",v:rows.filter(r=>r.estado==="confirmada").length,c:T.acc},{l:"En curso",v:rows.filter(r=>r.estado==="en_curso").length,c:T.blue},{l:"Completadas",v:rows.filter(r=>r.estado==="completada").length,c:T.acc}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-        {["todas","pendiente","confirmada","en_curso","completada","cancelada"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="en_curso"?"En curso":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
-        <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
-      </div>
-      {loading?<Spinner/>:filtered.length===0?<Empty icon="📭" msg="Sin reservas" action="+ Nueva" onAction={()=>setVista("form")}/>:(
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {filtered.map(r=>{const e=EST_RES[r.estado]||EST_RES.pendiente;const sig=FLUJO_RES[r.estado]||[];return(
-            <div key={r.id} style={S.card}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div><div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"🔑":"🗺"} {fmtD(r.fecha_inicio)}{r.fecha_fin?" → "+fmtD(r.fecha_fin):""}{r.vehiculo_nombre?" · "+r.vehiculo_nombre:""}</div></div>
-                <div style={{textAlign:"right"}}><Badge color={e.c} bg={e.bg} label={e.l}/><div style={{fontSize:15,fontWeight:700,color:T.acc,marginTop:4}}>Q {fmt(r.monto)}</div>{parseFloat(r.saldo)>0&&<div style={{fontSize:11,color:T.sec}}>Saldo: Q {fmt(r.saldo)}</div>}</div>
-              </div>
-              <div style={{display:"flex",gap:6,paddingTop:10,borderTop:`1px solid ${T.bord}22`,flexWrap:"wrap"}}>
-                {sig.map(s=><button key={s.v} onClick={()=>chEst(r.id,s.v)} style={{...S.btn(s.s),fontSize:11,padding:"5px 10px"}}>{s.l}</button>)}
-                <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"5px 10px"}}>✏️</button>
-                <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"5px 10px"}}>🗑️</button>
-              </div>
-            </div>
-          );})}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ═══ CALCULADORA ═══
-function PageCalculadora({showToast,empId}){
-  const [tab,setTab]=useState("renta");
-  const [cli,setCli]=useState("");const [selVeh,setSelVeh]=useState(null);const [dias,setDias]=useState(1);const [custom,setCustom]=useState("");const [iva,setIva]=useState(5);const [pago,setPago]=useState("efectivo");const [exch,setExch]=useState(7.70);const [notas,setNotas]=useState("");const [saving,setSaving]=useState(false);
-  const [tf,setTf]=useState({cliente:"",dias:1,veh:0,pil:0,hos:0,ali:0,galon:0,kpg:12,kmi:0,kmr:0,varios:0,iva:5,pago:"efectivo",exch:7.70,dept:"",muni:"",notas:"",ruta:""});
-  const stf=(k,v)=>setTf(p=>({...p,[k]:v}));
-  const tarifaFn=(v,d)=>{if(!v||d===0)return 0;if(d>=30)return v.mes;if(d>=8)return v.sem;return v.dia;};
-  const rate=custom>0?parseFloat(custom):(selVeh?tarifaFn(selVeh,dias):0);
-  const sub=dias*rate,ivaAmt=sub*iva/100,base=sub+ivaAmt,recTC=pago==="tarjeta"?base*0.05:0,tot=base+recTC;
-  const d2=parseFloat(tf.dias)||0,kmi=parseFloat(tf.kmi)||0,kmr=parseFloat(tf.kmr)||0,tkm=kmi+kmr,kpg=parseFloat(tf.kpg)||1,gals=kpg>0?tkm/kpg:0,fuel=gals*(parseFloat(tf.galon)||0);
-  const vT=d2*(parseFloat(tf.veh)||0),pT=d2*(parseFloat(tf.pil)||0),hT=d2*(parseFloat(tf.hos)||0),aT=d2*(parseFloat(tf.ali)||0),misc=parseFloat(tf.varios)||0,tsub=vT+pT+hT+aT+fuel+misc;
-  const tiva=tsub*(parseFloat(tf.iva)||0)/100,tbase=tsub+tiva,ttc=tf.pago==="tarjeta"?tbase*0.05:0,ttot=tbase+ttc;
-  const munis=tf.dept&&GT[tf.dept]?GT[tf.dept]:[];
-  const guardar=async(estado)=>{
-    const cn=tab==="renta"?cli:tf.cliente;
-    if(!cn.trim()){showToast("Ingresa el nombre del cliente","err");return;}
-    setSaving(true);
-    const payload={empresa_id:empId,tipo:tab,cliente_nombre:cn,numero:`COT-${Date.now().toString().slice(-6)}`,dias:tab==="renta"?dias:d2,costo_vehiculo:parseFloat(tf.veh)||0,costo_piloto:parseFloat(tf.pil)||0,costo_hospedaje:parseFloat(tf.hos)||0,costo_alimentacion:parseFloat(tf.ali)||0,precio_galon:parseFloat(tf.galon)||0,km_por_galon:parseFloat(tf.kpg)||0,km_ida:kmi,km_regreso:kmr,departamento:tf.dept,municipio:tf.muni,gastos_varios:misc,tasa_iva:tab==="renta"?iva:parseFloat(tf.iva)||5,metodo_pago:tab==="renta"?pago:tf.pago,tasa_cambio:tab==="renta"?exch:parseFloat(tf.exch)||7.70,subtotal:tab==="renta"?sub:tsub,total_iva:tab==="renta"?ivaAmt:tiva,recargo_tarjeta:tab==="renta"?recTC:ttc,total_gtq:tab==="renta"?tot:ttot,total_usd:(tab==="renta"?tot:ttot)/exch,estado,notas:tab==="renta"?notas:tf.notas};
-    await dbIns("cotizaciones",payload);
-    showToast("Guardada ✔");setSaving(false);
-  };
-  return(
-    <div>
-      <div style={{display:"flex",gap:8,marginBottom:16}}>{[{id:"renta",l:"🔑 Renta por días"},{id:"traslado",l:"🗺 Traslado/Viaje"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{...S.btn(tab===t.id?"primary":"ghost")}}>{t.l}</button>)}</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-        <div style={S.card}>
-          {tab==="renta"?(
-            <div style={{display:"grid",gap:11}}>
-              <Fld label="CLIENTE"><input style={S.inp} value={cli} onChange={e=>setCli(e.target.value)} placeholder="Nombre del cliente"/></Fld>
-              <Fld label="DÍAS"><input style={S.inp} type="number" min="1" value={dias} onChange={e=>setDias(parseInt(e.target.value)||1)}/></Fld>
-              <Fld label="VEHÍCULO"><select style={S.sel} value={selVeh?.id||""} onChange={e=>setSelVeh(CATALOGO.find(v=>v.id===e.target.value)||null)}><option value="">Seleccionar...</option>{CATALOGO.map(v=><option key={v.id} value={v.id}>{v.nombre} — Q{fmt(v.dia)}/día</option>)}</select></Fld>
-              <Fld label="PRECIO PERSONALIZADO"><input style={S.inp} type="number" value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Vacío = catálogo"/></Fld>
-              <Fld label="IVA"><select style={S.sel} value={iva} onChange={e=>setIva(parseInt(e.target.value))}><option value={12}>12% General</option><option value={5}>5% Pequeño Cont.</option><option value={0}>Sin IVA</option></select></Fld>
-              <Fld label="TASA CAMBIO GTQ=1USD"><input style={S.inp} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/></Fld>
-              <Fld label="MÉTODO DE PAGO"><div style={{display:"flex",gap:8}}><button onClick={()=>setPago("efectivo")} style={{...S.btn(pago==="efectivo"?"primary":"ghost"),flex:1,fontSize:12}}>💵 Efectivo/Depósito</button><button onClick={()=>setPago("tarjeta")} style={{...S.btn(pago==="tarjeta"?"warn":"ghost"),flex:1,fontSize:12}}>💳 Tarjeta</button></div></Fld>
-              <Fld label="¿MOSTRAR PRECIO CON TARJETA EN PDF?"><div style={{display:"flex",alignItems:"center",gap:10,paddingTop:6}}><input type="checkbox" checked={mostrarTC} onChange={e=>setMostrarTC(e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/><span style={{fontSize:13,color:T.sub}}>Incluir precio con tarjeta en la cotización PDF</span></div></Fld>
-              <Fld label="NOTAS"><textarea style={{...S.inp,minHeight:44,resize:"vertical"}} value={notas} onChange={e=>setNotas(e.target.value)}/></Fld>
-            </div>
-          ):(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-              <Fld label="CLIENTE" span2><input style={S.inp} value={tf.cliente} onChange={e=>stf("cliente",e.target.value)} placeholder="Nombre del cliente"/></Fld>
-              <Fld label="DÍAS"><input style={S.inp} type="number" value={tf.dias} onChange={e=>stf("dias",e.target.value)}/></Fld>
-              <Fld label="GASTOS VARIOS"><input style={S.inp} type="number" value={tf.varios} onChange={e=>stf("varios",e.target.value)} placeholder="0.00"/></Fld>
-              <Fld label="VEHÍCULO/DÍA"><input style={S.inp} type="number" value={tf.veh} onChange={e=>stf("veh",e.target.value)} placeholder="0.00"/></Fld>
-              <Fld label="PILOTO/DÍA"><input style={S.inp} type="number" value={tf.pil} onChange={e=>stf("pil",e.target.value)} placeholder="0.00"/></Fld>
-              <Fld label="HOSPEDAJE/DÍA"><input style={S.inp} type="number" value={tf.hos} onChange={e=>stf("hos",e.target.value)} placeholder="0.00"/></Fld>
-              <Fld label="ALIMENT./DÍA"><input style={S.inp} type="number" value={tf.ali} onChange={e=>stf("ali",e.target.value)} placeholder="0.00"/></Fld>
-              <Fld label="PRECIO/GALÓN"><input style={S.inp} type="number" value={tf.galon} onChange={e=>stf("galon",e.target.value)} placeholder="0.00"/></Fld>
-              <Fld label="KM/GALÓN"><input style={S.inp} type="number" value={tf.kpg} onChange={e=>stf("kpg",e.target.value)} placeholder="12"/></Fld>
-              <Fld label="DESTINO (tabla de rutas)" span2>
-                <select style={S.sel} value={tf.ruta||""} onChange={e=>{
-                  const r=RUTAS_GT.find(x=>x.d===e.target.value);
-                  if(r){stf("ruta",r.d);stf("kmi",r.km);stf("kmr",r.km);stf("dias",r.dias);}
-                  else stf("ruta",e.target.value);
-                }}>
-                  <option value="">Seleccionar destino (o ingresa km manualmente)</option>
-                  {RUTAS_GT.map(r=><option key={r.d} value={r.d}>{r.d} — {r.km} km · {r.dias} día{r.dias>1?"s":""}</option>)}
-                </select>
-              </Fld>
-              <Fld label="KM IDA"><input style={S.inp} type="number" value={tf.kmi} onChange={e=>stf("kmi",e.target.value)} placeholder="0"/></Fld>
-              <Fld label="KM REGRESO"><input style={S.inp} type="number" value={tf.kmr} onChange={e=>stf("kmr",e.target.value)} placeholder="0"/></Fld>
-              <Fld label="DEPTO"><select style={S.sel} value={tf.dept} onChange={e=>{stf("dept",e.target.value);stf("muni","");}}><option value="">Seleccionar...</option>{Object.keys(GT).map(d=><option key={d} value={d}>{d}</option>)}</select></Fld>
-              <Fld label="MUNICIPIO"><select style={S.sel} value={tf.muni} onChange={e=>stf("muni",e.target.value)} disabled={!tf.dept}><option value="">Seleccionar...</option>{munis.map(m=><option key={m} value={m}>{m}</option>)}</select></Fld>
-              <Fld label="IVA"><select style={S.sel} value={tf.iva} onChange={e=>stf("iva",e.target.value)}><option value="12">12%</option><option value="5">5%</option><option value="0">Sin IVA</option></select></Fld>
-              <Fld label="TASA CAMBIO"><input style={S.inp} type="number" step="0.01" value={tf.exch} onChange={e=>stf("exch",e.target.value)}/></Fld>
-              <Fld label="PAGO" span2><div style={{display:"flex",gap:8}}><button onClick={()=>stf("pago","efectivo")} style={{...S.btn(tf.pago==="efectivo"?"primary":"ghost"),flex:1,fontSize:12}}>💵 Efectivo</button><button onClick={()=>stf("pago","tarjeta")} style={{...S.btn(tf.pago==="tarjeta"?"warn":"ghost"),flex:1,fontSize:12}}>💳 Tarjeta</button></div></Fld>
-            </div>
-          )}
-        </div>
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
-            {tab==="renta"?(
-              <>
-                {cli&&<div style={{fontSize:13,fontWeight:700,marginBottom:6}}>👤 {cli}</div>}
-                {selVeh&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {selVeh.nombre}</div>}
-                <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-                  <div style={S.srow(false)}><span>Días</span><span>{dias}</span></div>
-                  <div style={S.srow(false)}><span>Tarifa</span><span>Q {fmt(rate)}/día</span></div>
-                  <div style={S.srow(false)}><span>Subtotal</span><span>Q {fmt(sub)}</span></div>
-                  <div style={S.srow(false)}><span>IVA {iva}%</span><span>Q {fmt(ivaAmt)}</span></div>
-                  {pago==="tarjeta"&&<div style={{...S.srow(false),color:T.sec}}><span>Recargo TC</span><span>Q {fmt(recTC)}</span></div>}
-                </div>
-                <div style={{background:T.accDim,border:`1px solid ${T.acc}55`,borderRadius:10,padding:"12px 16px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}><span>TOTAL</span><span>Q {fmt(tot)}</span></div>
-                  <div style={{fontSize:12,color:T.sub,marginTop:3}}>$ {fmt(exch>0?tot/exch:0)} USD</div>
-                </div>
-              </>
-            ):(
-              <>
-                {tf.cliente&&<div style={{fontSize:13,fontWeight:700,marginBottom:8}}>👤 {tf.cliente}</div>}
-                <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-                  {[["Vehículo",vT],["Piloto",pT],["Hospedaje",hT],["Aliment.",aT],["Combustible",fuel],["Varios",misc]].map(([l,v],i)=><div key={i} style={S.srow(false)}><span>{l}</span><span>Q {fmt(v)}</span></div>)}
-                  <div style={S.div}/>
-                  <div style={S.srow(false)}><span>Subtotal</span><span>Q {fmt(tsub)}</span></div>
-                  <div style={S.srow(false)}><span>IVA {tf.iva}%</span><span>Q {fmt(tiva)}</span></div>
-                </div>
-                <div style={{background:T.accDim,border:`1px solid ${T.acc}55`,borderRadius:10,padding:"12px 16px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}><span>TOTAL</span><span>Q {fmt(ttot)}</span></div>
-                  <div style={{fontSize:12,color:T.sub,marginTop:3}}>km: {Math.round(tkm)} · gal: {fmt(gals)}</div>
-                </div>
-              </>
-            )}
-          </div>
-          <div style={S.card}>
-            <button onClick={()=>guardar("borrador")} disabled={saving} style={{...S.btn("ghost"),width:"100%",marginBottom:8}}>{saving?"...":"💾 Borrador"}</button>
-            <button onClick={()=>guardar("enviada")} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"✅ Guardar y enviar"}</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ═══ COTIZACIONES PAGE ═══
 function PageCotizaciones({showToast,empId}){
@@ -2922,6 +2558,619 @@ function PageConfiguracion({showToast}){
 }
 
 // ═══ APP PRINCIPAL ═══
+
+
+// ═══ MANTENIMIENTO DE VEHÍCULOS ═══════════════════════════════════════════════
+
+
+function PageCalculadora({showToast,empId}){
+  const [tab,setTab]=useState("renta");
+  const [cli,setCli]=useState("");
+  const [selVeh,setSelVeh]=useState(null);
+  const [dias,setDias]=useState(1);
+  const [iva,setIva]=useState(5);
+  const [pago,setPago]=useState("efectivo");
+  const [conTC,setConTC]=useState(false);
+  const [exch,setExch]=useState(7.70);
+  const [saving,setSaving]=useState(false);
+  const [tf,setTf]=useState({cliente:"",dias:1,veh:0,pil:0,hos:0,ali:0,galon:48,kpg:27,kmi:0,kmr:0,varios:0,iva:5,pago:"efectivo",conTC:false,exch:7.70,ruta:""});
+  const stf=(k,v)=>setTf(p=>({...p,[k]:v}));
+  const tarifaFn=(v,d)=>{if(!v||d===0)return 0;if(d>=30)return v.mes;if(d>=8)return v.sem;return v.dia;};
+  const rate=selVeh?tarifaFn(selVeh,dias):0;
+  const sub=dias*rate;
+  const ivaAmt=Math.round(sub*iva/100*100)/100;
+  const base=sub+ivaAmt;
+  const recTC=conTC?Math.round(base*0.05*100)/100:0;
+  const tot=base+recTC;
+  const d2=parseFloat(tf.dias)||0;
+  const kmi=parseFloat(tf.kmi)||0;
+  const kmr=parseFloat(tf.kmr)||0;
+  const tkm=kmi+kmr;
+  const kpg=parseFloat(tf.kpg)||1;
+  const gals=tkm/kpg;
+  const fuel=gals*(parseFloat(tf.galon)||0);
+  const vT=d2*(parseFloat(tf.veh)||0);
+  const pT=d2*(parseFloat(tf.pil)||0);
+  const hT=d2*(parseFloat(tf.hos)||0);
+  const aT=d2*(parseFloat(tf.ali)||0);
+  const misc=parseFloat(tf.varios)||0;
+  const tsub=vT+pT+hT+aT+fuel+misc;
+  const tiva=tsub*(parseFloat(tf.iva)||0)/100;
+  const tbase=tsub+tiva;
+  const ttcr=tf.conTC?tbase*0.05:0;
+  const ttot=tbase+ttcr;
+
+  const guardar=async(estado)=>{
+    const cn=tab==="renta"?cli:tf.cliente;
+    if(!cn.trim()){showToast("Ingresa el nombre del cliente","err");return;}
+    setSaving(true);
+    const p={empresa_id:empId,tipo:tab,cliente_nombre:cn,numero:"COT-"+Date.now().toString().slice(-6),dias:tab==="renta"?dias:d2,tasa_iva:tab==="renta"?iva:parseFloat(tf.iva)||5,metodo_pago:tab==="renta"?pago:tf.pago,tasa_cambio:tab==="renta"?exch:parseFloat(tf.exch)||7.70,subtotal:tab==="renta"?sub:tsub,total_iva:tab==="renta"?ivaAmt:tiva,recargo_tarjeta:tab==="renta"?recTC:ttcr,total_gtq:tab==="renta"?tot:ttot,total_usd:(tab==="renta"?tot:ttot)/(tab==="renta"?exch:parseFloat(tf.exch)||7.70),vehiculo_nombre:selVeh?.nombre||"",estado,km_ida:kmi,km_regreso:kmr,costo_vehiculo:parseFloat(tf.veh)||0,costo_piloto:parseFloat(tf.pil)||0,costo_hospedaje:parseFloat(tf.hos)||0,costo_alimentacion:parseFloat(tf.ali)||0,precio_galon:parseFloat(tf.galon)||0,km_por_galon:parseFloat(tf.kpg)||0,gastos_varios:misc};
+    const r=await dbIns("cotizaciones",p);
+    if(r&&!r.error){showToast(estado==="enviada"?"Cotización guardada ✔":"Borrador guardado ✔");}
+    else{showToast("Error al guardar","err");}
+    setSaving(false);
+  };
+
+  const Row=({l,v,bold,color})=><div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:bold?14:13,fontWeight:bold?700:400,color:color||(bold?T.txt:T.sub)}}><span>{l}</span><span>{v}</span></div>;
+
+  return(
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {[{id:"renta",l:"🔑 Renta por días"},{id:"traslado",l:"🗺 Traslado/Viaje"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{...S.btn(tab===t.id?"primary":"ghost")}}>{t.l}</button>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
+        {/* FORM */}
+        <div style={S.card}>
+          {tab==="renta"?(
+            <div style={{display:"grid",gap:11}}>
+              <Fld label="CLIENTE"><input style={S.inp} value={cli} onChange={e=>setCli(e.target.value)} placeholder="Nombre del cliente"/></Fld>
+              <Fld label="DÍAS"><input style={S.inp} type="number" min="1" value={dias} onChange={e=>setDias(Math.max(1,parseInt(e.target.value)||1))}/></Fld>
+              <Fld label="VEHÍCULO">
+                <select style={S.sel} value={selVeh?.id||""} onChange={e=>setSelVeh(CATALOGO.find(v=>v.id===e.target.value)||null)}>
+                  <option value="">Seleccionar...</option>
+                  {CATALOGO.map(v=><option key={v.id} value={v.id}>{v.nombre} — Q{fmt(v.dia)}/día</option>)}
+                </select>
+              </Fld>
+              <Fld label="IVA">
+                <select style={S.sel} value={iva} onChange={e=>setIva(parseInt(e.target.value))}>
+                  <option value={12}>12% Régimen General</option>
+                  <option value={5}>5% Pequeño Contribuyente</option>
+                  <option value={0}>Sin IVA</option>
+                </select>
+              </Fld>
+              <Fld label="TASA DE CAMBIO (Q por $1)"><input style={S.inp} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/></Fld>
+              <Fld label="MÉTODO DE PAGO">
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>setPago("efectivo")} style={{...S.btn(pago==="efectivo"?"primary":"ghost"),flex:1}}>💵 Efectivo</button>
+                  <button onClick={()=>setPago("transferencia")} style={{...S.btn(pago==="transferencia"?"primary":"ghost"),flex:1}}>🏦 Transf.</button>
+                </div>
+              </Fld>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
+                <input type="checkbox" id="conTC" checked={conTC} onChange={e=>setConTC(e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/>
+                <label htmlFor="conTC" style={{fontSize:13,color:T.sub,cursor:"pointer"}}>💳 Incluir opción de pago con tarjeta (+5%)</label>
+              </div>
+            </div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+              <Fld label="CLIENTE" span2><input style={S.inp} value={tf.cliente} onChange={e=>stf("cliente",e.target.value)} placeholder="Nombre del cliente"/></Fld>
+              <Fld label="DESTINO (tabla de rutas)" span2>
+                <select style={S.sel} value={tf.ruta} onChange={e=>{
+                  const r=RUTAS_GT.find(x=>x.d===e.target.value);
+                  if(r){stf("ruta",r.d);stf("kmi",r.km);stf("kmr",r.km);stf("dias",r.dias);}
+                  else stf("ruta",e.target.value);
+                }}>
+                  <option value="">Seleccionar destino...</option>
+                  {RUTAS_GT.map(r=><option key={r.d} value={r.d}>{r.d} — {r.km} km · {r.dias}d</option>)}
+                </select>
+              </Fld>
+              <Fld label="DÍAS"><input style={S.inp} type="number" value={tf.dias} onChange={e=>stf("dias",e.target.value)}/></Fld>
+              <Fld label="COSTO VEHÍCULO/DÍA"><input style={S.inp} type="number" value={tf.veh} onChange={e=>stf("veh",e.target.value)} placeholder="0.00"/></Fld>
+              <Fld label="COSTO PILOTO/DÍA"><input style={S.inp} type="number" value={tf.pil} onChange={e=>stf("pil",e.target.value)} placeholder="0.00"/></Fld>
+              <Fld label="HOSPEDAJE/DÍA"><input style={S.inp} type="number" value={tf.hos} onChange={e=>stf("hos",e.target.value)} placeholder="0.00"/></Fld>
+              <Fld label="ALIMENTACIÓN/DÍA"><input style={S.inp} type="number" value={tf.ali} onChange={e=>stf("ali",e.target.value)} placeholder="0.00"/></Fld>
+              <Fld label="PRECIO GALÓN (Q)"><input style={S.inp} type="number" value={tf.galon} onChange={e=>stf("galon",e.target.value)} placeholder="48"/></Fld>
+              <Fld label="KM POR GALÓN"><input style={S.inp} type="number" value={tf.kpg} onChange={e=>stf("kpg",e.target.value)} placeholder="27"/></Fld>
+              <Fld label="KM IDA"><input style={S.inp} type="number" value={tf.kmi} onChange={e=>stf("kmi",e.target.value)} placeholder="0"/></Fld>
+              <Fld label="KM REGRESO"><input style={S.inp} type="number" value={tf.kmr} onChange={e=>stf("kmr",e.target.value)} placeholder="0"/></Fld>
+              <Fld label="GASTOS VARIOS"><input style={S.inp} type="number" value={tf.varios} onChange={e=>stf("varios",e.target.value)} placeholder="0.00"/></Fld>
+              <Fld label="IVA">
+                <select style={S.sel} value={tf.iva} onChange={e=>stf("iva",e.target.value)}>
+                  <option value="12">12%</option><option value="5">5%</option><option value="0">Sin IVA</option>
+                </select>
+              </Fld>
+              <Fld label="TASA CAMBIO"><input style={S.inp} type="number" step="0.01" value={tf.exch} onChange={e=>stf("exch",e.target.value)}/></Fld>
+              <Fld label="PAGO" span2>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>stf("pago","efectivo")} style={{...S.btn(tf.pago==="efectivo"?"primary":"ghost"),flex:1}}>💵 Efectivo</button>
+                  <button onClick={()=>stf("pago","transferencia")} style={{...S.btn(tf.pago==="transferencia"?"primary":"ghost"),flex:1}}>🏦 Transf.</button>
+                </div>
+              </Fld>
+              <div style={{gridColumn:"span 2",display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
+                <input type="checkbox" id="conTC2" checked={tf.conTC} onChange={e=>stf("conTC",e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/>
+                <label htmlFor="conTC2" style={{fontSize:13,color:T.sub,cursor:"pointer"}}>💳 Incluir opción con tarjeta (+5%)</label>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* RESUMEN */}
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={S.card}>
+            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen del presupuesto</div>
+            {tab==="renta"?(
+              <>
+                {selVeh&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {selVeh.nombre} · {dias} día{dias!==1?"s":""}</div>}
+                <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
+                  <Row l="Tarifa" v={"Q "+fmt(rate)+"/día"}/>
+                  <Row l="Subtotal" v={"Q "+fmt(sub)}/>
+                  <Row l={"IVA "+iva+"%"} v={"Q "+fmt(ivaAmt)}/>
+                  {conTC&&<Row l="Recargo tarjeta (5%)" v={"Q "+fmt(recTC)} color={T.sec}/>}
+                </div>
+                <div style={{background:T.accDim,border:"1px solid "+T.acc+"55",borderRadius:10,padding:"12px 16px",marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}>
+                    <span>{conTC?"Con tarjeta":"TOTAL"}</span><span>Q {fmt(tot)}</span>
+                  </div>
+                  {conTC&&<div style={{fontSize:12,color:T.sub}}>Efectivo: Q {fmt(base)}</div>}
+                  <div style={{fontSize:12,color:T.sub,marginTop:3}}>$ {fmt(exch>0?tot/exch:0)} USD</div>
+                </div>
+              </>
+            ):(
+              <>
+                {tf.ruta&&<div style={{fontSize:12,color:T.acc,marginBottom:8}}>📍 {tf.ruta} · {Math.round(tkm)} km totales</div>}
+                <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
+                  <Row l={"Vehículo (×"+d2+"d)"} v={"Q "+fmt(vT)}/>
+                  <Row l={"Piloto (×"+d2+"d)"} v={"Q "+fmt(pT)}/>
+                  <Row l={"Hospedaje (×"+d2+"d)"} v={"Q "+fmt(hT)}/>
+                  <Row l={"Aliment. (×"+d2+"d)"} v={"Q "+fmt(aT)}/>
+                  <Row l={"Combustible ("+fmt(gals)+" gal)"} v={"Q "+fmt(fuel)}/>
+                  <Row l="Varios" v={"Q "+fmt(misc)}/>
+                  <div style={{borderTop:"1px solid "+T.bord,margin:"8px 0"}}/>
+                  <Row l="Subtotal" v={"Q "+fmt(tsub)}/>
+                  <Row l={"IVA "+tf.iva+"%"} v={"Q "+fmt(tiva)}/>
+                  {tf.conTC&&<Row l="Recargo tarjeta (5%)" v={"Q "+fmt(ttcr)} color={T.sec}/>}
+                </div>
+                <div style={{background:T.accDim,border:"1px solid "+T.acc+"55",borderRadius:10,padding:"12px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}>
+                    <span>TOTAL</span><span>Q {fmt(ttot)}</span>
+                  </div>
+                  {tf.conTC&&<div style={{fontSize:12,color:T.sub}}>Sin tarjeta: Q {fmt(tbase)}</div>}
+                </div>
+              </>
+            )}
+          </div>
+          <div style={S.card}>
+            <button onClick={()=>guardar("borrador")} disabled={saving} style={{...S.btn("ghost"),width:"100%",marginBottom:8}}>{saving?"Guardando...":"💾 Guardar como borrador"}</button>
+            <button onClick={()=>guardar("enviada")} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"Guardando...":"✅ Guardar y enviar cotización"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PageClientes({showToast,empId}){
+  const [rows,setRows]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [vista,setVista]=useState("lista");
+  const [editItem,setEditItem]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const [f,setF]=useState({nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});
+  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+  const load=async()=>{setLoading(true);const d=await dbGet("clientes","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
+  useEffect(()=>{load();},[]);
+  const abrirEditar=c=>{setF({nombre:c.nombre||"",tipo:c.tipo||"empresa",nit:c.nit||"",direccion:c.direccion||"",telefono:c.telefono||"",email:c.email||""});setEditItem(c);setVista("form");};
+  const abrirNuevo=()=>{setF({nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});setEditItem(null);setVista("form");};
+  const guardar=async()=>{
+    if(!f.nombre.trim()){showToast("Nombre requerido","err");return;}
+    setSaving(true);
+    const p={...f,empresa_id:empId};
+    if(editItem?.id) await dbUpd("clientes",editItem.id,p);
+    else await dbIns("clientes",p);
+    showToast("Guardado ✔");setSaving(false);setVista("lista");setEditItem(null);load();
+  };
+  const del=async id=>{if(!confirm("¿Eliminar cliente?"))return;await dbDel("clientes",id);showToast("Eliminado");load();};
+  const TC={empresa:{c:T.sec,bg:T.secDim,l:"Empresa"},gobierno:{c:T.blue,bg:T.blueDim,l:"Gobierno/ONG"},persona:{c:T.acc,bg:T.accDim,l:"Persona"}};
+  if(vista==="form")return(
+    <div style={{maxWidth:600}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:14,fontWeight:700}}>{editItem?"Editar":"Nuevo"} cliente</div>
+        <button onClick={()=>{setVista("lista");setEditItem(null);}} style={S.btn("ghost")}>← Volver</button>
+      </div>
+      <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre completo"/></Fld>
+        <Fld label="TIPO DE CLIENTE">
+          <select style={S.sel} value={f.tipo} onChange={e=>sf("tipo",e.target.value)}>
+            <option value="empresa">Empresa</option>
+            <option value="gobierno">Gobierno / ONG</option>
+            <option value="persona">Persona natural</option>
+          </select>
+        </Fld>
+        <Fld label="NIT"><input style={S.inp} value={f.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
+        <Fld label="TELÉFONO"><input style={S.inp} value={f.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
+        <Fld label="CORREO ELECTRÓNICO"><input style={S.inp} type="email" value={f.email} onChange={e=>sf("email",e.target.value)} placeholder="correo@empresa.com"/></Fld>
+        <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección completa"/></Fld>
+        <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
+          <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar cliente"}</button>
+          <button onClick={()=>{setVista("lista");setEditItem(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:14,fontWeight:700}}>Directorio de Clientes ({rows.length})</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
+          <button onClick={abrirNuevo} style={{...S.btn("primary"),fontSize:12}}>+ Nuevo cliente</button>
+        </div>
+      </div>
+      {loading?<Spinner/>:rows.length===0?<Empty icon="👥" msg="Sin clientes registrados" action="+ Agregar cliente" onAction={abrirNuevo}/>:(
+        <div style={S.card}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Email",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {rows.map(c=>{
+                const tc=TC[c.tipo]||TC.empresa;
+                return(
+                  <tr key={c.id}>
+                    <td style={{...S.td,fontWeight:600}}>{c.nombre}</td>
+                    <td style={S.td}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,color:tc.c,background:tc.bg}}>{tc.l}</span></td>
+                    <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"—"}</td>
+                    <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
+                    <td style={{...S.td,color:T.sub,fontSize:12}}>{c.email||"—"}</td>
+                    <td style={S.td}>
+                      <div style={{display:"flex",gap:4}}>
+                        <button onClick={()=>abrirEditar(c)} style={{...S.btn("ghost"),padding:"3px 9px",fontSize:11}}>✏️</button>
+                        <button onClick={()=>del(c.id)} style={{...S.btn("danger"),padding:"3px 9px",fontSize:11}}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PageFlota({showToast,empId}){
+  const [rows,setRows]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [vista,setVista]=useState("lista");
+  const [editItem,setEditItem]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const [f,setF]=useState({placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});
+  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+  const TIPOS=["Sedán","SUV","Pickup","Van","Microbús","Bus"];
+  const load=async()=>{setLoading(true);const d=await dbGet("vehiculos","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
+  useEffect(()=>{load();},[]);
+  const abrirEditar=v=>{setF({placa:v.placa||"",marca:v.marca||"",modelo:v.modelo||"",anio:v.anio||new Date().getFullYear(),tipo:v.tipo||"SUV",estado:v.estado||"disponible",km_actual:v.km_actual||0});setEditItem(v);setVista("form");};
+  const abrirNuevo=()=>{setF({placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});setEditItem(null);setVista("form");};
+  const guardar=async()=>{
+    if(!f.placa.trim()){showToast("Placa requerida","err");return;}
+    setSaving(true);
+    const p={...f,empresa_id:empId,anio:parseInt(f.anio)||new Date().getFullYear(),km_actual:parseInt(f.km_actual)||0};
+    if(editItem?.id) await dbUpd("vehiculos",editItem.id,p);
+    else await dbIns("vehiculos",p);
+    showToast("Guardado ✔");setSaving(false);setVista("lista");setEditItem(null);load();
+  };
+  const del=async id=>{if(!confirm("¿Eliminar vehículo?"))return;await dbDel("vehiculos",id);showToast("Eliminado");load();};
+  const chEst=async(id,estado)=>{await dbUpd("vehiculos",id,{estado});showToast("Estado actualizado");load();};
+  const disp=rows.filter(r=>r.estado==="disponible").length;
+  const rent=rows.filter(r=>r.estado==="rentado").length;
+  const mant=rows.filter(r=>r.estado==="mantenimiento").length;
+  if(vista==="form")return(
+    <div style={{maxWidth:580}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:14,fontWeight:700}}>{editItem?"Editar":"Registrar"} vehículo</div>
+        <button onClick={()=>{setVista("lista");setEditItem(null);}} style={S.btn("ghost")}>← Volver</button>
+      </div>
+      <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Fld label="PLACA"><input style={S.inp} value={f.placa} onChange={e=>sf("placa",e.target.value.toUpperCase())} placeholder="P-000-ABC"/></Fld>
+        <Fld label="AÑO"><input style={S.inp} type="number" value={f.anio} onChange={e=>sf("anio",e.target.value)}/></Fld>
+        <Fld label="MARCA"><input style={S.inp} value={f.marca} onChange={e=>sf("marca",e.target.value)} placeholder="Toyota"/></Fld>
+        <Fld label="MODELO"><input style={S.inp} value={f.modelo} onChange={e=>sf("modelo",e.target.value)} placeholder="RAV4"/></Fld>
+        <Fld label="TIPO"><select style={S.sel} value={f.tipo} onChange={e=>sf("tipo",e.target.value)}>{TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select></Fld>
+        <Fld label="ESTADO">
+          <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
+            <option value="disponible">✅ Disponible</option>
+            <option value="rentado">🔵 Rentado</option>
+            <option value="mantenimiento">🟡 Mantenimiento</option>
+          </select>
+        </Fld>
+        <Fld label="KILOMETRAJE ACTUAL" span2><input style={S.inp} type="number" value={f.km_actual} onChange={e=>sf("km_actual",e.target.value)} placeholder="0"/></Fld>
+        <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
+          <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar"}</button>
+          <button onClick={()=>{setVista("lista");setEditItem(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+        {[{l:"Disponibles",v:disp,c:T.acc,bg:T.accDim},{l:"Rentados",v:rent,c:T.blue,bg:T.blueDim},{l:"Mantenimiento",v:mant,c:T.sec,bg:T.secDim}].map((s,i)=>(
+          <div key={i} style={{background:s.bg,border:"1px solid "+s.c+"44",borderRadius:12,padding:"14px 18px",display:"flex",gap:14,alignItems:"center"}}>
+            <div style={{fontSize:28,fontWeight:800,color:s.c}}>{s.v}</div>
+            <div style={{fontSize:12,color:T.sub}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{fontSize:14,fontWeight:700}}>Flota ({rows.length} vehículos)</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
+          <button onClick={abrirNuevo} style={{...S.btn("primary"),fontSize:12}}>+ Registrar vehículo</button>
+        </div>
+      </div>
+      {loading?<Spinner/>:rows.length===0?<Empty icon="🚗" msg="Sin vehículos registrados" action="+ Registrar" onAction={abrirNuevo}/>:(
+        <div style={S.card}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>{["Vehículo","Placa","Año","Tipo","Km actual","Estado","Cambiar estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {rows.map(v=>{
+                const e=EST_VEH[v.estado]||EST_VEH.disponible;
+                return(
+                  <tr key={v.id}>
+                    <td style={{...S.td,fontWeight:600}}>{v.marca} {v.modelo}</td>
+                    <td style={{...S.td,fontFamily:"monospace",fontWeight:700,color:T.acc}}>{v.placa}</td>
+                    <td style={{...S.td,color:T.sub}}>{v.anio}</td>
+                    <td style={S.td}>{v.tipo}</td>
+                    <td style={S.td}>{(v.km_actual||0).toLocaleString()} km</td>
+                    <td style={S.td}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,color:e.c,background:e.bg}}>{e.l}</span></td>
+                    <td style={S.td}>
+                      <select style={{...S.sel,padding:"4px 8px",fontSize:11,width:"auto"}} value={v.estado} onChange={ev=>chEst(v.id,ev.target.value)}>
+                        <option value="disponible">✅ Disponible</option>
+                        <option value="rentado">🔵 Rentado</option>
+                        <option value="mantenimiento">🟡 Mantenimiento</option>
+                      </select>
+                    </td>
+                    <td style={S.td}>
+                      <div style={{display:"flex",gap:4}}>
+                        <button onClick={()=>abrirEditar(v)} style={{...S.btn("ghost"),padding:"3px 9px",fontSize:11}}>✏️</button>
+                        <button onClick={()=>del(v.id)} style={{...S.btn("danger"),padding:"3px 9px",fontSize:11}}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PageReservas({showToast,empId}){
+  const [rows,setRows]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [vista,setVista]=useState("lista");
+  const [editItem,setEditItem]=useState(null);
+  const [filtro,setFiltro]=useState("todas");
+  const load=async()=>{setLoading(true);const d=await dbGet("reservas","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
+  useEffect(()=>{load();},[]);
+  const chEst=async(id,estado)=>{
+    await dbUpd("reservas",id,{estado});
+    if(estado==="en_curso"){
+      const res=rows.find(r=>r.id===id);
+      if(res?.vehiculo_id) await dbUpd("vehiculos",res.vehiculo_id,{estado:"rentado"});
+    }
+    if(estado==="completada"){
+      const res=rows.find(r=>r.id===id);
+      if(res?.vehiculo_id) await dbUpd("vehiculos",res.vehiculo_id,{estado:"mantenimiento"});
+    }
+    if(estado==="cancelada"){
+      const res=rows.find(r=>r.id===id);
+      if(res?.vehiculo_id) await dbUpd("vehiculos",res.vehiculo_id,{estado:"disponible"});
+    }
+    showToast("Estado actualizado");load();
+  };
+  const del=async id=>{if(!confirm("¿Eliminar reserva?"))return;await dbDel("reservas",id);showToast("Eliminada");load();};
+  const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro);
+  if(vista==="form")return <FormReserva initial={editItem} empId={empId} onSave={()=>{setVista("lista");setEditItem(null);load();showToast(editItem?"Actualizada ✔":"Guardada ✔");}} onCancel={()=>{setVista("lista");setEditItem(null);}}/>;
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
+        {[{l:"Total",v:rows.length,c:T.acc},{l:"Pendientes",v:rows.filter(r=>r.estado==="pendiente").length,c:T.mut},{l:"Confirmadas",v:rows.filter(r=>r.estado==="confirmada").length,c:T.acc},{l:"En curso",v:rows.filter(r=>r.estado==="en_curso").length,c:T.blue},{l:"Completadas",v:rows.filter(r=>r.estado==="completada").length,c:T.acc}].map((s,i)=>(
+          <div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}>
+            <div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div>
+            <div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        {["todas","pendiente","confirmada","en_curso","completada","cancelada"].map(f=>(
+          <button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>
+            {f==="en_curso"?"En curso":f.charAt(0).toUpperCase()+f.slice(1)}
+          </button>
+        ))}
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
+        <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva reserva</button>
+      </div>
+      {loading?<Spinner/>:filtered.length===0?<Empty icon="📭" msg="Sin reservas" action="+ Nueva reserva" onAction={()=>setVista("form")}/>:(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {filtered.map(r=>{
+            const e=EST_RES[r.estado]||EST_RES.pendiente;
+            const sig=FLUJO_RES[r.estado]||[];
+            return(
+              <div key={r.id} style={S.card}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                  <div>
+                    <div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div>
+                    <div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>
+                    <div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"🔑":"🗺"} {fmtD(r.fecha_inicio)}{r.fecha_fin?" → "+fmtD(r.fecha_fin):""}{r.vehiculo_nombre?" · "+r.vehiculo_nombre:""}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,color:e.c,background:e.bg}}>{e.l}</span>
+                    <div style={{fontSize:15,fontWeight:700,color:T.acc,marginTop:4}}>Q {fmt(r.monto)}</div>
+                    {parseFloat(r.saldo)>0&&<div style={{fontSize:11,color:T.sec}}>Saldo: Q {fmt(r.saldo)}</div>}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6,paddingTop:10,borderTop:"1px solid "+T.bord+"22",flexWrap:"wrap"}}>
+                  {sig.map(s=><button key={s.v} onClick={()=>chEst(r.id,s.v)} style={{...S.btn(s.s),fontSize:11,padding:"5px 10px"}}>{s.l}</button>)}
+                  <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"5px 10px"}}>✏️ Editar</button>
+                  <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"5px 10px"}}>🗑️</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PageMantenimiento({showToast,empId}){
+  const [rows,setRows]=useState([]);
+  const [vehiculos,setVehiculos]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [showForm,setShowForm]=useState(false);
+  const [editItem,setEditItem]=useState(null);
+  const [saving,setSaving]=useState(false);
+  const EMPTY={vehiculo_id:"",vehiculo_nombre:"",tipo:"preventivo",descripcion:"",km_entrada:0,km_salida:0,costo:0,proveedor:"",fecha_entrada:today(),fecha_salida:"",estado:"en_proceso",notas:""};
+  const [f,setF]=useState({...EMPTY});
+  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+  const TIPOS=["preventivo","correctivo","aceite","llantas","frenos","electricidad","carrocería","lavado","otro"];
+  const load=async()=>{
+    setLoading(true);
+    const [m,v]=await Promise.all([dbGet("mantenimientos",""),dbGet("vehiculos","")]);
+    setRows(Array.isArray(m)?m:[]);
+    setVehiculos(Array.isArray(v)?v:[]);
+    setLoading(false);
+  };
+  useEffect(()=>{load();},[]);
+  const abrirNuevo=()=>{setEditItem(null);setF({...EMPTY});setShowForm(true);};
+  const abrirEditar=item=>{setEditItem(item);setF({...item,fecha_entrada:item.fecha_entrada?.slice(0,10)||today(),fecha_salida:item.fecha_salida?.slice(0,10)||""});setShowForm(true);};
+  const guardar=async()=>{
+    if(!f.vehiculo_nombre||!f.descripcion){showToast("Vehículo y descripción requeridos","err");return;}
+    setSaving(true);
+    const payload={...f,empresa_id:empId,km_entrada:parseInt(f.km_entrada)||0,km_salida:parseInt(f.km_salida)||0,costo:parseFloat(f.costo)||0};
+    if(editItem?.id){
+      await dbUpd("mantenimientos",editItem.id,payload);
+      if(parseInt(f.km_salida)>0&&f.vehiculo_id) await dbUpd("vehiculos",f.vehiculo_id,{km_actual:parseInt(f.km_salida)});
+    } else {
+      await dbIns("mantenimientos",payload);
+      if(f.vehiculo_id) await dbUpd("vehiculos",f.vehiculo_id,{estado:"mantenimiento"});
+    }
+    showToast("Guardado ✔");setSaving(false);setShowForm(false);setEditItem(null);load();
+  };
+  const terminar=async item=>{
+    await dbUpd("mantenimientos",item.id,{estado:"completado",fecha_salida:today()});
+    if(item.vehiculo_id) await dbUpd("vehiculos",item.vehiculo_id,{estado:"disponible"});
+    showToast("Completado ✔ — vehículo disponible");load();
+  };
+  const del=async id=>{if(!confirm("¿Eliminar?"))return;await dbDel("mantenimientos",id);showToast("Eliminado");load();};
+  const necesitaMant=veh=>{
+    const ultimoKm=rows.filter(r=>r.vehiculo_id===veh.id&&r.estado==="completado").reduce((max,r)=>Math.max(max,r.km_salida||0),0);
+    return(veh.km_actual||0)-ultimoKm>=5000;
+  };
+  const alertas=vehiculos.filter(necesitaMant);
+  const totalCosto=rows.reduce((s,r)=>s+(parseFloat(r.costo)||0),0);
+  return(
+    <div>
+      {alertas.length>0&&(
+        <div style={{background:T.redDim,border:"1px solid "+T.red+"44",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.red,marginBottom:6}}>🔴 Requieren mantenimiento (≥5,000 km desde último servicio)</div>
+          {alertas.map(v=><div key={v.id} style={{fontSize:12,color:T.txt}}>• {v.marca} {v.modelo} ({v.placa}) — {(v.km_actual||0).toLocaleString()} km</div>)}
+        </div>
+      )}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+        {[{l:"Total registros",v:rows.length,c:T.acc},{l:"En proceso",v:rows.filter(r=>r.estado==="en_proceso").length,c:T.sec},{l:"Completados",v:rows.filter(r=>r.estado==="completado").length,c:T.acc},{l:"Costo total",v:"Q "+fmt(totalCosto),c:T.red}].map((s,i)=>(
+          <div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}>
+            <div style={{fontSize:i===3?13:22,fontWeight:800,color:s.c}}>{s.v}</div>
+            <div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:14}}>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
+        <button onClick={abrirNuevo} style={{...S.btn("primary"),fontSize:12}}>+ Registrar mantenimiento</button>
+      </div>
+      {showForm&&(
+        <div style={{...S.card,marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>{editItem?"Editar":"Nuevo"} registro de mantenimiento</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+            <Fld label="VEHÍCULO" span2>
+              <select style={S.sel} value={f.vehiculo_id} onChange={e=>{const v=vehiculos.find(x=>x.id===e.target.value);sf("vehiculo_id",e.target.value);sf("vehiculo_nombre",v?v.marca+" "+v.modelo+" ("+v.placa+")":"");if(v)sf("km_entrada",v.km_actual||0);}}>
+                <option value="">Seleccionar vehículo...</option>
+                {vehiculos.map(v=><option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa} · {(v.km_actual||0).toLocaleString()} km</option>)}
+              </select>
+            </Fld>
+            <Fld label="TIPO"><select style={S.sel} value={f.tipo} onChange={e=>sf("tipo",e.target.value)}>{TIPOS.map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}</select></Fld>
+            <Fld label="ESTADO"><select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}><option value="en_proceso">🔧 En proceso</option><option value="completado">✅ Completado</option></select></Fld>
+            <Fld label="DESCRIPCIÓN DEL TRABAJO" span2><textarea style={{...S.inp,minHeight:60,resize:"vertical"}} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Cambio de aceite 15W40, filtro de aceite y filtro de aire..."/></Fld>
+            <Fld label="KM AL ENTRAR"><input style={S.inp} type="number" value={f.km_entrada} onChange={e=>sf("km_entrada",e.target.value)}/></Fld>
+            <Fld label="KM AL SALIR"><input style={S.inp} type="number" value={f.km_salida} onChange={e=>sf("km_salida",e.target.value)} placeholder="Al terminar"/></Fld>
+            <Fld label="COSTO (GTQ)"><input style={S.inp} type="number" step="0.01" value={f.costo} onChange={e=>sf("costo",e.target.value)} placeholder="0.00"/></Fld>
+            <Fld label="TALLER / PROVEEDOR"><input style={S.inp} value={f.proveedor} onChange={e=>sf("proveedor",e.target.value)} placeholder="Nombre del taller"/></Fld>
+            <Fld label="FECHA ENTRADA"><input style={S.inp} type="date" value={f.fecha_entrada} onChange={e=>sf("fecha_entrada",e.target.value)}/></Fld>
+            <Fld label="FECHA SALIDA"><input style={S.inp} type="date" value={f.fecha_salida} onChange={e=>sf("fecha_salida",e.target.value)}/></Fld>
+            <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones..."/></Fld>
+            <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
+              <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar"}</button>
+              <button onClick={()=>{setShowForm(false);setEditItem(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {loading?<Spinner/>:rows.length===0?<Empty icon="🔧" msg="Sin registros de mantenimiento" action="+ Registrar" onAction={abrirNuevo}/>:(
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {rows.map(r=>{
+            const veh=vehiculos.find(v=>v.id===r.vehiculo_id);
+            const kmAct=veh?.km_actual||0;
+            const kmDesde=r.estado==="completado"?kmAct-(r.km_salida||0):0;
+            const alerta=kmDesde>=5000;
+            return(
+              <div key={r.id} style={{...S.card,borderLeft:"3px solid "+(r.estado==="completado"?T.acc:T.sec)}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700}}>{r.vehiculo_nombre}</div>
+                    <div style={{fontSize:12,color:T.sub,marginTop:2}}>🔧 {r.tipo} · {r.proveedor||"Sin taller"} · {fmtD(r.fecha_entrada)}</div>
+                    <div style={{fontSize:12,color:T.txt,marginTop:4}}>{r.descripcion}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,color:r.estado==="completado"?T.acc:T.sec,background:r.estado==="completado"?T.accDim:T.secDim}}>{r.estado==="completado"?"✅ Completado":"🔧 En proceso"}</span>
+                    <div style={{fontSize:15,fontWeight:700,color:T.red,marginTop:4}}>Q {fmt(r.costo)}</div>
+                    <div style={{fontSize:11,color:T.sub}}>KM entrada: {(r.km_entrada||0).toLocaleString()}{r.km_salida>0?" · Salida: "+(r.km_salida).toLocaleString():""}</div>
+                    {alerta&&<div style={{fontSize:10,fontWeight:700,color:T.red,marginTop:2}}>🔴 +{kmDesde.toLocaleString()} km — necesita mantenimiento</div>}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6,paddingTop:8,borderTop:"1px solid "+T.bord+"22",flexWrap:"wrap"}}>
+                  {r.estado==="en_proceso"&&<button onClick={()=>terminar(r)} style={{...S.btn("primary"),fontSize:11,padding:"5px 12px"}}>✅ Marcar completado</button>}
+                  <button onClick={()=>abrirEditar(r)} style={{...S.btn("ghost"),fontSize:11,padding:"5px 12px"}}>✏️ Editar</button>
+                  <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"5px 12px"}}>🗑️</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Error Boundary para capturar errores de renderizado ──────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props){ super(props); this.state={hasError:false,error:null}; }
+  static getDerivedStateFromError(error){ return {hasError:true,error}; }
+  render(){
+    if(this.state.hasError){
+      return <div style={{padding:24,background:"#162032",borderRadius:12,border:"1px solid #EF4444",margin:16}}>
+        <div style={{fontSize:14,fontWeight:700,color:"#EF4444",marginBottom:8}}>⚠️ Error en este módulo</div>
+        <div style={{fontSize:12,color:"#94A3B8",fontFamily:"monospace"}}>{String(this.state.error)}</div>
+        <button onClick={()=>this.setState({hasError:false,error:null})} style={{marginTop:12,padding:"6px 14px",background:"#00D4AA",border:"none",borderRadius:6,fontWeight:600,color:"#0A0F1E",cursor:"pointer"}}>↺ Reintentar</button>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
+
+
 export default function App(){
   const [pag,setPag]=useState("dashboard");
   const [toast,setToast]=useState(null);
@@ -2967,13 +3216,14 @@ export default function App(){
   const NAV=[
     {id:"sep1",label:"PRINCIPAL",sep:true},
     {id:"dashboard",icon:"📊",label:"Dashboard"},
-    {id:"sep2",label:"OPERACIÓN",sep:true},
-    {id:"flota",icon:"🚗",label:"Flota"},
-    {id:"reservas",icon:"📅",label:"Reservas"},
-    {id:"clientes",icon:"👥",label:"Clientes"},
-    {id:"sep3",label:"PRESUPUESTOS",sep:true},
+    {id:"sep2",label:"PRESUPUESTOS",sep:true},
     {id:"calculadora",icon:"🧮",label:"Calculadora"},
     {id:"cotizaciones",icon:"📋",label:"Cotizaciones"},
+    {id:"reservas",icon:"📅",label:"Reservas"},
+    {id:"sep3",label:"OPERACIÓN",sep:true},
+    {id:"flota",icon:"🚗",label:"Flota"},
+    {id:"mantenimiento",icon:"🔧",label:"Mantenimiento"},
+    {id:"clientes",icon:"👥",label:"Clientes"},
     {id:"sep4",label:"FINANZAS",sep:true},
     {id:"facturacion",icon:"🧾",label:"Facturación FEL"},
     {id:"banca",icon:"🏦",label:"La Banca"},
@@ -2991,6 +3241,7 @@ export default function App(){
     if(pag==="calculadora")  return <PageCalculadora showToast={showToast} empId={empId}/>;
     if(pag==="cotizaciones") return <PageCotizaciones showToast={showToast} empId={empId}/>;
     if(pag==="facturacion")  return <PageFacturacion showToast={showToast} empId={empId}/>;
+    if(pag==="mantenimiento") return <PageMantenimiento showToast={showToast} empId={empId}/>;
     if(pag==="banca")        return <PageBanca showToast={showToast} empId={empId}/>;
     if(pag==="gastos")       return <PageGastos showToast={showToast} empId={empId}/>;
     if(pag==="reportes")     return <PageReportes/>;
@@ -3028,7 +3279,7 @@ export default function App(){
         </div>
         <div style={{flex:1,overflowY:"auto",padding:20}}>
           {toast&&<Toast msg={toast.msg} type={toast.type}/>}
-          {renderPage()}
+          <ErrorBoundary>{renderPage()}</ErrorBoundary>
         </div>
       </div>
     </div>
