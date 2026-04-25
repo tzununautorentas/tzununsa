@@ -2246,6 +2246,257 @@ function FormReserva({initial,onSave,onCancel,empId}){
 
 
 // ═══ DASHBOARD ═══
+
+// ═══ EXPORTAR UNIVERSAL ════════════════════════════════════════════════════════
+function ModalExportar({titulo,datos,campos,onClose}){
+  const [modulo,setModulo]=useState("todo");
+  const [formato,setFormato]=useState("csv");
+  const [fechaIni,setFechaIni]=useState("");
+  const [fechaFin,setFechaFin]=useState("");
+
+  const filtrar=()=>{
+    if(!fechaIni&&!fechaFin) return datos;
+    return datos.filter(r=>{
+      const f=r.fecha||r.created_at||r.fecha_inicio||"";
+      if(fechaIni&&f<fechaIni) return false;
+      if(fechaFin&&f>fechaFin) return false;
+      return true;
+    });
+  };
+
+  const exportar=()=>{
+    const rows=filtrar();
+    const headers=campos.map(c=>c.label);
+    const body=rows.map(r=>campos.map(c=>{
+      const v=c.key.split(".").reduce((o,k)=>o?.[k],r);
+      return String(v??"-");
+    }));
+
+    if(formato==="pdf"){
+      const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+      <title>${titulo}</title>
+      <style>body{font-family:Arial,sans-serif;padding:20px;color:#1E293B}
+      h2{color:#1B2D5C}table{width:100%;border-collapse:collapse;font-size:11px}
+      th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left}
+      td{padding:5px 8px;border-bottom:1px solid #E2E8F0}
+      tr:nth-child(even){background:#F8FAFC}
+      @media print{button{display:none}}</style></head><body>
+      <h2>Tz'unun AutoRentas — ${titulo}</h2>
+      <p>Generado: ${new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})} · ${rows.length} registros</p>
+      <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${body.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table><script>window.onload=()=>window.print();</script></body></html>`;
+      const w=window.open("","_blank");w.document.write(html);w.document.close();
+      onClose();return;
+    }
+
+    const bom="﻿";
+    const sep=formato==="csv"?",":"	";
+    const ext=formato==="csv"?".csv":".xls";
+    const csv=bom+[headers.join(sep),...body.map(r=>r.map(v=>`"${v.replace(/"/g,'""')}"`).join(sep))].join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download=titulo.replace(/\s+/g,"_")+ext;a.click();
+    URL.revokeObjectURL(url);
+    onClose();
+  };
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:T.card,borderRadius:16,border:"1px solid "+T.bord,width:"100%",maxWidth:480,padding:28}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div style={{fontSize:16,fontWeight:800}}>📤 Exportar — {titulo}</div>
+          <button onClick={onClose} style={{background:"transparent",border:"none",color:T.sub,cursor:"pointer",fontSize:18}}>✕</button>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label style={S.lbl}>PERÍODO</label>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div><label style={{...S.lbl,fontSize:10}}>DESDE</label><input style={S.inp} type="date" value={fechaIni} onChange={e=>setFechaIni(e.target.value)}/></div>
+            <div><label style={{...S.lbl,fontSize:10}}>HASTA</label><input style={S.inp} type="date" value={fechaFin} onChange={e=>setFechaFin(e.target.value)}/></div>
+          </div>
+          {(fechaIni||fechaFin)&&<div style={{fontSize:11,color:T.acc,marginTop:4}}>{filtrar().length} registros en el período</div>}
+        </div>
+
+        <div style={{marginBottom:20}}>
+          <label style={S.lbl}>FORMATO DE EXPORTACIÓN</label>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {[["csv","📄 CSV (valor separado por coma)"],["xls","📊 XLS (compatible con Microsoft Excel)"],["pdf","🖨️ PDF (para imprimir)"]].map(([v,l])=>(
+              <label key={v} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 14px",borderRadius:8,background:formato===v?T.accDim:T.surf,border:"1px solid "+(formato===v?T.acc:T.bord)}}>
+                <input type="radio" name="formato" value={v} checked={formato===v} onChange={()=>setFormato(v)} style={{width:16,height:16,accentColor:T.acc}}/>
+                <span style={{fontSize:13}}>{l}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div style={{fontSize:11,color:T.mut,marginBottom:16,padding:"8px 12px",background:T.surf,borderRadius:6}}>
+          Se exportarán <b style={{color:T.acc}}>{filtrar().length}</b> registros con {campos.length} campos.
+        </div>
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={exportar} style={{...S.btn("primary"),flex:2,padding:12,fontSize:14}}>📤 Exportar</button>
+          <button onClick={onClose} style={{...S.btn("ghost"),flex:1,padding:12}}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══ PAGOS RECIBIDOS ══════════════════════════════════════════════════════════
+function PagePagos({showToast,empId}){
+  const [rows,setRows]=useState([]);
+  const [facturas,setFacturas]=useState([]);
+  const [reservas,setReservas]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [showForm,setShowForm]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [exportar,setExportar]=useState(false);
+  const [f,setF]=useState({fecha:today(),monto:"",metodo:"transferencia",referencia:"",factura_id:"",reserva_id:"",concepto:"",banco:"",notas:""});
+  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+
+  const load=async()=>{
+    setLoading(true);
+    const [p,fa,re]=await Promise.all([
+      dbGet("pagos_recibidos",""),
+      dbGet("facturas","&estado=in.(emitida,certificada,parcial)&select=id,numero,nombre_receptor,total,saldo_pendiente"),
+      dbGet("reservas","&estado=in.(confirmada,en_curso)&select=id,numero,cliente_nombre,monto,saldo"),
+    ]);
+    setRows(Array.isArray(p)?p:[]);
+    setFacturas(Array.isArray(fa)?fa:[]);
+    setReservas(Array.isArray(re)?re:[]);
+    setLoading(false);
+  };
+  useEffect(()=>{load();},[]);
+
+  const guardar=async()=>{
+    if(!f.monto||parseFloat(f.monto)<=0){showToast("Monto requerido","err");return;}
+    if(!f.concepto.trim()&&!f.factura_id&&!f.reserva_id){showToast("Ingresa concepto o vincula a factura/reserva","err");return;}
+    setSaving(true);
+    const monto=parseFloat(f.monto);
+    // Determine concepto
+    let concepto=f.concepto;
+    if(f.factura_id){const fa=facturas.find(x=>x.id===f.factura_id);concepto=concepto||"Pago factura "+(fa?.numero||"");}
+    if(f.reserva_id){const re=reservas.find(x=>x.id===f.reserva_id);concepto=concepto||"Pago reserva "+(re?.numero||"");}
+    // Save pago
+    await dbIns("pagos_recibidos",{...f,monto,concepto,empresa_id:empId});
+    // Update factura saldo
+    if(f.factura_id){
+      const fa=facturas.find(x=>x.id===f.factura_id);
+      const saldo=Math.max(0,(parseFloat(fa?.saldo_pendiente)||parseFloat(fa?.total)||0)-monto);
+      await dbUpd("facturas",f.factura_id,{saldo_pendiente:saldo,estado:saldo<=0?"pagada":"parcial"});
+    }
+    // Update reserva saldo
+    if(f.reserva_id){
+      const re=reservas.find(x=>x.id===f.reserva_id);
+      const saldo=Math.max(0,(parseFloat(re?.saldo)||parseFloat(re?.monto)||0)-monto);
+      await dbUpd("reservas",f.reserva_id,{saldo,anticipo:(parseFloat(re?.anticipo)||0)+monto});
+    }
+    // Register in banca
+    await dbIns("movimientos_bancarios",{empresa_id:empId,fecha:f.fecha,tipo:"ingreso",descripcion:concepto,monto,referencia:f.referencia,categoria:"ventas",conciliado:false,notas:f.notas});
+    showToast("Pago registrado ✔");setSaving(false);setShowForm(false);
+    setF({fecha:today(),monto:"",metodo:"transferencia",referencia:"",factura_id:"",reserva_id:"",concepto:"",banco:"",notas:""});
+    load();
+  };
+
+  const del=async id=>{if(!confirm("¿Eliminar pago?"))return;await dbDel("pagos_recibidos",id);showToast("Eliminado");load();};
+  const total=rows.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+
+  const CAMPOS_EXPORT=[
+    {label:"Fecha",key:"fecha"},{label:"Concepto",key:"concepto"},
+    {label:"Monto",key:"monto"},{label:"Método",key:"metodo"},
+    {label:"Referencia",key:"referencia"},{label:"Banco",key:"banco"},
+    {label:"Notas",key:"notas"},
+  ];
+
+  return(
+    <div>
+      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={rows} campos={CAMPOS_EXPORT} onClose={()=>setExportar(false)}/>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+        {[{l:"Total pagos recibidos",v:"Q "+fmt(total),c:T.acc,bg:T.accDim},{l:"Este mes",v:"Q "+fmt(rows.filter(r=>r.fecha?.slice(0,7)===today().slice(0,7)).reduce((s,r)=>s+(parseFloat(r.monto)||0),0)),c:T.blue,bg:T.blueDim},{l:"Registros",v:rows.length,c:T.purple,bg:T.purpleDim}].map((s,i)=>(
+          <div key={i} style={{background:s.bg,border:"1px solid "+s.c+"44",borderRadius:12,padding:"14px 18px"}}>
+            <div style={{fontSize:11,color:T.mut}}>{s.l}</div>
+            <div style={{fontSize:20,fontWeight:800,color:s.c,marginTop:4}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>📤 Exportar</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
+        <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>{showForm?"Cancelar":"+ Registrar pago"}</button>
+      </div>
+
+      {showForm&&(
+        <div style={{...S.card,marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Registrar pago recibido</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+            <Fld label="FECHA"><input style={S.inp} type="date" value={f.fecha} onChange={e=>sf("fecha",e.target.value)}/></Fld>
+            <Fld label="MONTO RECIBIDO (GTQ)"><input style={{...S.inp,fontWeight:700,color:T.acc}} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/></Fld>
+            <Fld label="MÉTODO DE PAGO">
+              <select style={S.sel} value={f.metodo} onChange={e=>sf("metodo",e.target.value)}>
+                <option value="transferencia">🏦 Transferencia bancaria</option>
+                <option value="deposito">💰 Depósito</option>
+                <option value="efectivo">💵 Efectivo</option>
+                <option value="tarjeta">💳 Tarjeta</option>
+                <option value="cheque">📄 Cheque</option>
+              </select>
+            </Fld>
+            <Fld label="REFERENCIA / N° COMPROBANTE"><input style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="REF-00001"/></Fld>
+            <Fld label="VINCULAR A FACTURA (opcional)">
+              <select style={S.sel} value={f.factura_id} onChange={e=>sf("factura_id",e.target.value)}>
+                <option value="">Sin vinculación a factura</option>
+                {facturas.map(fa=><option key={fa.id} value={fa.id}>{fa.numero} — {fa.nombre_receptor} — Q {fmt(fa.saldo_pendiente||fa.total)}</option>)}
+              </select>
+            </Fld>
+            <Fld label="VINCULAR A RESERVA (opcional)">
+              <select style={S.sel} value={f.reserva_id} onChange={e=>sf("reserva_id",e.target.value)}>
+                <option value="">Sin vinculación a reserva</option>
+                {reservas.map(re=><option key={re.id} value={re.id}>{re.numero} — {re.cliente_nombre} — Q {fmt(re.saldo||re.monto)}</option>)}
+              </select>
+            </Fld>
+            <Fld label="CONCEPTO" span2><input style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Anticipo reserva Cobán, Pago factura..."/></Fld>
+            <Fld label="CUENTA / BANCO"><input style={S.inp} value={f.banco} onChange={e=>sf("banco",e.target.value)} placeholder="Banco Industrial, Banrural..."/></Fld>
+            <Fld label="NOTAS"><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones adicionales"/></Fld>
+            <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
+              <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Registrar pago"}</button>
+              <button onClick={()=>setShowForm(false)} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading?<Spinner/>:rows.length===0?<Empty icon="💰" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
+        <div style={S.card}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>{["Fecha","Concepto","Método","Referencia","Monto",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {rows.map(r=>(
+                <tr key={r.id}>
+                  <td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(r.fecha)}</td>
+                  <td style={{...S.td,fontWeight:500}}>{r.concepto}</td>
+                  <td style={{...S.td,color:T.sub,fontSize:11}}>{r.metodo}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{r.referencia||"—"}</td>
+                  <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.monto)}</td>
+                  <td style={S.td}><button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:11}}>🗑️</button></td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{background:T.surf}}>
+                <td colSpan={4} style={{padding:"9px 10px",fontWeight:700,color:T.sub,fontSize:12}}>TOTAL</td>
+                <td style={{padding:"9px 10px",fontWeight:800,color:T.acc,fontSize:14}}>Q {fmt(total)}</td>
+                <td/>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PageDashboard(){
   const [d,setD]=useState(null);const [loading,setLoading]=useState(true);
   useEffect(()=>{load();},[]);
@@ -2381,7 +2632,7 @@ function PageFacturacion({showToast,empId}){
 
 // ═══ LA BANCA ═══
 function PageBanca({showToast,empId}){
-  const [cuentas,setCuentas]=useState([]);const [movs,setMovs]=useState([]);const [cuentaAct,setCuentaAct]=useState(null);const [loading,setLoading]=useState(true);const [showForm,setShowForm]=useState(false);const [saving,setSaving]=useState(false);const [filtroT,setFiltroT]=useState("todos");const [filtroC,setFiltroC]=useState("todos");
+  const [cuentas,setCuentas]=useState([]);const [movs,setMovs]=useState([]);const [cuentaAct,setCuentaAct]=useState(null);const [loading,setLoading]=useState(true);const [showForm,setShowForm]=useState(false);const [saving,setSaving]=useState(false);const [filtroT,setFiltroT]=useState("todos");const [filtroC,setFiltroC]=useState("todos");const [exportar,setExportar]=useState(false);
   const [f,setF]=useState({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const CATS=["ventas","combustible","mantenimiento","salarios","seguros","servicios","oficina","otros"];
@@ -2397,6 +2648,7 @@ function PageBanca({showToast,empId}){
   const saldoGTQ=cuentas.filter(c=>c.moneda==="GTQ").reduce((s,c)=>s+(parseFloat(c.saldo_actual)||0),0);
   return(
     <div>
+      {exportar&&<ModalExportar titulo="Movimientos Bancarios" datos={movs} campos={[{label:"Fecha",key:"fecha"},{label:"Descripción",key:"descripcion"},{label:"Categoría",key:"categoria"},{label:"Tipo",key:"tipo"},{label:"Monto",key:"monto"},{label:"Referencia",key:"referencia"},{label:"Conciliado",key:"conciliado"}]} onClose={()=>setExportar(false)}/>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
         {[{l:"Saldo total GTQ",v:`Q ${fmt(saldoGTQ)}`,c:T.acc,bg:T.accDim},{l:"Ingresos",v:`Q ${fmt(ing)}`,c:T.acc,bg:T.accDim},{l:"Sin conciliar",v:movs.filter(m=>!m.conciliado).length,c:T.sec,bg:T.secDim}].map((s,i)=><div key={i} style={{background:s.bg,border:`1px solid ${s.c}44`,borderRadius:12,padding:"14px 18px"}}><div style={{fontSize:11,color:T.mut}}>{s.l}</div><div style={{fontSize:20,fontWeight:800,color:s.c,marginTop:4}}>{s.v}</div></div>)}
       </div>
@@ -2409,7 +2661,10 @@ function PageBanca({showToast,empId}){
           {cuentaAct&&<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div><div style={{fontSize:14,fontWeight:700}}>{cuentaAct.banco}</div><div style={{fontSize:12,color:T.sub}}>{cuentaAct.numero_cuenta}</div></div>
-              <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12}}>{showForm?"Cancelar":"+ Movimiento"}</button>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>📤 Exportar</button>
+                <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12}}>{showForm?"Cancelar":"+ Movimiento"}</button>
+              </div>
             </div>
             {showForm&&<div style={{...S.card,marginBottom:14}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
@@ -2854,11 +3109,11 @@ function PageClientes({showToast,empId}){
   const [vista,setVista]=useState("lista");
   const [editItem,setEditItem]=useState(null);
   const [saving,setSaving]=useState(false);
-  const [f,setF]=useState({nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});
+  const [f,setF]=useState({codigo:"",nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const load=async()=>{setLoading(true);const d=await dbGet("clientes","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   useEffect(()=>{load();},[]);
-  const abrirEditar=c=>{setF({nombre:c.nombre||"",tipo:c.tipo||"empresa",nit:c.nit||"",direccion:c.direccion||"",telefono:c.telefono||"",email:c.email||""});setEditItem(c);setVista("form");};
+  const abrirEditar=c=>{setF({codigo:c.codigo||'',nombre:c.nombre||"",tipo:c.tipo||"empresa",nit:c.nit||"",direccion:c.direccion||"",telefono:c.telefono||"",email:c.email||""});setEditItem(c);setVista("form");};
   const abrirNuevo=()=>{setF({nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});setEditItem(null);setVista("form");};
   const guardar=async()=>{
     if(!f.nombre.trim()){showToast("Nombre requerido","err");return;}
@@ -2877,7 +3132,8 @@ function PageClientes({showToast,empId}){
         <button onClick={()=>{setVista("lista");setEditItem(null);}} style={S.btn("ghost")}>← Volver</button>
       </div>
       <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre completo"/></Fld>
+        <Fld label="CÓDIGO DE CLIENTE"><input style={{...S.inp,fontFamily:"monospace",fontWeight:700}} value={f.codigo} onChange={e=>sf("codigo",e.target.value.toUpperCase())} placeholder="001"/></Fld>
+        <Fld label="NOMBRE / RAZÓN SOCIAL"><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre completo"/></Fld>
         <Fld label="TIPO DE CLIENTE">
           <select style={S.sel} value={f.tipo} onChange={e=>sf("tipo",e.target.value)}>
             <option value="empresa">Empresa</option>
@@ -2908,17 +3164,17 @@ function PageClientes({showToast,empId}){
       {loading?<Spinner/>:rows.length===0?<Empty icon="👥" msg="Sin clientes registrados" action="+ Agregar cliente" onAction={abrirNuevo}/>:(
         <div style={S.card}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Email",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Código","Cliente","Tipo","NIT","Teléfono",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {rows.map(c=>{
                 const tc=TC[c.tipo]||TC.empresa;
                 return(
                   <tr key={c.id}>
+                    <td style={{...S.td,fontFamily:"monospace",fontWeight:700,color:T.acc,fontSize:12}}>{c.codigo||"—"}</td>
                     <td style={{...S.td,fontWeight:600}}>{c.nombre}</td>
                     <td style={S.td}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,color:tc.c,background:tc.bg}}>{tc.l}</span></td>
                     <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"—"}</td>
                     <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
-                    <td style={{...S.td,color:T.sub,fontSize:12}}>{c.email||"—"}</td>
                     <td style={S.td}>
                       <div style={{display:"flex",gap:4}}>
                         <button onClick={()=>abrirEditar(c)} style={{...S.btn("ghost"),padding:"3px 9px",fontSize:11}}>✏️</button>
@@ -2942,12 +3198,12 @@ function PageFlota({showToast,empId}){
   const [vista,setVista]=useState("lista");
   const [editItem,setEditItem]=useState(null);
   const [saving,setSaving]=useState(false);
-  const [f,setF]=useState({placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});
+  const [f,setF]=useState({codigo:"",propietario:"propio",placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const TIPOS=["Sedán","SUV","Pickup","Van","Microbús","Bus"];
   const load=async()=>{setLoading(true);const d=await dbGet("vehiculos","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   useEffect(()=>{load();},[]);
-  const abrirEditar=v=>{setF({placa:v.placa||"",marca:v.marca||"",modelo:v.modelo||"",anio:v.anio||new Date().getFullYear(),tipo:v.tipo||"SUV",estado:v.estado||"disponible",km_actual:v.km_actual||0});setEditItem(v);setVista("form");};
+  const abrirEditar=v=>{setF({codigo:v.codigo||'',propietario:v.propietario||'propio',placa:v.placa||"",marca:v.marca||"",modelo:v.modelo||"",anio:v.anio||new Date().getFullYear(),tipo:v.tipo||"SUV",estado:v.estado||"disponible",km_actual:v.km_actual||0});setEditItem(v);setVista("form");};
   const abrirNuevo=()=>{setF({placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});setEditItem(null);setVista("form");};
   const guardar=async()=>{
     if(!f.placa.trim()){showToast("Placa requerida","err");return;}
@@ -2969,6 +3225,14 @@ function PageFlota({showToast,empId}){
         <button onClick={()=>{setVista("lista");setEditItem(null);}} style={S.btn("ghost")}>← Volver</button>
       </div>
       <div style={{...S.card,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Fld label="CÓDIGO VEHÍCULO"><input style={{...S.inp,fontFamily:"monospace",fontWeight:700}} value={f.codigo} onChange={e=>sf("codigo",e.target.value.toUpperCase())} placeholder="001P"/></Fld>
+        <Fld label="PROPIETARIO">
+          <select style={S.sel} value={f.propietario} onChange={e=>sf("propietario",e.target.value)}>
+            <option value="propio">🏢 Propio (P)</option>
+            <option value="socio">🤝 Socio (A)</option>
+            <option value="alquilado">🔑 Alquilado</option>
+          </select>
+        </Fld>
         <Fld label="PLACA"><input style={S.inp} value={f.placa} onChange={e=>sf("placa",e.target.value.toUpperCase())} placeholder="P-000-ABC"/></Fld>
         <Fld label="AÑO"><input style={S.inp} type="number" value={f.anio} onChange={e=>sf("anio",e.target.value)}/></Fld>
         <Fld label="MARCA"><input style={S.inp} value={f.marca} onChange={e=>sf("marca",e.target.value)} placeholder="Toyota"/></Fld>
@@ -3009,15 +3273,18 @@ function PageFlota({showToast,empId}){
       {loading?<Spinner/>:rows.length===0?<Empty icon="🚗" msg="Sin vehículos registrados" action="+ Registrar" onAction={abrirNuevo}/>:(
         <div style={S.card}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>{["Vehículo","Placa","Año","Tipo","Km actual","Estado","Cambiar estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Código","Vehículo","Placa","Tipo","Km","Estado","Cambiar estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {rows.map(v=>{
                 const e=EST_VEH[v.estado]||EST_VEH.disponible;
                 return(
                   <tr key={v.id}>
+                    <td style={{...S.td,fontFamily:"monospace",fontWeight:700,color:T.acc,fontSize:12}}>
+                      {v.codigo||"—"}
+                      {v.propietario&&<div style={{fontSize:9,color:T.mut}}>{v.propietario==="propio"?"🏢 Propio":v.propietario==="socio"?"🤝 Socio":"🔑 Alq."}</div>}
+                    </td>
                     <td style={{...S.td,fontWeight:600}}>{v.marca} {v.modelo}</td>
-                    <td style={{...S.td,fontFamily:"monospace",fontWeight:700,color:T.acc}}>{v.placa}</td>
-                    <td style={{...S.td,color:T.sub}}>{v.anio}</td>
+                    <td style={{...S.td,fontFamily:"monospace",color:T.sub,fontSize:11}}>{v.placa}</td>
                     <td style={S.td}>{v.tipo}</td>
                     <td style={S.td}>{(v.km_actual||0).toLocaleString()} km</td>
                     <td style={S.td}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,color:e.c,background:e.bg}}>{e.l}</span></td>
@@ -3730,10 +3997,27 @@ function TabDiarios({empId,showToast}){
 // ── Página principal de Contabilidad ─────────────────────────────────────────
 function PageContabilidad({showToast,empId}){
   const [tab,setTab]=useState("catalogo");
+  const [balanceData,setBalanceData]=useState(null);
+  const [loadingBalance,setLoadingBalance]=useState(false);
+  const calcBalance=async()=>{
+    setLoadingBalance(true);
+    const [gastos,movs,facturas]=await Promise.all([
+      dbGet("gastos",""),dbGet("movimientos_bancarios",""),dbGet("facturas","")
+    ]);
+    const ingresos=(Array.isArray(facturas)?facturas:[]).filter(f=>!["anulada","borrador"].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.total)||0),0);
+    const egresosGas=(Array.isArray(gastos)?gastos:[]).reduce((s,g)=>s+(parseFloat(g.total)||0),0);
+    const saldoBanca=(Array.isArray(movs)?movs:[]).filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+(parseFloat(m.monto)||0),0)-
+                    (Array.isArray(movs)?movs:[]).filter(m=>m.tipo==="egreso").reduce((s,m)=>s+(parseFloat(m.monto)||0),0);
+    const utilidad=ingresos-egresosGas;
+    setBalanceData({ingresos,gastos:egresosGas,utilidad,saldoBanca,iva:ingresos*0.05,fecha:today()});
+    setLoadingBalance(false);
+  };
+  useEffect(()=>{if(tab==="balance")calcBalance();},[tab]);
+
   return(
     <div>
       <div style={{display:"flex",gap:2,borderBottom:"1px solid "+T.bord,marginBottom:18}}>
-        {[{id:"catalogo",l:"📋 Catálogo de Cuentas"},{id:"diarios",l:"📒 Diarios Manuales"}].map(t=>(
+        {[{id:"catalogo",l:"📋 Catálogo de Cuentas"},{id:"diarios",l:"📒 Diarios Manuales"},{id:"balance",l:"📊 Balance General"}].map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 18px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?"2px solid "+T.acc:"2px solid transparent"}}>
             {t.l}
           </button>
@@ -3741,6 +4025,42 @@ function PageContabilidad({showToast,empId}){
       </div>
       {tab==="catalogo"&&<TabCatalogo empId={empId} showToast={showToast}/>}
       {tab==="diarios"&&<TabDiarios empId={empId} showToast={showToast}/>}
+      {tab==="balance"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{fontSize:13,color:T.sub}}>Balance resumido al {fmtD(today())} — basado en facturas, gastos y movimientos registrados</div>
+            <button onClick={calcBalance} disabled={loadingBalance} style={{...S.btn("ghost"),fontSize:12}}>{loadingBalance?"Calculando...":"↺ Actualizar"}</button>
+          </div>
+          {balanceData?(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+              {/* Estado de Resultados */}
+              <div style={S.card}>
+                <div style={{fontSize:14,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Estado de Resultados</div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid "+T.bord+"33"}}><span style={{color:T.sub}}>Ingresos (facturas emitidas)</span><span style={{fontWeight:700,color:T.acc}}>Q {fmt(balanceData.ingresos)}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid "+T.bord+"33"}}><span style={{color:T.sub}}>Gastos registrados</span><span style={{fontWeight:700,color:T.red}}>Q {fmt(balanceData.gastos)}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0",background:balanceData.utilidad>=0?T.accDim:T.redDim,borderRadius:8,paddingLeft:10,paddingRight:10,marginTop:8}}>
+                  <span style={{fontWeight:700,fontSize:14}}>Utilidad bruta</span>
+                  <span style={{fontWeight:800,fontSize:16,color:balanceData.utilidad>=0?T.acc:T.red}}>Q {fmt(balanceData.utilidad)}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",marginTop:8}}><span style={{color:T.sub}}>IVA estimado (5%)</span><span style={{color:T.sec}}>Q {fmt(balanceData.iva)}</span></div>
+              </div>
+              {/* Posición Bancaria */}
+              <div style={S.card}>
+                <div style={{fontSize:14,fontWeight:700,color:T.blue,marginBottom:14}}>🏦 Posición Bancaria</div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid "+T.bord+"33"}}><span style={{color:T.sub}}>Total ingresos banca</span><span style={{fontWeight:700,color:T.acc}}>Q {fmt((balanceData.saldoBanca||0)+(balanceData.gastos||0))}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid "+T.bord+"33"}}><span style={{color:T.sub}}>Total egresos banca</span><span style={{fontWeight:700,color:T.red}}>Q {fmt(balanceData.gastos)}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0",background:T.blueDim,borderRadius:8,paddingLeft:10,paddingRight:10,marginTop:8}}>
+                  <span style={{fontWeight:700,fontSize:14}}>Saldo neto</span>
+                  <span style={{fontWeight:800,fontSize:16,color:T.blue}}>Q {fmt(Math.abs(balanceData.saldoBanca))}</span>
+                </div>
+                <div style={{marginTop:12,fontSize:12,color:T.mut}}>
+                  ⚠️ Este balance es un resumen estimado. Para contabilidad oficial utiliza los diarios manuales y el catálogo de cuentas.
+                </div>
+              </div>
+            </div>
+          ):<Spinner/>}
+        </div>
+      )}
     </div>
   );
 }
@@ -3820,6 +4140,7 @@ export default function App(){
     {id:"facturacion",icon:"🧾",label:"Facturación FEL"},
     {id:"banca",icon:"🏦",label:"La Banca"},
     {id:"gastos",icon:"💸",label:"Gastos/Compras"},
+    {id:"pagos",icon:"💰",label:"Pagos Recibidos"},
     {id:"contabilidad",icon:"📒",label:"Contabilidad"},
     {id:"sep5",label:"ANÁLISIS",sep:true},
     {id:"reportes",icon:"📈",label:"Reportes"},
@@ -3837,6 +4158,7 @@ export default function App(){
     if(pag==="mantenimiento") return <PageMantenimiento showToast={showToast} empId={empId}/>;
     if(pag==="banca")        return <PageBanca showToast={showToast} empId={empId}/>;
     if(pag==="gastos")       return <PageGastos showToast={showToast} empId={empId}/>;
+    if(pag==="pagos")         return <PagePagos showToast={showToast} empId={empId}/>;
     if(pag==="contabilidad") return <PageContabilidad showToast={showToast} empId={empId}/>;
     if(pag==="reportes")     return <PageReportes/>;
     if(pag==="configuracion")return <PageConfiguracion showToast={showToast}/>;
