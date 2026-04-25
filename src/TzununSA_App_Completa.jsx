@@ -10,7 +10,14 @@ const H={apikey:SK,Authorization:`Bearer ${SK}`,"Content-Type":"application/json
 const T={bg:"#0A0F1E",surf:"#111827",card:"#162032",bord:"#1E3A5F",acc:"#00D4AA",accDim:"#00D4AA22",sec:"#F59E0B",secDim:"#F59E0B22",red:"#EF4444",redDim:"#EF444422",blue:"#3B82F6",blueDim:"#3B82F622",purple:"#A855F7",purpleDim:"#A855F722",green:"#22C55E",greenDim:"#22C55E22",txt:"#F1F5F9",mut:"#64748B",sub:"#94A3B8"};
 const fmt=n=>new Intl.NumberFormat("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const fmtK=n=>n>=1000?`Q ${(n/1000).toFixed(1)}k`:`Q ${fmt(n)}`;
-const fmtD=s=>{if(!s)return"—";try{return new Date(s+"T12:00:00").toLocaleDateString("es-GT",{day:"2-digit",month:"short",year:"numeric"});}catch{return s;}};
+const fmtD=s=>{
+  if(!s||s==="Invalid Date")return"—";
+  try{
+    const d=s.includes("T")?new Date(s):new Date(s+"T12:00:00");
+    if(isNaN(d.getTime()))return s;
+    return d.toLocaleDateString("es-GT",{day:"2-digit",month:"short",year:"numeric"});
+  }catch{return s;}
+};
 const today=()=>new Date().toISOString().slice(0,10);
 const S={card:{background:T.card,border:`1px solid ${T.bord}`,borderRadius:14,padding:18},lbl:{fontSize:11,color:T.mut,display:"block",marginBottom:4,fontWeight:600},inp:{width:"100%",background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,padding:"9px 12px",color:T.txt,fontSize:13,outline:"none",boxSizing:"border-box"},sel:{width:"100%",background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,padding:"9px 12px",color:T.txt,fontSize:13,outline:"none",boxSizing:"border-box"},btn:v=>({padding:"8px 14px",borderRadius:8,border:v==="ghost"?`1px solid ${T.bord}`:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:v==="primary"?T.acc:v==="danger"?T.red:v==="blue"?T.blue:v==="purple"?T.purple:v==="green"?T.green:v==="warn"?T.sec:T.card,color:v==="primary"||v==="green"?"#0A0F1E":T.txt}),div:{borderTop:`1px solid ${T.bord}`,margin:"12px 0"},th:{textAlign:"left",fontSize:11,color:T.mut,padding:"6px 10px",fontWeight:600,background:T.surf},td:{padding:"9px 10px",borderTop:`1px solid ${T.bord}22`,fontSize:13},srow:b=>({display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:b?14:13,fontWeight:b?700:400,color:b?T.txt:T.sub})};
 async function dbGet(t,q=""){try{const r=await fetch(`${SB}/rest/v1/${t}?order=created_at.desc${q}`,{headers:H});return r.json();}catch{return[];}}
@@ -893,254 +900,363 @@ function ModalPago({factura,onConfirm,onCancel}){
   );
 }
 
-function FormFactura({initial,empId,clientes,reservas,cotizaciones,anticipos,onSave,onCancel}){
+function FormFactura({initial,empId,clientes,reservas,cotizaciones,onSave,onCancel}){
+  // ── State ──────────────────────────────────────────────────────────
   const [f,setF]=useState({
-    serie:"TZAR2026",tipo_dte:"FACT",fecha_emision:today(),
+    numero_autorizacion:initial?.numero_autorizacion||"",
+    serie:initial?.serie||"TZAR2026",
+    numero_dte:initial?.numero_dte||"",
+    numero_acceso:initial?.numero_acceso||"",
+    fecha_emision:initial?.fecha_emision?.slice(0,10)||today(),
+    fecha_certificacion:initial?.fecha_certificacion?.slice(0,10)||today(),
     nit_receptor:initial?.nit_receptor||"",
     nombre_receptor:initial?.nombre_receptor||"",
-    direccion_receptor:initial?.direccion_receptor||"",
+    direccion_receptor:initial?.direccion_receptor||"CIUDAD",
     correo_receptor:initial?.correo_receptor||"",
-    descripcion_servicio:initial?.descripcion_servicio||"",
-    cantidad:initial?.cantidad||1,
-    precio_unitario:initial?.precio_unitario||"",
-    tasa_iva:initial?.tasa_iva||12,
+    regimen:initial?.regimen||"PEQUENIO", // GENERAL | PEQUENIO | NINGUNO
     metodo_pago:initial?.metodo_pago||"efectivo",
     tasa_cambio:initial?.tasa_cambio||7.70,
-    regimen:initial?.regimen||"GENERAL",
-    estado:initial?.estado||"borrador",
-    notas:initial?.notas||"",
     cliente_id:initial?.cliente_id||"",
     reserva_id:initial?.reserva_id||"",
     cotizacion_id:initial?.cotizacion_id||"",
     anticipo_aplicado:initial?.anticipo_aplicado||0,
+    notas:initial?.notas||"",
+    estado:initial?.estado||"borrador",
   });
-  const [saving,setSaving]=useState(false);
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
 
-  // Cálculos
-  const sub=(parseFloat(f.cantidad)||0)*(parseFloat(f.precio_unitario)||0);
-  const ivaAmt=sub*(parseFloat(f.tasa_iva)||0)/100;
-  const recTC=f.metodo_pago==="tarjeta"?(sub+ivaAmt)*0.05:0;
-  const total=sub+ivaAmt+recTC;
-  const anticipo=parseFloat(f.anticipo_aplicado)||0;
-  const saldo=Math.max(0,total-anticipo);
-  const exch=parseFloat(f.tasa_cambio)||7.70;
+  // ── Líneas de detalle ───────────────────────────────────────────────
+  const EMPTY_LINE={tipo:"Servicio",cantidad:1,descripcion:"",precio_unitario:"",descuento:0};
+  const [lineas,setLineas]=useState(()=>{
+    if(initial?.lineas&&initial.lineas.length>0) return initial.lineas;
+    return [{...EMPTY_LINE}];
+  });
+  const addLinea=()=>setLineas(p=>[...p,{...EMPTY_LINE}]);
+  const removeLinea=idx=>setLineas(p=>p.filter((_,i)=>i!==idx));
+  const updateLinea=(idx,k,v)=>setLineas(p=>p.map((l,i)=>i===idx?{...l,[k]:v}:l));
 
-  // Al seleccionar cliente — prellenar datos
-  const selCliente=c=>{
-    sf("nombre_receptor",c.nombre);sf("nit_receptor",c.nit||"");
-    sf("direccion_receptor",c.direccion||"");sf("correo_receptor",c.email||"");
-    sf("cliente_id",c.id);
-  };
-  // Al seleccionar reserva — prellenar servicio y monto
-  const selReserva=r=>{
-    sf("reserva_id",r.id);
-    sf("descripcion_servicio",`${r.tipo==="renta"?"Renta de vehículo":"Servicio de traslado"} — ${r.vehiculo_nombre||""} · ${r.origen||""}${r.destino?" → "+r.destino:""}`);
-    sf("precio_unitario",parseFloat(r.monto)||"");
-    sf("anticipo_aplicado",parseFloat(r.anticipo)||0);
-  };
-  // Al seleccionar cotización — prellenar
-  const selCotizacion=c=>{
-    sf("cotizacion_id",c.id);
-    sf("descripcion_servicio",c.descripcion_servicio||`Cotización ${c.numero}`);
-    sf("precio_unitario",parseFloat(c.subtotal)||"");
-    sf("tasa_iva",parseFloat(c.tasa_iva)||12);
-  };
-  // Al seleccionar anticipo
-  const selAnticipo=m=>{sf("anticipo_aplicado",parseFloat(m.monto)||0);};
+  const [saving,setSaving]=useState(false);
 
-  const guardar=async()=>{
-    if(!f.nit_receptor.trim()||!f.nombre_receptor.trim()||!f.descripcion_servicio.trim()){
-      alert("NIT, nombre del receptor y descripción son requeridos");return;
+  // ── Cálculos ────────────────────────────────────────────────────────
+  const subtotalBruto=lineas.reduce((s,l)=>{
+    const q=parseFloat(l.cantidad)||0;
+    const p=parseFloat(l.precio_unitario)||0;
+    const d=parseFloat(l.descuento)||0;
+    return s+(q*p-d);
+  },0);
+
+  const ivaPct=f.regimen==="GENERAL"?12:f.regimen==="PEQUENIO"?5:0;
+  // For pequeño contribuyente, price already includes IVA
+  const subtotalSinIVA=ivaPct>0?subtotalBruto/(1+ivaPct/100):subtotalBruto;
+  const ivaAmt=subtotalBruto-subtotalSinIVA;
+  const total=subtotalBruto;
+  const saldoPend=Math.max(0,total-(parseFloat(f.anticipo_aplicado)||0));
+
+  // ── Auto-fill from cliente/reserva/cotizacion ───────────────────────
+  const onSelectCliente=id=>{
+    sf("cliente_id",id);
+    const c=clientes.find(x=>x.id===id);
+    if(c){sf("nit_receptor",c.nit||"");sf("nombre_receptor",c.nombre||"");sf("direccion_receptor",c.direccion||"CIUDAD");sf("correo_receptor",c.email||"");}
+  };
+  const onSelectReserva=id=>{
+    sf("reserva_id",id);
+    const r=reservas.find(x=>x.id===id);
+    if(r&&!f.nombre_receptor){
+      const c=clientes.find(x=>x.nombre===r.cliente_nombre);
+      if(c){sf("nit_receptor",c.nit||"");sf("nombre_receptor",c.nombre||"");sf("cliente_id",c.id||"");}
+      else sf("nombre_receptor",r.cliente_nombre||"");
+      if(lineas.length===1&&!lineas[0].descripcion){
+        setLineas([{tipo:"Servicio",cantidad:1,descripcion:"Servicio de transporte / alquiler de vehículo",precio_unitario:r.monto||"",descuento:0}]);
+      }
     }
-    setSaving(true);
-    const p={
-      empresa_id:empId,
-      numero:initial?.numero||`FAC-${Date.now().toString().slice(-6)}`,
-      serie:f.serie,tipo_dte:f.tipo_dte,
-      nit_emisor:"16693949",nombre_emisor:"Tz'unun AutoRentas",
-      regimen:f.regimen,
-      nit_receptor:f.nit_receptor,nombre_receptor:f.nombre_receptor,
-      direccion_receptor:f.direccion_receptor,correo_receptor:f.correo_receptor,
-      descripcion_servicio:f.descripcion_servicio,
-      cantidad:parseFloat(f.cantidad)||1,
-      precio_unitario:parseFloat(f.precio_unitario)||0,
-      subtotal:sub,tasa_iva:parseFloat(f.tasa_iva)||0,monto_iva:ivaAmt,
-      total,total_usd:exch>0?total/exch:0,tasa_cambio:exch,
-      metodo_pago:f.metodo_pago,
-      estado:f.estado,fecha_emision:f.fecha_emision,notas:f.notas,
-      cliente_id:f.cliente_id||null,
-      reserva_id:f.reserva_id||null,
-      cotizacion_id:f.cotizacion_id||null,
-      anticipo_aplicado:anticipo,
-      saldo_pendiente:saldo,
-    };
-    if(initial?.id) await dbUpd("facturas",initial.id,p);
-    else await dbIns("facturas",p);
-    setSaving(false);onSave();
+  };
+  const onSelectCotizacion=id=>{
+    sf("cotizacion_id",id);
+    const co=cotizaciones.find(x=>x.id===id);
+    if(co&&!f.nombre_receptor){sf("nombre_receptor",co.cliente_nombre||"");sf("nit_receptor",co.cliente_nit||"");}
   };
 
-  return (
+  // ── Guardar ─────────────────────────────────────────────────────────
+  const guardar=async()=>{
+    if(!f.nombre_receptor.trim()){alert("Nombre del receptor requerido");return;}
+    if(lineas.filter(l=>l.descripcion&&parseFloat(l.precio_unitario)>0).length===0){alert("Agrega al menos una línea con descripción y precio");return;}
+    setSaving(true);
+    const numero="FAC-"+Date.now().toString().slice(-8);
+    const payload={
+      ...f,
+      empresa_id:empId,
+      numero:initial?.numero||numero,
+      tasa_iva:ivaPct,
+      subtotal:subtotalSinIVA,
+      total_iva:ivaAmt,
+      total,
+      saldo_pendiente:saldoPend,
+      lineas:JSON.stringify(lineas),
+      tasa_cambio:parseFloat(f.tasa_cambio)||7.70,
+      anticipo_aplicado:parseFloat(f.anticipo_aplicado)||0,
+    };
+    if(initial?.id) await dbUpd("facturas",initial.id,payload);
+    else await dbIns("facturas",payload);
+    setSaving(false);
+    onSave();
+  };
+
+  // ── PDF SAT-style ────────────────────────────────────────────────────
+  const generarPDFFactura=()=>{
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Factura ${f.serie||""}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
+.header-top{display:flex;justify-content:space-between;margin-bottom:8px}
+.emisor{color:#1B2D5C}
+.emisor strong{display:block;font-size:13px}
+.autorizacion{text-align:right;color:#1B2D5C;font-size:10px}
+.autorizacion .num{font-weight:700;color:#DC2626}
+.divider{border-top:2px solid #1B2D5C;margin:8px 0}
+.receptor-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;font-size:10px}
+.label{color:#64748B;font-size:9px;display:block}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10px}
+th{background:#1B2D5C;color:white;padding:5px 6px;text-align:left}
+td{padding:5px 6px;border-bottom:1px solid #E2E8F0}
+.right{text-align:right}
+.totals-section{margin-top:8px;display:flex;justify-content:flex-end}
+.totals-table{width:260px;font-size:10px}
+.totals-table td{padding:3px 6px}
+.total-row td{font-weight:700;font-size:12px;border-top:1px solid #1B2D5C}
+.footer{margin-top:12px;font-size:9px;color:#64748B;border-top:1px solid #E2E8F0;padding-top:6px}
+.footer-grid{display:grid;grid-template-columns:1fr auto;align-items:start;gap:8px}
+.certificador{background:#F8FAFC;padding:6px;border:1px solid #E2E8F0}
+.titulo-factura{text-align:center;font-size:16px;font-weight:700;color:#1B2D5C;margin-bottom:6px}
+@media print{button{display:none}}
+</style></head><body>
+<div class="titulo-factura">${f.regimen==="GENERAL"?"Factura":f.regimen==="PEQUENIO"?"Factura Pequeño Contribuyente":"Documento"}</div>
+<div class="header-top">
+  <div class="emisor">
+    <strong>VANESSA MARÍA, GÁLVEZ HERNÁNDEZ</strong>
+    Nit Emisor: 20160860<br/>
+    <strong>TRANSPORTES TZUNUN</strong>
+    6 AVENIDA 5-23 COLONIA LA CASTELLANA, zona 1, EL TEJAR, CHIMALTENANGO
+  </div>
+  <div class="autorizacion">
+    <span class="num">NÚMERO DE AUTORIZACIÓN:</span><br/>
+    ${f.numero_autorizacion||"—"}<br/>
+    Serie: ${f.serie||"—"} &nbsp; Número de DTE: ${f.numero_dte||"—"}<br/>
+    Numero Acceso: ${f.numero_acceso||"—"}
+  </div>
+</div>
+<div class="divider"/>
+<div class="receptor-row">
+  <div><span class="label">NIT Receptor:</span> ${f.nit_receptor||"CF"}</div>
+  <div><span class="label">Fecha y hora de emisión:</span> ${f.fecha_emision||"—"} ${new Date().toLocaleTimeString("es-GT")}</div>
+  <div><span class="label">Nombre Receptor:</span> <strong>${f.nombre_receptor||"—"}</strong></div>
+  <div><span class="label">Fecha y hora de certificación:</span> ${f.fecha_certificacion||"—"} ${new Date().toLocaleTimeString("es-GT")}</div>
+  <div><span class="label">Dirección comprador:</span> ${f.direccion_receptor||"CIUDAD"}</div>
+  <div><span class="label">Moneda:</span> GTQ</div>
+</div>
+<div class="divider"/>
+<table>
+  <thead><tr><th>#No</th><th>B/S</th><th>Cantidad</th><th>Descripción</th><th class="right">P. Unitario con IVA (Q)</th><th class="right">Descuentos (Q)</th><th class="right">Otros Desc.(Q)</th><th class="right">Total (Q)</th></tr></thead>
+  <tbody>
+${lineas.filter(l=>l.descripcion).map((l,i)=>`    <tr><td>${i+1}</td><td>${l.tipo||"Servicio"}</td><td class="right">${l.cantidad}</td><td>${l.descripcion}</td><td class="right">${parseFloat(l.precio_unitario||0).toFixed(2)}</td><td class="right">${parseFloat(l.descuento||0).toFixed(2)}</td><td class="right">0.00</td><td class="right">${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0)-parseFloat(l.descuento||0)).toFixed(2)}</td></tr>`).join("\n")}
+  </tbody>
+  <tfoot><tr><td colspan="5"/><td class="right"><strong>TOTALES:</strong></td><td class="right">0.00</td><td class="right"><strong>${total.toFixed(2)}</strong></td></tr></tfoot>
+</table>
+<div class="totals-section">
+  <table class="totals-table">
+    <tr><td>Subtotal</td><td class="right">Q ${subtotalSinIVA.toFixed(2)}</td></tr>
+    <tr><td>IVA (${ivaPct}%)</td><td class="right">Q ${ivaAmt.toFixed(2)}</td></tr>
+    <tr class="total-row"><td>TOTAL</td><td class="right">Q ${total.toFixed(2)}</td></tr>
+  </table>
+</div>
+${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera derecho a crédito fiscal</p>':""}
+<div class="footer">
+  <div class="footer-grid">
+    <div class="certificador">
+      <div style="font-weight:700;margin-bottom:3px">Datos del certificador</div>
+      <div>Superintendencia de Administración Tributaria &nbsp; NIT: 16693949</div>
+    </div>
+  </div>
+  ${f.notas?`<div style="margin-top:6px"><strong>Notas:</strong> ${f.notas}</div>`:""}
+</div>
+<div style="text-align:center;margin-top:16px;font-style:italic;color:#1B2D5C;font-size:11px"><em>Contribuyendo</em> juntos por Guatemala</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+    const w=window.open("","_blank");w.document.write(html);w.document.close();
+  };
+
+  // ── JSX ─────────────────────────────────────────────────────────────
+  return(
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div style={{fontSize:14,fontWeight:700,color:T.acc}}>{initial?.id?"Editar factura":"Nueva factura FEL"}</div>
-        <button onClick={onCancel} style={S.btn("ghost")}>← Volver</button>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-        {/* FORM IZQUIERDO */}
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          {/* Régimen */}
-          <div style={S.card}>
-            <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>RÉGIMEN FISCAL SAT</div>
-            <div style={{display:"flex",gap:8,marginBottom:10}}>
-              {[{v:"GENERAL",l:"12% Régimen General"},{v:"PEQUENIO",l:"5% Pequeño Contribuyente"}].map(r=>(
-                <button key={r.v} onClick={()=>{sf("regimen",r.v);sf("tasa_iva",r.v==="GENERAL"?12:5);}}
-                  style={{...S.btn(f.regimen===r.v?"primary":"ghost"),flex:1,fontSize:11}}>{r.l}</button>
-              ))}
-            </div>
-            <div style={{background:f.regimen==="GENERAL"?T.accDim:T.secDim,borderRadius:8,padding:"8px 12px",fontSize:12,color:f.regimen==="GENERAL"?T.acc:T.sec,fontWeight:600}}>
-              NIT Emisor: 16693949 · Tz'unun AutoRentas · {f.regimen==="GENERAL"?"IVA 12%":"5% Pequeño Contribuyente"}
-            </div>
-          </div>
-
-          {/* Vincular receptor */}
-          <div style={S.card}>
-            <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>RECEPTOR (CLIENTE)</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-              <Fld label="BUSCAR CLIENTE EXISTENTE" span2>
-                <Autocomplete
-                  value={f.nombre_receptor}
-                  onChange={v=>sf("nombre_receptor",v)}
-                  onSelect={selCliente}
-                  items={clientes}
-                  placeholder="Escribe para buscar..."
-                  getLabel={c=>c.nombre}
-                  renderItem={c=><div><div style={{fontWeight:600,color:T.txt,fontSize:13}}>{c.nombre}</div><div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"—"} · {c.tipo}</div></div>}
-                />
-              </Fld>
-              <Fld label="NIT RECEPTOR">
-                <input style={S.inp} value={f.nit_receptor} onChange={e=>sf("nit_receptor",e.target.value)} placeholder="1234567-8 o CF"/>
-              </Fld>
-              <Fld label="CORREO (envío DTE)">
-                <input style={S.inp} type="email" value={f.correo_receptor} onChange={e=>sf("correo_receptor",e.target.value)} placeholder="correo@cliente.com"/>
-              </Fld>
-              <Fld label="DIRECCIÓN" span2>
-                <input style={S.inp} value={f.direccion_receptor} onChange={e=>sf("direccion_receptor",e.target.value)} placeholder="Dirección del receptor"/>
-              </Fld>
-            </div>
-          </div>
-
-          {/* Vincular servicio */}
-          <div style={S.card}>
-            <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>VINCULAR SERVICIO (opcional)</div>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div>
-                <label style={S.lbl}>VINCULAR A RESERVA</label>
-                <Autocomplete
-                  value={reservas.find(r=>r.id===f.reserva_id)?.numero||""}
-                  onChange={()=>{}}
-                  onSelect={selReserva}
-                  items={reservas.filter(r=>r.estado!=="cancelada")}
-                  placeholder="Buscar reserva por cliente..."
-                  getLabel={r=>r.cliente_nombre+" "+r.numero}
-                  renderItem={r=><div><div style={{fontWeight:600,color:T.txt,fontSize:12}}>{r.numero} · {r.cliente_nombre}</div><div style={{fontSize:11,color:T.sub}}>Q {fmt(r.monto)} · Saldo: Q {fmt(r.saldo)}</div></div>}
-                />
-              </div>
-              <div>
-                <label style={S.lbl}>VINCULAR A COTIZACIÓN</label>
-                <Autocomplete
-                  value={cotizaciones.find(c=>c.id===f.cotizacion_id)?.numero||""}
-                  onChange={()=>{}}
-                  onSelect={selCotizacion}
-                  items={cotizaciones.filter(c=>c.estado==="aprobada"||c.estado==="orden_venta")}
-                  placeholder="Buscar cotización aprobada..."
-                  getLabel={c=>c.cliente_nombre+" "+c.numero}
-                  renderItem={c=><div><div style={{fontWeight:600,color:T.txt,fontSize:12}}>{c.numero} · {c.cliente_nombre}</div><div style={{fontSize:11,color:T.sub}}>Q {fmt(c.total_gtq)} · {c.estado}</div></div>}
-                />
-              </div>
-              <div>
-                <label style={S.lbl}>APLICAR ANTICIPO DE LA BANCA</label>
-                <Autocomplete
-                  value={f.anticipo_aplicado>0?`Q ${fmt(f.anticipo_aplicado)} aplicado`:""}
-                  onChange={()=>{}}
-                  onSelect={selAnticipo}
-                  items={anticipos}
-                  placeholder="Buscar anticipo recibido..."
-                  getLabel={m=>m.descripcion+" "+m.monto}
-                  renderItem={m=><div><div style={{fontWeight:600,color:T.txt,fontSize:12}}>{m.descripcion}</div><div style={{fontSize:11,color:T.acc}}>Q {fmt(m.monto)} · {fmtD(m.fecha)}</div></div>}
-                />
-                {f.anticipo_aplicado>0&&<div style={{marginTop:6,background:T.accDim,borderRadius:7,padding:"6px 12px",fontSize:12,color:T.acc,fontWeight:600}}>✔ Anticipo de Q {fmt(f.anticipo_aplicado)} aplicado a esta factura</div>}
-              </div>
-            </div>
-          </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+        <div style={{fontSize:15,fontWeight:700,color:T.acc}}>{initial?.id?"Editar factura":"Nueva factura"}</div>
+        <div style={{display:"flex",gap:8}}>
+          {initial?.id&&<button onClick={generarPDFFactura} style={{...S.btn("blue"),fontSize:12}}>🖨️ Vista previa / Imprimir</button>}
+          <button onClick={onCancel} style={{...S.btn("ghost"),fontSize:12}}>← Volver</button>
         </div>
+      </div>
 
-        {/* FORM DERECHO */}
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          {/* Servicio */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        {/* Columna izquierda */}
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+          {/* Datos SAT */}
           <div style={S.card}>
-            <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>SERVICIO FACTURADO</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-              <Fld label="DESCRIPCIÓN" span2>
-                <textarea style={{...S.inp,minHeight:64,resize:"vertical"}} value={f.descripcion_servicio} onChange={e=>sf("descripcion_servicio",e.target.value)} placeholder="Descripción del servicio..."/>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>DATOS SAT / DTE</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <Fld label="N° AUTORIZACIÓN SAT" span2>
+                <input style={{...S.inp,fontFamily:"monospace",fontSize:11}} value={f.numero_autorizacion} onChange={e=>sf("numero_autorizacion",e.target.value)} placeholder="F047F606-C8E3-43D7-8B21-A77A28299F83"/>
               </Fld>
-              <Fld label="CANTIDAD">
-                <input style={S.inp} type="number" min="1" step="0.01" value={f.cantidad} onChange={e=>sf("cantidad",e.target.value)}/>
+              <Fld label="SERIE"><input style={S.inp} value={f.serie} onChange={e=>sf("serie",e.target.value)} placeholder="TZAR2026"/></Fld>
+              <Fld label="N° DTE"><input style={S.inp} value={f.numero_dte} onChange={e=>sf("numero_dte",e.target.value)} placeholder="3370337239"/></Fld>
+              <Fld label="N° ACCESO"><input style={S.inp} value={f.numero_acceso} onChange={e=>sf("numero_acceso",e.target.value)} placeholder="Número de acceso"/></Fld>
+              <Fld label="RÉGIMEN FISCAL">
+                <select style={S.sel} value={f.regimen} onChange={e=>sf("regimen",e.target.value)}>
+                  <option value="GENERAL">12% IVA — Régimen General</option>
+                  <option value="PEQUENIO">5% — Pequeño Contribuyente</option>
+                  <option value="NINGUNO">Sin impuestos</option>
+                </select>
               </Fld>
-              <Fld label="PRECIO UNITARIO (sin impuesto)">
-                <input style={S.inp} type="number" step="0.01" value={f.precio_unitario} onChange={e=>sf("precio_unitario",e.target.value)} placeholder="0.00"/>
+              <Fld label="TASA DE CAMBIO ($)"><input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e=>sf("tasa_cambio",e.target.value)}/></Fld>
+              <Fld label="FECHA EMISIÓN"><input style={S.inp} type="date" value={f.fecha_emision} onChange={e=>sf("fecha_emision",e.target.value)}/></Fld>
+              <Fld label="FECHA CERTIFICACIÓN"><input style={S.inp} type="date" value={f.fecha_certificacion} onChange={e=>sf("fecha_certificacion",e.target.value)}/></Fld>
+            </div>
+          </div>
+
+          {/* Receptor */}
+          <div style={S.card}>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>RECEPTOR</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <Fld label="VINCULAR A CLIENTE" span2>
+                <select style={S.sel} value={f.cliente_id} onChange={e=>onSelectCliente(e.target.value)}>
+                  <option value="">Seleccionar cliente (auto-llena datos)...</option>
+                  {clientes.map(c=><option key={c.id} value={c.id}>{c.codigo?c.codigo+" — ":""}{c.nombre}</option>)}
+                </select>
               </Fld>
-              <Fld label="MÉTODO DE PAGO">
+              <Fld label="NIT RECEPTOR"><input style={S.inp} value={f.nit_receptor} onChange={e=>sf("nit_receptor",e.target.value)} placeholder="CF o NIT"/></Fld>
+              <Fld label="NOMBRE RECEPTOR"><input style={S.inp} value={f.nombre_receptor} onChange={e=>sf("nombre_receptor",e.target.value)} placeholder="Nombre o razón social"/></Fld>
+              <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion_receptor} onChange={e=>sf("direccion_receptor",e.target.value)} placeholder="Ciudad"/></Fld>
+              <Fld label="CORREO"><input style={S.inp} type="email" value={f.correo_receptor} onChange={e=>sf("correo_receptor",e.target.value)} placeholder="email@cliente.com"/></Fld>
+              <Fld label="MÉTODO PAGO">
                 <select style={S.sel} value={f.metodo_pago} onChange={e=>sf("metodo_pago",e.target.value)}>
                   <option value="efectivo">💵 Efectivo</option>
                   <option value="transferencia">🏦 Transferencia</option>
                   <option value="deposito">💰 Depósito</option>
-                  <option value="tarjeta">💳 Tarjeta (+5%)</option>
-                  <option value="cheque">📄 Cheque</option>
+                  <option value="tarjeta">💳 Tarjeta</option>
                 </select>
-              </Fld>
-              <Fld label="TASA CAMBIO GTQ=1USD">
-                <input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e=>sf("tasa_cambio",e.target.value)}/>
-              </Fld>
-              <Fld label="ESTADO">
-                <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
-                  <option value="borrador">Borrador</option>
-                  <option value="emitida">Emitida</option>
-                  <option value="certificada">Certificada SAT</option>
-                  <option value="pagada">Pagada</option>
-                </select>
-              </Fld>
-              <Fld label="NOTAS INTERNAS" span2>
-                <input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones..."/>
               </Fld>
             </div>
           </div>
 
-          {/* Resumen financiero */}
+          {/* Vincular */}
           <div style={S.card}>
-            <div style={{fontSize:12,fontWeight:700,color:T.acc,marginBottom:12}}>💰 Resumen Financiero</div>
-            <div style={{background:T.surf,borderRadius:10,padding:14,marginBottom:10}}>
-              <div style={S.srow(false)}><span>Subtotal (sin impuesto)</span><span>Q {fmt(sub)}</span></div>
-              <div style={S.srow(false)}><span>{f.regimen==="GENERAL"?"IVA (12%)":"Impuesto Pequeño Cont. (5%)"}</span><span>Q {fmt(ivaAmt)}</span></div>
-              {f.metodo_pago==="tarjeta"&&<div style={{...S.srow(false),color:T.sec}}><span>Recargo tarjeta (5%)</span><span>Q {fmt(recTC)}</span></div>}
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>VINCULAR A RESERVA O COTIZACIÓN</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:10}}>
+              <Fld label="RESERVA (opcional)">
+                <select style={S.sel} value={f.reserva_id} onChange={e=>onSelectReserva(e.target.value)}>
+                  <option value="">Sin vinculación a reserva</option>
+                  {reservas.map(r=><option key={r.id} value={r.id}>{r.numero} — {r.cliente_nombre} — Q {fmt(r.monto)}</option>)}
+                </select>
+              </Fld>
+              <Fld label="COTIZACIÓN (opcional)">
+                <select style={S.sel} value={f.cotizacion_id} onChange={e=>onSelectCotizacion(e.target.value)}>
+                  <option value="">Sin vinculación a cotización</option>
+                  {cotizaciones.map(c=><option key={c.id} value={c.id}>{c.numero} — {c.cliente_nombre} — Q {fmt(c.total_gtq)}</option>)}
+                </select>
+              </Fld>
+              <Fld label="ANTICIPO RECIBIDO (Q)">
+                <input style={S.inp} type="number" step="0.01" value={f.anticipo_aplicado} onChange={e=>sf("anticipo_aplicado",parseFloat(e.target.value)||0)} placeholder="0.00"/>
+              </Fld>
             </div>
-            <div style={{background:T.accDim,border:`1px solid ${T.acc}55`,borderRadius:10,padding:"12px 16px",marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}><span>TOTAL</span><span>Q {fmt(total)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:T.sub,marginTop:3}}><span>USD (Q{f.tasa_cambio}=1)</span><span>$ {fmt(total/exch)}</span></div>
+          </div>
+
+          {/* Notas */}
+          <div style={S.card}>
+            <Fld label="NOTAS / OBSERVACIONES">
+              <textarea style={{...S.inp,minHeight:60,resize:"vertical"}} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones adicionales..."/>
+            </Fld>
+            <div style={{marginTop:10}}>
+              <Fld label="ESTADO">
+                <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
+                  <option value="borrador">📝 Borrador</option>
+                  <option value="emitida">📤 Emitida</option>
+                  <option value="certificada">✅ Certificada (DTE)</option>
+                  <option value="pagada">💚 Pagada</option>
+                </select>
+              </Fld>
             </div>
-            {anticipo>0&&(
-              <div style={{background:T.surf,borderRadius:9,padding:12}}>
-                <div style={S.srow(false)}><span>Total factura</span><span>Q {fmt(total)}</span></div>
-                <div style={S.srow(false)}><span>Anticipo aplicado</span><span style={{color:T.acc}}>− Q {fmt(anticipo)}</span></div>
-                <div style={S.div}/>
-                <div style={S.srow(true)}><span>SALDO PENDIENTE</span><span style={{color:saldo>0?T.sec:T.acc}}>Q {fmt(saldo)}</span></div>
-                <div style={{fontSize:11,color:T.sub,marginTop:4}}>$ {fmt(exch>0?saldo/exch:0)} USD</div>
+          </div>
+        </div>
+
+        {/* Columna derecha - Líneas y resumen */}
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {/* Líneas de detalle */}
+          <div style={S.card}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.mut}}>DETALLE DE SERVICIOS / PRODUCTOS</div>
+              <button onClick={addLinea} style={{...S.btn("primary"),fontSize:11,padding:"4px 10px"}}>+ Agregar línea</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {lineas.map((l,idx)=>(
+                <div key={idx} style={{background:T.surf,borderRadius:8,padding:10,border:"1px solid "+T.bord}}>
+                  <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:8,marginBottom:6}}>
+                    <div>
+                      <label style={{...S.lbl,fontSize:9}}>TIPO</label>
+                      <select style={{...S.sel,padding:"5px 6px",fontSize:11}} value={l.tipo} onChange={e=>updateLinea(idx,"tipo",e.target.value)}>
+                        <option value="Bien">Bien</option>
+                        <option value="Servicio">Servicio</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{...S.lbl,fontSize:9}}>DESCRIPCIÓN</label>
+                      <input style={{...S.inp,fontSize:12,padding:"5px 8px"}} value={l.descripcion} onChange={e=>updateLinea(idx,"descripcion",e.target.value)} placeholder="Descripción del servicio o producto"/>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr auto",gap:6,alignItems:"flex-end"}}>
+                    <div>
+                      <label style={{...S.lbl,fontSize:9}}>CANT.</label>
+                      <input style={{...S.inp,fontSize:12,padding:"5px 6px",textAlign:"center"}} type="number" value={l.cantidad} onChange={e=>updateLinea(idx,"cantidad",e.target.value)} min="1"/>
+                    </div>
+                    <div>
+                      <label style={{...S.lbl,fontSize:9}}>P. UNITARIO (Q)</label>
+                      <input style={{...S.inp,fontSize:12,padding:"5px 8px",textAlign:"right",color:T.acc}} type="number" step="0.01" value={l.precio_unitario} onChange={e=>updateLinea(idx,"precio_unitario",e.target.value)} placeholder="0.00"/>
+                    </div>
+                    <div>
+                      <label style={{...S.lbl,fontSize:9}}>DESCUENTO (Q)</label>
+                      <input style={{...S.inp,fontSize:12,padding:"5px 8px",textAlign:"right"}} type="number" step="0.01" value={l.descuento} onChange={e=>updateLinea(idx,"descuento",e.target.value)} placeholder="0.00"/>
+                    </div>
+                    <div style={{display:"flex",alignItems:"flex-end"}}>
+                      {lineas.length>1&&<button onClick={()=>removeLinea(idx)} style={{...S.btn("danger"),padding:"5px 8px",fontSize:11}}>✕</button>}
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right",marginTop:4,fontSize:11,color:T.acc,fontWeight:600}}>
+                    Subtotal: Q {(((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0))-(parseFloat(l.descuento)||0)).toFixed(2)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Resumen totales */}
+          <div style={S.card}>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>RESUMEN</div>
+            <div style={{background:T.surf,borderRadius:9,padding:"12px 14px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13,color:T.sub}}><span>Subtotal (sin IVA)</span><span>Q {fmt(subtotalSinIVA)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13,color:T.sub}}><span>IVA ({ivaPct}%)</span><span>Q {fmt(ivaAmt)}</span></div>
+              {parseFloat(f.anticipo_aplicado)>0&&<div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:13,color:T.sec}}><span>Anticipo aplicado</span><span>– Q {fmt(f.anticipo_aplicado)}</span></div>}
+              <div style={{borderTop:"1px solid "+T.bord,marginTop:6,paddingTop:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}><span>TOTAL</span><span>Q {fmt(total)}</span></div>
+                {parseFloat(f.anticipo_aplicado)>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:T.sec,fontWeight:600}}><span>Saldo pendiente</span><span>Q {fmt(saldoPend)}</span></div>}
+                <div style={{fontSize:11,color:T.sub,marginTop:3}}>$ {fmt(f.tasa_cambio>0?total/f.tasa_cambio:0)} USD</div>
               </div>
-            )}
-            <div style={{display:"flex",gap:8,marginTop:14}}>
-              <button onClick={()=>{sf("estado","borrador");setTimeout(guardar,0);}} disabled={saving} style={{...S.btn("ghost"),flex:1}}>{saving?"...":"💾 Borrador"}</button>
-              <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"...":"🧾 Emitir factura"}</button>
             </div>
+            {ivaPct===5&&<div style={{marginTop:8,fontSize:11,color:T.mut,fontStyle:"italic"}}>* No genera derecho a crédito fiscal</div>}
+          </div>
+
+          {/* Acciones */}
+          <div style={S.card}>
+            <button onClick={generarPDFFactura} style={{...S.btn("blue"),width:"100%",marginBottom:8,padding:10,fontSize:13}}>🖨️ Vista previa / Imprimir factura</button>
+            <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),width:"100%",padding:10,fontSize:13}}>{saving?"Guardando...":"💾 "+( initial?.id?"Actualizar":"Crear factura")}</button>
+            <button onClick={onCancel} style={{...S.btn("ghost"),width:"100%",padding:10,marginTop:6,fontSize:12}}>Cancelar</button>
           </div>
         </div>
       </div>
@@ -2598,8 +2714,30 @@ function PageCotizaciones({showToast,empId}){
 
 // ═══ FACTURACIÓN PAGE ═══
 function PageFacturacion({showToast,empId}){
-  const [rows,setRows]=useState([]);const [clientes,setClientes]=useState([]);const [reservas,setReservas]=useState([]);const [cotizaciones,setCotizaciones]=useState([]);const [anticipos,setAnticipos]=useState([]);const [loading,setLoading]=useState(true);const [vista,setVista]=useState("lista");const [editItem,setEditItem]=useState(null);const [filtro,setFiltro]=useState("todas");const [mAnular,setMAnular]=useState(null);const [mPago,setMPago]=useState(null);const [authFac,setAuthFac]=useState(null);const [authId,setAuthId]=useState("");
+  const [rows,setRows]=useState([]);const [clientes,setClientes]=useState([]);const [reservas,setReservas]=useState([]);const [cotizaciones,setCotizaciones]=useState([]);const [anticipos,setAnticipos]=useState([]);const [loading,setLoading]=useState(true);const [vista,setVista]=useState("lista");const [exportar,setExportar]=useState(false);const [editItem,setEditItem]=useState(null);const [filtro,setFiltro]=useState("todas");const [mAnular,setMAnular]=useState(null);const [mPago,setMPago]=useState(null);const [authFac,setAuthFac]=useState(null);const [authId,setAuthId]=useState("");
   const load=async()=>{setLoading(true);const d=await dbGet("facturas");setRows(Array.isArray(d)?d:[]);setLoading(false);};
+  const delFac=async id=>{if(!confirm("¿Eliminar esta factura permanentemente?"))return;await dbDel("facturas",id);showToast("Factura eliminada");load();};
+  const imprimirFac=r=>{
+    const lineas=r.lineas?JSON.parse(r.lineas):[];
+    const ivaPct=parseFloat(r.tasa_iva)||5;
+    const total=parseFloat(r.total)||0;
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${r.numero}</title><style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}.titulo{text-align:center;font-size:16px;font-weight:700;color:#1B2D5C;margin-bottom:8px}.emisor{color:#1B2D5C;font-size:10px;margin-bottom:4px}.right{text-align:right}.autorizacion{text-align:right;font-size:9px;color:#DC2626}table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10px}th{background:#1B2D5C;color:#fff;padding:5px 6px}td{padding:5px 6px;border-bottom:1px solid #E2E8F0}.footer{margin-top:10px;font-size:9px;color:#64748B;border-top:1px solid #E2E8F0;padding-top:6px}@media print{button{display:none}}</style></head><body>
+    <div class="titulo">${ivaPct===5?"Factura Pequeño Contribuyente":"Factura"}</div>
+    <div style="display:flex;justify-content:space-between">
+      <div class="emisor"><strong>VANESSA MARÍA, GÁLVEZ HERNÁNDEZ</strong><br/>Nit Emisor: 20160860<br/><strong>TRANSPORTES TZUNUN</strong><br/>6 AVENIDA 5-23 COLONIA LA CASTELLANA, zona 1, EL TEJAR, CHIMALTENANGO</div>
+      <div class="autorizacion"><strong>NÚMERO DE AUTORIZACIÓN:</strong><br/>${r.numero_autorizacion||"—"}<br/>Serie: ${r.serie||"—"} Número DTE: ${r.numero_dte||"—"}</div>
+    </div>
+    <hr/>
+    <div style="font-size:10px">NIT Receptor: ${r.nit_receptor||"CF"} &nbsp;|&nbsp; Nombre: <strong>${r.nombre_receptor}</strong> &nbsp;|&nbsp; Fecha: ${r.fecha_emision||""} &nbsp;|&nbsp; Moneda: GTQ</div>
+    <table><thead><tr><th>#</th><th>B/S</th><th>Cant.</th><th>Descripción</th><th class="right">P. Unitario</th><th class="right">Total</th></tr></thead>
+    <tbody>${lineas.map((l,i)=>`<tr><td>${i+1}</td><td>${l.tipo||"Servicio"}</td><td class="right">${l.cantidad}</td><td>${l.descripcion}</td><td class="right">Q ${parseFloat(l.precio_unitario||0).toFixed(2)}</td><td class="right">Q ${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0)-(parseFloat(l.descuento)||0)).toFixed(2)}</td></tr>`).join("")}</tbody>
+    <tfoot><tr><td colspan="4"/><td class="right"><strong>TOTAL:</strong></td><td class="right"><strong>Q ${total.toFixed(2)}</strong></td></tr></tfoot></table>
+    ${ivaPct===5?'<p style="font-size:9px;color:#64748B">* No genera derecho a crédito fiscal</p>':""}
+    <div class="footer"><strong>Datos del certificador:</strong> Superintendencia de Administración Tributaria &nbsp; NIT: 16693949</div>
+    <div style="text-align:center;margin-top:12px;font-style:italic;color:#1B2D5C;font-size:11px"><em>Contribuyendo</em> juntos por Guatemala</div>
+    <script>window.onload=()=>window.print();</script></body></html>`;
+    const w=window.open("","_blank");w.document.write(html);w.document.close();
+  };
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));dbGet("reservas","").then(d=>setReservas(Array.isArray(d)?d:[]));dbGet("cotizaciones","&estado=eq.aprobada").then(d=>setCotizaciones(Array.isArray(d)?d:[]));dbGet("movimientos_bancarios","&tipo=eq.ingreso").then(d=>setAnticipos(Array.isArray(d)?d:[]));load();},[]);
   const anular=async(fac,mot)=>{await dbUpd("facturas",fac.id,{estado:"anulada",motivo_anulacion:mot});showToast("Anulada");setMAnular(null);load();};
   const regPago=async(fac,monto,fecha,metodo)=>{const ns=Math.max(0,(parseFloat(fac.saldo_pendiente)||parseFloat(fac.total)||0)-monto);await dbUpd("facturas",fac.id,{saldo_pendiente:ns,estado:ns<=0?"pagada":"parcial",fecha_pago:fecha});await dbIns("movimientos_bancarios",{empresa_id:empId,fecha,tipo:"ingreso",descripcion:"Pago "+fac.numero+" — "+fac.nombre_receptor,monto,referencia:fac.numero,categoria:"ventas",conciliado:true});showToast(ns<=0?"Pagada ✔":"Pago parcial ✔");setMPago(null);load();};
@@ -2610,6 +2748,7 @@ function PageFacturacion({showToast,empId}){
   if(vista==="form")return <div><FormFactura initial={editItem} empId={empId} clientes={clientes} reservas={reservas} cotizaciones={cotizaciones} anticipos={anticipos} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
   return(
     <div>
+      {exportar&&<ModalExportar titulo="Facturas" datos={rows} campos={[{label:"N°",key:"numero"},{label:"Cliente",key:"nombre_receptor"},{label:"NIT",key:"nit_receptor"},{label:"Fecha",key:"fecha_emision"},{label:"Total",key:"total"},{label:"Saldo",key:"saldo_pendiente"},{label:"Estado",key:"estado"}]} onClose={()=>setExportar(false)}/>}
       <ModalAnular factura={mAnular} onConfirm={m=>anular(mAnular,m)} onCancel={()=>setMAnular(null)}/>
       <ModalPago factura={mPago} onConfirm={(mo,fe,me)=>regPago(mPago,mo,fe,me)} onCancel={()=>setMPago(null)}/>
       {authFac&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:460,padding:24}}><div style={{fontSize:14,fontWeight:700,color:T.acc,marginBottom:10}}>🔐 Registrar No. DTE</div><input style={{...S.inp,fontFamily:"monospace",marginBottom:14}} value={authId} onChange={e=>setAuthId(e.target.value)} placeholder="UUID SAT..."/><div style={{display:"flex",gap:8}}><button onClick={regAuth} style={{...S.btn("primary"),flex:1}}>✅ Certificar</button><button onClick={()=>{setAuthFac(null);setAuthId("");}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button></div></div></div>}
@@ -2619,7 +2758,8 @@ function PageFacturacion({showToast,empId}){
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         {["todas","borrador","emitida","certificada","parcial","pagada","anulada"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
         <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
-        <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
+        <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>📤 Exportar</button>
+                <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
       </div>
       {loading?<Spinner/>:filtered.length===0?<Empty icon="🧾" msg="Sin facturas"/>:(
         <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Factura","Cliente","Total","Anticipo","Saldo","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
@@ -3481,7 +3621,8 @@ function PageMantenimiento({showToast,empId}){
   const [showForm,setShowForm]=useState(false);
   const [editItem,setEditItem]=useState(null);
   const [saving,setSaving]=useState(false);
-  const EMPTY={vehiculo_id:"",vehiculo_nombre:"",tipo:"preventivo",descripcion:"",km_entrada:0,km_salida:0,costo:0,proveedor:"",fecha_entrada:today(),fecha_salida:"",estado:"en_proceso",notas:""};
+
+  const [exportar,setExportar]=useState(false);  const EMPTY={vehiculo_id:"",vehiculo_nombre:"",tipo:"preventivo",descripcion:"",km_entrada:0,km_salida:0,costo:0,proveedor:"",fecha_entrada:today(),fecha_salida:"",estado:"en_proceso",notas:""};
   const [f,setF]=useState({...EMPTY});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const TIPOS=["preventivo","correctivo","aceite","llantas","frenos","electricidad","carrocería","lavado","otro"];
@@ -3522,6 +3663,7 @@ function PageMantenimiento({showToast,empId}){
   const totalCosto=rows.reduce((s,r)=>s+(parseFloat(r.costo)||0),0);
   return(
     <div>
+      {exportar&&<ModalExportar titulo="Mantenimiento de Vehículos" datos={rows} campos={[{label:"Vehículo",key:"vehiculo_nombre"},{label:"Tipo",key:"tipo"},{label:"Descripción",key:"descripcion"},{label:"KM Entrada",key:"km_entrada"},{label:"KM Salida",key:"km_salida"},{label:"Costo",key:"costo"},{label:"Proveedor",key:"proveedor"},{label:"Fecha Entrada",key:"fecha_entrada"},{label:"Estado",key:"estado"}]} onClose={()=>setExportar(false)}/>}
       {alertas.length>0&&(
         <div style={{background:T.redDim,border:"1px solid "+T.red+"44",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
           <div style={{fontSize:13,fontWeight:700,color:T.red,marginBottom:6}}>🔴 Requieren mantenimiento (≥5,000 km desde último servicio)</div>
@@ -3538,6 +3680,7 @@ function PageMantenimiento({showToast,empId}){
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:14}}>
         <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
+        <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>📤 Exportar</button>
         <button onClick={abrirNuevo} style={{...S.btn("primary"),fontSize:12}}>+ Registrar mantenimiento</button>
       </div>
       {showForm&&(
@@ -4188,7 +4331,7 @@ export default function App(){
         <div style={{background:T.surf,borderBottom:`1px solid ${T.bord}`,padding:"10px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
           <div style={{fontSize:14,fontWeight:700}}>{curNav?.icon} {curNav?.label}</div>
           <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:14}}>
-            {user&&<div style={{fontSize:12,color:T.sub}}>👤 {user.email}</div>}
+            {user&&<div style={{fontSize:12,color:T.sub}}>👤 {user.name&&user.name!==user.email?user.name:user.email?.split("@")[0]}</div>}
             <div style={{fontSize:11,color:T.mut}}>{new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})}</div>
             <button onClick={handleLogout} style={{background:"transparent",border:`1px solid ${T.bord}`,borderRadius:7,padding:"4px 10px",fontSize:11,color:T.sub,cursor:"pointer"}}>Salir 🚪</button>
           </div>
