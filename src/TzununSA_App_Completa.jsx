@@ -11,12 +11,16 @@ const T={bg:"#0A0F1E",surf:"#111827",card:"#162032",bord:"#1E3A5F",acc:"#00D4AA"
 const fmt=n=>new Intl.NumberFormat("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const fmtK=n=>n>=1000?`Q ${(n/1000).toFixed(1)}k`:`Q ${fmt(n)}`;
 const fmtD=s=>{
-  if(!s||s==="Invalid Date")return"—";
+  if(!s||s==="Invalid Date"||s==="null"||s==="undefined")return"—";
   try{
-    const d=s.includes("T")?new Date(s):new Date(s+"T12:00:00");
-    if(isNaN(d.getTime()))return s;
+    let d;
+    if(s instanceof Date){d=s;}
+    else if(typeof s==="string"&&s.includes("T")){d=new Date(s);}
+    else if(typeof s==="string"&&s.match(/^\d{4}-\d{2}-\d{2}$/)){d=new Date(s+"T12:00:00");}
+    else{d=new Date(s);}
+    if(!d||isNaN(d.getTime()))return s;
     return d.toLocaleDateString("es-GT",{day:"2-digit",month:"short",year:"numeric"});
-  }catch{return s;}
+  }catch{return String(s);}
 };
 const today=()=>new Date().toISOString().slice(0,10);
 const S={card:{background:T.card,border:`1px solid ${T.bord}`,borderRadius:14,padding:18},lbl:{fontSize:11,color:T.mut,display:"block",marginBottom:4,fontWeight:600},inp:{width:"100%",background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,padding:"9px 12px",color:T.txt,fontSize:13,outline:"none",boxSizing:"border-box"},sel:{width:"100%",background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,padding:"9px 12px",color:T.txt,fontSize:13,outline:"none",boxSizing:"border-box"},btn:v=>({padding:"8px 14px",borderRadius:8,border:v==="ghost"?`1px solid ${T.bord}`:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:v==="primary"?T.acc:v==="danger"?T.red:v==="blue"?T.blue:v==="purple"?T.purple:v==="green"?T.green:v==="warn"?T.sec:T.card,color:v==="primary"||v==="green"?"#0A0F1E":T.txt}),div:{borderTop:`1px solid ${T.bord}`,margin:"12px 0"},th:{textAlign:"left",fontSize:11,color:T.mut,padding:"6px 10px",fontWeight:600,background:T.surf},td:{padding:"9px 10px",borderTop:`1px solid ${T.bord}22`,fontSize:13},srow:b=>({display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:b?14:13,fontWeight:b?700:400,color:b?T.txt:T.sub})};
@@ -351,8 +355,8 @@ function generarPDF(d){
   doc.setTextColor(30,41,59); doc.setFontSize(12); doc.setFont("helvetica","bold");
   // Client name with auto-wrap for long names
   const clientLines = doc.splitTextToSize(d.cliente||"", 180);
-  doc.text(clientLines, 14, 72);
-  const clientH = clientLines.length * 7;
+  doc.text(clientLines, 22, y);
+  y += clientLines.length * 8;
   doc.setTextColor(...GRAY); doc.setFontSize(8); doc.setFont("helvetica","normal");
   if(d.nit) doc.text("NIT: "+d.nit+(d.dir_cliente?"   |   "+d.dir_cliente:""),22,y);
   y+=8;
@@ -362,7 +366,9 @@ function generarPDF(d){
   doc.setFillColor(232,245,240); doc.roundedRect(22,y,W-44,46,4,4,"F");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,46,"F");
   doc.setTextColor(27,45,92); doc.setFontSize(9); doc.setFont("helvetica","bold");
-  doc.text((d.saludo||"Estimados señores de "+d.cliente)+":",32,y+13);
+  const saludoText = (d.saludo||"Estimados señores de "+(d.cliente||"")) + ":";
+  const saludoLines = doc.splitTextToSize(saludoText, W-70);
+  doc.text(saludoLines[0].slice(0, 80), 32, y+13);
   doc.setTextColor(...DKGRAY); doc.setFontSize(7.8); doc.setFont("helvetica","normal");
   const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de vehículos, viajes de turismo y traslado de personas en Guatemala y Centroamérica. Con mucho gusto le presentamos la siguiente cotización:";
   const introL=doc.splitTextToSize(intro,W-88);
@@ -591,6 +597,8 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
       fecha_vence:initial.fecha_vence||"",
       estado:"borrador",
       notas:initial.notas||"",
+      incl:initial.incl||[],
+      incluidos_texto:initial.incluidos_texto||"",
     };
   });
   const [saving,setSaving]=useState(false);
@@ -2008,350 +2016,223 @@ const EMPTY={
 
 
 function FormReserva({initial,onSave,onCancel,empId}){
+  const EMPTY_R={cliente_nombre:"",tipo:"renta",vehiculo_nombre:"",conductor_nombre:"",
+    fecha_inicio:"",fecha_fin:"",hora_recogida:"08:00",origen:"Guatemala",destino:"",
+    departamento:"",municipio:"",anticipo:"",notas:"",iva:5,pago:"efectivo",
+    exch:7.70,estado:"pendiente"};
+
   const [f,setF]=useState(()=>{
-    if(initial){
-      return{
-        ...EMPTY,
-        cliente_nombre:initial.cliente_nombre||"",
-        tipo:initial.tipo||"renta",
-        vehiculo_nombre:initial.vehiculo_nombre||"",
-        conductor_nombre:initial.conductor_nombre||"",
-        fecha_inicio:initial.fecha_inicio?initial.fecha_inicio.slice(0,10):"",
-        fecha_fin:initial.fecha_fin?initial.fecha_fin.slice(0,10):"",
-        hora_recogida:initial.hora_recogida||"08:00",
-        origen:initial.origen||"",
-        destino:initial.destino||"",
-        departamento:initial.departamento||"",
-        municipio:initial.municipio||"",
-        anticipo:initial.anticipo||"",
-        estado:initial.estado||"pendiente",
-        notas:initial.notas||"",
-        iva:initial.tasa_iva||12,
-        pago:initial.metodo_pago||"efectivo",
-        exch:initial.tasa_cambio||7.70,
-      };
-    }
-    return EMPTY;
+    if(!initial) return {...EMPTY_R};
+    return{
+      cliente_nombre:initial.cliente_nombre||"",
+      tipo:initial.tipo||"renta",
+      vehiculo_nombre:initial.vehiculo_nombre||"",
+      conductor_nombre:initial.conductor_nombre||"",
+      fecha_inicio:initial.fecha_inicio?initial.fecha_inicio.slice(0,10):"",
+      fecha_fin:initial.fecha_fin?initial.fecha_fin.slice(0,10):"",
+      hora_recogida:initial.hora_recogida||"08:00",
+      origen:initial.origen||"Guatemala",
+      destino:initial.destino||"",
+      departamento:initial.departamento||"",
+      municipio:initial.municipio||"",
+      anticipo:initial.anticipo||"",
+      notas:initial.notas||"",
+      iva:initial.tasa_iva||5,
+      pago:initial.metodo_pago||"efectivo",
+      exch:initial.tasa_cambio||7.70,
+      estado:initial.estado||"pendiente",
+    };
   });
+
   const [saving,setSaving]=useState(false);
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+
+  // Calcular días
+  const calcularDias=()=>{
+    if(!f.fecha_inicio) return 0;
+    const fi=new Date(f.fecha_inicio+"T12:00:00");
+    if(!f.fecha_fin) return 1;
+    const ff=new Date(f.fecha_fin+"T12:00:00");
+    const diff=Math.ceil((ff-fi)/(1000*60*60*24));
+    return Math.max(1,diff);
+  };
+
+  const calcularTarifa=(veh,dias)=>{
+    if(!veh||dias<=0) return 0;
+    if(dias>=30) return veh.mes;
+    if(dias>=8) return veh.sem;
+    return veh.dia;
+  };
+
+  const dias=calcularDias();
+  const vehObj=CATALOGO.find(v=>v.nombre===f.vehiculo_nombre)||null;
+  const tarifaDia=calcularTarifa(vehObj,dias);
+  const subtotal=dias*tarifaDia;
+  const ivaAmt=subtotal*(parseFloat(f.iva)||0)/100;
+  const totalEfectivo=subtotal+ivaAmt;
+  const recargoTC=f.pago==="tarjeta"?totalEfectivo*0.05:0;
+  const totalFinal=totalEfectivo+recargoTC;
+  const exch=parseFloat(f.exch)||7.70;
+  const anticipo=parseFloat(f.anticipo)||0;
+  const saldo=Math.max(0,totalFinal-anticipo);
   const munis=f.departamento&&GT[f.departamento]?GT[f.departamento]:[];
 
-  // ── CÁLCULOS ─────────────────────────────────────────────────────────────
-  const dias=calcDias(f.fecha_inicio,f.fecha_fin);
-  const vehObj=CATALOGO.find(v=>v.nombre===f.vehiculo_nombre)||null;
-  const tarifaBase=calcTarifa(vehObj,dias);
-  const nombreTarifa=getTarifaNombre(dias);
-
-  // Subtotal catálogo (precio base sin IVA ni TC)
-  const subtotalBase=dias>0&&vehObj?dias*tarifaBase:0;
-
-  // IVA
-  const ivaAmt=subtotalBase*(parseFloat(f.iva)||0)/100;
-
-  // Total con IVA (precio efectivo/depósito/transferencia)
-  const totalEfectivo=subtotalBase+ivaAmt;
-
-  // Recargo TC 5% (solo si pago con tarjeta)
-  const recargoTC=f.pago==="tarjeta"?totalEfectivo*0.05:0;
-
-  // Total final
-  const totalFinal=totalEfectivo+recargoTC;
-
-  // USD
-  const exch=parseFloat(f.exch)||7.70;
-  const totalUSD=exch>0?totalFinal/exch:0;
-  const totalEfUSD=exch>0?totalEfectivo/exch:0;
-
-  // Anticipo y saldo
-  const anticipo=parseFloat(f.anticipo)||0;
-  const saldo=totalFinal-anticipo;
-
-  // ── GUARDAR ──────────────────────────────────────────────────────────────
   const guardar=async()=>{
     if(!f.cliente_nombre.trim()){alert("El nombre del cliente es requerido");return;}
     if(!f.fecha_inicio){alert("La fecha de inicio es requerida");return;}
-    if(f.tipo==="renta"&&!f.vehiculo_nombre){alert("Selecciona un vehículo");return;}
     setSaving(true);
     const payload={
       empresa_id:empId,
-      cliente_nombre:f.cliente_nombre,
+      cliente_nombre:f.cliente_nombre.trim(),
       tipo:f.tipo,
-      numero:initial?.id?undefined:`RES-${Date.now().toString().slice(-6)}`,
+      numero:initial?.id?undefined:"RES-"+Date.now().toString().slice(-6),
       vehiculo_nombre:f.vehiculo_nombre,
       conductor_nombre:f.conductor_nombre,
-      fecha_inicio:new Date(f.fecha_inicio+"T"+(f.hora_recogida||"08:00")+":00").toISOString(),
-      fecha_fin:f.fecha_fin?new Date(f.fecha_fin+"T23:59:00").toISOString():null,
+      fecha_inicio:f.fecha_inicio+"T"+(f.hora_recogida||"08:00")+":00",
+      fecha_fin:f.fecha_fin?f.fecha_fin+"T23:59:00":null,
       hora_recogida:f.hora_recogida,
-      origen:f.origen,destino:f.destino,
-      departamento:f.departamento,municipio:f.municipio,
-      monto:totalFinal,
-      anticipo,saldo,
+      origen:f.origen,
+      destino:f.destino,
+      departamento:f.departamento,
+      municipio:f.municipio,
+      monto:Math.round(totalFinal*100)/100,
+      anticipo:anticipo,
+      saldo:Math.round(saldo*100)/100,
       tasa_iva:parseFloat(f.iva)||0,
       metodo_pago:f.pago,
       tasa_cambio:exch,
       estado:f.estado,
       notas:f.notas,
     };
-    if(initial?.id)await dbUpd("reservas",initial.id,payload);
-    else await dbIns("reservas",payload);
+    let result;
+    if(initial?.id) result=await dbUpd("reservas",initial.id,payload);
+    else result=await dbIns("reservas",payload);
     setSaving(false);
-    onSave();
+    if(result&&!result.error){
+      onSave();
+    } else {
+      alert("Error al guardar. Verifica la conexión e intenta de nuevo.");
+      console.error("Save error:", result);
+    }
   };
 
-  const hasCalc=dias>0&&vehObj;
+  const Resumen=()=>(
+    <div style={S.card}>
+      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
+      {vehObj&&dias>0?(
+        <>
+          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {dias} día{dias!==1?"s":""}</div>
+          <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
+            {[["Tarifa","Q "+fmt(tarifaDia)+"/día"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:12,color:T.sub}}><span>{l}</span><span>{v}</span></div>
+            ))}
+          </div>
+          <div style={{background:T.accDim,border:"1px solid "+T.acc+"55",borderRadius:10,padding:"12px 16px",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}><span>TOTAL</span><span>Q {fmt(totalFinal)}</span></div>
+            <div style={{fontSize:11,color:T.sub,marginTop:3}}>$ {fmt(exch>0?totalFinal/exch:0)} USD</div>
+          </div>
+          <div style={{background:T.surf,borderRadius:9,padding:11}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:T.sub,padding:"4px 0"}}><span>Anticipo</span><span>Q {fmt(anticipo)}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,padding:"4px 0",color:saldo>0?T.sec:T.acc}}><span>Saldo</span><span>Q {fmt(saldo)}</span></div>
+          </div>
+        </>
+      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona vehículo y fechas</div>}
+    </div>
+  );
 
   return(
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-
-      {/* FORM */}
-      <div style={S.card}>
-        <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:16}}>
-          {initial?.id?"Editar reserva":"Nueva reserva"}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>CLIENTE / EMPRESA</label>
-            <input style={S.inp} value={f.cliente_nombre} onChange={e=>sf("cliente_nombre",e.target.value)} placeholder="Nombre del cliente u organización"/>
-          </div>
-
-          <div>
-            <label style={S.lbl}>TIPO DE SERVICIO</label>
-            <select style={S.sel} value={f.tipo} onChange={e=>sf("tipo",e.target.value)}>
-              <option value="renta">Renta de vehículo</option>
-              <option value="traslado">Traslado con conductor</option>
-            </select>
-          </div>
-          <div>
-            <label style={S.lbl}>CONDUCTOR / PILOTO</label>
-            <input style={S.inp} value={f.conductor_nombre} onChange={e=>sf("conductor_nombre",e.target.value)} placeholder="Nombre del conductor"/>
-          </div>
-
-          {/* Vehículo */}
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>VEHÍCULO</label>
-            <select style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
-              <option value="">Seleccionar vehículo...</option>
-              {CATALOGO.map(v=>(
-                <option key={v.nombre} value={v.nombre}>
-                  {v.nombre} — Q{fmt(v.dia)}/día · Q{fmt(v.sem)}/semana · Q{fmt(v.mes)}/mes
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tarifas del vehículo */}
-          {vehObj&&(
-            <div style={{gridColumn:"span 2",background:T.accDim,border:`1px solid ${T.acc}44`,borderRadius:9,padding:"10px 14px"}}>
-              <div style={{fontSize:10,fontWeight:700,color:T.mut,marginBottom:6}}>TARIFAS CATÁLOGO — {vehObj.tipo}</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                {[{r:"1–7 días",v:vehObj.dia,a:dias>=1&&dias<=7},{r:"8–29 días",v:vehObj.sem,a:dias>=8&&dias<=29},{r:"30+ días",v:vehObj.mes,a:dias>=30}].map(({r,v,a})=>(
-                  <div key={r} style={{textAlign:"center",opacity:a?1:0.55}}>
-                    <div style={{fontSize:10,color:T.sub}}>{r}</div>
-                    <div style={{fontSize:14,fontWeight:700,color:a?T.acc:T.txt}}>Q {fmt(v)}/día</div>
-                    {a&&<div style={{fontSize:9,color:T.acc,fontWeight:700}}>▲ ACTIVA</div>}
-                  </div>
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+        <div style={{fontSize:15,fontWeight:700,color:T.acc}}>{initial?.id?"Editar reserva":"Nueva reserva"}</div>
+        <button onClick={onCancel} style={S.btn("ghost")}>← Volver</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
+        <div style={S.card}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+            <Fld label="CLIENTE" span2>
+              <ClienteBuscador value={f.cliente_nombre} onChange={v=>sf("cliente_nombre",v)} empId={empId}/>
+            </Fld>
+            <Fld label="TIPO DE SERVICIO" span2>
+              <div style={{display:"flex",gap:8}}>
+                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>🔑 Renta de vehículo</button>
+                <button tabIndex={0} onClick={()=>sf("tipo","traslado")} style={{...S.btn(f.tipo==="traslado"?"primary":"ghost"),flex:1}}>🗺 Traslado</button>
+              </div>
+            </Fld>
+            <Fld label="ESTADO">
+              <select tabIndex={0} style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="confirmada">✅ Confirmada</option>
+                <option value="en_curso">▶ En curso</option>
+                <option value="completada">🏁 Completada</option>
+                <option value="cancelada">✗ Cancelada</option>
+              </select>
+            </Fld>
+            <Fld label="HORA DE RECOGIDA">
+              <input tabIndex={0} style={S.inp} type="time" value={f.hora_recogida} onChange={e=>sf("hora_recogida",e.target.value)}/>
+            </Fld>
+            <Fld label="VEHÍCULO" span2>
+              <select tabIndex={0} style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
+                <option value="">Seleccionar vehículo...</option>
+                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q {fmt(v.dia)}/día</option>)}
+              </select>
+            </Fld>
+            <Fld label="CONDUCTOR">
+              <input tabIndex={0} style={S.inp} value={f.conductor_nombre} onChange={e=>sf("conductor_nombre",e.target.value)} placeholder="Nombre del piloto"/>
+            </Fld>
+            <Fld label="IVA">
+              <select tabIndex={0} style={S.sel} value={f.iva} onChange={e=>sf("iva",parseInt(e.target.value))}>
+                <option value={12}>12% Régimen General</option>
+                <option value={5}>5% Pequeño Contrib.</option>
+                <option value={0}>Sin IVA</option>
+              </select>
+            </Fld>
+            <Fld label="FECHA ENTREGA">
+              <input tabIndex={0} style={S.inp} type="date" value={f.fecha_inicio} onChange={e=>sf("fecha_inicio",e.target.value)}/>
+            </Fld>
+            <Fld label="FECHA DEVOLUCIÓN">
+              <input tabIndex={0} style={S.inp} type="date" value={f.fecha_fin} onChange={e=>sf("fecha_fin",e.target.value)}/>
+            </Fld>
+            <Fld label="ORIGEN">
+              <input tabIndex={0} style={S.inp} value={f.origen} onChange={e=>sf("origen",e.target.value)} placeholder="Ciudad de Guatemala"/>
+            </Fld>
+            <Fld label="DESTINO">
+              <input tabIndex={0} style={S.inp} value={f.destino} onChange={e=>sf("destino",e.target.value)} placeholder="Destino"/>
+            </Fld>
+            <Fld label="DEPARTAMENTO">
+              <select tabIndex={0} style={S.sel} value={f.departamento} onChange={e=>{sf("departamento",e.target.value);sf("municipio","");}}>
+                <option value="">Seleccionar...</option>
+                {Object.keys(GT).map(d=><option key={d} value={d}>{d}</option>)}
+              </select>
+            </Fld>
+            <Fld label="MUNICIPIO">
+              <select tabIndex={0} style={S.sel} value={f.municipio} onChange={e=>sf("municipio",e.target.value)} disabled={!f.departamento}>
+                <option value="">Seleccionar...</option>
+                {munis.map(m=><option key={m} value={m}>{m}</option>)}
+              </select>
+            </Fld>
+            <Fld label="MÉTODO DE PAGO" span2>
+              <div style={{display:"flex",gap:8}}>
+                {[["efectivo","💵 Efectivo"],["transferencia","🏦 Transferencia"],["tarjeta","💳 Tarjeta (+5%)"]].map(([v,l])=>(
+                  <button tabIndex={0} key={v} onClick={()=>sf("pago",v)} style={{...S.btn(f.pago===v?"primary":"ghost"),flex:1,fontSize:11}}>{l}</button>
                 ))}
               </div>
+            </Fld>
+            <Fld label="TASA CAMBIO ($1 USD)">
+              <input tabIndex={0} style={S.inp} type="number" step="0.01" value={f.exch} onChange={e=>sf("exch",parseFloat(e.target.value)||7.70)}/>
+            </Fld>
+            <Fld label="ANTICIPO (Q)">
+              <input tabIndex={0} style={S.inp} type="number" step="0.01" value={f.anticipo} onChange={e=>sf("anticipo",e.target.value)} placeholder="0.00"/>
+            </Fld>
+            <Fld label="NOTAS" span2>
+              <textarea tabIndex={0} style={{...S.inp,minHeight:60,resize:"vertical"}} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones..."/>
+            </Fld>
+            <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:6}}>
+              <button tabIndex={0} onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1,padding:12,fontSize:14}}>{saving?"💾 Guardando...":"💾 Guardar reserva"}</button>
+              <button tabIndex={0} onClick={onCancel} style={{...S.btn("ghost"),flex:1,padding:12}}>Cancelar</button>
             </div>
-          )}
-
-          {/* Fechas */}
-          <div style={{gridColumn:"span 2"}}><div style={S.div}/><div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:8}}>FECHAS — el total se calcula automáticamente</div></div>
-          <div>
-            <label style={S.lbl}>FECHA DE ENTREGA</label>
-            <input style={S.inp} type="date" value={f.fecha_inicio} onChange={e=>sf("fecha_inicio",e.target.value)}/>
-          </div>
-          <div>
-            <label style={S.lbl}>FECHA DE DEVOLUCIÓN</label>
-            <input style={S.inp} type="date" value={f.fecha_fin} onChange={e=>sf("fecha_fin",e.target.value)}/>
-          </div>
-          <div>
-            <label style={S.lbl}>HORA DE RECOGIDA</label>
-            <input style={S.inp} type="time" value={f.hora_recogida} onChange={e=>sf("hora_recogida",e.target.value)}/>
-          </div>
-          <div/>
-
-          {/* Resultado días */}
-          {dias>0&&(
-            <div style={{gridColumn:"span 2",background:T.surf,borderRadius:9,padding:"11px 16px",display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
-              <div><div style={{fontSize:10,color:T.mut}}>Días calculados</div><div style={{fontSize:20,fontWeight:800,color:T.acc}}>{dias} día{dias!==1?"s":""}</div></div>
-              {vehObj&&<>
-                <div><div style={{fontSize:10,color:T.mut}}>Tarifa {nombreTarifa}</div><div style={{fontSize:20,fontWeight:800}}>Q {fmt(tarifaBase)}/día</div></div>
-                <div><div style={{fontSize:10,color:T.mut}}>Subtotal base</div><div style={{fontSize:20,fontWeight:800,color:T.acc}}>Q {fmt(subtotalBase)}</div></div>
-                <div style={{fontSize:12,color:T.sub,fontStyle:"italic"}}>{dias} × Q {fmt(tarifaBase)}</div>
-              </>}
-            </div>
-          )}
-          {f.fecha_inicio&&f.fecha_fin&&dias===0&&(
-            <div style={{gridColumn:"span 2",background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:9,padding:"9px 14px",fontSize:12,color:T.red}}>
-              ⚠️ La fecha de devolución debe ser posterior a la fecha de entrega.
-            </div>
-          )}
-
-          {/* Ruta */}
-          <div style={{gridColumn:"span 2"}}><div style={S.div}/><div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:8}}>RUTA</div></div>
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>ORIGEN</label>
-            <input style={S.inp} value={f.origen} onChange={e=>sf("origen",e.target.value)} placeholder="Ej: Zona 10, Guatemala"/>
-          </div>
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>DESTINO</label>
-            <input style={S.inp} value={f.destino} onChange={e=>sf("destino",e.target.value)} placeholder="Ej: Antigua Guatemala"/>
-          </div>
-          <div>
-            <label style={S.lbl}>DEPARTAMENTO</label>
-            <select style={S.sel} value={f.departamento} onChange={e=>{sf("departamento",e.target.value);sf("municipio","");}}>
-              <option value="">Seleccionar...</option>
-              {Object.keys(GT).map(d=><option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={S.lbl}>MUNICIPIO</label>
-            <select style={S.sel} value={f.municipio} onChange={e=>sf("municipio",e.target.value)} disabled={!f.departamento}>
-              <option value="">Seleccionar...</option>
-              {munis.map(m=><option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-
-          {/* Fiscal y pago */}
-          <div style={{gridColumn:"span 2"}}><div style={S.div}/><div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:8}}>RÉGIMEN FISCAL Y MÉTODO DE PAGO</div></div>
-
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>IVA APLICABLE</label>
-            <div style={{display:"flex",gap:8}}>
-              {[{v:12,l:"12% — Régimen General"},{v:5,l:"5% — Pequeño Contribuyente"},{v:0,l:"Sin IVA / Exento"}].map(o=>(
-                <ToggleBtn key={o.v} active={f.iva===o.v} onClick={()=>sf("iva",o.v)}>{o.l}</ToggleBtn>
-              ))}
-            </div>
-          </div>
-
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>MÉTODO DE PAGO</label>
-            <div style={{display:"flex",gap:8}}>
-              <ToggleBtn active={f.pago==="efectivo"} onClick={()=>sf("pago","efectivo")}>💵 Efectivo / Depósito / Transferencia</ToggleBtn>
-              <ToggleBtn active={f.pago==="tarjeta"} onClick={()=>sf("pago","tarjeta")} warn>💳 Tarjeta de crédito/débito (+5%)</ToggleBtn>
-            </div>
-            {f.pago==="tarjeta"&&(
-              <div style={{marginTop:8,background:T.secDim,border:`1px solid ${T.sec}44`,borderRadius:8,padding:"8px 13px",fontSize:12,color:T.sec}}>
-                Las tarifas del catálogo aplican para efectivo, depósito o transferencia. El pago con tarjeta incluye un recargo bancario del 5%.
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label style={S.lbl}>TASA DE CAMBIO (GTQ = 1 USD)</label>
-            <input style={S.inp} type="number" step="0.01" value={f.exch} onChange={e=>sf("exch",parseFloat(e.target.value)||7.70)}/>
-          </div>
-          <div/>
-
-          {/* Anticipo */}
-          <div style={{gridColumn:"span 2"}}><div style={S.div}/><div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:8}}>ANTICIPO Y ESTADO</div></div>
-          <div>
-            <label style={S.lbl}>ANTICIPO RECIBIDO (GTQ)</label>
-            <input style={S.inp} type="number" value={f.anticipo} onChange={e=>sf("anticipo",e.target.value)} placeholder="0.00"/>
-          </div>
-          <div>
-            <label style={S.lbl}>ESTADO</label>
-            <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
-              <option value="pendiente">Pendiente</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="en_curso">En curso</option>
-              <option value="completada">Completada</option>
-              <option value="cancelada">Cancelada</option>
-            </select>
-          </div>
-          <div style={{gridColumn:"span 2"}}>
-            <label style={S.lbl}>NOTAS</label>
-            <textarea style={{...S.inp,minHeight:54,resize:"vertical"}} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones, requerimientos especiales..."/>
-          </div>
-
-          <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:4}}>
-            <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Guardar reserva"}</button>
-            <button onClick={onCancel} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
           </div>
         </div>
-      </div>
-
-      {/* RESUMEN */}
-      <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div style={S.card}>
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen del costo</div>
-
-          {f.cliente_nombre&&<div style={{fontSize:14,fontWeight:700,marginBottom:4}}>👤 {f.cliente_nombre}</div>}
-          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:12}}>🚗 {vehObj.nombre}</div>}
-
-          {hasCalc?(
-            <>
-              {/* Desglose */}
-              <div style={{background:T.surf,borderRadius:10,padding:14,marginBottom:12}}>
-                <div style={{fontSize:10,fontWeight:700,color:T.mut,marginBottom:8}}>DESGLOSE</div>
-                <div style={S.srow(false)}><span>{dias} día{dias!==1?"s":""} × Q {fmt(tarifaBase)} ({nombreTarifa})</span><span>Q {fmt(subtotalBase)}</span></div>
-                <div style={S.div}/>
-                <div style={S.srow(false)}><span>Subtotal sin impuesto</span><span>Q {fmt(subtotalBase)}</span></div>
-                <div style={S.srow(false)}><span>IVA ({f.iva}%)</span><span>Q {fmt(ivaAmt)}</span></div>
-                {f.pago==="tarjeta"&&(
-                  <div style={{...S.srow(false),color:T.sec}}><span>Recargo tarjeta (5%)</span><span>Q {fmt(recargoTC)}</span></div>
-                )}
-              </div>
-
-              {/* Si es tarjeta: mostrar precio catálogo como referencia */}
-              {f.pago==="tarjeta"&&(
-                <div style={{background:T.accDim,border:`1px solid ${T.acc}44`,borderRadius:10,padding:"12px 14px",marginBottom:10}}>
-                  <div style={{fontSize:11,fontWeight:700,color:T.acc,marginBottom:4}}>PRECIO CATÁLOGO (efectivo / depósito / transferencia)</div>
-                  <div style={{fontSize:18,fontWeight:800,color:T.acc}}>Q {fmt(totalEfectivo)}</div>
-                  <div style={{fontSize:12,color:T.sub,marginTop:2}}>$ {fmt(totalEfUSD)} USD · (Q{exch}=1 USD)</div>
-                </div>
-              )}
-
-              {/* Total final */}
-              <div style={{background:f.pago==="tarjeta"?T.secDim:T.accDim,border:`1px solid ${f.pago==="tarjeta"?T.sec:T.acc}55`,borderRadius:10,padding:"14px 16px",marginBottom:12}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:22,fontWeight:800,color:f.pago==="tarjeta"?T.sec:T.acc}}>
-                  <span>TOTAL {f.pago==="tarjeta"?"CON TARJETA":""}</span>
-                  <span>Q {fmt(totalFinal)}</span>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:T.sub,marginTop:4}}>
-                  <span>En dólares (Q{exch} = 1 USD)</span>
-                  <span>$ {fmt(totalUSD)}</span>
-                </div>
-              </div>
-
-              {/* Anticipo y saldo */}
-              <div style={{background:T.surf,borderRadius:10,padding:12}}>
-                <div style={S.srow(false)}><span>Total a pagar</span><span>Q {fmt(totalFinal)}</span></div>
-                <div style={S.srow(false)}><span>Anticipo recibido</span><span>Q {fmt(anticipo)}</span></div>
-                <div style={S.div}/>
-                <div style={S.srow(true)}><span>Saldo pendiente</span><span style={{color:saldo>0?T.sec:T.acc}}>Q {fmt(saldo)}</span></div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:T.sub,marginTop:4}}>
-                  <span>Saldo en USD</span><span>$ {fmt(exch>0?saldo/exch:0)}</span>
-                </div>
-              </div>
-
-              {/* Nota método de pago */}
-              <div style={{marginTop:10,background:T.surf,borderRadius:9,padding:"9px 13px",fontSize:11,color:T.sub}}>
-                {f.pago==="tarjeta"
-                  ?`Las tarifas del catálogo corresponden a pago en efectivo, depósito o transferencia. El total con tarjeta incluye el 5% de recargo bancario y el ${f.iva}% de IVA.`
-                  :`Precio catálogo Tz'unun Autorentas 2025. Incluye IVA del ${f.iva}%. Válido para pago en efectivo, depósito o transferencia.`}
-              </div>
-            </>
-          ):(
-            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>
-              Selecciona un vehículo y las fechas para ver el cálculo automático
-            </div>
-          )}
-        </div>
-
-        {/* Referencia ruta */}
-        {f.departamento&&(
-          <div style={{...S.card,fontSize:13}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:8}}>RUTA SELECCIONADA</div>
-            {f.origen&&<div style={S.srow(false)}><span>Origen</span><span>{f.origen}</span></div>}
-            {f.destino&&<div style={S.srow(false)}><span>Destino</span><span>{f.destino}</span></div>}
-            {f.departamento&&<div style={S.srow(false)}><span>Departamento</span><span>{f.departamento}</span></div>}
-            {f.municipio&&<div style={S.srow(false)}><span>Municipio</span><span>{f.municipio}</span></div>}
-          </div>
-        )}
+        <Resumen/>
       </div>
     </div>
   );
@@ -2466,127 +2347,234 @@ function PagePagos({showToast,empId}){
   const [rows,setRows]=useState([]);
   const [facturas,setFacturas]=useState([]);
   const [reservas,setReservas]=useState([]);
+  const [cuentas,setCuentas]=useState([]);
   const [loading,setLoading]=useState(true);
   const [showForm,setShowForm]=useState(false);
   const [saving,setSaving]=useState(false);
   const [exportar,setExportar]=useState(false);
-  const [f,setF]=useState({fecha:today(),monto:"",metodo:"transferencia",referencia:"",factura_id:"",reserva_id:"",concepto:"",banco:"",notas:""});
+  const EMPTY_P={fecha:today(),monto:"",metodo:"transferencia",referencia:"",
+    factura_id:"",reserva_id:"",concepto:"",cuenta_id:"",notas:""};
+  const [f,setF]=useState({...EMPTY_P});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
 
   const load=async()=>{
     setLoading(true);
-    const [p,fa,re]=await Promise.all([
+    const [p,fa,re,cu]=await Promise.all([
       dbGet("pagos_recibidos",""),
-      dbGet("facturas","&estado=in.(emitida,certificada,parcial)&select=id,numero,nombre_receptor,total,saldo_pendiente"),
-      dbGet("reservas","&estado=in.(confirmada,en_curso)&select=id,numero,cliente_nombre,monto,saldo"),
+      dbGet("facturas",""),
+      dbGet("reservas",""),
+      dbGet("cuentas_bancarias",""),
     ]);
     setRows(Array.isArray(p)?p:[]);
-    setFacturas(Array.isArray(fa)?fa:[]);
-    setReservas(Array.isArray(re)?re:[]);
+    setFacturas(Array.isArray(fa)?fa.filter(x=>!["anulada","borrador"].includes(x.estado)):[]);
+    setReservas(Array.isArray(re)?re.filter(x=>!["cancelada"].includes(x.estado)):[]);
+    setCuentas(Array.isArray(cu)?cu:[]);
     setLoading(false);
   };
   useEffect(()=>{load();},[]);
 
   const guardar=async()=>{
-    if(!f.monto||parseFloat(f.monto)<=0){showToast("Monto requerido","err");return;}
-    if(!f.concepto.trim()&&!f.factura_id&&!f.reserva_id){showToast("Ingresa concepto o vincula a factura/reserva","err");return;}
+    if(!f.monto||parseFloat(f.monto)<=0){showToast("Ingresa el monto recibido","err");return;}
+    if(!f.concepto.trim()&&!f.factura_id&&!f.reserva_id){showToast("Ingresa un concepto o vincula a factura/reserva","err");return;}
+    if(!f.cuenta_id){showToast("Selecciona la cuenta bancaria donde se recibe el pago","err");return;}
     setSaving(true);
     const monto=parseFloat(f.monto);
-    // Determine concepto
-    let concepto=f.concepto;
-    if(f.factura_id){const fa=facturas.find(x=>x.id===f.factura_id);concepto=concepto||"Pago factura "+(fa?.numero||"");}
-    if(f.reserva_id){const re=reservas.find(x=>x.id===f.reserva_id);concepto=concepto||"Pago reserva "+(re?.numero||"");}
-    // Save pago
-    await dbIns("pagos_recibidos",{...f,monto,concepto,empresa_id:empId});
-    // Update factura saldo
+    // Auto concepto
+    let concepto=f.concepto.trim();
+    if(!concepto){
+      const fa=facturas.find(x=>x.id===f.factura_id);
+      const re=reservas.find(x=>x.id===f.reserva_id);
+      if(fa) concepto="Pago factura "+(fa.numero||"")+" — "+fa.nombre_receptor;
+      else if(re) concepto="Pago reserva "+(re.numero||"")+" — "+re.cliente_nombre;
+      else concepto="Pago recibido";
+    }
+    // 1. Save pago
+    const pago=await dbIns("pagos_recibidos",{
+      empresa_id:empId,
+      fecha:f.fecha,
+      monto,
+      metodo:f.metodo,
+      referencia:f.referencia,
+      concepto,
+      cuenta_id:f.cuenta_id,
+      notas:f.notas,
+      factura_id:f.factura_id||null,
+      reserva_id:f.reserva_id||null,
+    });
+    if(!pago||pago.error){
+      showToast("Error al guardar el pago: "+(pago?.error?.message||"error desconocido"),"err");
+      setSaving(false);return;
+    }
+    // 2. Update factura saldo
     if(f.factura_id){
       const fa=facturas.find(x=>x.id===f.factura_id);
-      const saldo=Math.max(0,(parseFloat(fa?.saldo_pendiente)||parseFloat(fa?.total)||0)-monto);
-      await dbUpd("facturas",f.factura_id,{saldo_pendiente:saldo,estado:saldo<=0?"pagada":"parcial"});
+      if(fa){
+        const saldo=Math.max(0,(parseFloat(fa.saldo_pendiente)||parseFloat(fa.total)||0)-monto);
+        await dbUpd("facturas",f.factura_id,{
+          saldo_pendiente:saldo,
+          estado:saldo<=0?"pagada":"parcial"
+        });
+      }
     }
-    // Update reserva saldo
+    // 3. Update reserva saldo
     if(f.reserva_id){
       const re=reservas.find(x=>x.id===f.reserva_id);
-      const saldo=Math.max(0,(parseFloat(re?.saldo)||parseFloat(re?.monto)||0)-monto);
-      await dbUpd("reservas",f.reserva_id,{saldo,anticipo:(parseFloat(re?.anticipo)||0)+monto});
+      if(re){
+        const saldo=Math.max(0,(parseFloat(re.saldo)||0)-monto);
+        const anticipo=(parseFloat(re.anticipo)||0)+monto;
+        await dbUpd("reservas",f.reserva_id,{saldo,anticipo});
+      }
     }
-    // Register in banca
-    await dbIns("movimientos_bancarios",{empresa_id:empId,fecha:f.fecha,tipo:"ingreso",descripcion:concepto,monto,referencia:f.referencia,categoria:"ventas",conciliado:false,notas:f.notas});
-    showToast("Pago registrado ✔");setSaving(false);setShowForm(false);
-    setF({fecha:today(),monto:"",metodo:"transferencia",referencia:"",factura_id:"",reserva_id:"",concepto:"",banco:"",notas:""});
+    // 4. Register in banca & update saldo
+    await dbIns("movimientos_bancarios",{
+      empresa_id:empId,
+      cuenta_id:f.cuenta_id,
+      fecha:f.fecha,
+      tipo:"ingreso",
+      descripcion:concepto,
+      monto,
+      referencia:f.referencia,
+      categoria:"ventas",
+      conciliado:false,
+      notas:f.notas,
+    });
+    const cu=cuentas.find(x=>x.id===f.cuenta_id);
+    if(cu){
+      await dbUpd("cuentas_bancarias",f.cuenta_id,{
+        saldo_actual:(parseFloat(cu.saldo_actual)||0)+monto
+      });
+    }
+    showToast("Pago registrado correctamente ✔");
+    setSaving(false);
+    setShowForm(false);
+    setF({...EMPTY_P});
     load();
   };
 
-  const del=async id=>{if(!confirm("¿Eliminar pago?"))return;await dbDel("pagos_recibidos",id);showToast("Eliminado");load();};
-  const total=rows.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+  const del=async id=>{
+    if(!confirm("¿Eliminar este pago? Esta acción no se puede deshacer."))return;
+    await dbDel("pagos_recibidos",id);
+    showToast("Pago eliminado");
+    load();
+  };
 
-  const CAMPOS_EXPORT=[
+  const total=rows.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+  const esteMes=rows.filter(r=>(r.fecha||"").slice(0,7)===today().slice(0,7))
+    .reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+
+  const CAMPOS=[
     {label:"Fecha",key:"fecha"},{label:"Concepto",key:"concepto"},
     {label:"Monto",key:"monto"},{label:"Método",key:"metodo"},
-    {label:"Referencia",key:"referencia"},{label:"Banco",key:"banco"},
-    {label:"Notas",key:"notas"},
+    {label:"Referencia",key:"referencia"},{label:"Notas",key:"notas"},
   ];
 
   return(
     <div>
-      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={rows} campos={CAMPOS_EXPORT} onClose={()=>setExportar(false)}/>}
+      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={rows} campos={CAMPOS} onClose={()=>setExportar(false)}/>}
+
+      {/* KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
-        {[{l:"Total pagos recibidos",v:"Q "+fmt(total),c:T.acc,bg:T.accDim},{l:"Este mes",v:"Q "+fmt(rows.filter(r=>r.fecha?.slice(0,7)===today().slice(0,7)).reduce((s,r)=>s+(parseFloat(r.monto)||0),0)),c:T.blue,bg:T.blueDim},{l:"Registros",v:rows.length,c:T.purple,bg:T.purpleDim}].map((s,i)=>(
+        {[{l:"Total recibido",v:"Q "+fmt(total),c:T.acc,bg:T.accDim},
+          {l:"Este mes",v:"Q "+fmt(esteMes),c:T.blue,bg:T.blueDim},
+          {l:"Registros",v:rows.length,c:T.purple,bg:T.purpleDim}
+        ].map((s,i)=>(
           <div key={i} style={{background:s.bg,border:"1px solid "+s.c+"44",borderRadius:12,padding:"14px 18px"}}>
             <div style={{fontSize:11,color:T.mut}}>{s.l}</div>
             <div style={{fontSize:20,fontWeight:800,color:s.c,marginTop:4}}>{s.v}</div>
           </div>
         ))}
       </div>
+
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>📤 Exportar</button>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
-        <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>{showForm?"Cancelar":"+ Registrar pago"}</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺ Actualizar</button>
+        <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>
+          {showForm?"Cancelar":"+ Registrar pago"}
+        </button>
       </div>
 
+      {/* Formulario */}
       {showForm&&(
         <div style={{...S.card,marginBottom:16}}>
           <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Registrar pago recibido</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <Fld label="FECHA"><input style={S.inp} type="date" value={f.fecha} onChange={e=>sf("fecha",e.target.value)}/></Fld>
-            <Fld label="MONTO RECIBIDO (GTQ)"><input style={{...S.inp,fontWeight:700,color:T.acc}} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/></Fld>
+            <Fld label="FECHA">
+              <input tabIndex={0} style={S.inp} type="date" value={f.fecha} onChange={e=>sf("fecha",e.target.value)}/>
+            </Fld>
+            <Fld label="MONTO RECIBIDO (GTQ)">
+              <input tabIndex={0} style={{...S.inp,fontWeight:700,color:T.acc}} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/>
+            </Fld>
+            <Fld label="CUENTA BANCARIA (donde se recibe) *">
+              <select tabIndex={0} style={cuentas.length===0?{...S.sel,borderColor:T.red}:S.sel} value={f.cuenta_id} onChange={e=>sf("cuenta_id",e.target.value)}>
+                <option value="">Seleccionar cuenta bancaria...</option>
+                {cuentas.map(cu=>(
+                  <option key={cu.id} value={cu.id}>
+                    {cu.banco} — {cu.numero_cuenta} · Q {fmt(cu.saldo_actual||0)}
+                  </option>
+                ))}
+              </select>
+              {cuentas.length===0&&<div style={{fontSize:11,color:T.red,marginTop:3}}>⚠ No hay cuentas bancarias. Ve a La Banca para crearlas.</div>}
+            </Fld>
             <Fld label="MÉTODO DE PAGO">
-              <select style={S.sel} value={f.metodo} onChange={e=>sf("metodo",e.target.value)}>
+              <select tabIndex={0} style={S.sel} value={f.metodo} onChange={e=>sf("metodo",e.target.value)}>
                 <option value="transferencia">🏦 Transferencia bancaria</option>
-                <option value="deposito">💰 Depósito</option>
+                <option value="deposito">💰 Depósito en banco</option>
                 <option value="efectivo">💵 Efectivo</option>
-                <option value="tarjeta">💳 Tarjeta</option>
+                <option value="tarjeta">💳 Tarjeta de crédito/débito</option>
                 <option value="cheque">📄 Cheque</option>
               </select>
             </Fld>
-            <Fld label="REFERENCIA / N° COMPROBANTE"><input style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="REF-00001"/></Fld>
             <Fld label="VINCULAR A FACTURA (opcional)">
-              <select style={S.sel} value={f.factura_id} onChange={e=>sf("factura_id",e.target.value)}>
-                <option value="">Sin vinculación a factura</option>
-                {facturas.map(fa=><option key={fa.id} value={fa.id}>{fa.numero} — {fa.nombre_receptor} — Q {fmt(fa.saldo_pendiente||fa.total)}</option>)}
+              <select tabIndex={0} style={S.sel} value={f.factura_id} onChange={e=>sf("factura_id",e.target.value)}>
+                <option value="">Sin factura vinculada</option>
+                {facturas.map(fa=>(
+                  <option key={fa.id} value={fa.id}>
+                    {fa.numero} — {fa.nombre_receptor} — Saldo: Q {fmt(fa.saldo_pendiente||fa.total)}
+                  </option>
+                ))}
               </select>
             </Fld>
             <Fld label="VINCULAR A RESERVA (opcional)">
-              <select style={S.sel} value={f.reserva_id} onChange={e=>sf("reserva_id",e.target.value)}>
-                <option value="">Sin vinculación a reserva</option>
-                {reservas.map(re=><option key={re.id} value={re.id}>{re.numero} — {re.cliente_nombre} — Q {fmt(re.saldo||re.monto)}</option>)}
+              <select tabIndex={0} style={S.sel} value={f.reserva_id} onChange={e=>sf("reserva_id",e.target.value)}>
+                <option value="">Sin reserva vinculada</option>
+                {reservas.map(re=>(
+                  <option key={re.id} value={re.id}>
+                    {re.numero} — {re.cliente_nombre} — Saldo: Q {fmt(re.saldo||re.monto)}
+                  </option>
+                ))}
               </select>
             </Fld>
-            <Fld label="CONCEPTO" span2><input style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Anticipo reserva Cobán, Pago factura..."/></Fld>
-            <Fld label="CUENTA / BANCO"><input style={S.inp} value={f.banco} onChange={e=>sf("banco",e.target.value)} placeholder="Banco Industrial, Banrural..."/></Fld>
-            <Fld label="NOTAS"><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones adicionales"/></Fld>
+            <Fld label="CONCEPTO" span2>
+              <input tabIndex={0} style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Ej: Anticipo reserva Cobán, Pago factura FAC-001..."/>
+            </Fld>
+            <Fld label="REFERENCIA / N° COMPROBANTE">
+              <input tabIndex={0} style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="REF-00001"/>
+            </Fld>
+            <Fld label="NOTAS">
+              <input tabIndex={0} style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones"/>
+            </Fld>
             <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
-              <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"💾 Registrar pago"}</button>
-              <button onClick={()=>setShowForm(false)} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
+              <button tabIndex={0} onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1,padding:10,fontSize:13}}>
+                {saving?"💾 Registrando...":"💾 Registrar pago"}
+              </button>
+              <button tabIndex={0} onClick={()=>{setShowForm(false);setF({...EMPTY_P});}} style={{...S.btn("ghost"),flex:1,padding:10}}>
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {loading?<Spinner/>:rows.length===0?<Empty icon="💰" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
+      {/* Lista */}
+      {loading?<Spinner/>:rows.length===0?
+        <Empty icon="💰" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
         <div style={S.card}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>{["Fecha","Concepto","Método","Referencia","Monto",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>{["Fecha","Concepto","Método","Referencia","Monto",""].map(h=>(
+                <th key={h} style={S.th}>{h}</th>
+              ))}</tr>
+            </thead>
             <tbody>
               {rows.map(r=>(
                 <tr key={r.id}>
@@ -2594,8 +2582,10 @@ function PagePagos({showToast,empId}){
                   <td style={{...S.td,fontWeight:500}}>{r.concepto}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11}}>{r.metodo}</td>
                   <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{r.referencia||"—"}</td>
-                  <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.monto)}</td>
-                  <td style={S.td}><button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:11}}>🗑️</button></td>
+                  <td style={{...S.td,fontWeight:700,color:T.acc,whiteSpace:"nowrap"}}>Q {fmt(r.monto)}</td>
+                  <td style={S.td}>
+                    <button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:11}}>🗑️</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -2696,7 +2686,8 @@ function PageCotizaciones({showToast,empId}){
                   <button onClick={()=>setPreview(r)} style={{...S.btn("blue"),fontSize:11,padding:"4px 9px"}}>👁 Ver</button>
                   <button onClick={()=>{const doc=makePDF();if(doc)doc.save(r.numero+".pdf");}} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>⬇ PDF</button>
                   <button onClick={()=>{const doc=makePDF();if(doc){const url=URL.createObjectURL(doc.output("blob"));const w=window.open(url);setTimeout(()=>w&&w.print(),1000);}}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>🖨️</button>
-                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotizacion "+r.numero)+"&body="+encodeURIComponent("Adjunto cotizacion "+r.numero+" por Q "+fmt(total)+". Oscar Galvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>✉️</button>
+                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotización "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotización "+r.numero+" por Q "+fmt(total)+". Para más información: Oscar Gálvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>✉️</button>
+                  <button onClick={()=>{const msg="Estimados, le comparto cotización "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>💬 WA</button>
                   <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>📋 Clonar</button>
                   <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>✏️</button>
                   {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>📦</button>}
@@ -3251,7 +3242,7 @@ function PageClientes({showToast,empId}){
   const [saving,setSaving]=useState(false);
   const [f,setF]=useState({codigo:"",nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
-  const load=async()=>{setLoading(true);const d=await dbGet("clientes","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
+  const load=async()=>{setLoading(true);const d=await dbGet("clientes","&order=codigo.asc,nombre.asc");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   useEffect(()=>{load();},[]);
   const abrirEditar=c=>{setF({codigo:c.codigo||'',nombre:c.nombre||"",tipo:c.tipo||"empresa",nit:c.nit||"",direccion:c.direccion||"",telefono:c.telefono||"",email:c.email||""});setEditItem(c);setVista("form");};
   const abrirNuevo=()=>{setF({nombre:"",tipo:"empresa",nit:"",direccion:"",telefono:"",email:""});setEditItem(null);setVista("form");};
@@ -3341,7 +3332,7 @@ function PageFlota({showToast,empId}){
   const [f,setF]=useState({codigo:"",propietario:"propio",placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const TIPOS=["Sedán","SUV","Pickup","Van","Microbús","Bus"];
-  const load=async()=>{setLoading(true);const d=await dbGet("vehiculos","");setRows(Array.isArray(d)?d:[]);setLoading(false);};
+  const load=async()=>{setLoading(true);const d=await dbGet("vehiculos","&order=codigo.asc,marca.asc");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   useEffect(()=>{load();},[]);
   const abrirEditar=v=>{setF({codigo:v.codigo||'',propietario:v.propietario||'propio',placa:v.placa||"",marca:v.marca||"",modelo:v.modelo||"",anio:v.anio||new Date().getFullYear(),tipo:v.tipo||"SUV",estado:v.estado||"disponible",km_actual:v.km_actual||0});setEditItem(v);setVista("form");};
   const abrirNuevo=()=>{setF({placa:"",marca:"",modelo:"",anio:new Date().getFullYear(),tipo:"SUV",estado:"disponible",km_actual:0});setEditItem(null);setVista("form");};
@@ -4259,6 +4250,10 @@ export default function App(){
 
   useEffect(()=>{
     dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0])setEmpId(d[0].id);});
+    // Global TAB navigation style
+    const style=document.createElement("style");
+    style.innerHTML="input,select,textarea{outline:none}input:focus,select:focus,textarea:focus{border-color:#00D4AA!important;box-shadow:0 0 0 2px #00D4AA33}";
+    document.head.appendChild(style);
     // Load jsPDF dynamically
     if(!window.jspdf){
       const s=document.createElement("script");
