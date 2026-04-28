@@ -628,42 +628,34 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
     reader.readAsDataURL(file);
   };
 
-  const guardar=async(estado)=>{
-    if(!f.cliente_nombre.trim()){alert("El nombre del cliente es requerido");return;}
-    setSaving(true);
-    const numero=isClone?`COT-${Date.now().toString().slice(-6)}`:(initial?.numero||`COT-${Date.now().toString().slice(-6)}`);
-    const payload={
-      empresa_id: empId || DEFAULT_EMPRESA_ID,
-      numero,
-      tipo:f.tipo,
-      cliente_nombre:f.cliente_nombre,
-      cliente_nit:f.cliente_nit,
-      cliente_dir:f.cliente_dir,
-      saludo:f.saludo,
-      descripcion_servicio:f.descripcion_servicio,
-      vehiculo_nombre:f.vehiculo_nombre,
-      con_piloto:f.con_piloto,
-      dias:f.dias,
-      precio_personalizado:parseFloat(f.precio_custom)||null,
-      tasa_iva:f.iva_pct,
-      metodo_pago:f.pago,
-      tasa_cambio:exch,
-      subtotal:sub,
-      total_iva:iva_amt,
-      recargo_tarjeta:f.pago==="tarjeta"?total_ef*0.05:0,
-      total_gtq:f.pago==="tarjeta"?total_tc:total_ef,
-      total_usd:(f.pago==="tarjeta"?total_tc:total_ef)/exch,
-      fecha_emision:f.fecha_emision,
-      fecha_vence:f.fecha_vence,
-      estado,
-      notas:f.notas,
-      caract,
-      incluidos,
-      beneficios,
-      orden_venta:estado==="orden_venta",
+ const guardar = async () => {
+  try {
+    const payload = {
+      empresa_id: DEFAULT_EMPRESA_ID,
+      numero: "TEST-" + Date.now(),
+      cliente_nombre: "PRUEBA DIRECTA"
     };
-   try {
-  let result;
+
+    console.log("📤 Enviando:", payload);
+
+    const { data, error } = await supabase
+      .from("cotizaciones")
+      .insert([payload])
+      .select();
+
+    console.log("📥 DATA:", data);
+    console.log("❌ ERROR:", error);
+
+    if (error) {
+      alert("Error: " + error.message);
+    } else {
+      alert("Guardado correctamente");
+    }
+
+  } catch (err) {
+    console.error("🔥 ERROR:", err);
+  }
+};
 
   if(!isClone && initial?.id && !initial?.__clon){
     result = await dbUpd("cotizaciones", initial.id, payload);
