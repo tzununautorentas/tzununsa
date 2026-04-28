@@ -628,7 +628,8 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
     reader.readAsDataURL(file);
   };
 
- const guardar = async () => {
+const guardar = async () => {
+  alert("Estoy entrando a guardar");
   try {
     const payload = {
       empresa_id: DEFAULT_EMPRESA_ID,
