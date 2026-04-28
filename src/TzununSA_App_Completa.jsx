@@ -662,13 +662,32 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
       beneficios,
       orden_venta:estado==="orden_venta",
     };
-    if(!isClone && initial?.id && !initial?.__clon){
-      await dbUpd("cotizaciones",initial.id,payload);
-    } else {
-      await dbIns("cotizaciones",payload);
-    }
+   try {
+  let result;
+
+  if(!isClone && initial?.id && !initial?.__clon){
+    result = await dbUpd("cotizaciones", initial.id, payload);
+  } else {
+    result = await dbIns("cotizaciones", payload);
+  }
+
+  console.log("✅ RESULTADO:", result);
+
+  if (!result || result.error) {
+    console.error("❌ ERROR AL GUARDAR:", result?.error);
+    alert("Error al guardar: " + (result?.error?.message || "Error desconocido"));
     setSaving(false);
-    onSave(estado);
+    return;
+  }
+
+  setSaving(false);
+  onSave(estado);
+
+} catch (err) {
+  console.error("🔥 ERROR CRÍTICO:", err);
+  alert("Error crítico: " + err.message);
+  setSaving(false);
+}
   };
 
   return (
