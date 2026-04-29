@@ -689,7 +689,7 @@ const guardar = async () => {
         <div style={{fontSize:14,fontWeight:700,color:T.acc}}>
           {isClone?"Clonar cotización":initial?.id?"Editar cotización":"Nueva cotización"}
         </div>
-        <button onClick={onCancel} style={S.btn("ghost")}>← Volver</button>
+        <button onClick={() => guardar("borrador")} style={S.btn("ghost")}>← Volver</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
         {/* FORM */}
