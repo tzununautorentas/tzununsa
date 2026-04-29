@@ -1,6 +1,6 @@
-alert("ESTE ES EL ARCHIVO CORRECTO");
 /** @jsxRuntime classic */
 /** @jsx React.createElement */
+alert("ESTE ES EL ARCHIVO CORRECTO");
 import React, { useState, useEffect, useRef } from "react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 const DEFAULT_EMPRESA_ID = "adc5f324-a108-49ad-875c-779afe3b9f7f";
