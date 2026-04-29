@@ -629,7 +629,7 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
     reader.readAsDataURL(file);
   };
 
-const guardar = async () => {
+const guardar = async (estado) => {
   alert("Estoy entrando a guardar");
   try {
     const payload = {
