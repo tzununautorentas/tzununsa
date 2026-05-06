@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, Component } from "react";
 import { T, S, fmt, fmtD, dbGet, dbIns } from "./config.js";
-
 // ── Error Boundary ────────────────────────────────────────────────────────────
 export class ErrBoundary extends Component {
   constructor(p) { super(p); this.state = { err: null }; }
