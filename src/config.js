@@ -128,8 +128,8 @@ export const CATALOGO = [
   { id: "c5", nombre: "Mitsubishi L200 4x4",      tipo: "Pickup",  dia: 550, sem: 500, mes: 450 },
   { id: "c6", nombre: "Mahindra Pickup 4x4",      tipo: "Pickup",  dia: 550, sem: 500, mes: 450 },
   { id: "c7", nombre: "Nissan Urvan 16p",         tipo: "Microbús",dia: 750, sem: 700, mes: 650 },
-  { id: "c8", nombre: "Bus tipo County",          tipo: "Bus",     dia: 600, sem: 550, mes: 500 },
-  { id: "c9", nombre: "Bus Pullman",              tipo: "Bus",     dia: 600, sem: 550, mes: 500 },
+  { id: "c8", nombre: "Bus tipo County",          tipo: "Bus",     dia: 1000, sem: 950, mes: 900 },
+  { id: "c9", nombre: "Bus Pullman",              tipo: "Bus",     dia: 2000, sem: 2000, mes: 2000 },
 ];
 
 export const tarifaVeh = (v, dias) => {
