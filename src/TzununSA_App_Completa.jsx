@@ -4329,5 +4329,8 @@ export default function App(){
     </div>
   );
 }
-
+import PageCotizaciones from "./pages/Cotizaciones.jsx";
+import PageReservas from "./pages/Reservas.jsx";
+import PagePagos from "./pages/Pagos.jsx";
+import PageCatalogo from "./pages/Catalogo.jsx";
 // jsPDF loaded via CDN in index.html
