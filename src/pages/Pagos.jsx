@@ -220,3 +220,4 @@ export function BotonesCompartir({ numero, total, tipo }) {
     </div>
   );
 }
+
