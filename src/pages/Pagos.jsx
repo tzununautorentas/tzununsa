@@ -40,7 +40,7 @@ export default function PagePagos({ showToast, empId }) {
       if (!concepto) {
         const fa = facturas.find(x => x.id === f.factura_id);
         const re = reservas.find(x => x.id === f.reserva_id);
-        concepto = fa ? \`Pago factura \${fa.numero} ÔÇö \${fa.nombre_receptor}\` : re ? \`Pago reserva \${re.numero} ÔÇö \${re.cliente_nombre}\` : "Pago recibido";
+        concepto = fa ? `Pago factura ${fa.numero} ÔÇö ${fa.nombre_receptor}` : re ? `Pago reserva ${re.numero} ÔÇö ${re.cliente_nombre}` : "Pago recibido";
       }
       const pago = await dbIns("pagos_recibidos", { empresa_id: eid, fecha: f.fecha, monto, metodo: f.metodo, referencia: f.referencia || "", concepto, cuenta_id: f.cuenta_id, notas: f.notas || "", factura_id: f.factura_id || null, reserva_id: f.reserva_id || null });
       if (pago?.error) { showToast("Error: " + pago.error, "err"); setSaving(false); return; }
@@ -69,7 +69,7 @@ export default function PagePagos({ showToast, empId }) {
       {exportar && <ModalExportar titulo="Pagos Recibidos" datos={rows} campos={CAMPOS} onClose={() => setExportar(false)} />}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
         {[{ l: "Total recibido", v: "Q " + fmt(total), c: T.acc, bg: T.accD }, { l: "Este mes", v: "Q " + fmt(esteMes), c: T.blue, bg: T.blueD }, { l: "Registros", v: rows.length, c: T.purple, bg: T.purpleD }].map((s, i) => (
-          <div key={i} style={{ background: s.bg, border: \`1px solid \${s.c}44\`, borderRadius: 12, padding: "14px 18px" }}>
+          <div key={i} style={{ background: s.bg, border: `1px solid ${s.c}44`, borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ fontSize: 11, color: T.mut }}>{s.l}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: s.c, marginTop: 4 }}>{s.v}</div>
           </div>
@@ -153,3 +153,4 @@ export default function PagePagos({ showToast, empId }) {
     </div>
   );
 }
+

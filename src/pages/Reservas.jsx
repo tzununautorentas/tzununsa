@@ -19,7 +19,7 @@ function CalendarioReservas({ rows, onEdit }) {
   for (let i = 0; i < Math.ceil((startDow + last.getDate()) / 7) * 7; i++) {
     const day = i - startDow + 1;
     const valid = day >= 1 && day <= last.getDate();
-    const dateStr = valid ? \`\${y}-\${String(m+1).padStart(2,"0")}-\${String(day).padStart(2,"0")}\` : "";
+    const dateStr = valid ? `${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}` : "";
     const dayRows = valid ? rows.filter(r => {
       const fi = (r.fecha_inicio || "").slice(0, 10);
       const ff = (r.fecha_fin || fi).slice(0, 10);
@@ -41,11 +41,11 @@ function CalendarioReservas({ rows, onEdit }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
         {cells.map((c, i) => (
-          <div key={i} style={{ minHeight: 72, background: c.isToday ? T.accD : c.valid ? T.surf : "transparent", borderRadius: 6, padding: 4, border: c.isToday ? \`1px solid \${T.acc}\` : "1px solid transparent" }}>
+          <div key={i} style={{ minHeight: 72, background: c.isToday ? T.accD : c.valid ? T.surf : "transparent", borderRadius: 6, padding: 4, border: c.isToday ? `1px solid ${T.acc}` : "1px solid transparent" }}>
             {c.valid && <>
               <div style={{ fontSize: 12, fontWeight: c.isToday ? 700 : 400, color: c.isToday ? T.acc : T.sub, marginBottom: 2 }}>{c.day}</div>
               {c.dayRows.slice(0, 3).map(r => (
-                <div key={r.id} onClick={() => onEdit(r)} style={{ fontSize: 9, fontWeight: 600, background: (colors[r.estado] || T.mut) + "33", color: colors[r.estado] || T.mut, borderLeft: \`2px solid \${colors[r.estado] || T.mut}\`, padding: "1px 4px", borderRadius: 2, marginBottom: 1, cursor: "pointer", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                <div key={r.id} onClick={() => onEdit(r)} style={{ fontSize: 9, fontWeight: 600, background: (colors[r.estado] || T.mut) + "33", color: colors[r.estado] || T.mut, borderLeft: `2px solid ${colors[r.estado] || T.mut}`, padding: "1px 4px", borderRadius: 2, marginBottom: 1, cursor: "pointer", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                   {r.cliente_nombre?.split(" ")[0]}
                 </div>
               ))}
@@ -57,7 +57,7 @@ function CalendarioReservas({ rows, onEdit }) {
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 10 }}>
         {Object.entries(EST_RES).map(([k, v]) => (
           <div key={k} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: v.c + "44", border: \`1px solid \${v.c}\` }} />
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: v.c + "44", border: `1px solid ${v.c}` }} />
             <span style={{ color: T.sub }}>{v.l}</span>
           </div>
         ))}
@@ -214,11 +214,11 @@ function FormReserva({ initial, empId, onSave, onCancel }) {
           {vehObj && dias > 0 ? <>
             <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>­ƒÜù {vehObj.nombre} ┬À {dias} d├¡a{dias !== 1 ? "s" : ""}</div>
             <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-              {[["Tarifa", \`Q \${fmt(tarifa)}/d├¡a\`], ["Subtotal", \`Q \${fmt(sub)}\`], [\`IVA \${f.iva}%\`, \`Q \${fmt(ivaAmt)}\`], ...(f.pago === "tarjeta" ? [["Recargo TC 5%", \`Q \${fmt(recTC)}\`]] : [])].map(([l, v]) => (
+              {[["Tarifa", `Q ${fmt(tarifa)}/d├¡a`], ["Subtotal", `Q ${fmt(sub)}`], [`IVA ${f.iva}%`, `Q ${fmt(ivaAmt)}`], ...(f.pago === "tarjeta" ? [["Recargo TC 5%", `Q ${fmt(recTC)}`]] : [])].map(([l, v]) => (
                 <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12, color: T.sub }}><span>{l}</span><span>{v}</span></div>
               ))}
             </div>
-            <div style={{ background: T.accD, border: \`1px solid \${T.acc}55\`, borderRadius: 10, padding: "12px 16px", marginBottom: 10 }}>
+            <div style={{ background: T.accD, border: `1px solid ${T.acc}55`, borderRadius: 10, padding: "12px 16px", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, fontWeight: 800, color: T.acc }}><span>TOTAL</span><span>Q {fmt(total)}</span></div>
               <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>$ {fmt(f.exch > 0 ? total / f.exch : 0)} USD</div>
             </div>
@@ -253,15 +253,15 @@ export default function PageReservas({ showToast, empId }) {
     const res = rows.find(r => r.id === id);
     await dbUpd("reservas", id, { estado });
     if (estado === "en_curso" && res?.vehiculo_nombre) {
-      const vehs = await dbGet("vehiculos", \`&vehiculo_nombre=eq.\${encodeURIComponent(res.vehiculo_nombre)}\`);
+      const vehs = await dbGet("vehiculos", `&vehiculo_nombre=eq.${encodeURIComponent(res.vehiculo_nombre)}`);
       if (vehs[0]) await dbUpd("vehiculos", vehs[0].id, { estado: "rentado" });
     }
     if (estado === "completada" && res?.vehiculo_nombre) {
-      const vehs = await dbGet("vehiculos", \`&vehiculo_nombre=eq.\${encodeURIComponent(res.vehiculo_nombre)}\`);
+      const vehs = await dbGet("vehiculos", `&vehiculo_nombre=eq.${encodeURIComponent(res.vehiculo_nombre)}`);
       if (vehs[0]) await dbUpd("vehiculos", vehs[0].id, { estado: "mantenimiento" });
     }
     if (estado === "cancelada" && res?.vehiculo_nombre) {
-      const vehs = await dbGet("vehiculos", \`&vehiculo_nombre=eq.\${encodeURIComponent(res.vehiculo_nombre)}\`);
+      const vehs = await dbGet("vehiculos", `&vehiculo_nombre=eq.${encodeURIComponent(res.vehiculo_nombre)}`);
       if (vehs[0]) await dbUpd("vehiculos", vehs[0].id, { estado: "disponible" });
     }
     showToast("Estado actualizado");
@@ -333,7 +333,7 @@ export default function PageReservas({ showToast, empId }) {
                     {parseFloat(r.saldo) > 0 && <div style={{ fontSize: 11, color: T.sec }}>Saldo: Q {fmt(r.saldo)}</div>}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 6, paddingTop: 10, borderTop: \`1px solid \${T.bord}22\`, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, paddingTop: 10, borderTop: `1px solid ${T.bord}22`, flexWrap: "wrap" }}>
                   {sig.map(s => <button key={s.v} onClick={() => chEst(r.id, s.v)} style={{ ...S.btn(s.s), fontSize: 11, padding: "5px 10px" }}>{s.l}</button>)}
                   <button onClick={() => { setEditItem(r); setVista("form"); }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "5px 10px" }}>Ô£Å´©Å Editar</button>
                   <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), fontSize: 11, padding: "5px 10px" }}>­ƒùæ´©Å</button>
@@ -346,3 +346,4 @@ export default function PageReservas({ showToast, empId }) {
     </div>
   );
 }
+

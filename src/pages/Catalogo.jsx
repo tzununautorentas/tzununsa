@@ -169,7 +169,7 @@ export default function PageCatalogo({ showToast, empId }) {
       <div style={{ fontSize: 15, fontWeight: 700, color: T.red, marginBottom: 12 }}>ÔÜá´©Å Tabla no encontrada</div>
       <div style={{ fontSize: 13, color: T.sub, marginBottom: 16 }}>La tabla <code>catalogo_servicios</code> no existe en Supabase. Ejecuta este SQL:</div>
       <div style={{ background: "#0D1117", borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: "#7DD3FC", lineHeight: 1.8 }}>
-        {\`CREATE TABLE catalogo_servicios (\\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\\n  empresa_id UUID,\\n  codigo TEXT,\\n  nombre TEXT NOT NULL,\\n  descripcion TEXT,\\n  categoria TEXT DEFAULT 'transporte',\\n  precio_base DECIMAL(12,2) DEFAULT 0,\\n  precio_tarjeta DECIMAL(12,2) DEFAULT 0,\\n  unidad TEXT DEFAULT 'servicio',\\n  aplica_iva BOOLEAN DEFAULT true,\\n  tasa_iva INTEGER DEFAULT 5,\\n  activo BOOLEAN DEFAULT true,\\n  imagen_emoji TEXT DEFAULT '­ƒÜù',\\n  notas TEXT,\\n  created_at TIMESTAMPTZ DEFAULT NOW()\\n);\\nALTER TABLE catalogo_servicios DISABLE ROW LEVEL SECURITY;\`}
+        {`CREATE TABLE catalogo_servicios (\\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\\n  empresa_id UUID,\\n  codigo TEXT,\\n  nombre TEXT NOT NULL,\\n  descripcion TEXT,\\n  categoria TEXT DEFAULT 'transporte',\\n  precio_base DECIMAL(12,2) DEFAULT 0,\\n  precio_tarjeta DECIMAL(12,2) DEFAULT 0,\\n  unidad TEXT DEFAULT 'servicio',\\n  aplica_iva BOOLEAN DEFAULT true,\\n  tasa_iva INTEGER DEFAULT 5,\\n  activo BOOLEAN DEFAULT true,\\n  imagen_emoji TEXT DEFAULT '­ƒÜù',\\n  notas TEXT,\\n  created_at TIMESTAMPTZ DEFAULT NOW()\\n);\\nALTER TABLE catalogo_servicios DISABLE ROW LEVEL SECURITY;`}
       </div>
       <button onClick={load} style={{ ...S.btn("primary"), marginTop: 14 }}>Ôå║ Reintentar despu├®s de crear la tabla</button>
     </div>
@@ -219,14 +219,14 @@ export default function PageCatalogo({ showToast, empId }) {
               {r.codigo && <div style={{ fontFamily: "monospace", fontSize: 10, color: T.mut }}>{r.codigo}</div>}
               <div style={{ fontSize: 14, fontWeight: 700 }}>{r.nombre}</div>
               {r.descripcion && <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4 }}>{r.descripcion}</div>}
-              <div style={{ padding: "8px 0", borderTop: \`1px solid \${T.bord}22\` }}>
+              <div style={{ padding: "8px 0", borderTop: `1px solid ${T.bord}22` }}>
                 <div style={{ fontSize: 11, color: T.mut, marginBottom: 2 }}>{r.categoria} ┬À por {r.unidad}</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: T.acc }}>Q {fmt(r.aplica_iva ? (r.precio_base || 0) * (1 + (r.tasa_iva || 0) / 100) : r.precio_base)}</div>
                 {r.aplica_iva && <div style={{ fontSize: 11, color: T.sub }}>Incluye IVA {r.tasa_iva}% ┬À sin IVA: Q {fmt(r.precio_base)}</div>}
                 {r.precio_tarjeta > 0 && <div style={{ fontSize: 11, color: T.sec }}>­ƒÆ│ Con tarjeta: Q {fmt(r.precio_tarjeta)}</div>}
               </div>
               {r.notas && <div style={{ fontSize: 11, color: T.mut, fontStyle: "italic" }}>{r.notas}</div>}
-              <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: \`1px solid \${T.bord}22\` }}>
+              <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: `1px solid ${T.bord}22` }}>
                 <button onClick={() => { setEditItem(r); setVista("form"); }} style={{ ...S.btn("ghost"), flex: 1, fontSize: 11, padding: "5px 8px" }}>Ô£Å´©Å Editar</button>
                 <button onClick={() => toggleActivo(r.id, r.activo)} style={{ ...S.btn(r.activo !== false ? "warn" : "green"), flex: 1, fontSize: 11, padding: "5px 8px" }}>{r.activo !== false ? "ÔÅ© Pausar" : "ÔûÂ Activar"}</button>
                 <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), fontSize: 11, padding: "5px 8px" }}>­ƒùæ´©Å</button>
@@ -238,3 +238,4 @@ export default function PageCatalogo({ showToast, empId }) {
     </div>
   );
 }
+

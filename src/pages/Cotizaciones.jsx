@@ -18,9 +18,9 @@ function generarPDF(d) {
   doc.setFontSize(20); doc.setFont(undefined, "bold"); doc.setTextColor(0, 212, 170);
   doc.text(d.esOrden ? "ORDEN DE VENTA" : "COTIZACI├ôN", W - 22, 28, { align: "right" });
   doc.setFontSize(10); doc.setTextColor(200, 200, 200); doc.setFont(undefined, "normal");
-  doc.text(\`# \${d.numero}\`, W - 22, 44, { align: "right" });
-  doc.text(\`Emisi├│n: \${d.fecha}\`, W - 22, 56, { align: "right" });
-  doc.text(\`V├ílida: \${d.fechaVence || "15 d├¡as"}\`, W - 22, 68, { align: "right" });
+  doc.text(`# ${d.numero}`, W - 22, 44, { align: "right" });
+  doc.text(`Emisi├│n: ${d.fecha}`, W - 22, 56, { align: "right" });
+  doc.text(`V├ílida: ${d.fechaVence || "15 d├¡as"}`, W - 22, 68, { align: "right" });
   // Cliente
   let y = 100;
   doc.setTextColor(30, 30, 30);
@@ -28,12 +28,12 @@ function generarPDF(d) {
   doc.setFontSize(13); doc.setFont(undefined, "bold"); doc.setTextColor(27, 45, 92);
   const clienteLines = doc.splitTextToSize(d.cliente || "", 380);
   doc.text(clienteLines, 22, y); y += clienteLines.length * 14 + 4;
-  if (d.nit) { doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(100); doc.text(\`NIT: \${d.nit}\`, 22, y); y += 12; }
+  if (d.nit) { doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(100); doc.text(`NIT: ${d.nit}`, 22, y); y += 12; }
   // Saludo
   y += 8;
   doc.setFillColor(245, 248, 255); doc.rect(18, y, W - 36, 32, "F");
   doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(50);
-  const saludoText = d.saludo ? d.saludo + ":" : \`Estimados se├▒ores de \${d.cliente}:\`;
+  const saludoText = d.saludo ? d.saludo + ":" : `Estimados se├▒ores de ${d.cliente}:`;
   const saludoLines = doc.splitTextToSize(saludoText, W - 50);
   doc.text(saludoLines[0].slice(0, 90), 24, y + 12);
   doc.text("En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje.", 24, y + 24);
@@ -46,7 +46,7 @@ function generarPDF(d) {
   y += 22;
   doc.setFillColor(240, 248, 255); doc.rect(18, y, W - 36, 22, "F");
   doc.setTextColor(30); doc.setFont(undefined, "normal");
-  doc.text(d.descripcion || \`Servicio de transporte ÔÇö \${d.vehiculo || ""}\`, 24, y + 14);
+  doc.text(d.descripcion || `Servicio de transporte ÔÇö ${d.vehiculo || ""}`, 24, y + 14);
   y += 22;
   // Totales
   y += 12;
@@ -56,12 +56,12 @@ function generarPDF(d) {
     doc.setTextColor(...color); doc.setFontSize(10);
     doc.text(label, col2, y); doc.text(val, W - 24, y, { align: "right" }); y += 16;
   };
-  drawRow("Subtotal (sin IVA):", \`Q \${fmt(d.sub)}\`);
-  drawRow(\`IVA (\${d.ivaPct}%):\`, \`Q \${fmt(d.ivaAmt)}\`);
+  drawRow("Subtotal (sin IVA):", `Q ${fmt(d.sub)}`);
+  drawRow(`IVA (${d.ivaPct}%):`, `Q ${fmt(d.ivaAmt)}`);
   doc.setDrawColor(200); doc.line(col2, y, W - 24, y); y += 8;
-  drawRow("TOTAL EFECTIVO / DEP├ôSITO:", \`Q \${fmt(d.totalEf)}\`, true, [0, 148, 106]);
-  if (d.mostrarTC) drawRow("TOTAL CON TARJETA (+5%):", \`Q \${fmt(d.totalEf * 1.05)}\`, false, [100]);
-  drawRow(\`Equivalente USD (Q\${fmt(d.exch)}=\$1):\`, \`$ \${fmt(d.exch > 0 ? d.totalEf / d.exch : 0)}\`);
+  drawRow("TOTAL EFECTIVO / DEP├ôSITO:", `Q ${fmt(d.totalEf)}`, true, [0, 148, 106]);
+  if (d.mostrarTC) drawRow("TOTAL CON TARJETA (+5%):", `Q ${fmt(d.totalEf * 1.05)}`, false, [100]);
+  drawRow(`Equivalente USD (Q${fmt(d.exch)}=$1):`, `$ ${fmt(d.exch > 0 ? d.totalEf / d.exch : 0)}`);
   // T├®rminos
   y += 16;
   doc.setFillColor(245, 245, 245); doc.rect(18, y, W - 36, 90, "F");
@@ -295,11 +295,11 @@ function FormCotizacion({ initial, empId, onSave, onCancel }) {
           <div style={S.card}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>RESUMEN Y TOTALES</div>
             <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 12 }}>
-              {[["Subtotal", \`Q \${fmt(sub)}\`], [\`IVA \${f.iva}%\`, \`Q \${fmt(ivaAmt)}\`]].map(([l, v]) => (
+              {[["Subtotal", `Q ${fmt(sub)}`], [`IVA ${f.iva}%`, `Q ${fmt(ivaAmt)}`]].map(([l, v]) => (
                 <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: T.sub }}><span>{l}</span><span>{v}</span></div>
               ))}
             </div>
-            <div style={{ background: T.accD, border: \`1px solid \${T.acc}55\`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
+            <div style={{ background: T.accD, border: `1px solid ${T.acc}55`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, fontWeight: 800, color: T.acc }}><span>TOTAL EFECTIVO</span><span>Q {fmt(totalEf)}</span></div>
               {f.mostrarTC && <div style={{ fontSize: 12, color: T.sec, marginTop: 4 }}>Con tarjeta (+5%): Q {fmt(totalEf * 1.05)}</div>}
               <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>$ {fmt(f.exch > 0 ? totalEf / f.exch : 0)} USD</div>
@@ -312,7 +312,7 @@ function FormCotizacion({ initial, empId, onSave, onCancel }) {
                   <button onClick={() => sf("pago", "transferencia")} style={{ ...S.btn(f.pago === "transferencia" ? "primary" : "ghost"), flex: 1 }}>­ƒÅª Transf.</button>
                 </div>
               </Fld>
-              <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, cursor: "pointer", padding: "8px 10px", borderRadius: 8, background: f.mostrarTC ? T.secD : T.surf, border: \`1px solid \${f.mostrarTC ? T.sec : T.bord}\` }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, cursor: "pointer", padding: "8px 10px", borderRadius: 8, background: f.mostrarTC ? T.secD : T.surf, border: `1px solid ${f.mostrarTC ? T.sec : T.bord}` }}>
                 <input type="checkbox" checked={f.mostrarTC} onChange={e => sf("mostrarTC", e.target.checked)} style={{ width: 16, height: 16 }} />
                 ­ƒÆ│ Mostrar precio con tarjeta (+5%) en PDF
               </label>
@@ -426,7 +426,7 @@ export default function PageCotizaciones({ showToast, empId }) {
                     <div style={{ fontSize: 16, fontWeight: 800, color: T.acc, marginTop: 4 }}>Q {fmt(total)}</div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 5, paddingTop: 10, borderTop: \`1px solid \${T.bord}22\`, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 5, paddingTop: 10, borderTop: `1px solid ${T.bord}22`, flexWrap: "wrap" }}>
                   <button onClick={() => { const doc = makePDF(); if (doc) doc.save(r.numero + ".pdf"); }} style={{ ...S.btn("primary"), fontSize: 11, padding: "4px 10px" }}>Ô¼ç PDF</button>
                   <button onClick={() => { const doc = makePDF(); if (doc) { const url = URL.createObjectURL(doc.output("blob")); const w = window.open(url); setTimeout(() => w?.print(), 1000); } }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 10px" }}>­ƒû¿´©Å</button>
                   <BotonesCompartir numero={r.numero} total={total} tipo="Cotizaci├│n" />
@@ -444,3 +444,4 @@ export default function PageCotizaciones({ showToast, empId }) {
     </div>
   );
 }
+
