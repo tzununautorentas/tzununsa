@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef, Component } from "react";
+<<<<<<< HEAD
 import { T, S, fmt, fmtD, dbGet, dbIns } from "../config.js";
+=======
+import { T, S, fmt, fmtD, dbGet, dbIns } from "./config.js";
+>>>>>>> 4a0f4099400f9c90dcb967c23cc8bf8c32727e98
 
 // ── Error Boundary ────────────────────────────────────────────────────────────
 export class ErrBoundary extends Component {
