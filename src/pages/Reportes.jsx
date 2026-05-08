@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect, useRef, Component } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS } from '../config.js';
+import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS, LOGO_B64 } from '../config.js';
 import { Toast, Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, BotonesCompartir, ErrBoundary } from '../components/shared.jsx';
-
 function KpiCard({icon,label,value,sub,color,bg}){
   return (
     <div style={{...S.card,position:"relative",overflow:"hidden"}}>
@@ -360,26 +359,4 @@ function ReporteClientes({data}){
 
 // ÔòÉÔòÉÔòÉ GASTOS ÔòÉÔòÉÔòÉ
 
-export default function PageReportes(){
-  const [tab,setTab]=useState("ventas");const [data,setData]=useState(null);const [loading,setLoading]=useState(true);
-  useEffect(()=>{load();},[]);
-  const load=async()=>{
-    setLoading(true);
-    const [vehiculos,reservas,cotizaciones,facturas,gastos,clientes,movimientos]=await Promise.all([dbGet("vehiculos",""),dbGet("reservas",""),dbGet("cotizaciones",""),dbGet("facturas",""),dbGet("gastos",""),dbGet("clientes",""),dbGet("movimientos_bancarios","")]);
-    setData({vehiculos:Array.isArray(vehiculos)?vehiculos:[],reservas:Array.isArray(reservas)?reservas:[],cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],facturas:Array.isArray(facturas)?facturas:[],gastos:Array.isArray(gastos)?gastos:[],clientes:Array.isArray(clientes)?clientes:[],movimientos:Array.isArray(movimientos)?movimientos:[]});
-    setLoading(false);
-  };
-  const TABS=[{id:"ventas",l:"📊 Ventas"},{id:"flota",l:"🚗 Flota"},{id:"gastos",l:"🛍️ Gastos"},{id:"clientes",l:"👥 Clientes"}];
-  return(
-    <div>
-      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
-        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺ Actualizar</button>
-      </div>
-      {loading?<Spinner/>:data&&<>{tab==="ventas"&&<ReporteVentas data={data}/>}{tab==="flota"&&<ReporteFlota data={data}/>}{tab==="gastos"&&<ReporteGastos data={data}/>}{tab==="clientes"&&<ReporteClientes data={data}/>}</>}
-    </div>
-  );
-}
-
-// ÔòÉÔòÉÔòÉ CONFIGURACIÓN ÔòÉÔòÉÔòÉ
 

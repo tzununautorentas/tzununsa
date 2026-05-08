@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect, useRef, Component } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS, LOGO_B64 } from '../config.js';
+import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS, LOGO_B64 } from '../config.js';
 import { Toast, Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, BotonesCompartir, ErrBoundary } from '../components/shared.jsx';
-
 function FormReserva({initial,onSave,onCancel,empId}){
   const EMPTY_R={cliente_nombre:"",tipo:"renta",vehiculo_nombre:"",conductor_nombre:"",
     fecha_inicio:"",fecha_fin:"",hora_recogida:"08:00",origen:"Guatemala",destino:"",
