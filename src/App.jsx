@@ -1,8 +1,8 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
 import { ErrBoundary } from "./components/shared.jsx";
 
-// ÔöÇÔöÇ Importar todas las páginas ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// Importar todas las paginas
 import PageDashboard    from "./pages/Dashboard.jsx";
 import PageCalculadora  from "./pages/Calculadora.jsx";
 import PageCotizaciones from "./pages/Cotizaciones.jsx";
@@ -19,7 +19,7 @@ import PageContabilidad from "./pages/Contabilidad.jsx";
 import PageReportes     from "./pages/Reportes.jsx";
 import PageProveedores  from "./pages/Proveedores.jsx";
 
-// ÔöÇÔöÇ Login Screen ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// Login Screen
 function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
@@ -28,11 +28,11 @@ function LoginScreen({ onLogin }) {
 
   const login = async (e) => {
     e.preventDefault();
-    if (!email || !pwd) { setError("Ingresa correo y contraseña"); return; }
+    if (!email || !pwd) { setError("Ingresa correo y contrasena"); return; }
     setLoading(true); setError("");
     const res = await sbLogin(email, pwd);
     if (res.error || res.error_description) {
-      setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
+      setError("Credenciales incorrectas. Verifica tu correo y contrasena.");
     } else {
       onLogin(res);
     }
@@ -43,22 +43,22 @@ function LoginScreen({ onLogin }) {
     <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 56, marginBottom: 8 }}>🐦</div>
+          <div style={{ fontSize: 56, marginBottom: 8 }}>LOGO</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: T.acc, fontFamily: "monospace" }}>TzununSA</div>
-          <div style={{ fontSize: 14, color: T.sub, marginTop: 4 }}>Sistema de Gestión — Tz'unun AutoRentas</div>
+          <div style={{ fontSize: 14, color: T.sub, marginTop: 4 }}>Sistema de Gestion -- Tz'unun AutoRentas</div>
         </div>
         <form onSubmit={login} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label style={S.lbl}>CORREO ELECTRÓNICO</label>
+            <label style={S.lbl}>CORREO ELECTRONICO</label>
             <input style={S.inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@empresa.com" autoFocus />
           </div>
           <div>
-            <label style={S.lbl}>CONTRASE├æA</label>
-            <input style={S.inp} type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó" />
+            <label style={S.lbl}>CONTRASEÑA</label>
+            <input style={S.inp} type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="********" />
           </div>
           {error && <div style={{ background: T.redD, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red }}>{error}</div>}
           <button type="submit" disabled={loading} style={{ ...S.btn("primary"), padding: 13, fontSize: 14, marginTop: 4 }}>
-            {loading ? "Ingresando..." : "Entrar →"}
+            {loading ? "Ingresando..." : "Entrar ->"}
           </button>
         </form>
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: T.mut }}>
@@ -69,51 +69,51 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-// ÔöÇÔöÇ Navigation Config ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// Navigation Config
 const NAV = [
   { sep: true, label: "PRINCIPAL" },
-  { id: "dashboard",     icon: "📊", label: "Dashboard" },
+  { id: "dashboard",     icon: "[D]", label: "Dashboard" },
   { sep: true, label: "PRESUPUESTOS" },
-  { id: "calculadora",   icon: "🧮", label: "Calculadora" },
-  { id: "cotizaciones",  icon: "📋", label: "Cotizaciones" },
-  { id: "reservas",      icon: "📅", label: "Reservas" },
-  { sep: true, label: "OPERACIÓN" },
-  { id: "flota",         icon: "🚗", label: "Flota" },
-  { id: "mantenimiento", icon: "🔧", label: "Mantenimiento" },
-  { id: "clientes",      icon: "👥", label: "Clientes" },
-  { id: "catalogo",      icon: "📦", label: "Catálogo" },
+  { id: "calculadora",   icon: "[C]", label: "Calculadora" },
+  { id: "cotizaciones",  icon: "[Q]", label: "Cotizaciones" },
+  { id: "reservas",      icon: "[R]", label: "Reservas" },
+  { sep: true, label: "OPERACION" },
+  { id: "flota",         icon: "[V]", label: "Flota" },
+  { id: "mantenimiento", icon: "[M]", label: "Mantenimiento" },
+  { id: "clientes",      icon: "[CL]", label: "Clientes" },
+  { id: "catalogo",      icon: "[K]", label: "Catalogo" },
   { sep: true, label: "FINANZAS" },
-  { id: "facturacion",   icon: "🧾", label: "Facturación FEL" },
-  { id: "banca",         icon: "🏦", label: "La Banca" },
-  { id: "gastos",        icon: "🛍️", label: "Gastos / Compras" },
-  { id: "pagos",         icon: "💰", label: "Pagos Recibidos" },
-  { id: "proveedores",   icon: "🏢", label: "Proveedores" },
-  { id: "contabilidad",  icon: "­ƒôÆ", label: "Contabilidad" },
-  { sep: true, label: "ANÁLISIS" },
-  { id: "reportes",      icon: "📈", label: "Reportes" },
+  { id: "facturacion",   icon: "[F]", label: "Facturacion FEL" },
+  { id: "banca",         icon: "[B]", label: "La Banca" },
+  { id: "gastos",        icon: "[G]", label: "Gastos / Compras" },
+  { id: "pagos",         icon: "[P]", label: "Pagos Recibidos" },
+  { id: "proveedores",   icon: "[PR]", label: "Proveedores" },
+  { id: "contabilidad",  icon: "[A]", label: "Contabilidad" },
+  { sep: true, label: "ANALISIS" },
+  { id: "reportes",      icon: "[RE]", label: "Reportes" },
 ];
 
 const PAGE_TITLES = {
   dashboard: "Dashboard", calculadora: "Calculadora", cotizaciones: "Cotizaciones",
   reservas: "Reservas", flota: "Flota", mantenimiento: "Mantenimiento",
-  clientes: "Clientes", catalogo: "Catálogo de Servicios",
-  facturacion: "Facturación FEL", banca: "La Banca",
+  clientes: "Clientes", catalogo: "Catalogo de Servicios",
+  facturacion: "Facturacion FEL", banca: "La Banca",
   gastos: "Gastos y Compras", pagos: "Pagos Recibidos",
   proveedores: "Proveedores", contabilidad: "Contabilidad", reportes: "Reportes",
 };
 
-// ÔöÇÔöÇ Toast global ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// Toast global
 function ToastGlobal({ toast }) {
   if (!toast) return null;
   const c = toast.type === "err" ? T.red : T.acc;
   return (
     <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, background: T.card, border: `1px solid ${c}`, borderRadius: 12, padding: "13px 20px", fontSize: 13, color: c, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.4)", maxWidth: 360 }}>
-      {toast.type === "err" ? "❌" : "✅"} {toast.msg}
+      {toast.type === "err" ? "[X]" : "[OK]"} {toast.msg}
     </div>
   );
 }
 
-// ÔöÇÔöÇ Main App ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// Main App
 export default function App() {
   const [session, setSession] = useState(() => {
     try { return JSON.parse(localStorage.getItem("tzunun_session")); } catch { return null; }
@@ -177,11 +177,11 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: T.bg, color: T.txt, fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-      {/* ÔöÇÔöÇ Sidebar ÔöÇÔöÇ */}
+      {/* Sidebar */}
       <div style={{ width: collapsed ? 64 : 220, background: T.surf, borderRight: `1px solid ${T.bord}`, flexShrink: 0, display: "flex", flexDirection: "column", transition: "width .2s", overflow: "hidden" }}>
         {/* Logo */}
         <div style={{ padding: collapsed ? "18px 0" : "18px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${T.bord}`, justifyContent: collapsed ? "center" : "flex-start" }}>
-          <span style={{ fontSize: 24, flexShrink: 0 }}>🐦</span>
+          <span style={{ fontSize: 24, flexShrink: 0 }}>LOGO</span>
           {!collapsed && <div><div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>Tz'unun</div><div style={{ fontSize: 10, color: T.sub }}>AutoRentas</div></div>}
         </div>
         {/* Nav Items */}
@@ -203,18 +203,18 @@ export default function App() {
         </div>
         {/* User + Logout */}
         <div style={{ borderTop: `1px solid ${T.bord}`, padding: collapsed ? "12px 0" : "12px 14px" }}>
-          {!collapsed && <div style={{ fontSize: 11, color: T.sub, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {userName}</div>}
+          {!collapsed && <div style={{ fontSize: 11, color: T.sub, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>USER: {userName}</div>}
           <button onClick={handleLogout} style={{ ...S.btn("ghost"), width: collapsed ? "auto" : "100%", fontSize: 11, padding: "6px 10px" }}>
-            {collapsed ? "🚪" : "🚪 Salir"}
+            {collapsed ? "[X]" : "[X] Salir"}
           </button>
         </div>
       </div>
 
-      {/* ÔöÇÔöÇ Content ÔöÇÔöÇ */}
+      {/* Content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
         <div style={{ background: T.surf, borderBottom: `1px solid ${T.bord}`, padding: "0 20px", height: 52, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <button onClick={() => setCollapsed(!collapsed)} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 18, padding: "4px 6px" }}>Ôÿ░</button>
+          <button onClick={() => setCollapsed(!collapsed)} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 18, padding: "4px 6px" }}>M</button>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>{PAGE_TITLES[pag] || ""}</div>
           <div style={{ marginLeft: "auto", fontSize: 12, color: T.sub }}>{new Date().toLocaleDateString("es-GT", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</div>
         </div>
