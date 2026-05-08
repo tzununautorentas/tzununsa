@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { T, S } from "../config.js";
 import { Empty } from "../components/shared.jsx";
 
@@ -10,3 +10,4 @@ export default function PageProveedores({ showToast, empId }) {
     </div>
   );
 }
+

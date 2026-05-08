@@ -37,30 +37,30 @@ function ReporteVentas({data}){
   const totalFac=facturas.filter(f=>!["anulada","borrador"].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.total)||0),0);
 
   const tablaRows=reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>[
-    r.numero||"ÔÇö",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
-    r.vehiculo_nombre||"ÔÇö",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
+    r.numero||"—",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
+    r.vehiculo_nombre||"—",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
     `Q ${fmt(r.anticipo)}`,`Q ${fmt(r.saldo)}`,r.estado
   ]);
 
   const exportar=()=>exportCSV("Reporte_Ventas_TzununSA",
-    ["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
+    ["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
     tablaRows
   );
   const imprimir=()=>imprimirTabla("Reporte de Ventas",
-    ["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha","Monto","Anticipo","Saldo","Estado"],
+    ["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"],
     tablaRows
   );
 
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
-        <KpiCard icon="­ƒôà" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
-        <KpiCard icon="­ƒôï" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
-        <KpiCard icon="­ƒº¥" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
+        <KpiCard icon="📅" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="📋" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
+        <KpiCard icon="🧾" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
       </div>
 
       <div style={{...S.card,marginBottom:16}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales ÔÇö Reservas vs Cotizaciones</div>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales — Reservas vs Cotizaciones</div>
         {chartMensual.length>0?(
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartMensual}>
@@ -84,14 +84,14 @@ function ReporteVentas({data}){
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Reservas</div>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
-            <thead><tr>{["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>(
                 <tr key={r.id}>
                   <td style={{...S.td,fontFamily:"monospace",color:T.acc}}>{r.numero}</td>
                   <td style={{...S.td,fontWeight:600}}>{r.cliente_nombre}</td>
                   <td style={S.td}>{r.tipo==="renta"?"­ƒöæ Renta":"­ƒù║ Traslado"}</td>
-                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"ÔÇö"}</td>
+                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"—"}</td>
                   <td style={{...S.td,color:T.sub,whiteSpace:"nowrap"}}>{fmtD(r.fecha_inicio)}</td>
                   <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.monto)}</td>
                   <td style={{...S.td,color:T.acc}}>Q {fmt(r.anticipo)}</td>
@@ -125,14 +125,14 @@ function ReporteFlota({data}){
   ].filter(x=>x.value>0);
 
   const tablaRows=flotaData.map(v=>[v.placa,`${v.marca} ${v.modelo}`,v.tipo,v.anio,(v.km_actual||0).toLocaleString()+" km",v.viajes,`Q ${fmt(v.ingresos)}`,v.estado]);
-  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Veh├¡culo","Tipo","A├▒o","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
-  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Veh├¡culo","Tipo","A├▒o","Km","Viajes","Ingresos","Estado"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Vehículo","Tipo","Año","Km","Viajes","Ingresos","Estado"],tablaRows);
 
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <div style={S.card}>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por veh├¡culo</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por vehículo</div>
           {chartFlota.some(x=>x.Ingresos>0)?(
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartFlota} layout="vertical">
@@ -142,7 +142,7 @@ function ReporteFlota({data}){
                 <Bar dataKey="Ingresos" fill={T.acc} radius={[0,4,4,0]}/>
               </BarChart>
             </ResponsiveContainer>
-          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por veh├¡culo</div>}
+          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por vehículo</div>}
         </div>
         <div style={S.card}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Estado actual de flota</div>
@@ -175,7 +175,7 @@ function ReporteFlota({data}){
       <div style={S.card}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Flota</div>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr>{["Placa","Veh├¡culo","Tipo","A├▒o","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>
             {flotaData.map(v=>(
               <tr key={v.id}>
@@ -217,21 +217,21 @@ function ReporteGastos({data}){
     Gastos:Math.round(gastos.filter(g=>new Date(g.fecha).getMonth()===i).reduce((s,g)=>s+(parseFloat(g.total)||0),0)),
   })).filter(x=>x.Gastos>0);
 
-  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"ÔÇö",g.estado]);
-  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","M├®todo pago","Referencia","Estado"],tablaRows);
-  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","Estado"],tablaRows);
+  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"—",g.estado]);
+  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categoría","Descripción","Monto","IVA","Total","Método pago","Referencia","Estado"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categoría","Descripción","Monto","IVA","Total","Estado"],tablaRows);
 
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
-        <KpiCard icon="­ƒÆ©" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
-        <KpiCard icon="Ô£à" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
-        <KpiCard icon="ÔÅ│" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
+        <KpiCard icon="🛍️" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
+        <KpiCard icon="✅" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="⏳" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <div style={S.card}>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categor├¡a</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categoría</div>
           {porCat.map(({cat,total,count})=>(
             <div key={cat} style={{marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
@@ -272,7 +272,7 @@ function ReporteGastos({data}){
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Gastos</div>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
-            <thead><tr>{["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","M├®todo","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Fecha","Categoría","Descripción","Monto","IVA","Total","Método","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {gastos.map(g=>(
                 <tr key={g.id}>
@@ -283,8 +283,8 @@ function ReporteGastos({data}){
                   <td style={S.td}>Q {fmt(g.iva)}</td>
                   <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(g.total)}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11}}>{g.metodo_pago}</td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"ÔÇö"}</td>
-                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"Ô£ö Pagado":"ÔÅ│ Pendiente"}</span></td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"—"}</td>
+                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -312,19 +312,19 @@ function ReporteClientes({data}){
     return {...c,reservas:resC.length,cotizaciones:cotC.length,ingresos};
   }).sort((a,b)=>b.ingresos-a.ingresos);
 
-  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"ÔÇö",c.telefono||"ÔÇö",c.email||"ÔÇö",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
-  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Tel├®fono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
-  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Tel├®fono","Reservas","Cotizaciones","Ingresos"],tablaRows);
+  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"—",c.telefono||"—",c.email||"—",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
+  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Teléfono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos"],tablaRows);
 
   const TC={empresa:{c:T.sec,bg:T.secDim},gobierno:{c:T.blue,bg:T.blueDim},persona:{c:T.acc,bg:T.accDim}};
 
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
-        <KpiCard icon="­ƒæÑ" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="👥" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
         <KpiCard icon="­ƒÅó" label="Empresas" value={clientes.filter(c=>c.tipo==="empresa").length} color={T.sec} bg={T.secDim}/>
         <KpiCard icon="­ƒÅø´©Å" label="Gobierno/ONG" value={clientes.filter(c=>c.tipo==="gobierno").length} color={T.blue} bg={T.blueDim}/>
-        <KpiCard icon="­ƒæñ" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
+        <KpiCard icon="👤" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
       </div>
 
       <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -335,7 +335,7 @@ function ReporteClientes({data}){
       <div style={S.card}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Clientes por ingresos generados</div>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr>{["Cliente","Tipo","NIT","Tel├®fono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>
             {clientesData.map((c,i)=>{
               const tc=TC[c.tipo]||TC.empresa;
@@ -343,8 +343,8 @@ function ReporteClientes({data}){
                 <tr key={c.id} style={{background:i===0?T.accDim:"transparent"}}>
                   <td style={{...S.td,fontWeight:600}}>{i===0&&"­ƒÑç "}{c.nombre}</td>
                   <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:tc.bg,color:tc.c}}>{c.tipo}</span></td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"ÔÇö"}</td>
-                  <td style={{...S.td,color:T.sub}}>{c.telefono||"ÔÇö"}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"—"}</td>
+                  <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
                   <td style={{...S.td,fontWeight:600,color:T.blue,textAlign:"center"}}>{c.reservas}</td>
                   <td style={{...S.td,fontWeight:600,color:T.purple,textAlign:"center"}}>{c.cotizaciones}</td>
                   <td style={{...S.td,fontWeight:700,color:c.ingresos>0?T.acc:T.mut}}>Q {fmt(c.ingresos)}</td>
@@ -369,16 +369,17 @@ export default function PageReportes(){
     setData({vehiculos:Array.isArray(vehiculos)?vehiculos:[],reservas:Array.isArray(reservas)?reservas:[],cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],facturas:Array.isArray(facturas)?facturas:[],gastos:Array.isArray(gastos)?gastos:[],clientes:Array.isArray(clientes)?clientes:[],movimientos:Array.isArray(movimientos)?movimientos:[]});
     setLoading(false);
   };
-  const TABS=[{id:"ventas",l:"­ƒôè Ventas"},{id:"flota",l:"­ƒÜù Flota"},{id:"gastos",l:"­ƒÆ© Gastos"},{id:"clientes",l:"­ƒæÑ Clientes"}];
+  const TABS=[{id:"ventas",l:"📊 Ventas"},{id:"flota",l:"🚗 Flota"},{id:"gastos",l:"🛍️ Gastos"},{id:"clientes",l:"👥 Clientes"}];
   return(
     <div>
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
         {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║ Actualizar</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺ Actualizar</button>
       </div>
       {loading?<Spinner/>:data&&<>{tab==="ventas"&&<ReporteVentas data={data}/>}{tab==="flota"&&<ReporteFlota data={data}/>}{tab==="gastos"&&<ReporteGastos data={data}/>}{tab==="clientes"&&<ReporteClientes data={data}/>}</>}
     </div>
   );
 }
 
-// ÔòÉÔòÉÔòÉ CONFIGURACI├ôN ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ CONFIGURACIÓN ÔòÉÔòÉÔòÉ
+

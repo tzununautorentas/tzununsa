@@ -2,7 +2,7 @@
 import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
 import { ErrBoundary } from "./components/shared.jsx";
 
-// ÔöÇÔöÇ Importar todas las p├íginas ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ Importar todas las páginas ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 import PageDashboard    from "./pages/Dashboard.jsx";
 import PageCalculadora  from "./pages/Calculadora.jsx";
 import PageCotizaciones from "./pages/Cotizaciones.jsx";
@@ -28,11 +28,11 @@ function LoginScreen({ onLogin }) {
 
   const login = async (e) => {
     e.preventDefault();
-    if (!email || !pwd) { setError("Ingresa correo y contrase├▒a"); return; }
+    if (!email || !pwd) { setError("Ingresa correo y contraseña"); return; }
     setLoading(true); setError("");
     const res = await sbLogin(email, pwd);
     if (res.error || res.error_description) {
-      setError("Credenciales incorrectas. Verifica tu correo y contrase├▒a.");
+      setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
     } else {
       onLogin(res);
     }
@@ -43,13 +43,13 @@ function LoginScreen({ onLogin }) {
     <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 56, marginBottom: 8 }}>­ƒÉª</div>
+          <div style={{ fontSize: 56, marginBottom: 8 }}>🐦</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: T.acc, fontFamily: "monospace" }}>TzununSA</div>
-          <div style={{ fontSize: 14, color: T.sub, marginTop: 4 }}>Sistema de Gesti├│n ÔÇö Tz'unun AutoRentas</div>
+          <div style={{ fontSize: 14, color: T.sub, marginTop: 4 }}>Sistema de Gestión — Tz'unun AutoRentas</div>
         </div>
         <form onSubmit={login} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label style={S.lbl}>CORREO ELECTR├ôNICO</label>
+            <label style={S.lbl}>CORREO ELECTRÓNICO</label>
             <input style={S.inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@empresa.com" autoFocus />
           </div>
           <div>
@@ -58,11 +58,11 @@ function LoginScreen({ onLogin }) {
           </div>
           {error && <div style={{ background: T.redD, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red }}>{error}</div>}
           <button type="submit" disabled={loading} style={{ ...S.btn("primary"), padding: 13, fontSize: 14, marginTop: 4 }}>
-            {loading ? "Ingresando..." : "Entrar ÔåÆ"}
+            {loading ? "Ingresando..." : "Entrar →"}
           </button>
         </form>
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: T.mut }}>
-          tzununsa.vercel.app ┬À v1.0
+          tzununsa.vercel.app · v1.0
         </div>
       </div>
     </div>
@@ -72,32 +72,32 @@ function LoginScreen({ onLogin }) {
 // ÔöÇÔöÇ Navigation Config ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const NAV = [
   { sep: true, label: "PRINCIPAL" },
-  { id: "dashboard",     icon: "­ƒôè", label: "Dashboard" },
+  { id: "dashboard",     icon: "📊", label: "Dashboard" },
   { sep: true, label: "PRESUPUESTOS" },
-  { id: "calculadora",   icon: "­ƒº«", label: "Calculadora" },
-  { id: "cotizaciones",  icon: "­ƒôï", label: "Cotizaciones" },
-  { id: "reservas",      icon: "­ƒôà", label: "Reservas" },
-  { sep: true, label: "OPERACI├ôN" },
-  { id: "flota",         icon: "­ƒÜù", label: "Flota" },
-  { id: "mantenimiento", icon: "­ƒöº", label: "Mantenimiento" },
-  { id: "clientes",      icon: "­ƒæÑ", label: "Clientes" },
-  { id: "catalogo",      icon: "­ƒôª", label: "Cat├ílogo" },
+  { id: "calculadora",   icon: "🧮", label: "Calculadora" },
+  { id: "cotizaciones",  icon: "📋", label: "Cotizaciones" },
+  { id: "reservas",      icon: "📅", label: "Reservas" },
+  { sep: true, label: "OPERACIÓN" },
+  { id: "flota",         icon: "🚗", label: "Flota" },
+  { id: "mantenimiento", icon: "🔧", label: "Mantenimiento" },
+  { id: "clientes",      icon: "👥", label: "Clientes" },
+  { id: "catalogo",      icon: "📦", label: "Catálogo" },
   { sep: true, label: "FINANZAS" },
-  { id: "facturacion",   icon: "­ƒº¥", label: "Facturaci├│n FEL" },
-  { id: "banca",         icon: "­ƒÅª", label: "La Banca" },
-  { id: "gastos",        icon: "­ƒÆ©", label: "Gastos / Compras" },
-  { id: "pagos",         icon: "­ƒÆ░", label: "Pagos Recibidos" },
-  { id: "proveedores",   icon: "­ƒÅ¡", label: "Proveedores" },
+  { id: "facturacion",   icon: "🧾", label: "Facturación FEL" },
+  { id: "banca",         icon: "🏦", label: "La Banca" },
+  { id: "gastos",        icon: "🛍️", label: "Gastos / Compras" },
+  { id: "pagos",         icon: "💰", label: "Pagos Recibidos" },
+  { id: "proveedores",   icon: "🏢", label: "Proveedores" },
   { id: "contabilidad",  icon: "­ƒôÆ", label: "Contabilidad" },
-  { sep: true, label: "AN├üLISIS" },
-  { id: "reportes",      icon: "­ƒôê", label: "Reportes" },
+  { sep: true, label: "ANÁLISIS" },
+  { id: "reportes",      icon: "📈", label: "Reportes" },
 ];
 
 const PAGE_TITLES = {
   dashboard: "Dashboard", calculadora: "Calculadora", cotizaciones: "Cotizaciones",
   reservas: "Reservas", flota: "Flota", mantenimiento: "Mantenimiento",
-  clientes: "Clientes", catalogo: "Cat├ílogo de Servicios",
-  facturacion: "Facturaci├│n FEL", banca: "La Banca",
+  clientes: "Clientes", catalogo: "Catálogo de Servicios",
+  facturacion: "Facturación FEL", banca: "La Banca",
   gastos: "Gastos y Compras", pagos: "Pagos Recibidos",
   proveedores: "Proveedores", contabilidad: "Contabilidad", reportes: "Reportes",
 };
@@ -108,7 +108,7 @@ function ToastGlobal({ toast }) {
   const c = toast.type === "err" ? T.red : T.acc;
   return (
     <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, background: T.card, border: `1px solid ${c}`, borderRadius: 12, padding: "13px 20px", fontSize: 13, color: c, fontWeight: 600, boxShadow: "0 8px 32px rgba(0,0,0,.4)", maxWidth: 360 }}>
-      {toast.type === "err" ? "ÔØî" : "Ô£à"} {toast.msg}
+      {toast.type === "err" ? "❌" : "✅"} {toast.msg}
     </div>
   );
 }
@@ -181,7 +181,7 @@ export default function App() {
       <div style={{ width: collapsed ? 64 : 220, background: T.surf, borderRight: `1px solid ${T.bord}`, flexShrink: 0, display: "flex", flexDirection: "column", transition: "width .2s", overflow: "hidden" }}>
         {/* Logo */}
         <div style={{ padding: collapsed ? "18px 0" : "18px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${T.bord}`, justifyContent: collapsed ? "center" : "flex-start" }}>
-          <span style={{ fontSize: 24, flexShrink: 0 }}>­ƒÉª</span>
+          <span style={{ fontSize: 24, flexShrink: 0 }}>🐦</span>
           {!collapsed && <div><div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>Tz'unun</div><div style={{ fontSize: 10, color: T.sub }}>AutoRentas</div></div>}
         </div>
         {/* Nav Items */}
@@ -203,9 +203,9 @@ export default function App() {
         </div>
         {/* User + Logout */}
         <div style={{ borderTop: `1px solid ${T.bord}`, padding: collapsed ? "12px 0" : "12px 14px" }}>
-          {!collapsed && <div style={{ fontSize: 11, color: T.sub, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>­ƒæñ {userName}</div>}
+          {!collapsed && <div style={{ fontSize: 11, color: T.sub, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {userName}</div>}
           <button onClick={handleLogout} style={{ ...S.btn("ghost"), width: collapsed ? "auto" : "100%", fontSize: 11, padding: "6px 10px" }}>
-            {collapsed ? "­ƒÜ¬" : "­ƒÜ¬ Salir"}
+            {collapsed ? "🚪" : "🚪 Salir"}
           </button>
         </div>
       </div>
@@ -230,3 +230,4 @@ export default function App() {
     </div>
   );
 }
+

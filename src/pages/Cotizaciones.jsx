@@ -40,7 +40,7 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
               onMouseEnter={e=>e.currentTarget.style.background=T.accDim}
               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
               <div style={{fontWeight:600,color:T.txt}}>{c.nombre}</div>
-              <div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"ÔÇö"} ┬À {c.tipo}</div>
+              <div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"—"} · {c.tipo}</div>
             </div>
           ))}
         </div>
@@ -50,9 +50,9 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
 }
 
 function generarPDF(d){
-  if(!window.jspdf){alert("PDF no disponible. Recarga la p├ígina e intenta de nuevo.");return null;}
+  if(!window.jspdf){alert("PDF no disponible. Recarga la página e intenta de nuevo.");return null;}
   const {jsPDF} = window.jspdf;
-  if(!jsPDF){alert("jsPDF no carg├│. Intenta de nuevo en unos segundos.");return;}
+  if(!jsPDF){alert("jsPDF no cargó. Intenta de nuevo en unos segundos.");return;}
   const doc = new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
   const W = doc.internal.pageSize.getWidth();
   const HP = doc.internal.pageSize.getHeight();
@@ -71,12 +71,12 @@ function generarPDF(d){
   doc.text("2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala",100,61);
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas",100,72);
   doc.setTextColor(0,212,170); doc.setFontSize(20); doc.setFont("helvetica","bold");
-  doc.text(d.es_orden?"ORDEN DE VENTA":"COTIZACI├ôN",W-20,33,{align:"right"});
+  doc.text(d.es_orden?"ORDEN DE VENTA":"COTIZACIÓN",W-20,33,{align:"right"});
   doc.setTextColor(...WHITE); doc.setFontSize(10);
   doc.text("# "+d.numero,W-20,48,{align:"right"});
   doc.setTextColor(148,163,184); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
-  doc.text("Emisi├│n:      "+d.fecha,W-20,61,{align:"right"});
-  doc.text("V├ílida hasta: "+(d.fecha_vence||"15 d├¡as"),W-20,72,{align:"right"});
+  doc.text("Emisión:      "+d.fecha,W-20,61,{align:"right"});
+  doc.text("Válida hasta: "+(d.fecha_vence||"15 días"),W-20,72,{align:"right"});
   doc.setDrawColor(...TEAL); doc.setLineWidth(2); doc.line(0,92,W,92);
 
   let y = 110;
@@ -98,20 +98,20 @@ function generarPDF(d){
   doc.setFillColor(232,245,240); doc.roundedRect(22,y,W-44,46,4,4,"F");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,46,"F");
   doc.setTextColor(27,45,92); doc.setFontSize(9); doc.setFont("helvetica","bold");
-  const saludoText = (d.saludo||"Estimados se├▒ores de "+(d.cliente||"")) + ":";
+  const saludoText = (d.saludo||"Estimados señores de "+(d.cliente||"")) + ":";
   const saludoLines = doc.splitTextToSize(saludoText, W-70);
   doc.text(saludoLines[0].slice(0, 80), 32, y+13);
   doc.setTextColor(...DKGRAY); doc.setFontSize(7.8); doc.setFont("helvetica","normal");
-  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de veh├¡culos, viajes de turismo y traslado de personas en Guatemala y Centroam├®rica. Con mucho gusto le presentamos la siguiente cotizaci├│n:";
+  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de vehículos, viajes de turismo y traslado de personas en Guatemala y Centroamérica. Con mucho gusto le presentamos la siguiente cotización:";
   const introL=doc.splitTextToSize(intro,W-88);
   introL.slice(0,3).forEach((ln,i)=>doc.text(ln,32,y+25+(i*9)));
   y+=58;
 
-  // Descripci├│n
+  // Descripción
   if(d.servicio){
     doc.setFillColor(...TEAL2); doc.rect(22,y,3,12,"F");
     doc.setTextColor(27,45,92); doc.setFontSize(8.5); doc.setFont("helvetica","bold");
-    doc.text("DESCRIPCI├ôN DEL SERVICIO",30,y+8); y+=16;
+    doc.text("DESCRIPCIÓN DEL SERVICIO",30,y+8); y+=16;
     doc.setTextColor(...DKGRAY); doc.setFontSize(8); doc.setFont("helvetica","italic");
     const sl=doc.splitTextToSize(d.servicio,W-44);
     sl.slice(0,3).forEach((ln,i)=>doc.text(ln,22,y+(i*10)));
@@ -145,7 +145,7 @@ function generarPDF(d){
     doc.setFillColor(255,248,231); doc.roundedRect(22,y,W-44,13,3,3,"F");
     doc.setFillColor(...AMBER); doc.rect(22,y,3,13,"F");
     doc.setTextColor(146,64,14); doc.setFontSize(7.2); doc.setFont("helvetica","bold");
-    doc.text("ÔÜá  SIN PILOTO: Veh├¡culo entregado con tanque lleno ÔÇö debe devolverse con tanque lleno.",32,y+8);
+    doc.text("⚠️  SIN PILOTO: Vehículo entregado con tanque lleno — debe devolverse con tanque lleno.",32,y+8);
     y+=18;
   }
 
@@ -155,9 +155,9 @@ function generarPDF(d){
   doc.text("RESUMEN FINANCIERO",30,y+8); y+=14;
   const finRows=[
     ["Subtotal (precio base)",fmt(d.sub),fmt(d.sub/d.exch),false,false],
-    ["Impuesto "+d.iva_pct+"% ("+(d.iva_pct===5?"Peque├▒o Contribuyente":"R├®gimen General")+")",fmt(d.iva_amt),fmt(d.iva_amt/d.exch),false,false],
-    ["PRECIO BENEFICIO ÔÇö Efectivo / Dep├│sito / Transferencia",fmt(d.total_ef),fmt(d.total_ef/d.exch),true,false],
-    ["Con Tarjeta de Cr├®dito / D├®bito",fmt(d.total_tc),fmt(d.total_tc/d.exch),false,true],
+    ["Impuesto "+d.iva_pct+"% ("+(d.iva_pct===5?"Pequeño Contribuyente":"Régimen General")+")",fmt(d.iva_amt),fmt(d.iva_amt/d.exch),false,false],
+    ["PRECIO BENEFICIO — Efectivo / Depósito / Transferencia",fmt(d.total_ef),fmt(d.total_ef/d.exch),true,false],
+    ["Con Tarjeta de Crédito / Débito",fmt(d.total_tc),fmt(d.total_tc/d.exch),false,true],
   ];
   const cW=[310,100,90];
   doc.setFillColor(...NAVY); doc.rect(22,y,W-44,16,"F");
@@ -180,18 +180,18 @@ function generarPDF(d){
   });
   y+=10;
 
-  // T├®rminos y cuentas
+  // Términos y cuentas
   const termH=66;
   doc.setFillColor(241,245,249); doc.roundedRect(22,y,W-44,termH,4,4,"F");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,termH,"F");
   doc.setTextColor(27,45,92); doc.setFontSize(7.5); doc.setFont("helvetica","bold");
   doc.text("T├ëRMINOS Y CONDICIONES",30,y+10);
   const terms=[
-    "ÔÇó Nuestros veh├¡culos son higienizados antes y despu├®s de cada servicio.",
+    "ÔÇó Nuestros vehículos son higienizados antes y después de cada servicio.",
     "ÔÇó Se requiere copia de DPI del responsable del grupo.",
     "ÔÇó Anticipo del 75% para confirmar el servicio.",
-    d.con_piloto?"ÔÇó Combustible incluido seg├║n el recorrido acordado.":"ÔÇó Veh├¡culo entregado con tanque lleno ÔÇö devolver lleno.",
-    "ÔÇó El veh├¡culo debe devolverse limpio (recargo Q.75.00 si no cumple).",
+    d.con_piloto?"ÔÇó Combustible incluido según el recorrido acordado.":"ÔÇó Vehículo entregado con tanque lleno — devolver lleno.",
+    "ÔÇó El vehículo debe devolverse limpio (recargo Q.75.00 si no cumple).",
     "ÔÇó El saldo restante se cancela al finalizar el servicio.",
   ];
   doc.setFontSize(7.2); doc.setFont("helvetica","normal"); doc.setTextColor(...DKGRAY);
@@ -213,19 +213,19 @@ function generarPDF(d){
   // Firma y cierre
   doc.setDrawColor(203,213,225); doc.setLineWidth(0.6); doc.line(22,y,180,y);
   doc.setTextColor(27,45,92); doc.setFontSize(8); doc.setFont("helvetica","bold");
-  doc.text("Oscar G├ílvez",22,y+11);
+  doc.text("Oscar Gálvez",22,y+11);
   doc.setTextColor(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
   doc.text("Cel. 502 31221538   |   @TzununAutorentas",22,y+21);
   doc.setTextColor(0,200,150); doc.setFontSize(8.5); doc.setFont("helvetica","bolditalic");
   doc.text("Muchas gracias por su preferencia, esperamos poder servirle.",W/2,y+11,{align:"center"});
   doc.setTextColor(...GRAY); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
-  doc.text("Adjunto cotizaci├│n, quedamos a la espera de su aprobaci├│n.",W/2,y+21,{align:"center"});
+  doc.text("Adjunto cotización, quedamos a la espera de su aprobación.",W/2,y+21,{align:"center"});
 
   // Pie
   doc.setFillColor(...NAVY); doc.rect(0,HP-36,W,36,"F");
   doc.setFillColor(...TEAL); doc.rect(0,HP-36,W,2,"F");
   doc.setTextColor(148,163,184); doc.setFontSize(6.5); doc.setFont("helvetica","normal");
-  doc.text("TZ'UNUN AUTORENTAS  ÔÇö  M├ís comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
+  doc.text("TZ'UNUN AUTORENTAS  —  Más comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas   |   Guatemala",W/2,HP-11,{align:"center"});
 
   return doc;
@@ -243,7 +243,7 @@ function ModalVistaPrevia({cot, onClose}){
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.bord}`,width:"100%",maxWidth:700,maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.bord}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:14,fontWeight:700,color:T.acc}}>Vista previa ÔÇö {cot.numero}</div>
+          <div style={{fontSize:14,fontWeight:700,color:T.acc}}>Vista previa — {cot.numero}</div>
           <button onClick={onClose} style={{...S.btn("ghost"),padding:"4px 10px"}}>Ô£ò</button>
         </div>
         <div style={{padding:20}}>
@@ -253,11 +253,11 @@ function ModalVistaPrevia({cot, onClose}){
               <img src={`data:image/png;base64,${LOGO_B64}`} style={{width:44,height:44,borderRadius:10}} alt="logo"/>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:T.acc}}>TZ'UNUN AUTORENTAS</div>
-                <div style={{fontSize:10,color:T.sub}}>502-31221538 ┬À tzununautorentas@gmail.com</div>
+                <div style={{fontSize:10,color:T.sub}}>502-31221538 · tzununautorentas@gmail.com</div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:16,fontWeight:800,color:T.acc}}>{cot.orden_venta?"ORDEN DE VENTA":"COTIZACI├ôN"}</div>
+              <div style={{fontSize:16,fontWeight:800,color:T.acc}}>{cot.orden_venta?"ORDEN DE VENTA":"COTIZACIÓN"}</div>
               <div style={{fontSize:12,color:"#fff"}}>#{cot.numero}</div>
               <div style={{fontSize:11,color:T.sub}}>{cot.fecha_emision||cot.created_at?.slice(0,10)}</div>
             </div>
@@ -266,11 +266,11 @@ function ModalVistaPrevia({cot, onClose}){
           <div style={{marginBottom:12}}>
             <div style={{fontSize:10,color:T.mut,fontWeight:700,marginBottom:4}}>FACTURAR A:</div>
             <div style={{fontSize:14,fontWeight:700}}>{cot.cliente_nombre}</div>
-            <div style={{fontSize:12,color:T.sub}}>NIT: {cot.cliente_nit||"ÔÇö"} ┬À {cot.cliente_dir||""}</div>
+            <div style={{fontSize:12,color:T.sub}}>NIT: {cot.cliente_nit||"—"} · {cot.cliente_dir||""}</div>
           </div>
           {/* Saludo */}
           {cot.saludo&&<div style={{background:"#00D4AA11",border:"1px solid #00D4AA33",borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.sub,fontStyle:"italic"}}>"{cot.saludo}"</div>}
-          {/* Descripci├│n */}
+          {/* Descripción */}
           {cot.descripcion_servicio&&<div style={{marginBottom:12,fontSize:12,color:T.sub,fontStyle:"italic"}}>{cot.descripcion_servicio}</div>}
           {/* Financiero */}
           <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:12}}>
@@ -283,9 +283,9 @@ function ModalVistaPrevia({cot, onClose}){
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:T.sec,marginTop:6}}><span>Con Tarjeta C/D</span><span>Q {fmt(total_tc)}</span></div>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atenci├│n especializada"],beneficios:cot.beneficios||["Viaje seguro y c├│modo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc)doc.save(`${cot.numero}.pdf`);}} style={{...S.btn("primary"),fontSize:12}}>Ô¼ç Descargar PDF</button>
-            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atenci├│n especializada"],beneficios:cot.beneficios||["Viaje seguro y c├│modo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc){const blob=doc.output("blob");const url=URL.createObjectURL(blob);window.open(url,"_blank");}}} style={{...S.btn("blue"),fontSize:12}}>­ƒû¿´©Å Imprimir</button>
-            <button onClick={()=>{const subject=encodeURIComponent(`Cotizaci├│n ${cot.numero} ÔÇö Tz'unun AutoRentas`);const body=encodeURIComponent(`Estimados,\n\nAdjunto cotizaci├│n ${cot.numero} por Q ${fmt(total_ef)}.\n\nSaludos,\nOscar G├ílvez\nTz'unun AutoRentas\n502-31221538`);window.open(`mailto:?subject=${subject}&body=${body}`);}} style={{...S.btn("ghost"),fontSize:12}}>Ô£ë´©Å Email</button>
+            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atención especializada"],beneficios:cot.beneficios||["Viaje seguro y cómodo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc)doc.save(`${cot.numero}.pdf`);}} style={{...S.btn("primary"),fontSize:12}}>Ô¼ç Descargar PDF</button>
+            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atención especializada"],beneficios:cot.beneficios||["Viaje seguro y cómodo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc){const blob=doc.output("blob");const url=URL.createObjectURL(blob);window.open(url,"_blank");}}} style={{...S.btn("blue"),fontSize:12}}>­ƒû¿´©Å Imprimir</button>
+            <button onClick={()=>{const subject=encodeURIComponent(`Cotización ${cot.numero} — Tz'unun AutoRentas`);const body=encodeURIComponent(`Estimados,\n\nAdjunto cotización ${cot.numero} por Q ${fmt(total_ef)}.\n\nSaludos,\nOscar Gálvez\nTz'unun AutoRentas\n502-31221538`);window.open(`mailto:?subject=${subject}&body=${body}`);}} style={{...S.btn("ghost"),fontSize:12}}>Ô£ë´©Å Email</button>
           </div>
         </div>
       </div>
@@ -293,7 +293,7 @@ function ModalVistaPrevia({cot, onClose}){
   );
 }
 
-// ÔöÇÔöÇ FORMULARIO COTIZACI├ôN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ FORMULARIO COTIZACIÓN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const EMPTY_F={
   cliente_nombre:"",cliente_nit:"",cliente_dir:"",
   saludo:"",descripcion_servicio:"",
@@ -348,9 +348,9 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
   const total_tc=total_ef*1.05;
   const exch=parseFloat(f.exch)||7.70;
 
-  const caract=vehObj?[vehObj.nombre,"Aire acondicionado","Cinturones de seguridad","Seguro total"]:["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"];
-  const incluidos=f.con_piloto?["Combustible lleno (s├║per/di├®sel)","Conductor/piloto profesional","Servicio y atenci├│n especializada"]:["Veh├¡culo entregado con tanque lleno","Asistencia en ruta disponible","Servicio y atenci├│n especializada"];
-  const beneficios=["Experiencia de viaje segura y c├│moda","Flexibilidad a sus necesidades","Puntualidad garantizada"];
+  const caract=vehObj?[vehObj.nombre,"Aire acondicionado","Cinturones de seguridad","Seguro total"]:["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"];
+  const incluidos=f.con_piloto?["Combustible lleno (súper/diésel)","Conductor/piloto profesional","Servicio y atención especializada"]:["Vehículo entregado con tanque lleno","Asistencia en ruta disponible","Servicio y atención especializada"];
+  const beneficios=["Experiencia de viaje segura y cómoda","Flexibilidad a sus necesidades","Puntualidad garantizada"];
 
   const handleFile=e=>{
     const file=e.target.files[0];
@@ -395,7 +395,7 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
       if(initial?.id&&!initial?.__clon) result=await dbUpd("cotizaciones",initial.id,payload);
       else result=await dbIns("cotizaciones",payload);
       if(result&&result.error){showToast("Error: "+result.error,"err");setSaving(false);return;}
-      showToast("Cotizaci├│n guardada Ô£ö");
+      showToast("Cotización guardada ✔");
       setSaving(false);
       onSave(estado);
     }catch(e){showToast("Error al guardar: "+e.message,"err");setSaving(false);}
@@ -405,7 +405,7 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div style={{fontSize:14,fontWeight:700,color:T.acc}}>
-          {isClone?"Clonar cotizaci├│n":initial?.id?"Editar cotizaci├│n":"Nueva cotizaci├│n"}
+          {isClone?"Clonar cotización":initial?.id?"Editar cotización":"Nueva cotización"}
         </div>
         <button onClick={onCancel} style={S.btn("ghost")}>ÔåÉ Volver</button>
       </div>
@@ -414,43 +414,43 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* Cliente */}
           <div style={S.card}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒæñ DATOS DEL CLIENTE</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>👤 DATOS DEL CLIENTE</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
               <div style={{gridColumn:"span 2"}}>
                 <label style={S.lbl}>CLIENTE (escribe para buscar)</label>
                 <ClienteAutocomplete
                   value={f.cliente_nombre}
                   onChange={v=>sf("cliente_nombre",v)}
-                  onSelect={c=>{sf("cliente_nombre",c.nombre);sf("cliente_nit",c.nit||"");sf("cliente_dir",c.direccion||"");sf("saludo","Estimados se├▒ores de "+c.nombre);}}
+                  onSelect={c=>{sf("cliente_nombre",c.nombre);sf("cliente_nit",c.nit||"");sf("cliente_dir",c.direccion||"");sf("saludo","Estimados señores de "+c.nombre);}}
                   clientes={clientes}
                 />
               </div>
               <div><label style={S.lbl}>NIT</label><input style={S.inp} value={f.cliente_nit} onChange={e=>sf("cliente_nit",e.target.value)} placeholder="7032528"/></div>
-              <div><label style={S.lbl}>DIRECCI├ôN DEL CLIENTE</label><input style={S.inp} value={f.cliente_dir} onChange={e=>sf("cliente_dir",e.target.value)} placeholder="Ciudad, zona..."/></div>
+              <div><label style={S.lbl}>DIRECCIÓN DEL CLIENTE</label><input style={S.inp} value={f.cliente_dir} onChange={e=>sf("cliente_dir",e.target.value)} placeholder="Ciudad, zona..."/></div>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>SALUDO PERSONALIZADO</label>
-                <input style={S.inp} value={f.saludo} onChange={e=>sf("saludo",e.target.value)} placeholder="Ej: Estimados se├▒ores de Fundaci├│n Myrna Mack"/>
+                <input style={S.inp} value={f.saludo} onChange={e=>sf("saludo",e.target.value)} placeholder="Ej: Estimados señores de Fundación Myrna Mack"/>
               </div>
             </div>
           </div>
           {/* Servicio */}
           <div style={S.card}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒÜù SERVICIO</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>🚗 SERVICIO</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>VEH├ìCULO</label>
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
                   <option value="">Seleccionar...</option>
-                  {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} ÔÇö Q{fmt(v.dia)}/d├¡a</option>)}
+                  {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/día</option>)}
                 </select>
               </div>
               <div><label style={S.lbl}>D├ìAS</label><input style={S.inp} type="number" min="1" value={f.dias} onChange={e=>sf("dias",parseInt(e.target.value)||1)}/></div>
-              <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e=>sf("precio_custom",e.target.value)} placeholder="Vac├¡o = cat├ílogo"/></div>
+              <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e=>sf("precio_custom",e.target.value)} placeholder="Vacío = catálogo"/></div>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>MODALIDAD</label>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>sf("con_piloto",true)} style={{...S.btn(f.con_piloto?"primary":"ghost"),flex:1,fontSize:11}}>­ƒºæÔÇìÔ£ê´©Å Con piloto</button>
                   <button onClick={()=>sf("con_piloto",false)} style={{...S.btn(!f.con_piloto?"warn":"ghost"),flex:1,fontSize:11}}>­ƒöæ Sin piloto</button>
                 </div>
               </div>
-              <div style={{gridColumn:"span 2"}}><label style={S.lbl}>DESCRIPCI├ôN DEL SERVICIO</label>
+              <div style={{gridColumn:"span 2"}}><label style={S.lbl}>DESCRIPCIÓN DEL SERVICIO</label>
                 <textarea style={{...S.inp,minHeight:64,resize:"vertical"}} value={f.descripcion_servicio} onChange={e=>sf("descripcion_servicio",e.target.value)} placeholder="Ej: Servicio de traslado de personas de Ciudad Guatemala hacia Quetzaltenango, ida y vuelta, del 19 al 21 de marzo..."/>
               </div>
               <div style={{gridColumn:"span 2"}}>
@@ -465,11 +465,11 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
           </div>
           {/* Fiscal */}
           <div style={S.card}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒÆ░ FISCAL Y FECHAS</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>💰 FISCAL Y FECHAS</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>IVA</label>
                 <div style={{display:"flex",gap:8}}>
-                  {[{v:12,l:"12% General"},{v:5,l:"5% Peque├▒o Cont."},{v:0,l:"Sin IVA"}].map(o=>(
+                  {[{v:12,l:"12% General"},{v:5,l:"5% Pequeño Cont."},{v:0,l:"Sin IVA"}].map(o=>(
                     <button key={o.v} onClick={()=>sf("iva_pct",o.v)} style={{...S.btn(f.iva_pct===o.v?"primary":"ghost"),flex:1,fontSize:11}}>{o.l}</button>
                   ))}
                 </div>
@@ -490,10 +490,10 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
         </div>
         {/* RESUMEN */}
         <div style={S.card}>
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen</div>
-          {f.cliente_nombre&&<div style={{fontSize:13,fontWeight:700,marginBottom:4}}>­ƒæñ {f.cliente_nombre}</div>}
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
+          {f.cliente_nombre&&<div style={{fontSize:13,fontWeight:700,marginBottom:4}}>👤 {f.cliente_nombre}</div>}
           {f.saludo&&<div style={{fontSize:12,color:T.sub,fontStyle:"italic",marginBottom:8}}>{f.saludo}</div>}
-          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {vehObj.nombre} ┬À {f.dias} d├¡a{f.dias!==1?"s":""}</div>}
+          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {f.dias} día{f.dias!==1?"s":""}</div>}
           {sub>0?(
             <>
               {vehObj&&(
@@ -513,7 +513,7 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
                 <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>Q {fmt(iva_amt)}</span></div>
               </div>
               <div style={{background:T.accDim,border:`1px solid ${T.acc}55`,borderRadius:10,padding:"12px 16px",marginBottom:8}}>
-                <div style={{fontSize:10,fontWeight:700,color:T.acc,marginBottom:3}}>PRECIO BENEFICIO ÔÇö Efectivo/Dep├│sito/Transf.</div>
+                <div style={{fontSize:10,fontWeight:700,color:T.acc,marginBottom:3}}>PRECIO BENEFICIO — Efectivo/Depósito/Transf.</div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}>
                   <span>Q {fmt(total_ef)}</span>
                   <span style={{fontSize:12,color:T.sub,alignSelf:"flex-end"}}>$ {fmt(total_ef/exch)}</span>
@@ -525,12 +525,12 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <button onClick={()=>guardar("borrador")} disabled={saving} style={{...S.btn("ghost"),width:"100%"}}>{saving?"...":"­ƒÆ¥ Borrador"}</button>
-                <button onClick={()=>guardar(f.estado==="borrador"?"enviada":f.estado)} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"Ô£à Guardar cotizaci├│n"}</button>
-                <button onClick={()=>guardar("orden_venta")} disabled={saving} style={{...S.btn("purple"),width:"100%"}}>{saving?"...":"­ƒôª Convertir a Orden de Venta"}</button>
+                <button onClick={()=>guardar(f.estado==="borrador"?"enviada":f.estado)} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"✅ Guardar cotización"}</button>
+                <button onClick={()=>guardar("orden_venta")} disabled={saving} style={{...S.btn("purple"),width:"100%"}}>{saving?"...":"📦 Convertir a Orden de Venta"}</button>
               </div>
             </>
           ):(
-            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>Selecciona veh├¡culo y d├¡as para ver el resumen</div>
+            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>Selecciona vehículo y días para ver el resumen</div>
           )}
         </div>
       </div>
@@ -540,26 +540,26 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
 
 
 
-// ÔòÉÔòÉÔòÉ FACTURACI├ôN ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ FACTURACIÓN ÔòÉÔòÉÔòÉ
 
 export default function PageCotizaciones({showToast,empId}){
   const [rows,setRows]=useState([]);const [clientes,setClientes]=useState([]);const [loading,setLoading]=useState(true);const [vista,setVista]=useState("lista");const [editItem,setEditItem]=useState(null);const [filtro,setFiltro]=useState("todas");const [preview,setPreview]=useState(null);
   const load=async()=>{setLoading(true);const d=await dbGet("cotizaciones");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));load();},[]);
   const del=async id=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("cotizaciones",id);showToast("Eliminada");load();};
-  const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("ÔåÆ "+estado);load();};
+  const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("→ "+estado);load();};
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro||(filtro==="orden_venta"&&r.orden_venta));
   const EC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},enviada:{c:T.blue,bg:T.blueDim,l:"Enviada"},aprobada:{c:T.acc,bg:T.accDim,l:"Aprobada"},rechazada:{c:T.red,bg:T.redDim,l:"Rechazada"},orden_venta:{c:T.purple,bg:T.purpleDim,l:"Orden de Venta"}};
-  if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} onSave={()=>{showToast("Guardada Ô£ö");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
+  if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
   return(
     <div>
       {preview&&<ModalVistaPrevia cot={preview} onClose={()=>setPreview(null)}/>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
-        {[{l:"Total",v:rows.length,c:T.acc},{l:"Enviadas",v:rows.filter(r=>r.estado==="enviada").length,c:T.blue},{l:"Aprobadas",v:rows.filter(r=>r.estado==="aprobada").length,c:T.acc},{l:"├ôrdenes",v:rows.filter(r=>r.orden_venta).length,c:T.purple}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{l:"Total",v:rows.length,c:T.acc},{l:"Enviadas",v:rows.filter(r=>r.estado==="enviada").length,c:T.blue},{l:"Aprobadas",v:rows.filter(r=>r.estado==="aprobada").length,c:T.acc},{l:"Órdenes",v:rows.filter(r=>r.orden_venta).length,c:T.purple}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       </div>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-        {["todas","borrador","enviada","aprobada","rechazada","orden_venta"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="orden_venta"?"­ƒôª ├ôrdenes":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║</button>
+        {["todas","borrador","enviada","aprobada","rechazada","orden_venta"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="orden_venta"?"📦 Órdenes":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
         <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
       </div>
       {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒô¡" msg="Sin cotizaciones"/>:(
@@ -567,23 +567,23 @@ export default function PageCotizaciones({showToast,empId}){
           {filtered.map(r=>{
             const e=r.orden_venta?EC.orden_venta:(EC[r.estado]||EC.borrador);
             const total=parseFloat(r.total_gtq)||0;
-            const makePDF=()=>generarPDF({numero:r.numero,fecha:r.fecha_emision||today(),fecha_vence:r.fecha_vence,cliente:r.cliente_nombre,nit:r.cliente_nit,dir_cliente:r.cliente_dir,saludo:r.saludo,servicio:r.descripcion_servicio,caract:r.caract||["Veh├¡culo","Aire acond.","Cinturones","Seguro"],incluidos:r.incluidos||["Combustible","Conductor","Atenci├│n"],beneficios:r.beneficios||["Viaje seguro","Puntualidad","Flexibilidad"],con_piloto:r.con_piloto!==false,sub:parseFloat(r.subtotal)||0,iva_pct:parseFloat(r.tasa_iva)||5,iva_amt:parseFloat(r.total_iva)||0,total_ef:total,total_tc:total*1.05,exch:parseFloat(r.tasa_cambio)||7.70,es_orden:r.orden_venta});
+            const makePDF=()=>generarPDF({numero:r.numero,fecha:r.fecha_emision||today(),fecha_vence:r.fecha_vence,cliente:r.cliente_nombre,nit:r.cliente_nit,dir_cliente:r.cliente_dir,saludo:r.saludo,servicio:r.descripcion_servicio,caract:r.caract||["Vehículo","Aire acond.","Cinturones","Seguro"],incluidos:r.incluidos||["Combustible","Conductor","Atención"],beneficios:r.beneficios||["Viaje seguro","Puntualidad","Flexibilidad"],con_piloto:r.con_piloto!==false,sub:parseFloat(r.subtotal)||0,iva_pct:parseFloat(r.tasa_iva)||5,iva_amt:parseFloat(r.total_iva)||0,total_ef:total,total_tc:total*1.05,exch:parseFloat(r.tasa_cambio)||7.70,es_orden:r.orden_venta});
             return(
               <div key={r.id} style={S.card}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                  <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>{r.saludo&&<div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>"{r.saludo}"</div>}<div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {r.dias}d{r.vehiculo_nombre?" ┬À "+r.vehiculo_nombre:""}</div></div>
+                  <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>{r.saludo&&<div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>"{r.saludo}"</div>}<div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {r.dias}d{r.vehiculo_nombre?" · "+r.vehiculo_nombre:""}</div></div>
                   <div style={{textAlign:"right"}}><Badge color={e.c} bg={e.bg} label={e.l} small/><div style={{fontSize:15,fontWeight:700,color:T.acc,marginTop:4}}>Q {fmt(total)}</div></div>
                 </div>
                 <div style={{display:"flex",gap:5,paddingTop:10,borderTop:`1px solid ${T.bord}22`,flexWrap:"wrap"}}>
                   <button onClick={()=>setPreview(r)} style={{...S.btn("blue"),fontSize:11,padding:"4px 9px"}}>­ƒæü Ver</button>
                   <button onClick={()=>{const doc=makePDF();if(doc)doc.save(r.numero+".pdf");}} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>Ô¼ç PDF</button>
                   <button onClick={()=>{const doc=makePDF();if(doc){const url=URL.createObjectURL(doc.output("blob"));const w=window.open(url);setTimeout(()=>w&&w.print(),1000);}}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>­ƒû¿´©Å</button>
-                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotizaci├│n "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotizaci├│n "+r.numero+" por Q "+fmt(total)+". Para m├ís informaci├│n: Oscar G├ílvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£ë´©Å</button>
-                  <button onClick={()=>{const msg="Estimados, le comparto cotizaci├│n "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>­ƒÆ¼ WA</button>
-                  <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>­ƒôï Clonar</button>
+                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotización "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotización "+r.numero+" por Q "+fmt(total)+". Para más información: Oscar Gálvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£ë´©Å</button>
+                  <button onClick={()=>{const msg="Estimados, le comparto cotización "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>­ƒÆ¼ WA</button>
+                  <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>📋 Clonar</button>
                   <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£Å´©Å</button>
-                  {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>­ƒôª</button>}
-                  {r.estado==="enviada"&&<button onClick={()=>chEst(r.id,"aprobada")} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>Ô£à</button>}
+                  {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>📦</button>}
+                  {r.estado==="enviada"&&<button onClick={()=>chEst(r.id,"aprobada")} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>✅</button>}
                   <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"4px 9px",marginLeft:"auto"}}>­ƒùæ´©Å</button>
                 </div>
               </div>
@@ -595,4 +595,5 @@ export default function PageCotizaciones({showToast,empId}){
   );
 }
 
-// ÔòÉÔòÉÔòÉ FACTURACI├ôN PAGE ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ FACTURACIÓN PAGE ÔòÉÔòÉÔòÉ
+

@@ -34,7 +34,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
   const [saving,setSaving]=useState(false);
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
 
-  // Calcular d├¡as
+  // Calcular días
   const calcularDias=()=>{
     if(!f.fecha_inicio) return 0;
     const fi=new Date(f.fecha_inicio+"T12:00:00");
@@ -114,12 +114,12 @@ function FormReserva({initial,onSave,onCancel,empId}){
 
   const Resumen=()=>(
     <div style={S.card}>
-      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen</div>
+      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
       {vehObj&&dias>0?(
         <>
-          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {vehObj.nombre} ┬À {dias} d├¡a{dias!==1?"s":""}</div>
+          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {dias} día{dias!==1?"s":""}</div>
           <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-            {[["Tarifa","Q "+fmt(tarifaDia)+"/d├¡a"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
+            {[["Tarifa","Q "+fmt(tarifaDia)+"/día"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:12,color:T.sub}}><span>{l}</span><span>{v}</span></div>
             ))}
           </div>
@@ -132,7 +132,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,padding:"4px 0",color:saldo>0?T.sec:T.acc}}><span>Saldo</span><span>Q {fmt(saldo)}</span></div>
           </div>
         </>
-      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona veh├¡culo y fechas</div>}
+      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona vehículo y fechas</div>}
     </div>
   );
 
@@ -150,14 +150,14 @@ function FormReserva({initial,onSave,onCancel,empId}){
             </Fld>
             <Fld label="TIPO DE SERVICIO" span2>
               <div style={{display:"flex",gap:8}}>
-                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>­ƒöæ Renta de veh├¡culo</button>
+                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>­ƒöæ Renta de vehículo</button>
                 <button tabIndex={0} onClick={()=>sf("tipo","traslado")} style={{...S.btn(f.tipo==="traslado"?"primary":"ghost"),flex:1}}>­ƒù║ Traslado</button>
               </div>
             </Fld>
             <Fld label="ESTADO">
               <select tabIndex={0} style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
-                <option value="pendiente">ÔÅ│ Pendiente</option>
-                <option value="confirmada">Ô£à Confirmada</option>
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="confirmada">✅ Confirmada</option>
                 <option value="en_curso">ÔûÂ En curso</option>
                 <option value="completada">­ƒÅü Completada</option>
                 <option value="cancelada">Ô£ù Cancelada</option>
@@ -168,8 +168,8 @@ function FormReserva({initial,onSave,onCancel,empId}){
             </Fld>
             <Fld label="VEH├ìCULO" span2>
               <select tabIndex={0} style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
-                <option value="">Seleccionar veh├¡culo...</option>
-                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} ÔÇö Q {fmt(v.dia)}/d├¡a</option>)}
+                <option value="">Seleccionar vehículo...</option>
+                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q {fmt(v.dia)}/día</option>)}
               </select>
             </Fld>
             <Fld label="CONDUCTOR">
@@ -177,15 +177,15 @@ function FormReserva({initial,onSave,onCancel,empId}){
             </Fld>
             <Fld label="IVA">
               <select tabIndex={0} style={S.sel} value={f.iva} onChange={e=>sf("iva",parseInt(e.target.value))}>
-                <option value={12}>12% R├®gimen General</option>
-                <option value={5}>5% Peque├▒o Contrib.</option>
+                <option value={12}>12% Régimen General</option>
+                <option value={5}>5% Pequeño Contrib.</option>
                 <option value={0}>Sin IVA</option>
               </select>
             </Fld>
             <Fld label="FECHA ENTREGA">
               <input tabIndex={0} style={S.inp} type="date" value={f.fecha_inicio} onChange={e=>sf("fecha_inicio",e.target.value)}/>
             </Fld>
-            <Fld label="FECHA DEVOLUCI├ôN">
+            <Fld label="FECHA DEVOLUCIÓN">
               <input tabIndex={0} style={S.inp} type="date" value={f.fecha_fin} onChange={e=>sf("fecha_fin",e.target.value)}/>
             </Fld>
             <Fld label="ORIGEN">
@@ -208,7 +208,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
             </Fld>
             <Fld label="M├ëTODO DE PAGO" span2>
               <div style={{display:"flex",gap:8}}>
-                {[["efectivo","­ƒÆÁ Efectivo"],["transferencia","­ƒÅª Transferencia"],["tarjeta","­ƒÆ│ Tarjeta (+5%)"]].map(([v,l])=>(
+                {[["efectivo","­ƒÆÁ Efectivo"],["transferencia","🏦 Transferencia"],["tarjeta","­ƒÆ│ Tarjeta (+5%)"]].map(([v,l])=>(
                   <button tabIndex={0} key={v} onClick={()=>sf("pago",v)} style={{...S.btn(f.pago===v?"primary":"ghost"),flex:1,fontSize:11}}>{l}</button>
                 ))}
               </div>
@@ -243,7 +243,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
 // ÔòÉÔòÉÔòÉ EXPORTAR UNIVERSAL ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 function CalendarioReservas({rows,onNewReserva,onEdit}){
   const [mes,setMes]=useState(new Date());
-  const DIAS=["Lun","Mar","Mi├®","Jue","Vie","S├íb","Dom"];
+  const DIAS=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
   const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const EST_C={pendiente:"#64748B",confirmada:"#00D4AA",en_curso:"#3B82F6",completada:"#22C55E",cancelada:"#EF4444"};
 
@@ -295,11 +295,11 @@ function CalendarioReservas({rows,onNewReserva,onEdit}){
               <>
                 <div style={{fontSize:12,fontWeight:cell.isToday?700:400,color:cell.isToday?T.acc:T.sub,marginBottom:3}}>{cell.dayNum}</div>
                 {cell.dayReservas.slice(0,3).map(r=>(
-                  <div key={r.id} onClick={()=>onEdit&&onEdit(r)} style={{fontSize:9,fontWeight:600,background:(EST_C[r.estado]||"#64748B")+"33",color:EST_C[r.estado]||"#64748B",borderLeft:"2px solid "+(EST_C[r.estado]||"#64748B"),padding:"1px 4px",borderRadius:2,marginBottom:1,cursor:"pointer",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={r.cliente_nombre+" ÔÇö "+r.vehiculo_nombre}>
+                  <div key={r.id} onClick={()=>onEdit&&onEdit(r)} style={{fontSize:9,fontWeight:600,background:(EST_C[r.estado]||"#64748B")+"33",color:EST_C[r.estado]||"#64748B",borderLeft:"2px solid "+(EST_C[r.estado]||"#64748B"),padding:"1px 4px",borderRadius:2,marginBottom:1,cursor:"pointer",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}} title={r.cliente_nombre+" — "+r.vehiculo_nombre}>
                     {r.cliente_nombre?.split(" ")[0]} {r.vehiculo_nombre?.split(" ")[0]||""}
                   </div>
                 ))}
-                {cell.dayReservas.length>3&&<div style={{fontSize:9,color:T.mut}}>+{cell.dayReservas.length-3} m├ís</div>}
+                {cell.dayReservas.length>3&&<div style={{fontSize:9,color:T.mut}}>+{cell.dayReservas.length-3} más</div>}
               </>
             )}
           </div>
@@ -345,7 +345,7 @@ export default function PageReservas({showToast,empId}){
   };
   const del=async id=>{if(!confirm("┬┐Eliminar reserva?"))return;await dbDel("reservas",id);showToast("Eliminada");load();};
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro);
-  if(vista==="form")return <FormReserva initial={editItem} empId={empId} onSave={()=>{setVista("lista");setEditItem(null);load();showToast(editItem?"Actualizada Ô£ö":"Guardada Ô£ö");}} onCancel={()=>{setVista("lista");setEditItem(null);}}/>;
+  if(vista==="form")return <FormReserva initial={editItem} empId={empId} onSave={()=>{setVista("lista");setEditItem(null);load();showToast(editItem?"Actualizada ✔":"Guardada ✔");}} onCancel={()=>{setVista("lista");setEditItem(null);}}/>;
   return(
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
@@ -362,8 +362,8 @@ export default function PageReservas({showToast,empId}){
             {f==="en_curso"?"En curso":f.charAt(0).toUpperCase()+f.slice(1)}
           </button>
         ))}
-        <button onClick={()=>setViewMode(viewMode==="lista"?"calendario":"lista")} style={{...S.btn("ghost"),fontSize:11}}>{viewMode==="lista"?"­ƒôà Ver calendario":"­ƒôï Ver lista"}</button>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>Ôå║</button>
+        <button onClick={()=>setViewMode(viewMode==="lista"?"calendario":"lista")} style={{...S.btn("ghost"),fontSize:11}}>{viewMode==="lista"?"📅 Ver calendario":"📋 Ver lista"}</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>↺</button>
         <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva reserva</button>
       </div>
       {viewMode==="calendario"?(
@@ -379,7 +379,7 @@ export default function PageReservas({showToast,empId}){
                   <div>
                     <div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div>
                     <div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>
-                    <div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {fmtD(r.fecha_inicio)}{r.fecha_fin?" ÔåÆ "+fmtD(r.fecha_fin):""}{r.vehiculo_nombre?" ┬À "+r.vehiculo_nombre:""}</div>
+                    <div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {fmtD(r.fecha_inicio)}{r.fecha_fin?" → "+fmtD(r.fecha_fin):""}{r.vehiculo_nombre?" · "+r.vehiculo_nombre:""}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,color:e.c,background:e.bg}}>{e.l}</span>
@@ -400,4 +400,5 @@ export default function PageReservas({showToast,empId}){
     </div>
   );
 }
+
 

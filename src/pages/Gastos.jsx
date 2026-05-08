@@ -28,18 +28,18 @@ function ModGastos({empId,proveedores,showToast}){
   };
 
   const guardar=async()=>{
-    if(!f.descripcion.trim()||!(parseFloat(f.total)>0)){showToast("Descripci├│n y total son requeridos","err");return;}
+    if(!f.descripcion.trim()||!(parseFloat(f.total)>0)){showToast("Descripción y total son requeridos","err");return;}
     setSaving(true);
     const payload={empresa_id:empId,fecha:f.fecha,categoria:f.categoria,descripcion:f.descripcion,monto:parseFloat(f.monto)||0,iva:parseFloat(f.iva)||0,total:parseFloat(f.total)||0,metodo_pago:f.metodo_pago,referencia:f.referencia,estado:f.estado,proveedor_id:f.proveedor_id||null,notas:f.notas,fecha_pago:f.estado==="pagado"?f.fecha:null};
     if(editItem?.id) await dbUpd("gastos",editItem.id,payload);
     else await dbIns("gastos",payload);
-    showToast("Gasto guardado Ô£ö");setSaving(false);
+    showToast("Gasto guardado ✔");setSaving(false);
     setShowForm(false);setEditItem(null);
     setF({fecha:today(),categoria:"combustible",descripcion:"",monto:"",iva:"",total:"",metodo_pago:"efectivo",referencia:"",estado:"pendiente",proveedor_id:"",vehiculo_ref:"",notas:""});
     load();
   };
 
-  const marcarPagado=async id=>{await dbUpd("gastos",id,{estado:"pagado",fecha_pago:today()});showToast("Marcado como pagado Ô£ö");load();};
+  const marcarPagado=async id=>{await dbUpd("gastos",id,{estado:"pagado",fecha_pago:today()});showToast("Marcado como pagado ✔");load();};
   const del=async id=>{if(!confirm("┬┐Eliminar este gasto?"))return;await dbDel("gastos",id);showToast("Eliminado");load();};
 
   const filtered=rows.filter(r=>{
@@ -72,14 +72,14 @@ function ModGastos({empId,proveedores,showToast}){
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
             {["todos","pendiente","pagado"].map(f=>(
               <button key={f} onClick={()=>setFiltroEst(f)} style={{...S.btn(filtroEst===f?"primary":"ghost"),fontSize:11,padding:"5px 12px"}}>
-                {f==="todos"?"Todos":f==="pendiente"?"ÔÅ│ Pendientes":"Ô£à Pagados"}
+                {f==="todos"?"Todos":f==="pendiente"?"⏳ Pendientes":"✅ Pagados"}
               </button>
             ))}
             <select style={{...S.sel,width:"auto",fontSize:11,padding:"5px 10px"}} value={filtroCat} onChange={e=>setFiltroCat(e.target.value)}>
-              <option value="todas">Todas las categor├¡as</option>
+              <option value="todas">Todas las categorías</option>
               {CAT_GASTO.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
             </select>
-            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>Ôå║</button>
+            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>↺</button>
             <button onClick={()=>{setEditItem(null);setShowForm(!showForm);}} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>{showForm?"Cancelar":"+ Nuevo gasto"}</button>
           </div>
 
@@ -94,7 +94,7 @@ function ModGastos({empId,proveedores,showToast}){
                     {CAT_GASTO.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
                   </select>
                 </Fld>
-                <Fld label="DESCRIPCI├ôN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Di├®sel ÔÇö Toyota RAV4 viaje a Pet├®n"/></Fld>
+                <Fld label="DESCRIPCIÓN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Diésel — Toyota RAV4 viaje a Petén"/></Fld>
                 <Fld label="PROVEEDOR">
                   <select style={S.sel} value={f.proveedor_id} onChange={e=>sf("proveedor_id",e.target.value)}>
                     <option value="">Sin proveedor</option>
@@ -104,11 +104,11 @@ function ModGastos({empId,proveedores,showToast}){
                 <Fld label="M├ëTODO DE PAGO">
                   <select style={S.sel} value={f.metodo_pago} onChange={e=>sf("metodo_pago",e.target.value)}>
                     <option value="efectivo">­ƒÆÁ Efectivo</option>
-                    <option value="transferencia">­ƒÅª Transferencia</option>
-                    <option value="deposito">­ƒÆ░ Dep├│sito</option>
+                    <option value="transferencia">🏦 Transferencia</option>
+                    <option value="deposito">💰 Depósito</option>
                     <option value="tarjeta">­ƒÆ│ Tarjeta</option>
                     <option value="cheque">­ƒôä Cheque</option>
-                    <option value="credito">­ƒôï Cr├®dito</option>
+                    <option value="credito">📋 Crédito</option>
                   </select>
                 </Fld>
                 <Fld label="MONTO SIN IVA (GTQ)">
@@ -125,8 +125,8 @@ function ModGastos({empId,proveedores,showToast}){
                 </Fld>
                 <Fld label="ESTADO">
                   <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
-                    <option value="pendiente">ÔÅ│ Pendiente de pago</option>
-                    <option value="pagado">Ô£à Pagado</option>
+                    <option value="pendiente">⏳ Pendiente de pago</option>
+                    <option value="pagado">✅ Pagado</option>
                   </select>
                 </Fld>
                 <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones adicionales..."/></Fld>
@@ -139,10 +139,10 @@ function ModGastos({empId,proveedores,showToast}){
           )}
 
           {/* Tabla gastos */}
-          {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒÆ©" msg="Sin gastos registrados" action="+ Registrar primer gasto" onAction={()=>setShowForm(true)}/>:(
+          {loading?<Spinner/>:filtered.length===0?<Empty icon="🛍️" msg="Sin gastos registrados" action="+ Registrar primer gasto" onAction={()=>setShowForm(true)}/>:(
             <div style={S.card}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>{["Fecha","Descripci├│n","Categor├¡a","Proveedor","Total","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Fecha","Descripción","Categoría","Proveedor","Total","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {filtered.map(r=>{
                     const prov=proveedores.find(p=>p.id===r.proveedor_id);
@@ -154,11 +154,11 @@ function ModGastos({empId,proveedores,showToast}){
                           {r.referencia&&<div style={{fontSize:10,color:T.mut,fontFamily:"monospace"}}>{r.referencia}</div>}
                         </td>
                         <td style={S.td}><CatBadge cat={r.categoria}/></td>
-                        <td style={{...S.td,fontSize:11,color:T.sub}}>{prov?.nombre||"ÔÇö"}</td>
+                        <td style={{...S.td,fontSize:11,color:T.sub}}>{prov?.nombre||"—"}</td>
                         <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(r.total)}</td>
                         <td style={S.td}>
                           <span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:r.estado==="pagado"?T.accDim:T.secDim,color:r.estado==="pagado"?T.acc:T.sec}}>
-                            {r.estado==="pagado"?"Ô£ö Pagado":"ÔÅ│ Pendiente"}
+                            {r.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}
                           </span>
                         </td>
                         <td style={S.td}>
@@ -184,7 +184,7 @@ function ModGastos({empId,proveedores,showToast}){
           )}
         </div>
 
-        {/* Sidebar categor├¡as */}
+        {/* Sidebar categorías */}
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={S.card}>
             <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:12}}>POR CATEGOR├ìA</div>
@@ -233,7 +233,7 @@ function ModProveedores({empId,showToast}){
     const payload={empresa_id:empId,nombre:f.nombre,nit:f.nit,categoria:f.categoria,contacto:f.contacto,telefono:f.telefono,email:f.email,direccion:f.direccion,credito_limite:parseFloat(f.credito_limite)||0,notas:f.notas,activo:true};
     if(editItem?.id) await dbUpd("proveedores",editItem.id,payload);
     else await dbIns("proveedores",payload);
-    showToast("Proveedor guardado Ô£ö");setSaving(false);
+    showToast("Proveedor guardado ✔");setSaving(false);
     setShowForm(false);setEditItem(null);
     setF({nombre:"",nit:"",categoria:"combustible",contacto:"",telefono:"",email:"",direccion:"",credito_limite:"",notas:""});
     load();
@@ -247,7 +247,7 @@ function ModProveedores({empId,showToast}){
     <div>
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
-        {[{l:"Proveedores activos",v:rows.filter(r=>r.activo).length,c:T.acc},{l:"Cr├®dito total usado",v:`Q ${fmt(totalCredito)}`,c:T.red},{l:"Categor├¡as",v:[...new Set(rows.map(r=>r.categoria))].length,c:T.blue}].map((s,i)=>(
+        {[{l:"Proveedores activos",v:rows.filter(r=>r.activo).length,c:T.acc},{l:"Crédito total usado",v:`Q ${fmt(totalCredito)}`,c:T.red},{l:"Categorías",v:[...new Set(rows.map(r=>r.categoria))].length,c:T.blue}].map((s,i)=>(
           <div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}>
             <div style={{fontSize:i>0?16:22,fontWeight:800,color:s.c}}>{s.v}</div>
             <div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div>
@@ -264,7 +264,7 @@ function ModProveedores({empId,showToast}){
         <div style={{...S.card,marginBottom:16,maxWidth:640}}>
           <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>{editItem?"Editar proveedor":"Nuevo proveedor"}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <Fld label="NOMBRE / RAZ├ôN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del proveedor"/></Fld>
+            <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del proveedor"/></Fld>
             <Fld label="NIT"><input style={S.inp} value={f.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
             <Fld label="CATEGOR├ìA">
               <select style={S.sel} value={f.categoria} onChange={e=>sf("categoria",e.target.value)}>
@@ -275,7 +275,7 @@ function ModProveedores({empId,showToast}){
             <Fld label="TEL├ëFONO"><input style={S.inp} value={f.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
             <Fld label="EMAIL"><input style={S.inp} type="email" value={f.email} onChange={e=>sf("email",e.target.value)} placeholder="proveedor@email.com"/></Fld>
             <Fld label="L├ìMITE DE CR├ëDITO (GTQ)"><input style={S.inp} type="number" value={f.credito_limite} onChange={e=>sf("credito_limite",e.target.value)} placeholder="0.00"/></Fld>
-            <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Direcci├│n del proveedor"/></Fld>
+            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección del proveedor"/></Fld>
             <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones..."/></Fld>
             <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
               <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"­ƒÆ¥ Guardar proveedor"}</button>
@@ -298,12 +298,12 @@ function ModProveedores({empId,showToast}){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginTop:4,marginBottom:12}}>
                   <div>
                     <div style={{fontSize:14,fontWeight:700}}>{p.nombre}</div>
-                    <div style={{fontSize:11,color:T.sub,marginTop:2}}>NIT: {p.nit||"ÔÇö"}</div>
+                    <div style={{fontSize:11,color:T.sub,marginTop:2}}>NIT: {p.nit||"—"}</div>
                   </div>
                   <CatBadge cat={p.categoria}/>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-                  {[["Contacto",p.contacto||"ÔÇö"],["Tel├®fono",p.telefono||"ÔÇö"],["Email",p.email||"ÔÇö"],["Direcci├│n",p.direccion||"ÔÇö"]].map(([lbl,val])=>(
+                  {[["Contacto",p.contacto||"—"],["Teléfono",p.telefono||"—"],["Email",p.email||"—"],["Dirección",p.direccion||"—"]].map(([lbl,val])=>(
                     <div key={lbl} style={{background:T.surf,borderRadius:7,padding:"7px 10px"}}>
                       <div style={{fontSize:10,color:T.mut}}>{lbl}</div>
                       <div style={{fontSize:12,fontWeight:500,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{val}</div>
@@ -313,7 +313,7 @@ function ModProveedores({empId,showToast}){
                 {creditoLimite>0&&(
                   <div style={{marginBottom:12}}>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
-                      <span>Cr├®dito usado</span>
+                      <span>Crédito usado</span>
                       <span style={{color:pct>80?T.red:T.sub,fontWeight:600}}>Q {fmt(creditoUsado)} / Q {fmt(creditoLimite)}</span>
                     </div>
                     <div style={{background:T.surf,borderRadius:4,height:6,overflow:"hidden"}}>
@@ -353,7 +353,7 @@ export default function PageGastos({showToast,empId}){
   return(
     <div>
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
-        {[{id:"gastos",l:"­ƒÆ© Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+        {[{id:"gastos",l:"🛍️ Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       </div>
       {tab==="gastos"&&<ModGastos empId={empId} proveedores={proveedores} showToast={showToast}/>}
       {tab==="proveedores"&&<ModProveedores empId={empId} showToast={(m,tp)=>{showToast(m,tp);reloadProv();}}/>}
@@ -362,3 +362,4 @@ export default function PageGastos({showToast,empId}){
 }
 
 // ÔòÉÔòÉÔòÉ REPORTES PAGE ÔòÉÔòÉÔòÉ
+

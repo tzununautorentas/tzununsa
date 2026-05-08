@@ -2,7 +2,7 @@
 import { T, S, fmt, today, getEmpId, dbGet, dbIns, dbUpd, dbDel } from "../config.js";
 import { Toast, Spinner, Empty, Fld, ModalExportar } from "../components/shared.jsx";
 
-const CATEGORIAS_PROD = ["transporte", "turismo", "renta veh├¡culo", "traslado", "servicio especial", "paquete corporativo", "otro"];
+const CATEGORIAS_PROD = ["transporte", "turismo", "renta vehículo", "traslado", "servicio especial", "paquete corporativo", "otro"];
 
 function FormProducto({ initial, empId, onSave, onCancel }) {
   const [f, setF] = useState({
@@ -16,7 +16,7 @@ function FormProducto({ initial, empId, onSave, onCancel }) {
     aplica_iva: initial?.aplica_iva !== false,
     tasa_iva: initial?.tasa_iva || 5,
     activo: initial?.activo !== false,
-    imagen_emoji: initial?.imagen_emoji || "­ƒÜù",
+    imagen_emoji: initial?.imagen_emoji || "🚗",
     notas: initial?.notas || "",
   });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
@@ -35,7 +35,7 @@ function FormProducto({ initial, empId, onSave, onCancel }) {
     setSaving(false); onSave();
   };
 
-  const EMOJIS = ["­ƒÜù", "­ƒÜî", "­ƒÅì´©Å", "­ƒÜÉ", "­ƒø╗", "Ô£ê´©Å", "­ƒîÄ", "­ƒÅö´©Å", "­ƒÅû´©Å", "­ƒÅó", "­ƒæÑ", "­ƒôª", "Ô¡É", "­ƒÆ╝", "­ƒÄ»"];
+  const EMOJIS = ["🚗", "­ƒÜî", "­ƒÅì´©Å", "­ƒÜÉ", "­ƒø╗", "Ô£ê´©Å", "­ƒîÄ", "­ƒÅö´©Å", "­ƒÅû´©Å", "­ƒÅó", "👥", "📦", "Ô¡É", "­ƒÆ╝", "­ƒÄ»"];
 
   return (
     <div>
@@ -53,26 +53,26 @@ function FormProducto({ initial, empId, onSave, onCancel }) {
               ))}
             </div>
           </div>
-          <Fld label="C├ôDIGO"><input style={S.inp} value={f.codigo} onChange={e => sf("codigo", e.target.value)} placeholder="SRV-001" /></Fld>
+          <Fld label="CÓDIGO"><input style={S.inp} value={f.codigo} onChange={e => sf("codigo", e.target.value)} placeholder="SRV-001" /></Fld>
           <Fld label="CATEGOR├ìA">
             <select style={S.sel} value={f.categoria} onChange={e => sf("categoria", e.target.value)}>
               {CATEGORIAS_PROD.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
             </select>
           </Fld>
           <Fld label="NOMBRE DEL SERVICIO" span2><input style={S.inp} value={f.nombre} onChange={e => sf("nombre", e.target.value)} placeholder="Ej: Traslado aeropuerto zona 10" /></Fld>
-          <Fld label="DESCRIPCI├ôN" span2><textarea style={{ ...S.inp, minHeight: 70, resize: "vertical" }} value={f.descripcion} onChange={e => sf("descripcion", e.target.value)} placeholder="Descripci├│n del servicio para el cliente..." /></Fld>
+          <Fld label="DESCRIPCIÓN" span2><textarea style={{ ...S.inp, minHeight: 70, resize: "vertical" }} value={f.descripcion} onChange={e => sf("descripcion", e.target.value)} placeholder="Descripción del servicio para el cliente..." /></Fld>
           <Fld label="UNIDAD DE COBRO">
             <select style={S.sel} value={f.unidad} onChange={e => sf("unidad", e.target.value)}>
               <option value="servicio">Por servicio</option>
-              <option value="dia">Por d├¡a</option>
-              <option value="km">Por kil├│metro</option>
+              <option value="dia">Por día</option>
+              <option value="km">Por kilómetro</option>
               <option value="hora">Por hora</option>
               <option value="persona">Por persona</option>
             </select>
           </Fld>
           <Fld label="ESTADO">
             <select style={S.sel} value={f.activo ? "activo" : "inactivo"} onChange={e => sf("activo", e.target.value === "activo")}>
-              <option value="activo">Ô£à Activo</option>
+              <option value="activo">✅ Activo</option>
               <option value="inactivo">ÔÅ© Inactivo</option>
             </select>
           </Fld>
@@ -106,7 +106,7 @@ function FormProducto({ initial, empId, onSave, onCancel }) {
             <div style={{ background: T.surf, borderRadius: 12, padding: 16, border: `1px solid ${T.bord}` }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>{f.imagen_emoji}</div>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{f.nombre || "Nombre del servicio"}</div>
-              <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{f.descripcion || "Descripci├│n del servicio"}</div>
+              <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{f.descripcion || "Descripción del servicio"}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: T.acc }}>Q {fmt(precioConIVA)}</div>
@@ -146,13 +146,13 @@ export default function PageCatalogo({ showToast, empId }) {
   useEffect(() => { load(); }, []);
 
   const del = async (id) => {
-    if (!confirm("┬┐Eliminar este servicio del cat├ílogo?")) return;
+    if (!confirm("┬┐Eliminar este servicio del catálogo?")) return;
     await dbDel("catalogo_servicios", id);
     showToast("Eliminado"); load();
   };
   const toggleActivo = async (id, activo) => {
     await dbUpd("catalogo_servicios", id, { activo: !activo });
-    showToast(!activo ? "Activado Ô£ö" : "Desactivado"); load();
+    showToast(!activo ? "Activado ✔" : "Desactivado"); load();
   };
 
   const filtered = rows.filter(r => {
@@ -162,31 +162,31 @@ export default function PageCatalogo({ showToast, empId }) {
   });
 
   const categorias = ["todas", ...new Set(rows.map(r => r.categoria).filter(Boolean))];
-  const CAMPOS_EXP = [{ label: "C├│digo", key: "codigo" }, { label: "Nombre", key: "nombre" }, { label: "Categor├¡a", key: "categoria" }, { label: "Precio base", key: "precio_base" }, { label: "Unidad", key: "unidad" }, { label: "Activo", key: "activo" }];
+  const CAMPOS_EXP = [{ label: "Código", key: "codigo" }, { label: "Nombre", key: "nombre" }, { label: "Categoría", key: "categoria" }, { label: "Precio base", key: "precio_base" }, { label: "Unidad", key: "unidad" }, { label: "Activo", key: "activo" }];
 
   if (!tableExists) return (
     <div style={S.card}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: T.red, marginBottom: 12 }}>ÔÜá´©Å Tabla no encontrada</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: T.red, marginBottom: 12 }}>⚠️´©Å Tabla no encontrada</div>
       <div style={{ fontSize: 13, color: T.sub, marginBottom: 16 }}>La tabla <code>catalogo_servicios</code> no existe en Supabase. Ejecuta este SQL:</div>
       <div style={{ background: "#0D1117", borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: "#7DD3FC", lineHeight: 1.8 }}>
-        {`CREATE TABLE catalogo_servicios (\\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\\n  empresa_id UUID,\\n  codigo TEXT,\\n  nombre TEXT NOT NULL,\\n  descripcion TEXT,\\n  categoria TEXT DEFAULT 'transporte',\\n  precio_base DECIMAL(12,2) DEFAULT 0,\\n  precio_tarjeta DECIMAL(12,2) DEFAULT 0,\\n  unidad TEXT DEFAULT 'servicio',\\n  aplica_iva BOOLEAN DEFAULT true,\\n  tasa_iva INTEGER DEFAULT 5,\\n  activo BOOLEAN DEFAULT true,\\n  imagen_emoji TEXT DEFAULT '­ƒÜù',\\n  notas TEXT,\\n  created_at TIMESTAMPTZ DEFAULT NOW()\\n);\\nALTER TABLE catalogo_servicios DISABLE ROW LEVEL SECURITY;`}
+        {`CREATE TABLE catalogo_servicios (\\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\\n  empresa_id UUID,\\n  codigo TEXT,\\n  nombre TEXT NOT NULL,\\n  descripcion TEXT,\\n  categoria TEXT DEFAULT 'transporte',\\n  precio_base DECIMAL(12,2) DEFAULT 0,\\n  precio_tarjeta DECIMAL(12,2) DEFAULT 0,\\n  unidad TEXT DEFAULT 'servicio',\\n  aplica_iva BOOLEAN DEFAULT true,\\n  tasa_iva INTEGER DEFAULT 5,\\n  activo BOOLEAN DEFAULT true,\\n  imagen_emoji TEXT DEFAULT '🚗',\\n  notas TEXT,\\n  created_at TIMESTAMPTZ DEFAULT NOW()\\n);\\nALTER TABLE catalogo_servicios DISABLE ROW LEVEL SECURITY;`}
       </div>
-      <button onClick={load} style={{ ...S.btn("primary"), marginTop: 14 }}>Ôå║ Reintentar despu├®s de crear la tabla</button>
+      <button onClick={load} style={{ ...S.btn("primary"), marginTop: 14 }}>↺ Reintentar después de crear la tabla</button>
     </div>
   );
 
   if (vista === "form") return (
     <FormProducto initial={editItem} empId={empId}
-      onSave={() => { setVista("catalogo"); setEditItem(null); load(); showToast("Guardado Ô£ö"); }}
+      onSave={() => { setVista("catalogo"); setEditItem(null); load(); showToast("Guardado ✔"); }}
       onCancel={() => { setVista("catalogo"); setEditItem(null); }} />
   );
 
   return (
     <div>
-      {exportar && <ModalExportar titulo="Cat├ílogo de Servicios" datos={rows} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />}
+      {exportar && <ModalExportar titulo="Catálogo de Servicios" datos={rows} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />}
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
-        {[{ l: "Total servicios", v: rows.length, c: T.acc }, { l: "Activos", v: rows.filter(r => r.activo !== false).length, c: T.green }, { l: "Inactivos", v: rows.filter(r => r.activo === false).length, c: T.red }, { l: "Categor├¡as", v: new Set(rows.map(r => r.categoria)).size, c: T.blue }].map((s, i) => (
+        {[{ l: "Total servicios", v: rows.length, c: T.acc }, { l: "Activos", v: rows.filter(r => r.activo !== false).length, c: T.green }, { l: "Inactivos", v: rows.filter(r => r.activo === false).length, c: T.red }, { l: "Categorías", v: new Set(rows.map(r => r.categoria)).size, c: T.blue }].map((s, i) => (
           <div key={i} style={{ background: T.surf, borderRadius: 10, padding: 14, textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.c }}>{s.v}</div>
             <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{s.l}</div>
@@ -195,34 +195,34 @@ export default function PageCatalogo({ showToast, empId }) {
       </div>
       {/* Controles */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        <input style={{ ...S.inp, maxWidth: 260 }} value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="­ƒöì Buscar por nombre o c├│digo..." />
+        <input style={{ ...S.inp, maxWidth: 260 }} value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="­ƒöì Buscar por nombre o código..." />
         {categorias.map(c => (
           <button key={c} onClick={() => setFiltroCat(c)} style={{ ...S.btn(filtroCat === c ? "primary" : "ghost"), fontSize: 11, padding: "5px 10px" }}>
             {c === "todas" ? "Todas" : c.charAt(0).toUpperCase() + c.slice(1)}
           </button>
         ))}
         <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>­ƒôñ Exportar</button>
-        <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 11 }}>Ôå║</button>
+        <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 11 }}>↺</button>
         <button onClick={() => { setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize: 12, marginLeft: "auto" }}>+ Agregar servicio</button>
       </div>
-      {/* Grid de tarjetas tipo cat├ílogo */}
+      {/* Grid de tarjetas tipo catálogo */}
       {loading ? <Spinner /> : filtered.length === 0 ? (
-        <Empty icon="­ƒôª" msg="Sin servicios en el cat├ílogo" action="+ Agregar primer servicio" onAction={() => { setEditItem(null); setVista("form"); }} />
+        <Empty icon="📦" msg="Sin servicios en el catálogo" action="+ Agregar primer servicio" onAction={() => { setEditItem(null); setVista("form"); }} />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 16 }}>
           {filtered.map(r => (
             <div key={r.id} style={{ ...S.card, opacity: r.activo === false ? 0.6 : 1, transition: "transform .15s", cursor: "default", display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ fontSize: 36 }}>{r.imagen_emoji || "­ƒÜù"}</div>
+                <div style={{ fontSize: 36 }}>{r.imagen_emoji || "🚗"}</div>
                 <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: r.activo !== false ? T.greenD : T.redD, color: r.activo !== false ? T.green : T.red }}>{r.activo !== false ? "Activo" : "Inactivo"}</span>
               </div>
               {r.codigo && <div style={{ fontFamily: "monospace", fontSize: 10, color: T.mut }}>{r.codigo}</div>}
               <div style={{ fontSize: 14, fontWeight: 700 }}>{r.nombre}</div>
               {r.descripcion && <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4 }}>{r.descripcion}</div>}
               <div style={{ padding: "8px 0", borderTop: `1px solid ${T.bord}22` }}>
-                <div style={{ fontSize: 11, color: T.mut, marginBottom: 2 }}>{r.categoria} ┬À por {r.unidad}</div>
+                <div style={{ fontSize: 11, color: T.mut, marginBottom: 2 }}>{r.categoria} · por {r.unidad}</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: T.acc }}>Q {fmt(r.aplica_iva ? (r.precio_base || 0) * (1 + (r.tasa_iva || 0) / 100) : r.precio_base)}</div>
-                {r.aplica_iva && <div style={{ fontSize: 11, color: T.sub }}>Incluye IVA {r.tasa_iva}% ┬À sin IVA: Q {fmt(r.precio_base)}</div>}
+                {r.aplica_iva && <div style={{ fontSize: 11, color: T.sub }}>Incluye IVA {r.tasa_iva}% · sin IVA: Q {fmt(r.precio_base)}</div>}
                 {r.precio_tarjeta > 0 && <div style={{ fontSize: 11, color: T.sec }}>­ƒÆ│ Con tarjeta: Q {fmt(r.precio_tarjeta)}</div>}
               </div>
               {r.notas && <div style={{ fontSize: 11, color: T.mut, fontStyle: "italic" }}>{r.notas}</div>}
@@ -238,4 +238,5 @@ export default function PageCatalogo({ showToast, empId }) {
     </div>
   );
 }
+
 

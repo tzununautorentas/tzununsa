@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, Component } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS } from '../config.js';
+import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS } from '../config.js';
 import { Toast, Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, BotonesCompartir, ErrBoundary } from '../components/shared.jsx';
 
 export default function PageCalculadora({showToast,empId}){
@@ -14,7 +14,7 @@ export default function PageCalculadora({showToast,empId}){
             </div>
               </div>
                 <button onClick={()=>setShowNew(false)} style={{...S.btn("ghost"),flex:1,fontSize:11,padding:"6px"}}>Cancelar</button>
-                <button onClick={agregarCliente} disabled={saving} style={{...S.btn("primary"),flex:1,fontSize:11,padding:"6px"}}>{saving?"...":"Ô£ö Guardar"}</button>
+                <button onClick={agregarCliente} disabled={saving} style={{...S.btn("primary"),flex:1,fontSize:11,padding:"6px"}}>{saving?"...":"✔ Guardar"}</button>
               <div style={{display:"flex",gap:6}}>
               </select>
                 <option value="persona">Persona</option>
@@ -98,27 +98,27 @@ function ClienteBuscador({value,onChange,empId}){
       </div>}
         </div>
           </div>
-            {[{v:12,l:"12% ÔÇö R├®gimen General"},{v:5,l:"5% ÔÇö Peque├▒o Contribuyente"},{v:0,l:"Sin IVA"}].map(o=><button key={o.v} onClick={()=>setIva(o.v)} style={{...S.btn(iva===o.v?"primary":"ghost"),textAlign:"left"}}>{o.l}</button>)}
+            {[{v:12,l:"12% — Régimen General"},{v:5,l:"5% — Pequeño Contribuyente"},{v:0,l:"Sin IVA"}].map(o=><button key={o.v} onClick={()=>setIva(o.v)} style={{...S.btn(iva===o.v?"primary":"ghost"),textAlign:"left"}}>{o.l}</button>)}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒº¥ R├®gimen Fiscal</div>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>🧾 Régimen Fiscal</div>
         <div style={S.card}>
         </div>
           <div style={{display:"flex",justifyContent:"space-between",marginTop:10,padding:"10px 14px",background:T.surf,borderRadius:9,fontSize:14}}><span style={{color:T.sub}}>1 USD =</span><span style={{fontWeight:800,color:T.acc}}>Q {fmt(exch)}</span></div>
           <input style={{...S.inp,fontSize:20,fontWeight:700,color:T.acc}} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/>
           <label style={S.lbl}>GTQ POR 1 USD</label>
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒÆ▒ Tasa de Cambio del D├¡a</div>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒÆ▒ Tasa de Cambio del Día</div>
         <div style={S.card}>
       {tab==="fiscal"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
       </div>}
-        <div style={{marginTop:10,fontSize:11,color:T.mut}}>* 1-7 d├¡as = diaria ┬À 8-29 d├¡as = semanal ┬À 30+ d├¡as = mensual</div>
+        <div style={{marginTop:10,fontSize:11,color:T.mut}}>* 1-7 días = diaria · 8-29 días = semanal · 30+ días = mensual</div>
         </table>
           </tr>)}</tbody>
-            <td style={S.td}><div style={{display:"flex",gap:4}}>{editId===v.id?<><button onClick={saveEdit} style={{...S.btn("primary"),padding:"4px 9px",fontSize:11}}>Ô£ö</button><button onClick={()=>setEditId(null)} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£ò</button></>:<><button onClick={()=>{setEditId(v.id);setEditVals({...v});}} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£Å´©Å</button><button onClick={()=>delVeh(v.id)} style={{...S.btn("danger"),padding:"4px 9px",fontSize:11}}>­ƒùæ´©Å</button></>}</div></td>
+            <td style={S.td}><div style={{display:"flex",gap:4}}>{editId===v.id?<><button onClick={saveEdit} style={{...S.btn("primary"),padding:"4px 9px",fontSize:11}}>✔</button><button onClick={()=>setEditId(null)} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£ò</button></>:<><button onClick={()=>{setEditId(v.id);setEditVals({...v});}} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£Å´©Å</button><button onClick={()=>delVeh(v.id)} style={{...S.btn("danger"),padding:"4px 9px",fontSize:11}}>­ƒùæ´©Å</button></>}</div></td>
             {["dia","sem","mes"].map(c=><td key={c} style={{...S.td,fontWeight:700,color:T.acc}}>{editId===v.id?<input style={{...S.inp,padding:"5px 8px",fontSize:12,width:80}} type="number" value={editVals[c]} onChange={e=>setEditVals(p=>({...p,[c]:parseFloat(e.target.value)||0}))}/>:`Q ${fmt(v[c])}`}</td>)}
             <td style={S.td}>{editId===v.id?<select style={{...S.sel,padding:"5px 8px",fontSize:12}} value={editVals.tipo} onChange={e=>setEditVals(p=>({...p,tipo:e.target.value}))}>{TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select>:v.tipo}</td>
             <td style={{...S.td,fontWeight:600}}>{editId===v.id?<input style={{...S.inp,padding:"5px 8px",fontSize:12}} value={editVals.nombre} onChange={e=>setEditVals(p=>({...p,nombre:e.target.value}))}/>:v.nombre}</td>
           <tbody>{catalogo.map(v=><tr key={v.id}>
-          <thead><tr>{["Veh├¡culo","Tipo","Q/D├¡a","Q/Semana","Q/Mes",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Vehículo","Tipo","Q/Día","Q/Semana","Q/Mes",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
         </div>}
           <button onClick={addVeh} style={{...S.btn("primary"),padding:"9px 14px",alignSelf:"flex-end"}}>+</button>
@@ -129,15 +129,15 @@ function ClienteBuscador({value,onChange,empId}){
           <Fld label="NOMBRE"><input style={S.inp} value={newVeh.nombre} onChange={e=>setNewVeh(p=>({...p,nombre:e.target.value}))} placeholder="Nombre..."/></Fld>
         {showNewVeh&&<div style={{background:T.surf,borderRadius:10,padding:14,marginBottom:14,display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr auto",gap:10,alignItems:"flex-end"}}>
         </div>
-          <button onClick={()=>setShowNewVeh(!showNewVeh)} style={{...S.btn(showNewVeh?"warn":"primary"),fontSize:12}}>{showNewVeh?"Cancelar":"+ Agregar veh├¡culo"}</button>
-          <div style={{fontSize:13,fontWeight:700}}>Cat├ílogo y Tarifas</div>
+          <button onClick={()=>setShowNewVeh(!showNewVeh)} style={{...S.btn(showNewVeh?"warn":"primary"),fontSize:12}}>{showNewVeh?"Cancelar":"+ Agregar vehículo"}</button>
+          <div style={{fontSize:13,fontWeight:700}}>Catálogo y Tarifas</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
       {tab==="tarifas"&&<div style={S.card}>
       </div>}
         </div>
           </div>
-            <div>­ƒÅª Banrural ÔÇö 3309159475</div>
-            <div>­ƒÅª Banco Industrial ÔÇö 853-000016-8</div>
+            <div>🏦 Banrural — 3309159475</div>
+            <div>🏦 Banco Industrial — 853-000016-8</div>
           <div style={{...S.card,marginTop:12,background:T.surf,fontSize:12,color:T.sub,lineHeight:2}}>
           </div>
             </div>
@@ -156,7 +156,7 @@ function ClienteBuscador({value,onChange,empId}){
         </div>
           </div>
             <div style={{gridColumn:"span 2"}}><button onClick={guardarEmp} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"Guardando...":"­ƒÆ¥ Guardar"}</button></div>
-            <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={emp.direccion||""} onChange={e=>se("direccion",e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3"/></Fld>
+            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={emp.direccion||""} onChange={e=>se("direccion",e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3"/></Fld>
             <Fld label="EMAIL" span2><input style={S.inp} value={emp.email||""} onChange={e=>se("email",e.target.value)} placeholder="tzununautorentas@gmail.com"/></Fld>
             <Fld label="TEL├ëFONO"><input style={S.inp} value={emp.telefono||""} onChange={e=>se("telefono",e.target.value)} placeholder="502-31221538"/></Fld>
             <Fld label="NIT"><input style={S.inp} value={emp.nit||""} onChange={e=>se("nit",e.target.value)} placeholder="16693949"/></Fld>
@@ -166,36 +166,36 @@ function ClienteBuscador({value,onChange,empId}){
         <div style={S.card}>
       {tab==="empresa"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       </div>
-        {[{id:"empresa",l:"­ƒÅó Empresa"},{id:"tarifas",l:"­ƒÆ░ Tarifas"},{id:"fiscal",l:"­ƒº¥ Fiscal"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 16px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+        {[{id:"empresa",l:"­ƒÅó Empresa"},{id:"tarifas",l:"💰 Tarifas"},{id:"fiscal",l:"🧾 Fiscal"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 16px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:20}}>
     <div>
   return(
-  const addVeh=()=>{if(!newVeh.nombre.trim()){showToast("Nombre requerido","err");return;}setCatalogo(p=>[...p,{...newVeh,id:`c${Date.now()}`,dia:parseFloat(newVeh.dia)||0,sem:parseFloat(newVeh.sem)||0,mes:parseFloat(newVeh.mes)||0}]);setNewVeh({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});setShowNewVeh(false);showToast("Agregado Ô£ö");};
+  const addVeh=()=>{if(!newVeh.nombre.trim()){showToast("Nombre requerido","err");return;}setCatalogo(p=>[...p,{...newVeh,id:`c${Date.now()}`,dia:parseFloat(newVeh.dia)||0,sem:parseFloat(newVeh.sem)||0,mes:parseFloat(newVeh.mes)||0}]);setNewVeh({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});setShowNewVeh(false);showToast("Agregado ✔");};
   const delVeh=id=>{if(!confirm("┬┐Eliminar?"))return;setCatalogo(p=>p.filter(v=>v.id!==id));};
-  const saveEdit=()=>{setCatalogo(p=>p.map(v=>v.id===editId?{...v,...editVals}:v));setEditId(null);showToast("Tarifa actualizada Ô£ö");};
+  const saveEdit=()=>{setCatalogo(p=>p.map(v=>v.id===editId?{...v,...editVals}:v));setEditId(null);showToast("Tarifa actualizada ✔");};
   const se=(k,v)=>setEmp(p=>({...p,[k]:v}));
-  const guardarEmp=async()=>{if(!emp.nombre?.trim()){showToast("Nombre requerido","err");return;}setSaving(true);if(empId)await dbUpd("empresas",empId,{nombre:emp.nombre,nit:emp.nit,direccion:emp.direccion,telefono:emp.telefono,email:emp.email});showToast("Guardado Ô£ö");setSaving(false);};
+  const guardarEmp=async()=>{if(!emp.nombre?.trim()){showToast("Nombre requerido","err");return;}setSaving(true);if(empId)await dbUpd("empresas",empId,{nombre:emp.nombre,nit:emp.nit,direccion:emp.direccion,telefono:emp.telefono,email:emp.email});showToast("Guardado ✔");setSaving(false);};
   useEffect(()=>{dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0]){setEmp(d[0]);setEmpId(d[0].id);}});},[]);
-  const TIPOS=["Sed├ín","SUV","Pickup","Van","Microb├║s","Bus"];
+  const TIPOS=["Sedán","SUV","Pickup","Van","Microbús","Bus"];
   const [showNewVeh,setShowNewVeh]=useState(false);const [newVeh,setNewVeh]=useState({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});
   const [editId,setEditId]=useState(null);const [editVals,setEditVals]=useState({});
   const [catalogo,setCatalogo]=useState(CATALOGO.map(v=>({...v})));
   const [exch,setExch]=useState(7.70);const [iva,setIva]=useState(5);
   const [tab,setTab]=useState("empresa");const [emp,setEmp]=useState({});const [empId,setEmpId]=useState(null);const [saving,setSaving]=useState(false);
 function PageConfiguracion({showToast}){
-// ÔòÉÔòÉÔòÉ CONFIGURACI├ôN ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ CONFIGURACIÓN ÔòÉÔòÉÔòÉ
 
 }
   );
     </div>
       {loading?<Spinner/>:data&&<>{tab==="ventas"&&<ReporteVentas data={data}/>}{tab==="flota"&&<ReporteFlota data={data}/>}{tab==="gastos"&&<ReporteGastos data={data}/>}{tab==="clientes"&&<ReporteClientes data={data}/>}</>}
       </div>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║ Actualizar</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺ Actualizar</button>
         {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
     <div>
   return(
-  const TABS=[{id:"ventas",l:"­ƒôè Ventas"},{id:"flota",l:"­ƒÜù Flota"},{id:"gastos",l:"­ƒÆ© Gastos"},{id:"clientes",l:"­ƒæÑ Clientes"}];
+  const TABS=[{id:"ventas",l:"📊 Ventas"},{id:"flota",l:"🚗 Flota"},{id:"gastos",l:"🛍️ Gastos"},{id:"clientes",l:"👥 Clientes"}];
   };
     setLoading(false);
     setData({vehiculos:Array.isArray(vehiculos)?vehiculos:[],reservas:Array.isArray(reservas)?reservas:[],cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],facturas:Array.isArray(facturas)?facturas:[],gastos:Array.isArray(gastos)?gastos:[],clientes:Array.isArray(clientes)?clientes:[],movimientos:Array.isArray(movimientos)?movimientos:[]});
@@ -213,7 +213,7 @@ function PageReportes(){
       {tab==="proveedores"&&<ModProveedores empId={empId} showToast={(m,tp)=>{showToast(m,tp);reloadProv();}}/>}
       {tab==="gastos"&&<ModGastos empId={empId} proveedores={proveedores} showToast={showToast}/>}
       </div>
-        {[{id:"gastos",l:"­ƒÆ© Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+        {[{id:"gastos",l:"🛍️ Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
     <div>
   return(
@@ -231,11 +231,11 @@ function PageGastos({showToast,empId}){
           </>}
             )}
               </tbody></table></div>
-              <tbody>{movsFil.map(m=><tr key={m.id}><td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(m.fecha)}</td><td style={{...S.td,maxWidth:180}}><div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:175}}>{m.descripcion}</div>{m.referencia&&<div style={{fontSize:9,color:T.mut}}>{m.referencia}</div>}</td><td style={S.td}><span style={{padding:"2px 6px",borderRadius:8,fontSize:10,fontWeight:600,background:(CC[m.categoria]||T.mut)+"22",color:CC[m.categoria]||T.mut}}>{m.categoria}</span></td><td style={{...S.td,fontWeight:700,color:m.tipo==="ingreso"?T.acc:T.red,whiteSpace:"nowrap"}}>{m.tipo==="ingreso"?"+ ":"ÔêÆ "}Q {fmt(m.monto)}</td><td style={S.td}><button onClick={()=>conciliar(m.id,!m.conciliado)} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,padding:0}}>{m.conciliado?"Ô£à":"Ô¼£"}</button></td><td style={S.td}><button onClick={async()=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("movimientos_bancarios",m.id);loadMovs(cuentaAct.id);}} style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}}>­ƒùæ´©Å</button></td></tr>)}
-              <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Fecha","Descripci├│n","Cat.","Monto","Ô£ô",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <tbody>{movsFil.map(m=><tr key={m.id}><td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(m.fecha)}</td><td style={{...S.td,maxWidth:180}}><div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:175}}>{m.descripcion}</div>{m.referencia&&<div style={{fontSize:9,color:T.mut}}>{m.referencia}</div>}</td><td style={S.td}><span style={{padding:"2px 6px",borderRadius:8,fontSize:10,fontWeight:600,background:(CC[m.categoria]||T.mut)+"22",color:CC[m.categoria]||T.mut}}>{m.categoria}</span></td><td style={{...S.td,fontWeight:700,color:m.tipo==="ingreso"?T.acc:T.red,whiteSpace:"nowrap"}}>{m.tipo==="ingreso"?"+ ":"ÔêÆ "}Q {fmt(m.monto)}</td><td style={S.td}><button onClick={()=>conciliar(m.id,!m.conciliado)} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,padding:0}}>{m.conciliado?"✅":"Ô¼£"}</button></td><td style={S.td}><button onClick={async()=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("movimientos_bancarios",m.id);loadMovs(cuentaAct.id);}} style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}}>­ƒùæ´©Å</button></td></tr>)}
+              <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Fecha","Descripción","Cat.","Monto","Ô£ô",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             {movsFil.length===0?<Empty icon="­ƒÆ│" msg="Sin movimientos" action="+ Registrar" onAction={()=>setShowForm(true)}/>:(
             </div>
-              {["todos","conciliado","pendiente"].map(t=><button key={t} onClick={()=>setFiltroC(t)} style={{...S.btn(filtroC===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todo":t==="conciliado"?"Ô£à Conciliados":"ÔÅ│ Pendientes"}</button>)}
+              {["todos","conciliado","pendiente"].map(t=><button key={t} onClick={()=>setFiltroC(t)} style={{...S.btn(filtroC===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todo":t==="conciliado"?"✅ Conciliados":"⏳ Pendientes"}</button>)}
               {["todos","ingreso","egreso"].map(t=><button key={t} onClick={()=>setFiltroT(t)} style={{...S.btn(filtroT===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todos":t==="ingreso"?"Ô¼å Ingresos":"Ô¼ç Egresos"}</button>)}
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
             </div>}
@@ -245,7 +245,7 @@ function PageGastos({showToast,empId}){
                 <Fld label="REFERENCIA"><input style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="N┬░ factura..."/></Fld>
                 <Fld label="CATEGOR├ìA"><select style={S.sel} value={f.categoria} onChange={e=>sf("categoria",e.target.value)}>{CATS.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}</select></Fld>
                 <Fld label="MONTO (GTQ)"><input style={S.inp} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/></Fld>
-                <Fld label="DESCRIPCI├ôN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Descripci├│n..."/></Fld>
+                <Fld label="DESCRIPCIÓN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Descripción..."/></Fld>
                 <Fld label="TIPO"><div style={{display:"flex",gap:8}}><button onClick={()=>sf("tipo","ingreso")} style={{...S.btn(f.tipo==="ingreso"?"primary":"ghost"),flex:1,fontSize:12}}>Ô¼å Ingreso</button><button onClick={()=>sf("tipo","egreso")} style={{...S.btn(f.tipo==="egreso"?"danger":"ghost"),flex:1,fontSize:12}}>Ô¼ç Egreso</button></div></Fld>
                 <Fld label="FECHA"><input style={S.inp} type="date" value={f.fecha} onChange={e=>sf("fecha",e.target.value)}/></Fld>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
@@ -260,21 +260,21 @@ function PageGastos({showToast,empId}){
           {cuentaAct&&<>
         <div>
         </div>
-          {loading?<Spinner/>:cuentas.length===0?<Empty icon="­ƒÅª" msg="Sin cuentas registradas"/>:cuentas.map(c=><div key={c.id} onClick={()=>setCuentaAct(c)} style={{...S.card,cursor:"pointer",border:`1px solid ${cuentaAct?.id===c.id?T.acc:T.bord}`,marginBottom:10,background:cuentaAct?.id===c.id?T.accDim:T.card}}><div style={{fontSize:13,fontWeight:700}}>{c.banco}</div><div style={{fontSize:11,color:T.sub}}>{c.numero_cuenta} ┬À {c.moneda}</div><div style={{fontSize:18,fontWeight:800,color:T.acc,marginTop:8}}>Q {fmt(c.saldo_actual)}</div></div>)}
+          {loading?<Spinner/>:cuentas.length===0?<Empty icon="🏦" msg="Sin cuentas registradas"/>:cuentas.map(c=><div key={c.id} onClick={()=>setCuentaAct(c)} style={{...S.card,cursor:"pointer",border:`1px solid ${cuentaAct?.id===c.id?T.acc:T.bord}`,marginBottom:10,background:cuentaAct?.id===c.id?T.accDim:T.card}}><div style={{fontSize:13,fontWeight:700}}>{c.banco}</div><div style={{fontSize:11,color:T.sub}}>{c.numero_cuenta} · {c.moneda}</div><div style={{fontSize:18,fontWeight:800,color:T.acc,marginTop:8}}>Q {fmt(c.saldo_actual)}</div></div>)}
           <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>MIS CUENTAS</div>
         <div>
       <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:18}}>
       </div>
         {[{l:"Saldo total GTQ",v:`Q ${fmt(saldoGTQ)}`,c:T.acc,bg:T.accDim},{l:"Ingresos",v:`Q ${fmt(ing)}`,c:T.acc,bg:T.accDim},{l:"Sin conciliar",v:movs.filter(m=>!m.conciliado).length,c:T.sec,bg:T.secDim}].map((s,i)=><div key={i} style={{background:s.bg,border:`1px solid ${s.c}44`,borderRadius:12,padding:"14px 18px"}}><div style={{fontSize:11,color:T.mut}}>{s.l}</div><div style={{fontSize:20,fontWeight:800,color:s.c,marginTop:4}}>{s.v}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
-      {exportar&&<ModalExportar titulo="Movimientos Bancarios" datos={movs} campos={[{label:"Fecha",key:"fecha"},{label:"Descripci├│n",key:"descripcion"},{label:"Categor├¡a",key:"categoria"},{label:"Tipo",key:"tipo"},{label:"Monto",key:"monto"},{label:"Referencia",key:"referencia"},{label:"Conciliado",key:"conciliado"}]} onClose={()=>setExportar(false)}/>}
+      {exportar&&<ModalExportar titulo="Movimientos Bancarios" datos={movs} campos={[{label:"Fecha",key:"fecha"},{label:"Descripción",key:"descripcion"},{label:"Categoría",key:"categoria"},{label:"Tipo",key:"tipo"},{label:"Monto",key:"monto"},{label:"Referencia",key:"referencia"},{label:"Conciliado",key:"conciliado"}]} onClose={()=>setExportar(false)}/>}
     <div>
   return(
   const saldoGTQ=cuentas.filter(c=>c.moneda==="GTQ").reduce((s,c)=>s+(parseFloat(c.saldo_actual)||0),0);
   const ing=movs.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+(parseFloat(m.monto)||0),0);
   const movsFil=movs.filter(m=>{if(filtroT!=="todos"&&m.tipo!==filtroT)return false;if(filtroC==="conciliado"&&!m.conciliado)return false;if(filtroC==="pendiente"&&m.conciliado)return false;return true;});
   const conciliar=async(id,val)=>{await dbUpd("movimientos_bancarios",id,{conciliado:val});loadMovs(cuentaAct.id);};
-  const guardarMov=async()=>{if(!f.descripcion.trim()||!(parseFloat(f.monto)>0)){showToast("Descripci├│n y monto requeridos","err");return;}setSaving(true);await dbIns("movimientos_bancarios",{empresa_id:empId,cuenta_id:cuentaAct.id,fecha:f.fecha,tipo:f.tipo,descripcion:f.descripcion,monto:parseFloat(f.monto),referencia:f.referencia,categoria:f.categoria,conciliado:f.conciliado,notas:f.notas});showToast("Guardado Ô£ö");setSaving(false);setShowForm(false);setF({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});loadMovs(cuentaAct.id);};
+  const guardarMov=async()=>{if(!f.descripcion.trim()||!(parseFloat(f.monto)>0)){showToast("Descripción y monto requeridos","err");return;}setSaving(true);await dbIns("movimientos_bancarios",{empresa_id:empId,cuenta_id:cuentaAct.id,fecha:f.fecha,tipo:f.tipo,descripcion:f.descripcion,monto:parseFloat(f.monto),referencia:f.referencia,categoria:f.categoria,conciliado:f.conciliado,notas:f.notas});showToast("Guardado ✔");setSaving(false);setShowForm(false);setF({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});loadMovs(cuentaAct.id);};
   useEffect(()=>{if(cuentaAct)loadMovs(cuentaAct.id);},[cuentaAct?.id]);
   const loadMovs=async(cid)=>{if(!cid)return;const m=await dbGet("movimientos_bancarios",`&cuenta_id=eq.${cid}`);setMovs(Array.isArray(m)?m:[]);};
   const loadCuentas=async()=>{setLoading(true);const c=await dbGet("cuentas_bancarias");const arr=Array.isArray(c)?c:[];setCuentas(arr);if(arr.length>0){const first=arr[0];setCuentaAct(first);}setLoading(false);};
@@ -292,48 +292,48 @@ function PageBanca({showToast,empId}){
     </div>
       )}
         </tbody></table></div>
-        <tbody>{filtered.map(r=>{const e=EST_FAC[r.estado]||EST_FAC.borrador;const saldo=parseFloat(r.saldo_pendiente)||0;const ant=parseFloat(r.anticipo_aplicado)||0;return <tr key={r.id}><td style={S.td}><div style={{fontFamily:"monospace",fontSize:11,color:T.acc,fontWeight:700}}>{r.numero}</div><div style={{fontSize:10,color:T.mut}}>{fmtD(r.fecha_emision)}</div>{r.numero_autorizacion&&<div style={{fontSize:9,color:T.acc}}>Ô£ô DTE</div>}{r.motivo_anulacion&&<div style={{fontSize:9,color:T.red}}>ÔÜá {r.motivo_anulacion.slice(0,20)}</div>}</td><td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{r.nombre_receptor}</div><div style={{fontSize:10,color:T.mut}}>{r.nit_receptor}</div></td><td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.total)}</td><td style={{...S.td,color:ant>0?T.acc:T.mut,fontSize:12}}>{ant>0?"Q "+fmt(ant):"ÔÇö"}</td><td style={{...S.td,fontWeight:700,color:saldo>0?T.sec:T.acc}}>{r.estado==="anulada"?"ÔÇö":"Q "+fmt(saldo)}</td><td style={S.td}><Badge color={e.c} bg={e.bg} label={e.l} small/></td><td style={S.td}><div style={{display:"flex",flexDirection:"column",gap:4,minWidth:90}}>{r.estado==="emitida"&&<button onClick={()=>{setAuthFac(r);setAuthId("");}} style={{...S.btn("blue"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒöÉ DTE</button>}{["emitida","certificada","parcial"].includes(r.estado)&&<button onClick={()=>setMPago(r)} style={{...S.btn("primary"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒÆ░ Pago</button>}{r.estado!=="anulada"&&<button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),padding:"3px 7px",fontSize:10,width:"100%"}}>Ô£Å´©Å</button>}{!["anulada","pagada"].includes(r.estado)&&<button onClick={()=>setMAnular(r)} style={{...S.btn("danger"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒÜ½</button>}</div></td></tr>;})}
+        <tbody>{filtered.map(r=>{const e=EST_FAC[r.estado]||EST_FAC.borrador;const saldo=parseFloat(r.saldo_pendiente)||0;const ant=parseFloat(r.anticipo_aplicado)||0;return <tr key={r.id}><td style={S.td}><div style={{fontFamily:"monospace",fontSize:11,color:T.acc,fontWeight:700}}>{r.numero}</div><div style={{fontSize:10,color:T.mut}}>{fmtD(r.fecha_emision)}</div>{r.numero_autorizacion&&<div style={{fontSize:9,color:T.acc}}>Ô£ô DTE</div>}{r.motivo_anulacion&&<div style={{fontSize:9,color:T.red}}>⚠️ {r.motivo_anulacion.slice(0,20)}</div>}</td><td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{r.nombre_receptor}</div><div style={{fontSize:10,color:T.mut}}>{r.nit_receptor}</div></td><td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.total)}</td><td style={{...S.td,color:ant>0?T.acc:T.mut,fontSize:12}}>{ant>0?"Q "+fmt(ant):"—"}</td><td style={{...S.td,fontWeight:700,color:saldo>0?T.sec:T.acc}}>{r.estado==="anulada"?"—":"Q "+fmt(saldo)}</td><td style={S.td}><Badge color={e.c} bg={e.bg} label={e.l} small/></td><td style={S.td}><div style={{display:"flex",flexDirection:"column",gap:4,minWidth:90}}>{r.estado==="emitida"&&<button onClick={()=>{setAuthFac(r);setAuthId("");}} style={{...S.btn("blue"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒöÉ DTE</button>}{["emitida","certificada","parcial"].includes(r.estado)&&<button onClick={()=>setMPago(r)} style={{...S.btn("primary"),padding:"3px 7px",fontSize:10,width:"100%"}}>💰 Pago</button>}{r.estado!=="anulada"&&<button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),padding:"3px 7px",fontSize:10,width:"100%"}}>Ô£Å´©Å</button>}{!["anulada","pagada"].includes(r.estado)&&<button onClick={()=>setMAnular(r)} style={{...S.btn("danger"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒÜ½</button>}</div></td></tr>;})}
         <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Factura","Cliente","Total","Anticipo","Saldo","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-      {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒº¥" msg="Sin facturas"/>:(
+      {loading?<Spinner/>:filtered.length===0?<Empty icon="🧾" msg="Sin facturas"/>:(
       </div>
                 <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
         <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>­ƒôñ Exportar</button>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
         {["todas","borrador","emitida","certificada","parcial","pagada","anulada"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
       </div>
         {[{l:"Total",v:rows.length,c:T.acc},{l:"Emitidas",v:rows.filter(r=>r.estado==="emitida").length,c:T.blue},{l:"Facturado",v:`Q ${fmt(tFac).split(".")[0]}`,c:T.purple},{l:"Saldos pend.",v:`Q ${fmt(tSaldo).split(".")[0]}`,c:tSaldo>0?T.sec:T.acc}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:i>=2?13:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
-      {authFac&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:460,padding:24}}><div style={{fontSize:14,fontWeight:700,color:T.acc,marginBottom:10}}>­ƒöÉ Registrar No. DTE</div><input style={{...S.inp,fontFamily:"monospace",marginBottom:14}} value={authId} onChange={e=>setAuthId(e.target.value)} placeholder="UUID SAT..."/><div style={{display:"flex",gap:8}}><button onClick={regAuth} style={{...S.btn("primary"),flex:1}}>Ô£à Certificar</button><button onClick={()=>{setAuthFac(null);setAuthId("");}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button></div></div></div>}
+      {authFac&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:460,padding:24}}><div style={{fontSize:14,fontWeight:700,color:T.acc,marginBottom:10}}>­ƒöÉ Registrar No. DTE</div><input style={{...S.inp,fontFamily:"monospace",marginBottom:14}} value={authId} onChange={e=>setAuthId(e.target.value)} placeholder="UUID SAT..."/><div style={{display:"flex",gap:8}}><button onClick={regAuth} style={{...S.btn("primary"),flex:1}}>✅ Certificar</button><button onClick={()=>{setAuthFac(null);setAuthId("");}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button></div></div></div>}
       <ModalPago factura={mPago} onConfirm={(mo,fe,me)=>regPago(mPago,mo,fe,me)} onCancel={()=>setMPago(null)}/>
       <ModalAnular factura={mAnular} onConfirm={m=>anular(mAnular,m)} onCancel={()=>setMAnular(null)}/>
       {exportar&&<ModalExportar titulo="Facturas" datos={rows} campos={[{label:"N┬░",key:"numero"},{label:"Cliente",key:"nombre_receptor"},{label:"NIT",key:"nit_receptor"},{label:"Fecha",key:"fecha_emision"},{label:"Total",key:"total"},{label:"Saldo",key:"saldo_pendiente"},{label:"Estado",key:"estado"}]} onClose={()=>setExportar(false)}/>}
     <div>
   return(
-  if(vista==="form")return <div><FormFactura initial={editItem} empId={empId} clientes={clientes} reservas={reservas} cotizaciones={cotizaciones} anticipos={anticipos} onSave={()=>{showToast("Guardada Ô£ö");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
+  if(vista==="form")return <div><FormFactura initial={editItem} empId={empId} clientes={clientes} reservas={reservas} cotizaciones={cotizaciones} anticipos={anticipos} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
   const tSaldo=rows.filter(r=>!["anulada","pagada"].includes(r.estado)).reduce((s,r)=>s+(parseFloat(r.saldo_pendiente)||0),0);
   const tFac=rows.filter(r=>!["anulada","borrador"].includes(r.estado)).reduce((s,r)=>s+(parseFloat(r.total)||0),0);
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro);
-  const regAuth=async()=>{if(!authId.trim()){showToast("Ingresa el No. autorizaci├│n","err");return;}await dbUpd("facturas",authFac.id,{numero_autorizacion:authId,estado:"certificada",fecha_certificacion:new Date().toISOString()});showToast("DTE certificado Ô£ö");setAuthFac(null);setAuthId("");load();};
-  const regPago=async(fac,monto,fecha,metodo)=>{const ns=Math.max(0,(parseFloat(fac.saldo_pendiente)||parseFloat(fac.total)||0)-monto);await dbUpd("facturas",fac.id,{saldo_pendiente:ns,estado:ns<=0?"pagada":"parcial",fecha_pago:fecha});await dbIns("movimientos_bancarios",{empresa_id:empId,fecha,tipo:"ingreso",descripcion:"Pago "+fac.numero+" ÔÇö "+fac.nombre_receptor,monto,referencia:fac.numero,categoria:"ventas",conciliado:true});showToast(ns<=0?"Pagada Ô£ö":"Pago parcial Ô£ö");setMPago(null);load();};
+  const regAuth=async()=>{if(!authId.trim()){showToast("Ingresa el No. autorización","err");return;}await dbUpd("facturas",authFac.id,{numero_autorizacion:authId,estado:"certificada",fecha_certificacion:new Date().toISOString()});showToast("DTE certificado ✔");setAuthFac(null);setAuthId("");load();};
+  const regPago=async(fac,monto,fecha,metodo)=>{const ns=Math.max(0,(parseFloat(fac.saldo_pendiente)||parseFloat(fac.total)||0)-monto);await dbUpd("facturas",fac.id,{saldo_pendiente:ns,estado:ns<=0?"pagada":"parcial",fecha_pago:fecha});await dbIns("movimientos_bancarios",{empresa_id:empId,fecha,tipo:"ingreso",descripcion:"Pago "+fac.numero+" — "+fac.nombre_receptor,monto,referencia:fac.numero,categoria:"ventas",conciliado:true});showToast(ns<=0?"Pagada ✔":"Pago parcial ✔");setMPago(null);load();};
   const anular=async(fac,mot)=>{await dbUpd("facturas",fac.id,{estado:"anulada",motivo_anulacion:mot});showToast("Anulada");setMAnular(null);load();};
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));dbGet("reservas","").then(d=>setReservas(Array.isArray(d)?d:[]));dbGet("cotizaciones","&estado=eq.aprobada").then(d=>setCotizaciones(Array.isArray(d)?d:[]));dbGet("movimientos_bancarios","&tipo=eq.ingreso").then(d=>setAnticipos(Array.isArray(d)?d:[]));load();},[]);
   };
     const w=window.open("","_blank");w.document.write(html);w.document.close();
     <script>window.onload=()=>window.print();</script></body></html>`;
     <div style="text-align:center;margin-top:12px;font-style:italic;color:#1B2D5C;font-size:11px"><em>Contribuyendo</em> juntos por Guatemala</div>
-    <div class="footer"><strong>Datos del certificador:</strong> Superintendencia de Administraci├│n Tributaria &nbsp; NIT: 16693949</div>
-    ${ivaPct===5?'<p style="font-size:9px;color:#64748B">* No genera derecho a cr├®dito fiscal</p>':""}
+    <div class="footer"><strong>Datos del certificador:</strong> Superintendencia de Administración Tributaria &nbsp; NIT: 16693949</div>
+    ${ivaPct===5?'<p style="font-size:9px;color:#64748B">* No genera derecho a crédito fiscal</p>':""}
     <tfoot><tr><td colspan="4"/><td class="right"><strong>TOTAL:</strong></td><td class="right"><strong>Q ${total.toFixed(2)}</strong></td></tr></tfoot></table>
     <tbody>${lineas.map((l,i)=>`<tr><td>${i+1}</td><td>${l.tipo||"Servicio"}</td><td class="right">${l.cantidad}</td><td>${l.descripcion}</td><td class="right">Q ${parseFloat(l.precio_unitario||0).toFixed(2)}</td><td class="right">Q ${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0)-(parseFloat(l.descuento)||0)).toFixed(2)}</td></tr>`).join("")}</tbody>
-    <table><thead><tr><th>#</th><th>B/S</th><th>Cant.</th><th>Descripci├│n</th><th class="right">P. Unitario</th><th class="right">Total</th></tr></thead>
+    <table><thead><tr><th>#</th><th>B/S</th><th>Cant.</th><th>Descripción</th><th class="right">P. Unitario</th><th class="right">Total</th></tr></thead>
     <div style="font-size:10px">NIT Receptor: ${r.nit_receptor||"CF"} &nbsp;|&nbsp; Nombre: <strong>${r.nombre_receptor}</strong> &nbsp;|&nbsp; Fecha: ${r.fecha_emision||""} &nbsp;|&nbsp; Moneda: GTQ</div>
     <hr/>
     </div>
-      <div class="autorizacion"><strong>N├ÜMERO DE AUTORIZACI├ôN:</strong><br/>${r.numero_autorizacion||"ÔÇö"}<br/>Serie: ${r.serie||"ÔÇö"} N├║mero DTE: ${r.numero_dte||"ÔÇö"}</div>
+      <div class="autorizacion"><strong>N├ÜMERO DE AUTORIZACIÓN:</strong><br/>${r.numero_autorizacion||"—"}<br/>Serie: ${r.serie||"—"} Número DTE: ${r.numero_dte||"—"}</div>
       <div class="emisor"><strong>VANESSA MAR├ìA, G├üLVEZ HERN├üNDEZ</strong><br/>Nit Emisor: 20160860<br/><strong>TRANSPORTES TZUNUN</strong><br/>6 AVENIDA 5-23 COLONIA LA CASTELLANA, zona 1, EL TEJAR, CHIMALTENANGO</div>
     <div style="display:flex;justify-content:space-between">
-    <div class="titulo">${ivaPct===5?"Factura Peque├▒o Contribuyente":"Factura"}</div>
+    <div class="titulo">${ivaPct===5?"Factura Pequeño Contribuyente":"Factura"}</div>
     const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${r.numero}</title><style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}.titulo{text-align:center;font-size:16px;font-weight:700;color:#1B2D5C;margin-bottom:8px}.emisor{color:#1B2D5C;font-size:10px;margin-bottom:4px}.right{text-align:right}.autorizacion{text-align:right;font-size:9px;color:#DC2626}table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10px}th{background:#1B2D5C;color:#fff;padding:5px 6px}td{padding:5px 6px;border-bottom:1px solid #E2E8F0}.footer{margin-top:10px;font-size:9px;color:#64748B;border-top:1px solid #E2E8F0;padding-top:6px}@media print{button{display:none}}</style></head><body>
     const total=parseFloat(r.total)||0;
     const ivaPct=parseFloat(r.tasa_iva)||5;
@@ -343,7 +343,7 @@ function PageBanca({showToast,empId}){
   const load=async()=>{setLoading(true);const d=await dbGet("facturas");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   const [rows,setRows]=useState([]);const [clientes,setClientes]=useState([]);const [reservas,setReservas]=useState([]);const [cotizaciones,setCotizaciones]=useState([]);const [anticipos,setAnticipos]=useState([]);const [loading,setLoading]=useState(true);const [vista,setVista]=useState("lista");const [exportar,setExportar]=useState(false);const [editItem,setEditItem]=useState(null);const [filtro,setFiltro]=useState("todas");const [mAnular,setMAnular]=useState(null);const [mPago,setMPago]=useState(null);const [authFac,setAuthFac]=useState(null);const [authId,setAuthId]=useState("");
 function PageFacturacion({showToast,empId}){
-// ÔòÉÔòÉÔòÉ FACTURACI├ôN PAGE ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ FACTURACIÓN PAGE ÔòÉÔòÉÔòÉ
 
 }
   );
@@ -355,23 +355,23 @@ function PageFacturacion({showToast,empId}){
               </div>
                 </div>
                   <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"4px 9px",marginLeft:"auto"}}>­ƒùæ´©Å</button>
-                  {r.estado==="enviada"&&<button onClick={()=>chEst(r.id,"aprobada")} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>Ô£à</button>}
-                  {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>­ƒôª</button>}
+                  {r.estado==="enviada"&&<button onClick={()=>chEst(r.id,"aprobada")} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>✅</button>}
+                  {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>📦</button>}
                   <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£Å´©Å</button>
-                  <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>­ƒôï Clonar</button>
-                  <button onClick={()=>{const msg="Estimados, le comparto cotizaci├│n "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>­ƒÆ¼ WA</button>
-                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotizaci├│n "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotizaci├│n "+r.numero+" por Q "+fmt(total)+". Para m├ís informaci├│n: Oscar G├ílvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£ë´©Å</button>
+                  <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>📋 Clonar</button>
+                  <button onClick={()=>{const msg="Estimados, le comparto cotización "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>­ƒÆ¼ WA</button>
+                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotización "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotización "+r.numero+" por Q "+fmt(total)+". Para más información: Oscar Gálvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£ë´©Å</button>
                   <button onClick={()=>{const doc=makePDF();if(doc){const url=URL.createObjectURL(doc.output("blob"));const w=window.open(url);setTimeout(()=>w&&w.print(),1000);}}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>­ƒû¿´©Å</button>
                   <button onClick={()=>{const doc=makePDF();if(doc)doc.save(r.numero+".pdf");}} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>Ô¼ç PDF</button>
                   <button onClick={()=>setPreview(r)} style={{...S.btn("blue"),fontSize:11,padding:"4px 9px"}}>­ƒæü Ver</button>
                 <div style={{display:"flex",gap:5,paddingTop:10,borderTop:`1px solid ${T.bord}22`,flexWrap:"wrap"}}>
                 </div>
                   <div style={{textAlign:"right"}}><Badge color={e.c} bg={e.bg} label={e.l} small/><div style={{fontSize:15,fontWeight:700,color:T.acc,marginTop:4}}>Q {fmt(total)}</div></div>
-                  <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>{r.saludo&&<div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>"{r.saludo}"</div>}<div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {r.dias}d{r.vehiculo_nombre?" ┬À "+r.vehiculo_nombre:""}</div></div>
+                  <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>{r.saludo&&<div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>"{r.saludo}"</div>}<div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {r.dias}d{r.vehiculo_nombre?" · "+r.vehiculo_nombre:""}</div></div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
               <div key={r.id} style={S.card}>
             return(
-            const makePDF=()=>generarPDF({numero:r.numero,fecha:r.fecha_emision||today(),fecha_vence:r.fecha_vence,cliente:r.cliente_nombre,nit:r.cliente_nit,dir_cliente:r.cliente_dir,saludo:r.saludo,servicio:r.descripcion_servicio,caract:r.caract||["Veh├¡culo","Aire acond.","Cinturones","Seguro"],incluidos:r.incluidos||["Combustible","Conductor","Atenci├│n"],beneficios:r.beneficios||["Viaje seguro","Puntualidad","Flexibilidad"],con_piloto:r.con_piloto!==false,sub:parseFloat(r.subtotal)||0,iva_pct:parseFloat(r.tasa_iva)||5,iva_amt:parseFloat(r.total_iva)||0,total_ef:total,total_tc:total*1.05,exch:parseFloat(r.tasa_cambio)||7.70,es_orden:r.orden_venta});
+            const makePDF=()=>generarPDF({numero:r.numero,fecha:r.fecha_emision||today(),fecha_vence:r.fecha_vence,cliente:r.cliente_nombre,nit:r.cliente_nit,dir_cliente:r.cliente_dir,saludo:r.saludo,servicio:r.descripcion_servicio,caract:r.caract||["Vehículo","Aire acond.","Cinturones","Seguro"],incluidos:r.incluidos||["Combustible","Conductor","Atención"],beneficios:r.beneficios||["Viaje seguro","Puntualidad","Flexibilidad"],con_piloto:r.con_piloto!==false,sub:parseFloat(r.subtotal)||0,iva_pct:parseFloat(r.tasa_iva)||5,iva_amt:parseFloat(r.total_iva)||0,total_ef:total,total_tc:total*1.05,exch:parseFloat(r.tasa_cambio)||7.70,es_orden:r.orden_venta});
             const total=parseFloat(r.total_gtq)||0;
             const e=r.orden_venta?EC.orden_venta:(EC[r.estado]||EC.borrador);
           {filtered.map(r=>{
@@ -379,19 +379,19 @@ function PageFacturacion({showToast,empId}){
       {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒô¡" msg="Sin cotizaciones"/>:(
       </div>
         <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║</button>
-        {["todas","borrador","enviada","aprobada","rechazada","orden_venta"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="orden_venta"?"­ƒôª ├ôrdenes":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
+        {["todas","borrador","enviada","aprobada","rechazada","orden_venta"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="orden_venta"?"📦 Órdenes":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
       </div>
-        {[{l:"Total",v:rows.length,c:T.acc},{l:"Enviadas",v:rows.filter(r=>r.estado==="enviada").length,c:T.blue},{l:"Aprobadas",v:rows.filter(r=>r.estado==="aprobada").length,c:T.acc},{l:"├ôrdenes",v:rows.filter(r=>r.orden_venta).length,c:T.purple}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{l:"Total",v:rows.length,c:T.acc},{l:"Enviadas",v:rows.filter(r=>r.estado==="enviada").length,c:T.blue},{l:"Aprobadas",v:rows.filter(r=>r.estado==="aprobada").length,c:T.acc},{l:"Órdenes",v:rows.filter(r=>r.orden_venta).length,c:T.purple}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
       {preview&&<ModalVistaPrevia cot={preview} onClose={()=>setPreview(null)}/>}
     <div>
   return(
-  if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} onSave={()=>{showToast("Guardada Ô£ö");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
+  if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
   const EC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},enviada:{c:T.blue,bg:T.blueDim,l:"Enviada"},aprobada:{c:T.acc,bg:T.accDim,l:"Aprobada"},rechazada:{c:T.red,bg:T.redDim,l:"Rechazada"},orden_venta:{c:T.purple,bg:T.purpleDim,l:"Orden de Venta"}};
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro||(filtro==="orden_venta"&&r.orden_venta));
-  const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("ÔåÆ "+estado);load();};
+  const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("→ "+estado);load();};
   const del=async id=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("cotizaciones",id);showToast("Eliminada");load();};
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));load();},[]);
   const load=async()=>{setLoading(true);const d=await dbGet("cotizaciones");setRows(Array.isArray(d)?d:[]);setLoading(false);};
@@ -408,16 +408,16 @@ function PageCotizaciones({showToast,empId}){
     </div>
       </div>
         <div style={S.card}><div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Flota</div>{d.pie.length>0?<><ResponsiveContainer width="100%" height={120}><PieChart><Pie data={d.pie} cx="50%" cy="50%" innerRadius={35} outerRadius={52} dataKey="value" paddingAngle={3}>{d.pie.map((e,i)=><Cell key={i} fill={e.color}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer>{d.pie.map((e,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:e.color}}/><span style={{color:T.sub}}>{e.name}</span></div><span style={{fontWeight:700,color:e.color}}>{e.value}</span></div>)}</>:<div style={{textAlign:"center",padding:30,color:T.sub,fontSize:12}}>Sin datos</div>}</div>
-        <div style={S.card}><div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos vs Egresos</div>{d.chart.length>0?<ResponsiveContainer width="100%" height={180}><BarChart data={d.chart}><XAxis dataKey="mes" tick={{fill:T.sub,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/><Tooltip contentStyle={{background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,fontSize:11}}/><Legend wrapperStyle={{fontSize:11}}/><Bar dataKey="Ingresos" fill={T.acc} radius={[4,4,0,0]}/><Bar dataKey="Egresos" fill={T.red} radius={[4,4,0,0]}/></BarChart></ResponsiveContainer>:<div style={{textAlign:"center",padding:40,color:T.sub,fontSize:13}}>Sin movimientos a├║n</div>}</div>
+        <div style={S.card}><div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos vs Egresos</div>{d.chart.length>0?<ResponsiveContainer width="100%" height={180}><BarChart data={d.chart}><XAxis dataKey="mes" tick={{fill:T.sub,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/><Tooltip contentStyle={{background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,fontSize:11}}/><Legend wrapperStyle={{fontSize:11}}/><Bar dataKey="Ingresos" fill={T.acc} radius={[4,4,0,0]}/><Bar dataKey="Egresos" fill={T.red} radius={[4,4,0,0]}/></BarChart></ResponsiveContainer>:<div style={{textAlign:"center",padding:40,color:T.sub,fontSize:13}}>Sin movimientos aún</div>}</div>
       <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
       </div>
-        {[{icon:"­ƒÆ░",l:"Ingresos",v:fmtK(d.ing),c:T.acc,bg:T.accDim},{icon:"­ƒÆ©",l:"Egresos",v:fmtK(d.eg),c:T.red,bg:T.redDim},{icon:"­ƒÅª",l:"Saldo GTQ",v:fmtK(d.saldo),c:T.acc,bg:T.accDim},{icon:"­ƒº¥",l:"Facturado",v:fmtK(d.facTot),c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{icon:"💰",l:"Ingresos",v:fmtK(d.ing),c:T.acc,bg:T.accDim},{icon:"🛍️",l:"Egresos",v:fmtK(d.eg),c:T.red,bg:T.redDim},{icon:"🏦",l:"Saldo GTQ",v:fmtK(d.saldo),c:T.acc,bg:T.accDim},{icon:"🧾",l:"Facturado",v:fmtK(d.facTot),c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
       <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>FINANZAS</div>
       </div>
-        {[{icon:"­ƒÜù",l:"Flota",v:d.v.length,c:T.acc,bg:T.accDim},{icon:"Ô£à",l:"Disponibles",v:d.vDisp,c:T.acc,bg:T.accDim},{icon:"­ƒöæ",l:"Rentados",v:d.vRent,c:T.blue,bg:T.blueDim},{icon:"­ƒôà",l:"Res. activas",v:d.rAct,c:T.blue,bg:T.blueDim},{icon:"­ƒæÑ",l:"Clientes",v:d.clientes.length,c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{icon:"🚗",l:"Flota",v:d.v.length,c:T.acc,bg:T.accDim},{icon:"✅",l:"Disponibles",v:d.vDisp,c:T.acc,bg:T.accDim},{icon:"­ƒöæ",l:"Rentados",v:d.vRent,c:T.blue,bg:T.blueDim},{icon:"📅",l:"Res. activas",v:d.rAct,c:T.blue,bg:T.blueDim},{icon:"👥",l:"Clientes",v:d.clientes.length,c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:20}}>
-      <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>OPERACI├ôN</div>
+      <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>OPERACIÓN</div>
       {d.alertas.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>{d.alertas.map((a,i)=><div key={i} style={{background:T.card,border:`1px solid ${a.c}44`,borderRadius:10,padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:16}}>{a.icon}</span><span style={{fontSize:13}}>{a.msg}</span><div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:a.c}}/></div>)}</div>}
     <div>
   return(
@@ -428,9 +428,9 @@ function PageCotizaciones({showToast,empId}){
     const pie=[{name:"Disponible",value:v.filter(x=>x.estado==="disponible").length,color:T.acc},{name:"Rentado",value:v.filter(x=>x.estado==="rentado").length,color:T.blue},{name:"Mantenim.",value:vMant,color:T.sec}].filter(x=>x.value>0);
     const chart=meses.map((mes,i)=>({mes,Ingresos:Math.round(m.filter(x=>x.tipo==="ingreso"&&new Date(x.fecha).getMonth()===i).reduce((s,x)=>s+(parseFloat(x.monto)||0),0)),Egresos:Math.round(m.filter(x=>x.tipo==="egreso"&&new Date(x.fecha).getMonth()===i).reduce((s,x)=>s+(parseFloat(x.monto)||0),0))})).filter(x=>x.Ingresos>0||x.Egresos>0);
     const meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-    if(c.filter(x=>x.estado==="enviada").length>0)alertas.push({icon:"­ƒôï",msg:`${c.filter(x=>x.estado==="enviada").length} cotizaciones esperando aprobaci├│n`,c:T.blue});
-    if(r.filter(x=>x.estado==="pendiente").length>0)alertas.push({icon:"­ƒôà",msg:`${r.filter(x=>x.estado==="pendiente").length} reservas pendientes`,c:T.sec});
-    if(vMant>0)alertas.push({icon:"­ƒöº",msg:`${vMant} veh├¡culo${vMant>1?"s":""} en mantenimiento`,c:T.sec});
+    if(c.filter(x=>x.estado==="enviada").length>0)alertas.push({icon:"📋",msg:`${c.filter(x=>x.estado==="enviada").length} cotizaciones esperando aprobación`,c:T.blue});
+    if(r.filter(x=>x.estado==="pendiente").length>0)alertas.push({icon:"📅",msg:`${r.filter(x=>x.estado==="pendiente").length} reservas pendientes`,c:T.sec});
+    if(vMant>0)alertas.push({icon:"🔧",msg:`${vMant} vehículo${vMant>1?"s":""} en mantenimiento`,c:T.sec});
     const alertas=[];
     const vMant=v.filter(x=>x.estado==="mantenimiento").length;
     const facTot=f.filter(x=>!["anulada","borrador"].includes(x.estado)).reduce((s,x)=>s+(parseFloat(x.total)||0),0);
@@ -465,7 +465,7 @@ function PageDashboard(){
                     <button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:11}}>­ƒùæ´©Å</button>
                   <td style={S.td}>
                   <td style={{...S.td,fontWeight:700,color:T.acc,whiteSpace:"nowrap"}}>Q {fmt(r.monto)}</td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{r.referencia||"ÔÇö"}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{r.referencia||"—"}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11}}>{r.metodo}</td>
                   <td style={{...S.td,fontWeight:500}}>{r.concepto}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(r.fecha)}</td>
@@ -475,11 +475,11 @@ function PageDashboard(){
             </thead>
               ))}</tr>
                 <th key={h} style={S.th}>{h}</th>
-              <tr>{["Fecha","Concepto","M├®todo","Referencia","Monto",""].map(h=>(
+              <tr>{["Fecha","Concepto","Método","Referencia","Monto",""].map(h=>(
             <thead>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
         <div style={S.card}>
-        <Empty icon="­ƒÆ░" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
+        <Empty icon="💰" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
       {loading?<Spinner/>:rows.length===0?
       {/* Lista */}
 
@@ -501,13 +501,13 @@ function PageDashboard(){
               <input tabIndex={0} style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="REF-00001"/>
             <Fld label="REFERENCIA / N┬░ COMPROBANTE">
             </Fld>
-              <input tabIndex={0} style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Ej: Anticipo reserva Cob├ín, Pago factura FAC-001..."/>
+              <input tabIndex={0} style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Ej: Anticipo reserva Cobán, Pago factura FAC-001..."/>
             <Fld label="CONCEPTO" span2>
             </Fld>
               </select>
                 ))}
                   </option>
-                    {re.numero} ÔÇö {re.cliente_nombre} ÔÇö Saldo: Q {fmt(re.saldo||re.monto)}
+                    {re.numero} — {re.cliente_nombre} — Saldo: Q {fmt(re.saldo||re.monto)}
                   <option key={re.id} value={re.id}>
                 {reservas.map(re=>(
                 <option value="">Sin reserva vinculada</option>
@@ -517,7 +517,7 @@ function PageDashboard(){
               </select>
                 ))}
                   </option>
-                    {fa.numero} ÔÇö {fa.nombre_receptor} ÔÇö Saldo: Q {fmt(fa.saldo_pendiente||fa.total)}
+                    {fa.numero} — {fa.nombre_receptor} — Saldo: Q {fmt(fa.saldo_pendiente||fa.total)}
                   <option key={fa.id} value={fa.id}>
                 {facturas.map(fa=>(
                 <option value="">Sin factura vinculada</option>
@@ -526,18 +526,18 @@ function PageDashboard(){
             </Fld>
               </select>
                 <option value="cheque">­ƒôä Cheque</option>
-                <option value="tarjeta">­ƒÆ│ Tarjeta de cr├®dito/d├®bito</option>
+                <option value="tarjeta">­ƒÆ│ Tarjeta de crédito/débito</option>
                 <option value="efectivo">­ƒÆÁ Efectivo</option>
-                <option value="deposito">­ƒÆ░ Dep├│sito en banco</option>
-                <option value="transferencia">­ƒÅª Transferencia bancaria</option>
+                <option value="deposito">💰 Depósito en banco</option>
+                <option value="transferencia">🏦 Transferencia bancaria</option>
               <select tabIndex={0} style={S.sel} value={f.metodo} onChange={e=>sf("metodo",e.target.value)}>
             <Fld label="M├ëTODO DE PAGO">
             </Fld>
-              {cuentas.length===0&&<div style={{fontSize:11,color:T.red,marginTop:3}}>ÔÜá No hay cuentas bancarias. Ve a La Banca para crearlas.</div>}
+              {cuentas.length===0&&<div style={{fontSize:11,color:T.red,marginTop:3}}>⚠️ No hay cuentas bancarias. Ve a La Banca para crearlas.</div>}
               </select>
                 ))}
                   </option>
-                    {cu.banco} ÔÇö {cu.numero_cuenta} ┬À Q {fmt(cu.saldo_actual||0)}
+                    {cu.banco} — {cu.numero_cuenta} · Q {fmt(cu.saldo_actual||0)}
                   <option key={cu.id} value={cu.id}>
                 {cuentas.map(cu=>(
                 <option value="">Seleccionar cuenta bancaria...</option>
@@ -559,7 +559,7 @@ function PageDashboard(){
         </button>
           {showForm?"Cancelar":"+ Registrar pago"}
         <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>Ôå║ Actualizar</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺ Actualizar</button>
         <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>­ƒôñ Exportar</button>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
 
@@ -582,7 +582,7 @@ function PageDashboard(){
 
   ];
     {label:"Referencia",key:"referencia"},{label:"Notas",key:"notas"},
-    {label:"Monto",key:"monto"},{label:"M├®todo",key:"metodo"},
+    {label:"Monto",key:"monto"},{label:"Método",key:"metodo"},
     {label:"Fecha",key:"fecha"},{label:"Concepto",key:"concepto"},
   const CAMPOS=[
 
@@ -594,7 +594,7 @@ function PageDashboard(){
     load();
     showToast("Pago eliminado");
     await dbDel("pagos_recibidos",id);
-    if(!confirm("┬┐Eliminar este pago? Esta acci├│n no se puede deshacer."))return;
+    if(!confirm("┬┐Eliminar este pago? Esta acción no se puede deshacer."))return;
   const del=async id=>{
 
   };
@@ -602,7 +602,7 @@ function PageDashboard(){
       load();
       setF({fecha:today(),monto:"",metodo:"transferencia",referencia:"",factura_id:"",reserva_id:"",concepto:"",cuenta_id:"",notas:""});
       setSaving(false);setShowForm(false);
-      showToast("Pago registrado correctamente Ô£ö");
+      showToast("Pago registrado correctamente ✔");
       if(cu)await dbUpd("cuentas_bancarias",f.cuenta_id,{saldo_actual:(parseFloat(cu.saldo_actual)||0)+monto});
       const cu=cuentas.find(x=>x.id===f.cuenta_id);
       // 5. Actualizar saldo de cuenta bancaria
@@ -622,7 +622,7 @@ function PageDashboard(){
       const pago=await dbIns("pagos_recibidos",{empresa_id:empId,fecha:f.fecha,monto,metodo:f.metodo,referencia:f.referencia||"",concepto,cuenta_id:f.cuenta_id,notas:f.notas||"",factura_id:f.factura_id||null,reserva_id:f.reserva_id||null});
       // 1. Guardar pago
       }
-        concepto=fa?"Pago factura "+(fa.numero||"")+" ÔÇö "+fa.nombre_receptor:re?"Pago reserva "+(re.numero||"")+" ÔÇö "+re.cliente_nombre:"Pago recibido";
+        concepto=fa?"Pago factura "+(fa.numero||"")+" — "+fa.nombre_receptor:re?"Pago reserva "+(re.numero||"")+" — "+re.cliente_nombre:"Pago recibido";
         const re=reservas.find(x=>x.id===f.reserva_id);
         const fa=facturas.find(x=>x.id===f.factura_id);
       if(!concepto){
@@ -678,7 +678,7 @@ function PagePagos({showToast,empId}){
         <div style={{display:"flex",gap:10}}>
 
         </div>
-          Se exportar├ín <b style={{color:T.acc}}>{filtrar().length}</b> registros con {campos.length} campos.
+          Se exportarán <b style={{color:T.acc}}>{filtrar().length}</b> registros con {campos.length} campos.
         <div style={{fontSize:11,color:T.mut,marginBottom:16,padding:"8px 12px",background:T.surf,borderRadius:6}}>
 
         </div>
@@ -688,13 +688,13 @@ function PagePagos({showToast,empId}){
                 <span style={{fontSize:13}}>{l}</span>
                 <input type="radio" name="formato" value={v} checked={formato===v} onChange={()=>setFormato(v)} style={{width:16,height:16,accentColor:T.acc}}/>
               <label key={v} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 14px",borderRadius:8,background:formato===v?T.accDim:T.surf,border:"1px solid "+(formato===v?T.acc:T.bord)}}>
-            {[["csv","­ƒôä CSV (valor separado por coma)"],["xls","­ƒôè XLS (compatible con Microsoft Excel)"],["pdf","­ƒû¿´©Å PDF (para imprimir)"]].map(([v,l])=>(
+            {[["csv","­ƒôä CSV (valor separado por coma)"],["xls","📊 XLS (compatible con Microsoft Excel)"],["pdf","­ƒû¿´©Å PDF (para imprimir)"]].map(([v,l])=>(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <label style={S.lbl}>FORMATO DE EXPORTACI├ôN</label>
+          <label style={S.lbl}>FORMATO DE EXPORTACIÓN</label>
         <div style={{marginBottom:20}}>
 
         </div>
-          {(fechaIni||fechaFin)&&<div style={{fontSize:11,color:T.acc,marginTop:4}}>{filtrar().length} registros en el per├¡odo</div>}
+          {(fechaIni||fechaFin)&&<div style={{fontSize:11,color:T.acc,marginTop:4}}>{filtrar().length} registros en el período</div>}
           </div>
             <div><label style={{...S.lbl,fontSize:10}}>HASTA</label><input style={S.inp} type="date" value={fechaFin} onChange={e=>setFechaFin(e.target.value)}/></div>
             <div><label style={{...S.lbl,fontSize:10}}>DESDE</label><input style={S.inp} type="date" value={fechaIni} onChange={e=>setFechaIni(e.target.value)}/></div>
@@ -704,7 +704,7 @@ function PagePagos({showToast,empId}){
 
         </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",color:T.sub,cursor:"pointer",fontSize:18}}>Ô£ò</button>
-          <div style={{fontSize:16,fontWeight:800}}>­ƒôñ Exportar ÔÇö {titulo}</div>
+          <div style={{fontSize:16,fontWeight:800}}>­ƒôñ Exportar — {titulo}</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
       <div style={{background:T.card,borderRadius:16,border:"1px solid "+T.bord,width:"100%",maxWidth:480,padding:28}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -728,8 +728,8 @@ function PagePagos({showToast,empId}){
       </table><script>window.onload=()=>window.print();</script></body></html>`;
       <tbody>${body.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody>
       <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <p>Generado: ${new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})} ┬À ${rows.length} registros</p>
-      <h2>Tz'unun AutoRentas ÔÇö ${titulo}</h2>
+      <p>Generado: ${new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})} · ${rows.length} registros</p>
+      <h2>Tz'unun AutoRentas — ${titulo}</h2>
       @media print{button{display:none}}</style></head><body>
       tr:nth-child(even){background:#F8FAFC}
       td{padding:5px 8px;border-bottom:1px solid #E2E8F0}
@@ -795,7 +795,7 @@ function ModalExportar({titulo,datos,campos,onClose}){
               </div>
                 ))}
                   <button tabIndex={0} key={v} onClick={()=>sf("pago",v)} style={{...S.btn(f.pago===v?"primary":"ghost"),flex:1,fontSize:11}}>{l}</button>
-                {[["efectivo","­ƒÆÁ Efectivo"],["transferencia","­ƒÅª Transferencia"],["tarjeta","­ƒÆ│ Tarjeta (+5%)"]].map(([v,l])=>(
+                {[["efectivo","­ƒÆÁ Efectivo"],["transferencia","🏦 Transferencia"],["tarjeta","­ƒÆ│ Tarjeta (+5%)"]].map(([v,l])=>(
               <div style={{display:"flex",gap:8}}>
             <Fld label="M├ëTODO DE PAGO" span2>
             </Fld>
@@ -818,15 +818,15 @@ function ModalExportar({titulo,datos,campos,onClose}){
             <Fld label="ORIGEN">
             </Fld>
               <input tabIndex={0} style={S.inp} type="date" value={f.fecha_fin} onChange={e=>sf("fecha_fin",e.target.value)}/>
-            <Fld label="FECHA DEVOLUCI├ôN">
+            <Fld label="FECHA DEVOLUCIÓN">
             </Fld>
               <input tabIndex={0} style={S.inp} type="date" value={f.fecha_inicio} onChange={e=>sf("fecha_inicio",e.target.value)}/>
             <Fld label="FECHA ENTREGA">
             </Fld>
               </select>
                 <option value={0}>Sin IVA</option>
-                <option value={5}>5% Peque├▒o Contrib.</option>
-                <option value={12}>12% R├®gimen General</option>
+                <option value={5}>5% Pequeño Contrib.</option>
+                <option value={12}>12% Régimen General</option>
               <select tabIndex={0} style={S.sel} value={f.iva} onChange={e=>sf("iva",parseInt(e.target.value))}>
             <Fld label="IVA">
             </Fld>
@@ -834,8 +834,8 @@ function ModalExportar({titulo,datos,campos,onClose}){
             <Fld label="CONDUCTOR">
             </Fld>
               </select>
-                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} ÔÇö Q {fmt(v.dia)}/d├¡a</option>)}
-                <option value="">Seleccionar veh├¡culo...</option>
+                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q {fmt(v.dia)}/día</option>)}
+                <option value="">Seleccionar vehículo...</option>
               <select tabIndex={0} style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
             <Fld label="VEH├ìCULO" span2>
             </Fld>
@@ -846,14 +846,14 @@ function ModalExportar({titulo,datos,campos,onClose}){
                 <option value="cancelada">Ô£ù Cancelada</option>
                 <option value="completada">­ƒÅü Completada</option>
                 <option value="en_curso">ÔûÂ En curso</option>
-                <option value="confirmada">Ô£à Confirmada</option>
-                <option value="pendiente">ÔÅ│ Pendiente</option>
+                <option value="confirmada">✅ Confirmada</option>
+                <option value="pendiente">⏳ Pendiente</option>
               <select tabIndex={0} style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
             <Fld label="ESTADO">
             </Fld>
               </div>
                 <button tabIndex={0} onClick={()=>sf("tipo","traslado")} style={{...S.btn(f.tipo==="traslado"?"primary":"ghost"),flex:1}}>­ƒù║ Traslado</button>
-                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>­ƒöæ Renta de veh├¡culo</button>
+                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>­ƒöæ Renta de vehículo</button>
               <div style={{display:"flex",gap:8}}>
             <Fld label="TIPO DE SERVICIO" span2>
             </Fld>
@@ -871,7 +871,7 @@ function ModalExportar({titulo,datos,campos,onClose}){
 
   );
     </div>
-      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona veh├¡culo y fechas</div>}
+      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona vehículo y fechas</div>}
         </>
           </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,padding:"4px 0",color:saldo>0?T.sec:T.acc}}><span>Saldo</span><span>Q {fmt(saldo)}</span></div>
@@ -884,12 +884,12 @@ function ModalExportar({titulo,datos,campos,onClose}){
           </div>
             ))}
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:12,color:T.sub}}><span>{l}</span><span>{v}</span></div>
-            {[["Tarifa","Q "+fmt(tarifaDia)+"/d├¡a"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
+            {[["Tarifa","Q "+fmt(tarifaDia)+"/día"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
           <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {vehObj.nombre} ┬À {dias} d├¡a{dias!==1?"s":""}</div>
+          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {dias} día{dias!==1?"s":""}</div>
         <>
       {vehObj&&dias>0?(
-      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen</div>
+      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
     <div style={S.card}>
   const Resumen=()=>(
 
@@ -969,7 +969,7 @@ function ModalExportar({titulo,datos,campos,onClose}){
     const fi=new Date(f.fecha_inicio+"T12:00:00");
     if(!f.fecha_inicio) return 0;
   const calcularDias=()=>{
-  // Calcular d├¡as
+  // Calcular días
 
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const [saving,setSaving]=useState(false);
@@ -1034,7 +1034,7 @@ const EMPTY={
                     <div style={{background:T.surf,borderRadius:4,height:6,overflow:"hidden"}}>
                     </div>
                       <span style={{color:pct>80?T.red:T.sub,fontWeight:600}}>Q {fmt(creditoUsado)} / Q {fmt(creditoLimite)}</span>
-                      <span>Cr├®dito usado</span>
+                      <span>Crédito usado</span>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
                   <div style={{marginBottom:12}}>
                 {creditoLimite>0&&(
@@ -1044,12 +1044,12 @@ const EMPTY={
                       <div style={{fontSize:12,fontWeight:500,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{val}</div>
                       <div style={{fontSize:10,color:T.mut}}>{lbl}</div>
                     <div key={lbl} style={{background:T.surf,borderRadius:7,padding:"7px 10px"}}>
-                  {[["Contacto",p.contacto||"ÔÇö"],["Tel├®fono",p.telefono||"ÔÇö"],["Email",p.email||"ÔÇö"],["Direcci├│n",p.direccion||"ÔÇö"]].map(([lbl,val])=>(
+                  {[["Contacto",p.contacto||"—"],["Teléfono",p.telefono||"—"],["Email",p.email||"—"],["Dirección",p.direccion||"—"]].map(([lbl,val])=>(
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
                 </div>
                   <CatBadge cat={p.categoria}/>
                   </div>
-                    <div style={{fontSize:11,color:T.sub,marginTop:2}}>NIT: {p.nit||"ÔÇö"}</div>
+                    <div style={{fontSize:11,color:T.sub,marginTop:2}}>NIT: {p.nit||"—"}</div>
                     <div style={{fontSize:14,fontWeight:700}}>{p.nombre}</div>
                   <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginTop:4,marginBottom:12}}>
@@ -1072,7 +1072,7 @@ const EMPTY={
               <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"­ƒÆ¥ Guardar proveedor"}</button>
             <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
             <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones..."/></Fld>
-            <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Direcci├│n del proveedor"/></Fld>
+            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección del proveedor"/></Fld>
             <Fld label="L├ìMITE DE CR├ëDITO (GTQ)"><input style={S.inp} type="number" value={f.credito_limite} onChange={e=>sf("credito_limite",e.target.value)} placeholder="0.00"/></Fld>
             <Fld label="EMAIL"><input style={S.inp} type="email" value={f.email} onChange={e=>sf("email",e.target.value)} placeholder="proveedor@email.com"/></Fld>
             <Fld label="TEL├ëFONO"><input style={S.inp} value={f.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
@@ -1083,7 +1083,7 @@ const EMPTY={
               <select style={S.sel} value={f.categoria} onChange={e=>sf("categoria",e.target.value)}>
             <Fld label="CATEGOR├ìA">
             <Fld label="NIT"><input style={S.inp} value={f.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
-            <Fld label="NOMBRE / RAZ├ôN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del proveedor"/></Fld>
+            <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del proveedor"/></Fld>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
           <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>{editItem?"Editar proveedor":"Nuevo proveedor"}</div>
         <div style={{...S.card,marginBottom:16,maxWidth:640}}>
@@ -1100,7 +1100,7 @@ const EMPTY={
             <div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div>
             <div style={{fontSize:i>0?16:22,fontWeight:800,color:s.c}}>{s.v}</div>
           <div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}>
-        {[{l:"Proveedores activos",v:rows.filter(r=>r.activo).length,c:T.acc},{l:"Cr├®dito total usado",v:`Q ${fmt(totalCredito)}`,c:T.red},{l:"Categor├¡as",v:[...new Set(rows.map(r=>r.categoria))].length,c:T.blue}].map((s,i)=>(
+        {[{l:"Proveedores activos",v:rows.filter(r=>r.activo).length,c:T.acc},{l:"Crédito total usado",v:`Q ${fmt(totalCredito)}`,c:T.red},{l:"Categorías",v:[...new Set(rows.map(r=>r.categoria))].length,c:T.blue}].map((s,i)=>(
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
       {/* Stats */}
     <div>
@@ -1114,7 +1114,7 @@ const EMPTY={
     load();
     setF({nombre:"",nit:"",categoria:"combustible",contacto:"",telefono:"",email:"",direccion:"",credito_limite:"",notas:""});
     setShowForm(false);setEditItem(null);
-    showToast("Proveedor guardado Ô£ö");setSaving(false);
+    showToast("Proveedor guardado ✔");setSaving(false);
     else await dbIns("proveedores",payload);
     if(editItem?.id) await dbUpd("proveedores",editItem.id,payload);
     const payload={empresa_id:empId,nombre:f.nombre,nit:f.nit,categoria:f.categoria,contacto:f.contacto,telefono:f.telefono,email:f.email,direccion:f.direccion,credito_limite:parseFloat(f.credito_limite)||0,notas:f.notas,activo:true};
@@ -1163,7 +1163,7 @@ function ModProveedores({empId,showToast}){
             <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:12}}>POR CATEGOR├ìA</div>
           <div style={S.card}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {/* Sidebar categor├¡as */}
+        {/* Sidebar categorías */}
 
         </div>
           )}
@@ -1189,11 +1189,11 @@ function ModProveedores({empId,showToast}){
                         <td style={S.td}>
                         </td>
                           </span>
-                            {r.estado==="pagado"?"Ô£ö Pagado":"ÔÅ│ Pendiente"}
+                            {r.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}
                           <span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:r.estado==="pagado"?T.accDim:T.secDim,color:r.estado==="pagado"?T.acc:T.sec}}>
                         <td style={S.td}>
                         <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(r.total)}</td>
-                        <td style={{...S.td,fontSize:11,color:T.sub}}>{prov?.nombre||"ÔÇö"}</td>
+                        <td style={{...S.td,fontSize:11,color:T.sub}}>{prov?.nombre||"—"}</td>
                         <td style={S.td}><CatBadge cat={r.categoria}/></td>
                         </td>
                           {r.referencia&&<div style={{fontSize:10,color:T.mut,fontFamily:"monospace"}}>{r.referencia}</div>}
@@ -1205,10 +1205,10 @@ function ModProveedores({empId,showToast}){
                     const prov=proveedores.find(p=>p.id===r.proveedor_id);
                   {filtered.map(r=>{
                 <tbody>
-                <thead><tr>{["Fecha","Descripci├│n","Categor├¡a","Proveedor","Total","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Fecha","Descripción","Categoría","Proveedor","Total","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
             <div style={S.card}>
-          {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒÆ©" msg="Sin gastos registrados" action="+ Registrar primer gasto" onAction={()=>setShowForm(true)}/>:(
+          {loading?<Spinner/>:filtered.length===0?<Empty icon="🛍️" msg="Sin gastos registrados" action="+ Registrar primer gasto" onAction={()=>setShowForm(true)}/>:(
           {/* Tabla gastos */}
 
           )}
@@ -1221,8 +1221,8 @@ function ModProveedores({empId,showToast}){
                 <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones adicionales..."/></Fld>
                 </Fld>
                   </select>
-                    <option value="pagado">Ô£à Pagado</option>
-                    <option value="pendiente">ÔÅ│ Pendiente de pago</option>
+                    <option value="pagado">✅ Pagado</option>
+                    <option value="pendiente">⏳ Pendiente de pago</option>
                   <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
                 <Fld label="ESTADO">
                 </Fld>
@@ -1239,11 +1239,11 @@ function ModProveedores({empId,showToast}){
                 <Fld label="MONTO SIN IVA (GTQ)">
                 </Fld>
                   </select>
-                    <option value="credito">­ƒôï Cr├®dito</option>
+                    <option value="credito">📋 Crédito</option>
                     <option value="cheque">­ƒôä Cheque</option>
                     <option value="tarjeta">­ƒÆ│ Tarjeta</option>
-                    <option value="deposito">­ƒÆ░ Dep├│sito</option>
-                    <option value="transferencia">­ƒÅª Transferencia</option>
+                    <option value="deposito">💰 Depósito</option>
+                    <option value="transferencia">🏦 Transferencia</option>
                     <option value="efectivo">­ƒÆÁ Efectivo</option>
                   <select style={S.sel} value={f.metodo_pago} onChange={e=>sf("metodo_pago",e.target.value)}>
                 <Fld label="M├ëTODO DE PAGO">
@@ -1253,7 +1253,7 @@ function ModProveedores({empId,showToast}){
                     <option value="">Sin proveedor</option>
                   <select style={S.sel} value={f.proveedor_id} onChange={e=>sf("proveedor_id",e.target.value)}>
                 <Fld label="PROVEEDOR">
-                <Fld label="DESCRIPCI├ôN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Di├®sel ÔÇö Toyota RAV4 viaje a Pet├®n"/></Fld>
+                <Fld label="DESCRIPCIÓN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Diésel — Toyota RAV4 viaje a Petén"/></Fld>
                 </Fld>
                   </select>
                     {CAT_GASTO.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
@@ -1268,14 +1268,14 @@ function ModProveedores({empId,showToast}){
 
           </div>
             <button onClick={()=>{setEditItem(null);setShowForm(!showForm);}} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>{showForm?"Cancelar":"+ Nuevo gasto"}</button>
-            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>Ôå║</button>
+            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>↺</button>
             </select>
               {CAT_GASTO.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
-              <option value="todas">Todas las categor├¡as</option>
+              <option value="todas">Todas las categorías</option>
             <select style={{...S.sel,width:"auto",fontSize:11,padding:"5px 10px"}} value={filtroCat} onChange={e=>setFiltroCat(e.target.value)}>
             ))}
               </button>
-                {f==="todos"?"Todos":f==="pendiente"?"ÔÅ│ Pendientes":"Ô£à Pagados"}
+                {f==="todos"?"Todos":f==="pendiente"?"⏳ Pendientes":"✅ Pagados"}
               <button key={f} onClick={()=>setFiltroEst(f)} style={{...S.btn(filtroEst===f?"primary":"ghost"),fontSize:11,padding:"5px 12px"}}>
             {["todos","pendiente","pagado"].map(f=>(
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
@@ -1308,18 +1308,18 @@ function ModProveedores({empId,showToast}){
   const filtered=rows.filter(r=>{
 
   const del=async id=>{if(!confirm("┬┐Eliminar este gasto?"))return;await dbDel("gastos",id);showToast("Eliminado");load();};
-  const marcarPagado=async id=>{await dbUpd("gastos",id,{estado:"pagado",fecha_pago:today()});showToast("Marcado como pagado Ô£ö");load();};
+  const marcarPagado=async id=>{await dbUpd("gastos",id,{estado:"pagado",fecha_pago:today()});showToast("Marcado como pagado ✔");load();};
 
   };
     load();
     setF({fecha:today(),categoria:"combustible",descripcion:"",monto:"",iva:"",total:"",metodo_pago:"efectivo",referencia:"",estado:"pendiente",proveedor_id:"",vehiculo_ref:"",notas:""});
     setShowForm(false);setEditItem(null);
-    showToast("Gasto guardado Ô£ö");setSaving(false);
+    showToast("Gasto guardado ✔");setSaving(false);
     else await dbIns("gastos",payload);
     if(editItem?.id) await dbUpd("gastos",editItem.id,payload);
     const payload={empresa_id:empId,fecha:f.fecha,categoria:f.categoria,descripcion:f.descripcion,monto:parseFloat(f.monto)||0,iva:parseFloat(f.iva)||0,total:parseFloat(f.total)||0,metodo_pago:f.metodo_pago,referencia:f.referencia,estado:f.estado,proveedor_id:f.proveedor_id||null,notas:f.notas,fecha_pago:f.estado==="pagado"?f.fecha:null};
     setSaving(true);
-    if(!f.descripcion.trim()||!(parseFloat(f.total)>0)){showToast("Descripci├│n y total son requeridos","err");return;}
+    if(!f.descripcion.trim()||!(parseFloat(f.total)>0)){showToast("Descripción y total son requeridos","err");return;}
   const guardar=async()=>{
 
   };
@@ -1365,8 +1365,8 @@ function CatBadge({cat}){
                   <td style={{...S.td,fontWeight:700,color:c.ingresos>0?T.acc:T.mut}}>Q {fmt(c.ingresos)}</td>
                   <td style={{...S.td,fontWeight:600,color:T.purple,textAlign:"center"}}>{c.cotizaciones}</td>
                   <td style={{...S.td,fontWeight:600,color:T.blue,textAlign:"center"}}>{c.reservas}</td>
-                  <td style={{...S.td,color:T.sub}}>{c.telefono||"ÔÇö"}</td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"ÔÇö"}</td>
+                  <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"—"}</td>
                   <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:tc.bg,color:tc.c}}>{c.tipo}</span></td>
                   <td style={{...S.td,fontWeight:600}}>{i===0&&"­ƒÑç "}{c.nombre}</td>
                 <tr key={c.id} style={{background:i===0?T.accDim:"transparent"}}>
@@ -1374,7 +1374,7 @@ function CatBadge({cat}){
               const tc=TC[c.tipo]||TC.empresa;
             {clientesData.map((c,i)=>{
           <tbody>
-          <thead><tr>{["Cliente","Tipo","NIT","Tel├®fono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Clientes por ingresos generados</div>
       <div style={S.card}>
@@ -1385,19 +1385,19 @@ function CatBadge({cat}){
       <div style={{display:"flex",gap:8,marginBottom:12}}>
 
       </div>
-        <KpiCard icon="­ƒæñ" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
+        <KpiCard icon="👤" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
         <KpiCard icon="­ƒÅø´©Å" label="Gobierno/ONG" value={clientes.filter(c=>c.tipo==="gobierno").length} color={T.blue} bg={T.blueDim}/>
         <KpiCard icon="­ƒÅó" label="Empresas" value={clientes.filter(c=>c.tipo==="empresa").length} color={T.sec} bg={T.secDim}/>
-        <KpiCard icon="­ƒæÑ" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="👥" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
     <div>
   return (
 
   const TC={empresa:{c:T.sec,bg:T.secDim},gobierno:{c:T.blue,bg:T.blueDim},persona:{c:T.acc,bg:T.accDim}};
 
-  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Tel├®fono","Reservas","Cotizaciones","Ingresos"],tablaRows);
-  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Tel├®fono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
-  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"ÔÇö",c.telefono||"ÔÇö",c.email||"ÔÇö",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
+  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Teléfono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
+  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"—",c.telefono||"—",c.email||"—",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
 
   }).sort((a,b)=>b.ingresos-a.ingresos);
     return {...c,reservas:resC.length,cotizaciones:cotC.length,ingresos};
@@ -1425,8 +1425,8 @@ function ReporteClientes({data}){
             </tbody>
               ))}
                 </tr>
-                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"Ô£ö Pagado":"ÔÅ│ Pendiente"}</span></td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"ÔÇö"}</td>
+                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}</span></td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"—"}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11}}>{g.metodo_pago}</td>
                   <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(g.total)}</td>
                   <td style={S.td}>Q {fmt(g.iva)}</td>
@@ -1437,7 +1437,7 @@ function ReporteClientes({data}){
                 <tr key={g.id}>
               {gastos.map(g=>(
             <tbody>
-            <thead><tr>{["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","M├®todo","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Fecha","Categoría","Descripción","Monto","IVA","Total","Método","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
         <div style={{overflowX:"auto"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Gastos</div>
@@ -1478,21 +1478,21 @@ function ReporteClientes({data}){
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
             <div key={cat} style={{marginBottom:10}}>
           {porCat.map(({cat,total,count})=>(
-          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categor├¡a</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categoría</div>
         <div style={S.card}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
 
       </div>
-        <KpiCard icon="ÔÅ│" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
-        <KpiCard icon="Ô£à" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
-        <KpiCard icon="­ƒÆ©" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
+        <KpiCard icon="⏳" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
+        <KpiCard icon="✅" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="🛍️" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
     <div>
   return (
 
-  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","Estado"],tablaRows);
-  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","M├®todo pago","Referencia","Estado"],tablaRows);
-  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"ÔÇö",g.estado]);
+  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categoría","Descripción","Monto","IVA","Total","Estado"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categoría","Descripción","Monto","IVA","Total","Método pago","Referencia","Estado"],tablaRows);
+  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"—",g.estado]);
 
   })).filter(x=>x.Gastos>0);
     Gastos:Math.round(gastos.filter(g=>new Date(g.fecha).getMonth()===i).reduce((s,g)=>s+(parseFloat(g.total)||0),0)),
@@ -1534,7 +1534,7 @@ function ReporteGastos({data}){
               <tr key={v.id}>
             {flotaData.map(v=>(
           <tbody>
-          <thead><tr>{["Placa","Veh├¡culo","Tipo","A├▒o","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Flota</div>
       <div style={S.card}>
@@ -1567,7 +1567,7 @@ function ReporteGastos({data}){
           <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Estado actual de flota</div>
         <div style={S.card}>
         </div>
-          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por veh├¡culo</div>}
+          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por vehículo</div>}
             </ResponsiveContainer>
               </BarChart>
                 <Bar dataKey="Ingresos" fill={T.acc} radius={[0,4,4,0]}/>
@@ -1577,14 +1577,14 @@ function ReporteGastos({data}){
               <BarChart data={chartFlota} layout="vertical">
             <ResponsiveContainer width="100%" height={180}>
           {chartFlota.some(x=>x.Ingresos>0)?(
-          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por veh├¡culo</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por vehículo</div>
         <div style={S.card}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
     <div>
   return (
 
-  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Veh├¡culo","Tipo","A├▒o","Km","Viajes","Ingresos","Estado"],tablaRows);
-  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Veh├¡culo","Tipo","A├▒o","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Vehículo","Tipo","Año","Km","Viajes","Ingresos","Estado"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
   const tablaRows=flotaData.map(v=>[v.placa,`${v.marca} ${v.modelo}`,v.tipo,v.anio,(v.km_actual||0).toLocaleString()+" km",v.viajes,`Q ${fmt(v.ingresos)}`,v.estado]);
 
   ].filter(x=>x.value>0);
@@ -1618,14 +1618,14 @@ function ReporteFlota({data}){
                   <td style={{...S.td,color:T.acc}}>Q {fmt(r.anticipo)}</td>
                   <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.monto)}</td>
                   <td style={{...S.td,color:T.sub,whiteSpace:"nowrap"}}>{fmtD(r.fecha_inicio)}</td>
-                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"ÔÇö"}</td>
+                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"—"}</td>
                   <td style={S.td}>{r.tipo==="renta"?"­ƒöæ Renta":"­ƒù║ Traslado"}</td>
                   <td style={{...S.td,fontWeight:600}}>{r.cliente_nombre}</td>
                   <td style={{...S.td,fontFamily:"monospace",color:T.acc}}>{r.numero}</td>
                 <tr key={r.id}>
               {reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>(
             <tbody>
-            <thead><tr>{["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
         <div style={{overflowX:"auto"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Reservas</div>
@@ -1649,30 +1649,30 @@ function ReporteFlota({data}){
             <BarChart data={chartMensual}>
           <ResponsiveContainer width="100%" height={200}>
         {chartMensual.length>0?(
-        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales ÔÇö Reservas vs Cotizaciones</div>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales — Reservas vs Cotizaciones</div>
       <div style={{...S.card,marginBottom:16}}>
 
       </div>
-        <KpiCard icon="­ƒº¥" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
-        <KpiCard icon="­ƒôï" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
-        <KpiCard icon="­ƒôà" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="🧾" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
+        <KpiCard icon="📋" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
+        <KpiCard icon="📅" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
     <div>
   return (
 
   );
     tablaRows
-    ["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha","Monto","Anticipo","Saldo","Estado"],
+    ["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"],
   const imprimir=()=>imprimirTabla("Reporte de Ventas",
   );
     tablaRows
-    ["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
+    ["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
   const exportar=()=>exportCSV("Reporte_Ventas_TzununSA",
 
   ]);
     `Q ${fmt(r.anticipo)}`,`Q ${fmt(r.saldo)}`,r.estado
-    r.vehiculo_nombre||"ÔÇö",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
-    r.numero||"ÔÇö",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
+    r.vehiculo_nombre||"—",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
+    r.numero||"—",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
   const tablaRows=reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>[
 
   const totalFac=facturas.filter(f=>!["anulada","borrador"].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.total)||0),0);
@@ -1715,10 +1715,10 @@ function KpiCard({icon,label,value,sub,color,bg}){
   </body></html>`;
   <script>window.onload=()=>window.print();</script>
   </table>
-  <tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+(v||"ÔÇö")+"</td>").join("")+"</tr>").join("")}</tbody>
+  <tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+(v||"—")+"</td>").join("")+"</tr>").join("")}</tbody>
   <table><thead><tr>${headers.map(h=>"<th>"+h+"</th>").join("")}</tr></thead>
   <p>Generado: ${new Date().toLocaleDateString("es-GT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</p>
-  <h2>Tz'unun AutoRentas ÔÇö ${titulo}</h2>
+  <h2>Tz'unun AutoRentas — ${titulo}</h2>
   </style></head><body>
     @media print{button{display:none}}
     .total{font-weight:bold;background:#E1F5EE!important}
@@ -1759,7 +1759,7 @@ function exportCSV(filename, headers, rows){
           {/* Acciones */}
 
           </div>
-            {ivaPct===5&&<div style={{marginTop:8,fontSize:11,color:T.mut,fontStyle:"italic"}}>* No genera derecho a cr├®dito fiscal</div>}
+            {ivaPct===5&&<div style={{marginTop:8,fontSize:11,color:T.mut,fontStyle:"italic"}}>* No genera derecho a crédito fiscal</div>}
             </div>
               </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:3}}>$ {fmt(f.tasa_cambio>0?total/f.tasa_cambio:0)} USD</div>
@@ -1800,8 +1800,8 @@ function exportCSV(filename, headers, rows){
                   <div style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr auto",gap:6,alignItems:"flex-end"}}>
                   </div>
                     </div>
-                      <input style={{...S.inp,fontSize:12,padding:"5px 8px"}} value={l.descripcion} onChange={e=>updateLinea(idx,"descripcion",e.target.value)} placeholder="Descripci├│n del servicio o producto"/>
-                      <label style={{...S.lbl,fontSize:9}}>DESCRIPCI├ôN</label>
+                      <input style={{...S.inp,fontSize:12,padding:"5px 8px"}} value={l.descripcion} onChange={e=>updateLinea(idx,"descripcion",e.target.value)} placeholder="Descripción del servicio o producto"/>
+                      <label style={{...S.lbl,fontSize:9}}>DESCRIPCIÓN</label>
                     <div>
                     </div>
                       </select>
@@ -1815,13 +1815,13 @@ function exportCSV(filename, headers, rows){
               {lineas.map((l,idx)=>(
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
             </div>
-              <button onClick={addLinea} style={{...S.btn("primary"),fontSize:11,padding:"4px 10px"}}>+ Agregar l├¡nea</button>
+              <button onClick={addLinea} style={{...S.btn("primary"),fontSize:11,padding:"4px 10px"}}>+ Agregar línea</button>
               <div style={{fontSize:12,fontWeight:700,color:T.mut}}>DETALLE DE SERVICIOS / PRODUCTOS</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div style={S.card}>
-          {/* L├¡neas de detalle */}
+          {/* Líneas de detalle */}
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {/* Columna derecha - L├¡neas y resumen */}
+        {/* Columna derecha - Líneas y resumen */}
 
         </div>
           </div>
@@ -1829,7 +1829,7 @@ function exportCSV(filename, headers, rows){
               </Fld>
                 </select>
                   <option value="pagada">­ƒÆÜ Pagada</option>
-                  <option value="certificada">Ô£à Certificada (DTE)</option>
+                  <option value="certificada">✅ Certificada (DTE)</option>
                   <option value="emitida">­ƒôñ Emitida</option>
                   <option value="borrador">­ƒôØ Borrador</option>
                 <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
@@ -1848,18 +1848,18 @@ function exportCSV(filename, headers, rows){
               <Fld label="ANTICIPO RECIBIDO (Q)">
               </Fld>
                 </select>
-                  {cotizaciones.map(c=><option key={c.id} value={c.id}>{c.numero} ÔÇö {c.cliente_nombre} ÔÇö Q {fmt(c.total_gtq)}</option>)}
-                  <option value="">Sin vinculaci├│n a cotizaci├│n</option>
+                  {cotizaciones.map(c=><option key={c.id} value={c.id}>{c.numero} — {c.cliente_nombre} — Q {fmt(c.total_gtq)}</option>)}
+                  <option value="">Sin vinculación a cotización</option>
                 <select style={S.sel} value={f.cotizacion_id} onChange={e=>onSelectCotizacion(e.target.value)}>
-              <Fld label="COTIZACI├ôN (opcional)">
+              <Fld label="COTIZACIÓN (opcional)">
               </Fld>
                 </select>
-                  {reservas.map(r=><option key={r.id} value={r.id}>{r.numero} ÔÇö {r.cliente_nombre} ÔÇö Q {fmt(r.monto)}</option>)}
-                  <option value="">Sin vinculaci├│n a reserva</option>
+                  {reservas.map(r=><option key={r.id} value={r.id}>{r.numero} — {r.cliente_nombre} — Q {fmt(r.monto)}</option>)}
+                  <option value="">Sin vinculación a reserva</option>
                 <select style={S.sel} value={f.reserva_id} onChange={e=>onSelectReserva(e.target.value)}>
               <Fld label="RESERVA (opcional)">
             <div style={{display:"grid",gridTemplateColumns:"1fr",gap:10}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>VINCULAR A RESERVA O COTIZACI├ôN</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>VINCULAR A RESERVA O COTIZACIÓN</div>
           <div style={S.card}>
           {/* Vincular */}
 
@@ -1868,18 +1868,18 @@ function exportCSV(filename, headers, rows){
               </Fld>
                 </select>
                   <option value="tarjeta">­ƒÆ│ Tarjeta</option>
-                  <option value="deposito">­ƒÆ░ Dep├│sito</option>
-                  <option value="transferencia">­ƒÅª Transferencia</option>
+                  <option value="deposito">💰 Depósito</option>
+                  <option value="transferencia">🏦 Transferencia</option>
                   <option value="efectivo">­ƒÆÁ Efectivo</option>
                 <select style={S.sel} value={f.metodo_pago} onChange={e=>sf("metodo_pago",e.target.value)}>
               <Fld label="M├ëTODO PAGO">
               <Fld label="CORREO"><input style={S.inp} type="email" value={f.correo_receptor} onChange={e=>sf("correo_receptor",e.target.value)} placeholder="email@cliente.com"/></Fld>
-              <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={f.direccion_receptor} onChange={e=>sf("direccion_receptor",e.target.value)} placeholder="Ciudad"/></Fld>
-              <Fld label="NOMBRE RECEPTOR"><input style={S.inp} value={f.nombre_receptor} onChange={e=>sf("nombre_receptor",e.target.value)} placeholder="Nombre o raz├│n social"/></Fld>
+              <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion_receptor} onChange={e=>sf("direccion_receptor",e.target.value)} placeholder="Ciudad"/></Fld>
+              <Fld label="NOMBRE RECEPTOR"><input style={S.inp} value={f.nombre_receptor} onChange={e=>sf("nombre_receptor",e.target.value)} placeholder="Nombre o razón social"/></Fld>
               <Fld label="NIT RECEPTOR"><input style={S.inp} value={f.nit_receptor} onChange={e=>sf("nit_receptor",e.target.value)} placeholder="CF o NIT"/></Fld>
               </Fld>
                 </select>
-                  {clientes.map(c=><option key={c.id} value={c.id}>{c.codigo?c.codigo+" ÔÇö ":""}{c.nombre}</option>)}
+                  {clientes.map(c=><option key={c.id} value={c.id}>{c.codigo?c.codigo+" — ":""}{c.nombre}</option>)}
                   <option value="">Seleccionar cliente (auto-llena datos)...</option>
                 <select style={S.sel} value={f.cliente_id} onChange={e=>onSelectCliente(e.target.value)}>
               <Fld label="VINCULAR A CLIENTE" span2>
@@ -1890,22 +1890,22 @@ function exportCSV(filename, headers, rows){
 
           </div>
             </div>
-              <Fld label="FECHA CERTIFICACI├ôN"><input style={S.inp} type="date" value={f.fecha_certificacion} onChange={e=>sf("fecha_certificacion",e.target.value)}/></Fld>
-              <Fld label="FECHA EMISI├ôN"><input style={S.inp} type="date" value={f.fecha_emision} onChange={e=>sf("fecha_emision",e.target.value)}/></Fld>
+              <Fld label="FECHA CERTIFICACIÓN"><input style={S.inp} type="date" value={f.fecha_certificacion} onChange={e=>sf("fecha_certificacion",e.target.value)}/></Fld>
+              <Fld label="FECHA EMISIÓN"><input style={S.inp} type="date" value={f.fecha_emision} onChange={e=>sf("fecha_emision",e.target.value)}/></Fld>
               <Fld label="TASA DE CAMBIO ($)"><input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e=>sf("tasa_cambio",e.target.value)}/></Fld>
               </Fld>
                 </select>
                   <option value="NINGUNO">Sin impuestos</option>
-                  <option value="PEQUENIO">5% ÔÇö Peque├▒o Contribuyente</option>
-                  <option value="GENERAL">12% IVA ÔÇö R├®gimen General</option>
+                  <option value="PEQUENIO">5% — Pequeño Contribuyente</option>
+                  <option value="GENERAL">12% IVA — Régimen General</option>
                 <select style={S.sel} value={f.regimen} onChange={e=>sf("regimen",e.target.value)}>
               <Fld label="R├ëGIMEN FISCAL">
-              <Fld label="N┬░ ACCESO"><input style={S.inp} value={f.numero_acceso} onChange={e=>sf("numero_acceso",e.target.value)} placeholder="N├║mero de acceso"/></Fld>
+              <Fld label="N┬░ ACCESO"><input style={S.inp} value={f.numero_acceso} onChange={e=>sf("numero_acceso",e.target.value)} placeholder="Número de acceso"/></Fld>
               <Fld label="N┬░ DTE"><input style={S.inp} value={f.numero_dte} onChange={e=>sf("numero_dte",e.target.value)} placeholder="3370337239"/></Fld>
               <Fld label="SERIE"><input style={S.inp} value={f.serie} onChange={e=>sf("serie",e.target.value)} placeholder="TZAR2026"/></Fld>
               </Fld>
                 <input style={{...S.inp,fontFamily:"monospace",fontSize:11}} value={f.numero_autorizacion} onChange={e=>sf("numero_autorizacion",e.target.value)} placeholder="F047F606-C8E3-43D7-8B21-A77A28299F83"/>
-              <Fld label="N┬░ AUTORIZACI├ôN SAT" span2>
+              <Fld label="N┬░ AUTORIZACIÓN SAT" span2>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>DATOS SAT / DTE</div>
           <div style={S.card}>
@@ -1935,12 +1935,12 @@ function exportCSV(filename, headers, rows){
   ${f.notas?`<div style="margin-top:6px"><strong>Notas:</strong> ${f.notas}</div>`:""}
   </div>
     </div>
-      <div>Superintendencia de Administraci├│n Tributaria &nbsp; NIT: 16693949</div>
+      <div>Superintendencia de Administración Tributaria &nbsp; NIT: 16693949</div>
       <div style="font-weight:700;margin-bottom:3px">Datos del certificador</div>
     <div class="certificador">
   <div class="footer-grid">
 <div class="footer">
-${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera derecho a cr├®dito fiscal</p>':""}
+${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera derecho a crédito fiscal</p>':""}
 </div>
   </table>
     <tr class="total-row"><td>TOTAL</td><td class="right">Q ${total.toFixed(2)}</td></tr>
@@ -1953,24 +1953,24 @@ ${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera 
   </tbody>
 ${lineas.filter(l=>l.descripcion).map((l,i)=>`    <tr><td>${i+1}</td><td>${l.tipo||"Servicio"}</td><td class="right">${l.cantidad}</td><td>${l.descripcion}</td><td class="right">${parseFloat(l.precio_unitario||0).toFixed(2)}</td><td class="right">${parseFloat(l.descuento||0).toFixed(2)}</td><td class="right">0.00</td><td class="right">${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0)-parseFloat(l.descuento||0)).toFixed(2)}</td></tr>`).join("\n")}
   <tbody>
-  <thead><tr><th>#No</th><th>B/S</th><th>Cantidad</th><th>Descripci├│n</th><th class="right">P. Unitario con IVA (Q)</th><th class="right">Descuentos (Q)</th><th class="right">Otros Desc.(Q)</th><th class="right">Total (Q)</th></tr></thead>
+  <thead><tr><th>#No</th><th>B/S</th><th>Cantidad</th><th>Descripción</th><th class="right">P. Unitario con IVA (Q)</th><th class="right">Descuentos (Q)</th><th class="right">Otros Desc.(Q)</th><th class="right">Total (Q)</th></tr></thead>
 <table>
 <div class="divider"/>
 </div>
   <div><span class="label">Moneda:</span> GTQ</div>
-  <div><span class="label">Direcci├│n comprador:</span> ${f.direccion_receptor||"CIUDAD"}</div>
-  <div><span class="label">Fecha y hora de certificaci├│n:</span> ${f.fecha_certificacion||"ÔÇö"} ${new Date().toLocaleTimeString("es-GT")}</div>
-  <div><span class="label">Nombre Receptor:</span> <strong>${f.nombre_receptor||"ÔÇö"}</strong></div>
-  <div><span class="label">Fecha y hora de emisi├│n:</span> ${f.fecha_emision||"ÔÇö"} ${new Date().toLocaleTimeString("es-GT")}</div>
+  <div><span class="label">Dirección comprador:</span> ${f.direccion_receptor||"CIUDAD"}</div>
+  <div><span class="label">Fecha y hora de certificación:</span> ${f.fecha_certificacion||"—"} ${new Date().toLocaleTimeString("es-GT")}</div>
+  <div><span class="label">Nombre Receptor:</span> <strong>${f.nombre_receptor||"—"}</strong></div>
+  <div><span class="label">Fecha y hora de emisión:</span> ${f.fecha_emision||"—"} ${new Date().toLocaleTimeString("es-GT")}</div>
   <div><span class="label">NIT Receptor:</span> ${f.nit_receptor||"CF"}</div>
 <div class="receptor-row">
 <div class="divider"/>
 </div>
   </div>
-    Numero Acceso: ${f.numero_acceso||"ÔÇö"}
-    Serie: ${f.serie||"ÔÇö"} &nbsp; N├║mero de DTE: ${f.numero_dte||"ÔÇö"}<br/>
-    ${f.numero_autorizacion||"ÔÇö"}<br/>
-    <span class="num">N├ÜMERO DE AUTORIZACI├ôN:</span><br/>
+    Numero Acceso: ${f.numero_acceso||"—"}
+    Serie: ${f.serie||"—"} &nbsp; Número de DTE: ${f.numero_dte||"—"}<br/>
+    ${f.numero_autorizacion||"—"}<br/>
+    <span class="num">N├ÜMERO DE AUTORIZACIÓN:</span><br/>
   <div class="autorizacion">
   </div>
     6 AVENIDA 5-23 COLONIA LA CASTELLANA, zona 1, EL TEJAR, CHIMALTENANGO
@@ -1979,7 +1979,7 @@ ${lineas.filter(l=>l.descripcion).map((l,i)=>`    <tr><td>${i+1}</td><td>${l.tip
     <strong>VANESSA MAR├ìA, G├üLVEZ HERN├üNDEZ</strong>
   <div class="emisor">
 <div class="header-top">
-<div class="titulo-factura">${f.regimen==="GENERAL"?"Factura":f.regimen==="PEQUENIO"?"Factura Peque├▒o Contribuyente":"Documento"}</div>
+<div class="titulo-factura">${f.regimen==="GENERAL"?"Factura":f.regimen==="PEQUENIO"?"Factura Pequeño Contribuyente":"Documento"}</div>
 </style></head><body>
 @media print{button{display:none}}
 .titulo-factura{text-align:center;font-size:16px;font-weight:700;color:#1B2D5C;margin-bottom:6px}
@@ -2029,7 +2029,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
     const payload={
     const numero="FAC-"+Date.now().toString().slice(-8);
     setSaving(true);
-    if(lineas.filter(l=>l.descripcion&&parseFloat(l.precio_unitario)>0).length===0){alert("Agrega al menos una l├¡nea con descripci├│n y precio");return;}
+    if(lineas.filter(l=>l.descripcion&&parseFloat(l.precio_unitario)>0).length===0){alert("Agrega al menos una línea con descripción y precio");return;}
     if(!f.nombre_receptor.trim()){alert("Nombre del receptor requerido");return;}
   const guardar=async()=>{
   // ÔöÇÔöÇ Guardar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -2042,7 +2042,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
   };
     }
       }
-        setLineas([{tipo:"Servicio",cantidad:1,descripcion:"Servicio de transporte / alquiler de veh├¡culo",precio_unitario:r.monto||"",descuento:0}]);
+        setLineas([{tipo:"Servicio",cantidad:1,descripcion:"Servicio de transporte / alquiler de vehículo",precio_unitario:r.monto||"",descuento:0}]);
       if(lineas.length===1&&!lineas[0].descripcion){
       else sf("nombre_receptor",r.cliente_nombre||"");
       if(c){sf("nit_receptor",c.nit||"");sf("nombre_receptor",c.nombre||"");sf("cliente_id",c.id||"");}
@@ -2062,7 +2062,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
   const total=subtotalBruto;
   const ivaAmt=subtotalBruto-subtotalSinIVA;
   const subtotalSinIVA=ivaPct>0?subtotalBruto/(1+ivaPct/100):subtotalBruto;
-  // For peque├▒o contribuyente, price already includes IVA
+  // For pequeño contribuyente, price already includes IVA
   const ivaPct=f.regimen==="GENERAL"?12:f.regimen==="PEQUENIO"?5:0;
 
   },0);
@@ -2071,7 +2071,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
     const p=parseFloat(l.precio_unitario)||0;
     const q=parseFloat(l.cantidad)||0;
   const subtotalBruto=lineas.reduce((s,l)=>{
-  // ÔöÇÔöÇ C├ílculos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ÔöÇÔöÇ Cálculos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const [saving,setSaving]=useState(false);
 
@@ -2083,7 +2083,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
     if(initial?.lineas&&initial.lineas.length>0) return initial.lineas;
   const [lineas,setLineas]=useState(()=>{
   const EMPTY_LINE={tipo:"Servicio",cantidad:1,descripcion:"",precio_unitario:"",descuento:0};
-  // ÔöÇÔöÇ L├¡neas de detalle ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ÔöÇÔöÇ Líneas de detalle ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   });
@@ -2116,15 +2116,15 @@ function FormFactura({initial,empId,clientes,reservas,cotizaciones,onSave,onCanc
       </div>
         </div>
           <button onClick={onCancel} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
-          <button onClick={()=>onConfirm(parseFloat(monto)||saldo,fecha,metodo)} style={{...S.btn("primary"),flex:1}}>Ô£à Registrar pago</button>
+          <button onClick={()=>onConfirm(parseFloat(monto)||saldo,fecha,metodo)} style={{...S.btn("primary"),flex:1}}>✅ Registrar pago</button>
         <div style={{display:"flex",gap:8}}>
         </div>
           </Fld>
             </select>
               <option value="cheque">­ƒôä Cheque</option>
               <option value="tarjeta">­ƒÆ│ Tarjeta</option>
-              <option value="deposito">­ƒÆ░ Dep├│sito</option>
-              <option value="transferencia">­ƒÅª Transferencia</option>
+              <option value="deposito">💰 Depósito</option>
+              <option value="transferencia">🏦 Transferencia</option>
               <option value="efectivo">­ƒÆÁ Efectivo</option>
             <select style={S.sel} value={metodo} onChange={e=>setMetodo(e.target.value)}>
           <Fld label="M├ëTODO" span2>
@@ -2140,8 +2140,8 @@ function FormFactura({initial,empId,clientes,reservas,cotizaciones,onSave,onCanc
           <div style={S.srow(false)}><span>Anticipo aplicado</span><span>Q {fmt(factura.anticipo_aplicado)}</span></div>
           <div style={S.srow(false)}><span>Total factura</span><span>Q {fmt(factura.total)}</span></div>
         <div style={{background:T.surf,borderRadius:9,padding:"10px 14px",marginBottom:16}}>
-        <div style={{fontSize:13,color:T.sub,marginBottom:4}}>{factura.numero} ┬À {factura.nombre_receptor}</div>
-        <div style={{fontSize:15,fontWeight:700,color:T.acc,marginBottom:6}}>­ƒÆ░ Registrar Pago</div>
+        <div style={{fontSize:13,color:T.sub,marginBottom:4}}>{factura.numero} · {factura.nombre_receptor}</div>
+        <div style={{fontSize:15,fontWeight:700,color:T.acc,marginBottom:6}}>💰 Registrar Pago</div>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:440,padding:24}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
   return (
@@ -2158,14 +2158,14 @@ function ModalPago({factura,onConfirm,onCancel}){
       </div>
         </div>
           <button onClick={onCancel} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
-          <button onClick={()=>onConfirm(motivo)} disabled={!motivo.trim()} style={{...S.btn("danger"),flex:1,opacity:motivo.trim()?1:0.5}}>­ƒÜ½ Confirmar anulaci├│n</button>
+          <button onClick={()=>onConfirm(motivo)} disabled={!motivo.trim()} style={{...S.btn("danger"),flex:1,opacity:motivo.trim()?1:0.5}}>­ƒÜ½ Confirmar anulación</button>
         <div style={{display:"flex",gap:8}}>
         </div>
-          ÔÜá´©Å Esta acci├│n no se puede deshacer. La factura quedar├í marcada como ANULADA en el sistema.
+          ⚠️´©Å Esta acción no se puede deshacer. La factura quedará marcada como ANULADA en el sistema.
         <div style={{background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:8,padding:"10px 14px",fontSize:12,color:T.red,marginBottom:16}}>
         <textarea style={{...S.inp,minHeight:70,resize:"vertical",marginBottom:16}} value={motivo} onChange={e=>setMotivo(e.target.value)} placeholder="Ej: Error en datos del receptor, duplicado, etc."/>
-        <label style={S.lbl}>MOTIVO DE ANULACI├ôN (requerido)</label>
-        <div style={{fontSize:13,color:T.sub,marginBottom:16}}>Factura <strong style={{color:T.txt}}>{factura.numero}</strong> ┬À Q {fmt(factura.total)}</div>
+        <label style={S.lbl}>MOTIVO DE ANULACIÓN (requerido)</label>
+        <div style={{fontSize:13,color:T.sub,marginBottom:16}}>Factura <strong style={{color:T.txt}}>{factura.numero}</strong> · Q {fmt(factura.total)}</div>
         <div style={{fontSize:15,fontWeight:700,color:T.red,marginBottom:6}}>­ƒÜ½ Anular Factura</div>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.red}`,width:"100%",maxWidth:440,padding:24}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -2206,7 +2206,7 @@ function ModalAnular({factura,onConfirm,onCancel}){
   const [open,setOpen]=useState(false);
 function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getLabel}){
 
-// ÔòÉÔòÉÔòÉ FACTURACI├ôN ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ FACTURACIÓN ÔòÉÔòÉÔòÉ
 
 
 
@@ -2216,12 +2216,12 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
       </div>
         </div>
           )}
-            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>Selecciona veh├¡culo y d├¡as para ver el resumen</div>
+            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>Selecciona vehículo y días para ver el resumen</div>
           ):(
             </>
               </div>
-                <button onClick={()=>guardar("orden_venta")} disabled={saving} style={{...S.btn("purple"),width:"100%"}}>{saving?"...":"­ƒôª Convertir a Orden de Venta"}</button>
-                <button onClick={()=>guardar(f.estado==="borrador"?"enviada":f.estado)} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"Ô£à Guardar cotizaci├│n"}</button>
+                <button onClick={()=>guardar("orden_venta")} disabled={saving} style={{...S.btn("purple"),width:"100%"}}>{saving?"...":"📦 Convertir a Orden de Venta"}</button>
+                <button onClick={()=>guardar(f.estado==="borrador"?"enviada":f.estado)} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"✅ Guardar cotización"}</button>
                 <button onClick={()=>guardar("borrador")} disabled={saving} style={{...S.btn("ghost"),width:"100%"}}>{saving?"...":"­ƒÆ¥ Borrador"}</button>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
               </div>
@@ -2233,7 +2233,7 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
                   <span style={{fontSize:12,color:T.sub,alignSelf:"flex-end"}}>$ {fmt(total_ef/exch)}</span>
                   <span>Q {fmt(total_ef)}</span>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}>
-                <div style={{fontSize:10,fontWeight:700,color:T.acc,marginBottom:3}}>PRECIO BENEFICIO ÔÇö Efectivo/Dep├│sito/Transf.</div>
+                <div style={{fontSize:10,fontWeight:700,color:T.acc,marginBottom:3}}>PRECIO BENEFICIO — Efectivo/Depósito/Transf.</div>
               <div style={{background:T.accDim,border:`1px solid ${T.acc}55`,borderRadius:10,padding:"12px 16px",marginBottom:8}}>
               </div>
                 <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>Q {fmt(iva_amt)}</span></div>
@@ -2253,10 +2253,10 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
               {vehObj&&(
             <>
           {sub>0?(
-          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {vehObj.nombre} ┬À {f.dias} d├¡a{f.dias!==1?"s":""}</div>}
+          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {f.dias} día{f.dias!==1?"s":""}</div>}
           {f.saludo&&<div style={{fontSize:12,color:T.sub,fontStyle:"italic",marginBottom:8}}>{f.saludo}</div>}
-          {f.cliente_nombre&&<div style={{fontSize:13,fontWeight:700,marginBottom:4}}>­ƒæñ {f.cliente_nombre}</div>}
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen</div>
+          {f.cliente_nombre&&<div style={{fontSize:13,fontWeight:700,marginBottom:4}}>👤 {f.cliente_nombre}</div>}
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
         <div style={S.card}>
         {/* RESUMEN */}
         </div>
@@ -2277,11 +2277,11 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
                 </div>
                   ))}
                     <button key={o.v} onClick={()=>sf("iva_pct",o.v)} style={{...S.btn(f.iva_pct===o.v?"primary":"ghost"),flex:1,fontSize:11}}>{o.l}</button>
-                  {[{v:12,l:"12% General"},{v:5,l:"5% Peque├▒o Cont."},{v:0,l:"Sin IVA"}].map(o=>(
+                  {[{v:12,l:"12% General"},{v:5,l:"5% Pequeño Cont."},{v:0,l:"Sin IVA"}].map(o=>(
                 <div style={{display:"flex",gap:8}}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>IVA</label>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒÆ░ FISCAL Y FECHAS</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>💰 FISCAL Y FECHAS</div>
           <div style={S.card}>
           {/* Fiscal */}
           </div>
@@ -2296,43 +2296,43 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
               <div style={{gridColumn:"span 2"}}>
               </div>
                 <textarea style={{...S.inp,minHeight:64,resize:"vertical"}} value={f.descripcion_servicio} onChange={e=>sf("descripcion_servicio",e.target.value)} placeholder="Ej: Servicio de traslado de personas de Ciudad Guatemala hacia Quetzaltenango, ida y vuelta, del 19 al 21 de marzo..."/>
-              <div style={{gridColumn:"span 2"}}><label style={S.lbl}>DESCRIPCI├ôN DEL SERVICIO</label>
+              <div style={{gridColumn:"span 2"}}><label style={S.lbl}>DESCRIPCIÓN DEL SERVICIO</label>
               </div>
                 </div>
                   <button onClick={()=>sf("con_piloto",false)} style={{...S.btn(!f.con_piloto?"warn":"ghost"),flex:1,fontSize:11}}>­ƒöæ Sin piloto</button>
                   <button onClick={()=>sf("con_piloto",true)} style={{...S.btn(f.con_piloto?"primary":"ghost"),flex:1,fontSize:11}}>­ƒºæÔÇìÔ£ê´©Å Con piloto</button>
                 <div style={{display:"flex",gap:8}}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>MODALIDAD</label>
-              <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e=>sf("precio_custom",e.target.value)} placeholder="Vac├¡o = cat├ílogo"/></div>
+              <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e=>sf("precio_custom",e.target.value)} placeholder="Vacío = catálogo"/></div>
               <div><label style={S.lbl}>D├ìAS</label><input style={S.inp} type="number" min="1" value={f.dias} onChange={e=>sf("dias",parseInt(e.target.value)||1)}/></div>
               </div>
                 </select>
-                  {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} ÔÇö Q{fmt(v.dia)}/d├¡a</option>)}
+                  {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/día</option>)}
                   <option value="">Seleccionar...</option>
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>VEH├ìCULO</label>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒÜù SERVICIO</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>🚗 SERVICIO</div>
           <div style={S.card}>
           {/* Servicio */}
           </div>
             </div>
               </div>
-                <input style={S.inp} value={f.saludo} onChange={e=>sf("saludo",e.target.value)} placeholder="Ej: Estimados se├▒ores de Fundaci├│n Myrna Mack"/>
+                <input style={S.inp} value={f.saludo} onChange={e=>sf("saludo",e.target.value)} placeholder="Ej: Estimados señores de Fundación Myrna Mack"/>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>SALUDO PERSONALIZADO</label>
-              <div><label style={S.lbl}>DIRECCI├ôN DEL CLIENTE</label><input style={S.inp} value={f.cliente_dir} onChange={e=>sf("cliente_dir",e.target.value)} placeholder="Ciudad, zona..."/></div>
+              <div><label style={S.lbl}>DIRECCIÓN DEL CLIENTE</label><input style={S.inp} value={f.cliente_dir} onChange={e=>sf("cliente_dir",e.target.value)} placeholder="Ciudad, zona..."/></div>
               <div><label style={S.lbl}>NIT</label><input style={S.inp} value={f.cliente_nit} onChange={e=>sf("cliente_nit",e.target.value)} placeholder="7032528"/></div>
               </div>
                 />
                   clientes={clientes}
-                  onSelect={c=>{sf("cliente_nombre",c.nombre);sf("cliente_nit",c.nit||"");sf("cliente_dir",c.direccion||"");sf("saludo","Estimados se├▒ores de "+c.nombre);}}
+                  onSelect={c=>{sf("cliente_nombre",c.nombre);sf("cliente_nit",c.nit||"");sf("cliente_dir",c.direccion||"");sf("saludo","Estimados señores de "+c.nombre);}}
                   onChange={v=>sf("cliente_nombre",v)}
                   value={f.cliente_nombre}
                 <ClienteAutocomplete
                 <label style={S.lbl}>CLIENTE (escribe para buscar)</label>
               <div style={{gridColumn:"span 2"}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒæñ DATOS DEL CLIENTE</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>👤 DATOS DEL CLIENTE</div>
           <div style={S.card}>
           {/* Cliente */}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -2341,7 +2341,7 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
       </div>
         <button onClick={onCancel} style={S.btn("ghost")}>ÔåÉ Volver</button>
         </div>
-          {isClone?"Clonar cotizaci├│n":initial?.id?"Editar cotizaci├│n":"Nueva cotizaci├│n"}
+          {isClone?"Clonar cotización":initial?.id?"Editar cotización":"Nueva cotización"}
         <div style={{fontSize:14,fontWeight:700,color:T.acc}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
     <div>
@@ -2351,7 +2351,7 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
     }catch(e){showToast("Error al guardar: "+e.message,"err");setSaving(false);}
       onSave(estado);
       setSaving(false);
-      showToast("Cotizaci├│n guardada Ô£ö");
+      showToast("Cotización guardada ✔");
       if(result&&result.error){showToast("Error: "+result.error,"err");setSaving(false);return;}
       else result=await dbIns("cotizaciones",payload);
       if(initial?.id&&!initial?.__clon) result=await dbUpd("cotizaciones",initial.id,payload);
@@ -2396,9 +2396,9 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
     const file=e.target.files[0];
   const handleFile=e=>{
 
-  const beneficios=["Experiencia de viaje segura y c├│moda","Flexibilidad a sus necesidades","Puntualidad garantizada"];
-  const incluidos=f.con_piloto?["Combustible lleno (s├║per/di├®sel)","Conductor/piloto profesional","Servicio y atenci├│n especializada"]:["Veh├¡culo entregado con tanque lleno","Asistencia en ruta disponible","Servicio y atenci├│n especializada"];
-  const caract=vehObj?[vehObj.nombre,"Aire acondicionado","Cinturones de seguridad","Seguro total"]:["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"];
+  const beneficios=["Experiencia de viaje segura y cómoda","Flexibilidad a sus necesidades","Puntualidad garantizada"];
+  const incluidos=f.con_piloto?["Combustible lleno (súper/diésel)","Conductor/piloto profesional","Servicio y atención especializada"]:["Vehículo entregado con tanque lleno","Asistencia en ruta disponible","Servicio y atención especializada"];
+  const caract=vehObj?[vehObj.nombre,"Aire acondicionado","Cinturones de seguridad","Seguro total"]:["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"];
 
   const exch=parseFloat(f.exch)||7.70;
   const total_tc=total_ef*1.05;
@@ -2453,7 +2453,7 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
   saludo:"",descripcion_servicio:"",
   cliente_nombre:"",cliente_nit:"",cliente_dir:"",
 const EMPTY_F={
-// ÔöÇÔöÇ FORMULARIO COTIZACI├ôN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ FORMULARIO COTIZACIÓN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 }
   );
@@ -2461,9 +2461,9 @@ const EMPTY_F={
       </div>
         </div>
           </div>
-            <button onClick={()=>{const subject=encodeURIComponent(`Cotizaci├│n ${cot.numero} ÔÇö Tz'unun AutoRentas`);const body=encodeURIComponent(`Estimados,\n\nAdjunto cotizaci├│n ${cot.numero} por Q ${fmt(total_ef)}.\n\nSaludos,\nOscar G├ílvez\nTz'unun AutoRentas\n502-31221538`);window.open(`mailto:?subject=${subject}&body=${body}`);}} style={{...S.btn("ghost"),fontSize:12}}>Ô£ë´©Å Email</button>
-            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atenci├│n especializada"],beneficios:cot.beneficios||["Viaje seguro y c├│modo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc){const blob=doc.output("blob");const url=URL.createObjectURL(blob);window.open(url,"_blank");}}} style={{...S.btn("blue"),fontSize:12}}>­ƒû¿´©Å Imprimir</button>
-            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atenci├│n especializada"],beneficios:cot.beneficios||["Viaje seguro y c├│modo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc)doc.save(`${cot.numero}.pdf`);}} style={{...S.btn("primary"),fontSize:12}}>Ô¼ç Descargar PDF</button>
+            <button onClick={()=>{const subject=encodeURIComponent(`Cotización ${cot.numero} — Tz'unun AutoRentas`);const body=encodeURIComponent(`Estimados,\n\nAdjunto cotización ${cot.numero} por Q ${fmt(total_ef)}.\n\nSaludos,\nOscar Gálvez\nTz'unun AutoRentas\n502-31221538`);window.open(`mailto:?subject=${subject}&body=${body}`);}} style={{...S.btn("ghost"),fontSize:12}}>Ô£ë´©Å Email</button>
+            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atención especializada"],beneficios:cot.beneficios||["Viaje seguro y cómodo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc){const blob=doc.output("blob");const url=URL.createObjectURL(blob);window.open(url,"_blank");}}} style={{...S.btn("blue"),fontSize:12}}>­ƒû¿´©Å Imprimir</button>
+            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atención especializada"],beneficios:cot.beneficios||["Viaje seguro y cómodo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc)doc.save(`${cot.numero}.pdf`);}} style={{...S.btn("primary"),fontSize:12}}>Ô¼ç Descargar PDF</button>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:T.sec,marginTop:6}}><span>Con Tarjeta C/D</span><span>Q {fmt(total_tc)}</span></div>
@@ -2476,11 +2476,11 @@ const EMPTY_F={
           <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:12}}>
           {/* Financiero */}
           {cot.descripcion_servicio&&<div style={{marginBottom:12,fontSize:12,color:T.sub,fontStyle:"italic"}}>{cot.descripcion_servicio}</div>}
-          {/* Descripci├│n */}
+          {/* Descripción */}
           {cot.saludo&&<div style={{background:"#00D4AA11",border:"1px solid #00D4AA33",borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.sub,fontStyle:"italic"}}>"{cot.saludo}"</div>}
           {/* Saludo */}
           </div>
-            <div style={{fontSize:12,color:T.sub}}>NIT: {cot.cliente_nit||"ÔÇö"} ┬À {cot.cliente_dir||""}</div>
+            <div style={{fontSize:12,color:T.sub}}>NIT: {cot.cliente_nit||"—"} · {cot.cliente_dir||""}</div>
             <div style={{fontSize:14,fontWeight:700}}>{cot.cliente_nombre}</div>
             <div style={{fontSize:10,color:T.mut,fontWeight:700,marginBottom:4}}>FACTURAR A:</div>
           <div style={{marginBottom:12}}>
@@ -2489,11 +2489,11 @@ const EMPTY_F={
             </div>
               <div style={{fontSize:11,color:T.sub}}>{cot.fecha_emision||cot.created_at?.slice(0,10)}</div>
               <div style={{fontSize:12,color:"#fff"}}>#{cot.numero}</div>
-              <div style={{fontSize:16,fontWeight:800,color:T.acc}}>{cot.orden_venta?"ORDEN DE VENTA":"COTIZACI├ôN"}</div>
+              <div style={{fontSize:16,fontWeight:800,color:T.acc}}>{cot.orden_venta?"ORDEN DE VENTA":"COTIZACIÓN"}</div>
             <div style={{textAlign:"right"}}>
             </div>
               </div>
-                <div style={{fontSize:10,color:T.sub}}>502-31221538 ┬À tzununautorentas@gmail.com</div>
+                <div style={{fontSize:10,color:T.sub}}>502-31221538 · tzununautorentas@gmail.com</div>
                 <div style={{fontSize:14,fontWeight:800,color:T.acc}}>TZ'UNUN AUTORENTAS</div>
               <div>
               <img src={`data:image/png;base64,${LOGO_B64}`} style={{width:44,height:44,borderRadius:10}} alt="logo"/>
@@ -2503,7 +2503,7 @@ const EMPTY_F={
         <div style={{padding:20}}>
         </div>
           <button onClick={onClose} style={{...S.btn("ghost"),padding:"4px 10px"}}>Ô£ò</button>
-          <div style={{fontSize:14,fontWeight:700,color:T.acc}}>Vista previa ÔÇö {cot.numero}</div>
+          <div style={{fontSize:14,fontWeight:700,color:T.acc}}>Vista previa — {cot.numero}</div>
         <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.bord}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.bord}`,width:"100%",maxWidth:700,maxHeight:"90vh",overflowY:"auto"}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -2521,19 +2521,19 @@ function ModalVistaPrevia({cot, onClose}){
   return doc;
 
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas   |   Guatemala",W/2,HP-11,{align:"center"});
-  doc.text("TZ'UNUN AUTORENTAS  ÔÇö  M├ís comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
+  doc.text("TZ'UNUN AUTORENTAS  —  Más comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
   doc.setTextColor(148,163,184); doc.setFontSize(6.5); doc.setFont("helvetica","normal");
   doc.setFillColor(...TEAL); doc.rect(0,HP-36,W,2,"F");
   doc.setFillColor(...NAVY); doc.rect(0,HP-36,W,36,"F");
   // Pie
 
-  doc.text("Adjunto cotizaci├│n, quedamos a la espera de su aprobaci├│n.",W/2,y+21,{align:"center"});
+  doc.text("Adjunto cotización, quedamos a la espera de su aprobación.",W/2,y+21,{align:"center"});
   doc.setTextColor(...GRAY); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
   doc.text("Muchas gracias por su preferencia, esperamos poder servirle.",W/2,y+11,{align:"center"});
   doc.setTextColor(0,200,150); doc.setFontSize(8.5); doc.setFont("helvetica","bolditalic");
   doc.text("Cel. 502 31221538   |   @TzununAutorentas",22,y+21);
   doc.setTextColor(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
-  doc.text("Oscar G├ílvez",22,y+11);
+  doc.text("Oscar Gálvez",22,y+11);
   doc.setTextColor(27,45,92); doc.setFontSize(8); doc.setFont("helvetica","bold");
   doc.setDrawColor(203,213,225); doc.setLineWidth(0.6); doc.line(22,y,180,y);
   // Firma y cierre
@@ -2555,18 +2555,18 @@ function ModalVistaPrevia({cot, onClose}){
   doc.setFontSize(7.2); doc.setFont("helvetica","normal"); doc.setTextColor(...DKGRAY);
   ];
     "ÔÇó El saldo restante se cancela al finalizar el servicio.",
-    "ÔÇó El veh├¡culo debe devolverse limpio (recargo Q.75.00 si no cumple).",
-    d.con_piloto?"ÔÇó Combustible incluido seg├║n el recorrido acordado.":"ÔÇó Veh├¡culo entregado con tanque lleno ÔÇö devolver lleno.",
+    "ÔÇó El vehículo debe devolverse limpio (recargo Q.75.00 si no cumple).",
+    d.con_piloto?"ÔÇó Combustible incluido según el recorrido acordado.":"ÔÇó Vehículo entregado con tanque lleno — devolver lleno.",
     "ÔÇó Anticipo del 75% para confirmar el servicio.",
     "ÔÇó Se requiere copia de DPI del responsable del grupo.",
-    "ÔÇó Nuestros veh├¡culos son higienizados antes y despu├®s de cada servicio.",
+    "ÔÇó Nuestros vehículos son higienizados antes y después de cada servicio.",
   const terms=[
   doc.text("T├ëRMINOS Y CONDICIONES",30,y+10);
   doc.setTextColor(27,45,92); doc.setFontSize(7.5); doc.setFont("helvetica","bold");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,termH,"F");
   doc.setFillColor(241,245,249); doc.roundedRect(22,y,W-44,termH,4,4,"F");
   const termH=66;
-  // T├®rminos y cuentas
+  // Términos y cuentas
 
   y+=10;
   });
@@ -2589,9 +2589,9 @@ function ModalVistaPrevia({cot, onClose}){
   doc.setFillColor(...NAVY); doc.rect(22,y,W-44,16,"F");
   const cW=[310,100,90];
   ];
-    ["Con Tarjeta de Cr├®dito / D├®bito",fmt(d.total_tc),fmt(d.total_tc/d.exch),false,true],
-    ["PRECIO BENEFICIO ÔÇö Efectivo / Dep├│sito / Transferencia",fmt(d.total_ef),fmt(d.total_ef/d.exch),true,false],
-    ["Impuesto "+d.iva_pct+"% ("+(d.iva_pct===5?"Peque├▒o Contribuyente":"R├®gimen General")+")",fmt(d.iva_amt),fmt(d.iva_amt/d.exch),false,false],
+    ["Con Tarjeta de Crédito / Débito",fmt(d.total_tc),fmt(d.total_tc/d.exch),false,true],
+    ["PRECIO BENEFICIO — Efectivo / Depósito / Transferencia",fmt(d.total_ef),fmt(d.total_ef/d.exch),true,false],
+    ["Impuesto "+d.iva_pct+"% ("+(d.iva_pct===5?"Pequeño Contribuyente":"Régimen General")+")",fmt(d.iva_amt),fmt(d.iva_amt/d.exch),false,false],
     ["Subtotal (precio base)",fmt(d.sub),fmt(d.sub/d.exch),false,false],
   const finRows=[
   doc.text("RESUMEN FINANCIERO",30,y+8); y+=14;
@@ -2601,7 +2601,7 @@ function ModalVistaPrevia({cot, onClose}){
 
   }
     y+=18;
-    doc.text("ÔÜá  SIN PILOTO: Veh├¡culo entregado con tanque lleno ÔÇö debe devolverse con tanque lleno.",32,y+8);
+    doc.text("⚠️  SIN PILOTO: Vehículo entregado con tanque lleno — debe devolverse con tanque lleno.",32,y+8);
     doc.setTextColor(146,64,14); doc.setFontSize(7.2); doc.setFont("helvetica","bold");
     doc.setFillColor(...AMBER); doc.rect(22,y,3,13,"F");
     doc.setFillColor(255,248,231); doc.roundedRect(22,y,W-44,13,3,3,"F");
@@ -2635,20 +2635,20 @@ function ModalVistaPrevia({cot, onClose}){
     sl.slice(0,3).forEach((ln,i)=>doc.text(ln,22,y+(i*10)));
     const sl=doc.splitTextToSize(d.servicio,W-44);
     doc.setTextColor(...DKGRAY); doc.setFontSize(8); doc.setFont("helvetica","italic");
-    doc.text("DESCRIPCI├ôN DEL SERVICIO",30,y+8); y+=16;
+    doc.text("DESCRIPCIÓN DEL SERVICIO",30,y+8); y+=16;
     doc.setTextColor(27,45,92); doc.setFontSize(8.5); doc.setFont("helvetica","bold");
     doc.setFillColor(...TEAL2); doc.rect(22,y,3,12,"F");
   if(d.servicio){
-  // Descripci├│n
+  // Descripción
 
   y+=58;
   introL.slice(0,3).forEach((ln,i)=>doc.text(ln,32,y+25+(i*9)));
   const introL=doc.splitTextToSize(intro,W-88);
-  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de veh├¡culos, viajes de turismo y traslado de personas en Guatemala y Centroam├®rica. Con mucho gusto le presentamos la siguiente cotizaci├│n:";
+  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de vehículos, viajes de turismo y traslado de personas en Guatemala y Centroamérica. Con mucho gusto le presentamos la siguiente cotización:";
   doc.setTextColor(...DKGRAY); doc.setFontSize(7.8); doc.setFont("helvetica","normal");
   doc.text(saludoLines[0].slice(0, 80), 32, y+13);
   const saludoLines = doc.splitTextToSize(saludoText, W-70);
-  const saludoText = (d.saludo||"Estimados se├▒ores de "+(d.cliente||"")) + ":";
+  const saludoText = (d.saludo||"Estimados señores de "+(d.cliente||"")) + ":";
   doc.setTextColor(27,45,92); doc.setFontSize(9); doc.setFont("helvetica","bold");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,46,"F");
   doc.setFillColor(232,245,240); doc.roundedRect(22,y,W-44,46,4,4,"F");
@@ -2670,12 +2670,12 @@ function ModalVistaPrevia({cot, onClose}){
   let y = 110;
 
   doc.setDrawColor(...TEAL); doc.setLineWidth(2); doc.line(0,92,W,92);
-  doc.text("V├ílida hasta: "+(d.fecha_vence||"15 d├¡as"),W-20,72,{align:"right"});
-  doc.text("Emisi├│n:      "+d.fecha,W-20,61,{align:"right"});
+  doc.text("Válida hasta: "+(d.fecha_vence||"15 días"),W-20,72,{align:"right"});
+  doc.text("Emisión:      "+d.fecha,W-20,61,{align:"right"});
   doc.setTextColor(148,163,184); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
   doc.text("# "+d.numero,W-20,48,{align:"right"});
   doc.setTextColor(...WHITE); doc.setFontSize(10);
-  doc.text(d.es_orden?"ORDEN DE VENTA":"COTIZACI├ôN",W-20,33,{align:"right"});
+  doc.text(d.es_orden?"ORDEN DE VENTA":"COTIZACIÓN",W-20,33,{align:"right"});
   doc.setTextColor(0,212,170); doc.setFontSize(20); doc.setFont("helvetica","bold");
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas",100,72);
   doc.text("2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala",100,61);
@@ -2694,9 +2694,9 @@ function ModalVistaPrevia({cot, onClose}){
   const HP = doc.internal.pageSize.getHeight();
   const W = doc.internal.pageSize.getWidth();
   const doc = new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
-  if(!jsPDF){alert("jsPDF no carg├│. Intenta de nuevo en unos segundos.");return;}
+  if(!jsPDF){alert("jsPDF no cargó. Intenta de nuevo en unos segundos.");return;}
   const {jsPDF} = window.jspdf;
-  if(!window.jspdf){alert("PDF no disponible. Recarga la p├ígina e intenta de nuevo.");return null;}
+  if(!window.jspdf){alert("PDF no disponible. Recarga la página e intenta de nuevo.");return null;}
 function generarPDF(d){
 
 }
@@ -2706,7 +2706,7 @@ function generarPDF(d){
         </div>
           ))}
             </div>
-              <div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"ÔÇö"} ┬À {c.tipo}</div>
+              <div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"—"} · {c.tipo}</div>
               <div style={{fontWeight:600,color:T.txt}}>{c.nombre}</div>
               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
               onMouseEnter={e=>e.currentTarget.style.background=T.accDim}
@@ -2755,17 +2755,17 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
     </div>
       </div>
         </div>
-          TzununSA ┬À Acceso exclusivo para personal autorizado
+          TzununSA · Acceso exclusivo para personal autorizado
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: T.mut }}>
 
         </div>
           </div>
-            Ve a Supabase ÔåÆ Authentication ÔåÆ Users ÔåÆ Invite user y agrega el correo de cada empleado. Ellos recibir├ín un correo para crear su contrase├▒a.
+            Ve a Supabase → Authentication → Users → Invite user y agrega el correo de cada empleado. Ellos recibirán un correo para crear su contraseña.
             <div style={{ fontWeight: 600, color: T.mut, marginBottom: 4 }}>┬┐PRIMER ACCESO?</div>
           <div style={{ marginTop: 20, padding: "12px 14px", background: T.surf, borderRadius: 8, fontSize: 12, color: T.sub }}>
 
           </button>
-            {loading ? "Verificando..." : "Entrar ÔåÆ"}
+            {loading ? "Verificando..." : "Entrar →"}
           >
             style={{ width: "100%", padding: "13px", background: loading ? T.mut : T.acc, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#0A0F1E", cursor: loading ? "not-allowed" : "pointer" }}
             disabled={loading}
@@ -2789,23 +2789,23 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
               type="email" value={email} onChange={e => setEmail(e.target.value)}
               style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
             <input
-            <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CORREO ELECTR├ôNICO</label>
+            <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CORREO ELECTRÓNICO</label>
           <div style={{ marginBottom: 14 }}>
 
           )}
             </div>
-              ÔØî {error}
+              ❌ {error}
             <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>
           {error && (
 
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.txt, marginBottom: 24, textAlign: "center" }}>Iniciar sesi├│n</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.txt, marginBottom: 24, textAlign: "center" }}>Iniciar sesión</div>
         <div style={{ background: T.card, border: `1px solid ${T.bord}`, borderRadius: 16, padding: 32 }}>
         {/* Card login */}
 
         </div>
-          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gesti├│n Integral</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gestión Integral</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.acc }}>Tz'unun AutoRentas</div>
-          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>­ƒÉª</div>
+          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>🐦</div>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
         {/* Logo */}
       <div style={{ width: "100%", maxWidth: 420 }}>
@@ -2815,10 +2815,10 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
   };
     setLoading(false);
     }
-      setError("Error de conexi├│n. Verifica tu internet.");
+      setError("Error de conexión. Verifica tu internet.");
     } catch {
       }
-        setError("Correo o contrase├▒a incorrectos");
+        setError("Correo o contraseña incorrectos");
       } else {
         onLogin(data.access_token, data.user);
         localStorage.setItem("tzunun_user", JSON.stringify({ email: data.user?.email, name: data.user?.user_metadata?.name || data.user?.email }));
@@ -2830,7 +2830,7 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
     setLoading(true);
     }
       return;
-      setError("Ingresa tu correo y contrase├▒a");
+      setError("Ingresa tu correo y contraseña");
     if (!email.trim() || !password.trim()) {
   const handleLogin = async () => {
 
@@ -2849,7 +2849,7 @@ function LoginScreen({ onLogin }) {
           )}
             </>
               </button>
-                {loading ? "Guardando..." : "Crear contrase├▒a ÔåÆ"}
+                {loading ? "Guardando..." : "Crear contraseña →"}
                 style={{ width: "100%", padding: "13px", background: loading ? T.mut : T.acc, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#0A0F1E", cursor: loading ? "not-allowed" : "pointer" }}>
               <button onClick={handleSet} disabled={loading}
               </div>
@@ -2861,18 +2861,18 @@ function LoginScreen({ onLogin }) {
               </div>
                   type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó" />
                 <input style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-                <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>NUEVA CONTRASE├æA (m├¡nimo 8 caracteres)</label>
+                <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>NUEVA CONTRASE├æA (mínimo 8 caracteres)</label>
               <div style={{ marginBottom: 14 }}>
-              {error && <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>ÔØî {error}</div>}
+              {error && <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>❌ {error}</div>}
             <>
           ) : (
             <div style={{ textAlign: "center", fontSize: 16, color: T.acc, padding: 20 }}>{msg}</div>
           {msg ? (
         <div style={{ background: T.card, border: `1px solid ${T.bord}`, borderRadius: 16, padding: 32 }}>
         </div>
-          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Tz'unun AutoRentas ÔÇö Primer acceso</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T.acc }}>Crear contrase├▒a</div>
-          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>­ƒÉª</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Tz'unun AutoRentas — Primer acceso</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.acc }}>Crear contraseña</div>
+          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>🐦</div>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
     <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: T.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -2881,15 +2881,15 @@ function LoginScreen({ onLogin }) {
   };
     setLoading(false);
     }
-      setError("Error al guardar. Pide una nueva invitaci├│n.");
+      setError("Error al guardar. Pide una nueva invitación.");
     } else {
       setTimeout(onDone, 2000);
-      setMsg("Ô£à Contrase├▒a creada. Ya puedes iniciar sesi├│n.");
+      setMsg("✅ Contraseña creada. Ya puedes iniciar sesión.");
     if (data.id) {
     const data = await sbSetPassword(token, pwd);
     setLoading(true); setError("");
-    if (pwd !== pwd2) { setError("Las contrase├▒as no coinciden"); return; }
-    if (pwd.length < 8) { setError("La contrase├▒a debe tener al menos 8 caracteres"); return; }
+    if (pwd !== pwd2) { setError("Las contraseñas no coinciden"); return; }
+    if (pwd.length < 8) { setError("La contraseña debe tener al menos 8 caracteres"); return; }
   const handleSet = async () => {
 
   const [error, setError] = useState("");
@@ -2907,7 +2907,7 @@ function SetPasswordScreen({ token, onDone }) {
     method: "PUT",
   const r = await fetch(`${SB}/auth/v1/user`, {
 async function sbSetPassword(token, newPassword) {
-// ÔöÇÔöÇ PANTALLA: CREAR/CAMBIAR CONTRASE├æA (desde link de invitaci├│n) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ PANTALLA: CREAR/CAMBIAR CONTRASE├æA (desde link de invitación) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 
 }
@@ -2941,51 +2941,51 @@ async function sbSignIn(email, password) {
   "oscar@tzununautorentas.com",
 const USERS_ALLOWED = [
 // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
-// AUTENTICACI├ôN ÔÇö Login con Supabase Auth
+// AUTENTICACIÓN — Login con Supabase Auth
 // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 ];
-  {d:"Jocotan Chiquimula",km:210,dias:1},{d:"Zacualpa Quich├®",km:210,dias:1},
+  {d:"Jocotan Chiquimula",km:210,dias:1},{d:"Zacualpa Quiché",km:210,dias:1},
   {d:"Playa El Tunco El Salvador",km:275,dias:1},{d:"Suchitoto El Salvador",km:253,dias:1},
-  {d:"Nebaj Quich├®",km:235,dias:1},{d:"Chisec Alta Verapaz",km:350,dias:1},
-  {d:"Totonicap├ín",km:185,dias:1},{d:"Zacapa",km:160,dias:1},
-  {d:"Tecp├ín",km:93,dias:1},{d:"Tikal Pet├®n",km:536,dias:1},
-  {d:"Solol├í",km:145,dias:1},{d:"Suchitep├®quez",km:164,dias:1},
+  {d:"Nebaj Quiché",km:235,dias:1},{d:"Chisec Alta Verapaz",km:350,dias:1},
+  {d:"Totonicapán",km:185,dias:1},{d:"Zacapa",km:160,dias:1},
+  {d:"Tecpán",km:93,dias:1},{d:"Tikal Petén",km:536,dias:1},
+  {d:"Sololá",km:145,dias:1},{d:"Suchitepéquez",km:164,dias:1},
   {d:"Santa Rosa",km:57,dias:1},{d:"Semuc Champey",km:300,dias:1},
   {d:"San Marcos",km:284,dias:1},{d:"San Pedro La Laguna",km:180,dias:1},
-  {d:"San Jos├® / Iztapa",km:115,dias:1},{d:"San Lucas Sacatep├®quez",km:25,dias:1},
-  {d:"Ruinas Cop├ín Honduras",km:235,dias:1},{d:"Sacatep├®quez",km:45,dias:1},
-  {d:"R├¡o Dulce",km:300,dias:1},{d:"R├¡o Hondo Zacapa",km:145,dias:1},
+  {d:"San José / Iztapa",km:115,dias:1},{d:"San Lucas Sacatepéquez",km:25,dias:1},
+  {d:"Ruinas Copán Honduras",km:235,dias:1},{d:"Sacatepéquez",km:45,dias:1},
+  {d:"Río Dulce",km:300,dias:1},{d:"Río Hondo Zacapa",km:145,dias:1},
   {d:"Rabinal Baja Verapaz",km:185,dias:1},{d:"Retalhuleu",km:200,dias:1},
-  {d:"Quich├® (Sta. Cruz)",km:269,dias:1},{d:"Quirigu├í",km:215,dias:1},
+  {d:"Quiché (Sta. Cruz)",km:269,dias:1},{d:"Quiriguá",km:215,dias:1},
   {d:"Puerto Barrios",km:315,dias:1},{d:"Quetzaltenango",km:210,dias:1},
-  {d:"Panajachel",km:140,dias:1},{d:"Pet├®n (Flores)",km:525,dias:1},
+  {d:"Panajachel",km:140,dias:1},{d:"Petén (Flores)",km:525,dias:1},
   {d:"Livingston",km:300,dias:1},{d:"Monterrico",km:140,dias:1},
   {d:"Jalapa",km:112,dias:1},{d:"Jutiapa",km:205,dias:1},
-  {d:"Ixc├ín Quich├®",km:385,dias:1},{d:"Izabal",km:245,dias:1},
+  {d:"Ixcán Quiché",km:385,dias:1},{d:"Izabal",km:245,dias:1},
   {d:"Huehuetenango",km:275,dias:1},{d:"Irtra Retalhuleu",km:190,dias:1},
-  {d:"Flores Pet├®n",km:520,dias:1},{d:"Frontera Mesilla",km:320,dias:1},
+  {d:"Flores Petén",km:520,dias:1},{d:"Frontera Mesilla",km:320,dias:1},
   {d:"Esquipulas",km:215,dias:1},{d:"Escuintla",km:68,dias:1},
   {d:"El Estor Izabal",km:590,dias:1},{d:"El Progreso",km:135,dias:1},
-  {d:"Cob├ín",km:215,dias:1},{d:"Coatep├®que",km:225,dias:1},
+  {d:"Cobán",km:215,dias:1},{d:"Coatepéque",km:225,dias:1},
   {d:"Chimaltenango",km:110,dias:1},{d:"Chiquimula",km:180,dias:1},
   {d:"Champerico",km:230,dias:1},{d:"Chichicastenango",km:150,dias:1},
   {d:"Antigua Guatemala",km:40,dias:1},{d:"Baja Verapaz",km:165,dias:1},
 const RUTAS=[
 // ÔòÉÔòÉÔòÉ TABLA DE RUTAS Y DISTANCIAS (de tarifario Tz'unun) ÔòÉÔòÉÔòÉ
 
-const FLUJO_RES={pendiente:[{v:"confirmada",l:"Ô£ô Confirmar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],confirmada:[{v:"en_curso",l:"ÔûÂ Iniciar",s:"blue"},{v:"cancelada",l:"Ô£ù",s:"danger"}],en_curso:[{v:"completada",l:"Ô£ô Completar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"Ôå║",s:"ghost"}]};
+const FLUJO_RES={pendiente:[{v:"confirmada",l:"Ô£ô Confirmar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],confirmada:[{v:"en_curso",l:"ÔûÂ Iniciar",s:"blue"},{v:"cancelada",l:"Ô£ù",s:"danger"}],en_curso:[{v:"completada",l:"Ô£ô Completar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"↺",s:"ghost"}]};
 const EST_FAC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},emitida:{c:T.blue,bg:T.blueDim,l:"Emitida"},certificada:{c:T.acc,bg:T.accDim,l:"Certificada"},pagada:{c:T.acc,bg:T.accDim,l:"Pagada"},parcial:{c:T.sec,bg:T.secDim,l:"Pago parcial"},anulada:{c:T.red,bg:T.redDim,l:"Anulada"}};
 const EST_VEH={disponible:{c:T.acc,bg:T.accDim,l:"Disponible"},rentado:{c:T.blue,bg:T.blueDim,l:"Rentado"},mantenimiento:{c:T.sec,bg:T.secDim,l:"Mantenim."}};
 const EST_RES={pendiente:{c:T.mut,bg:"#1E293B",l:"Pendiente"},confirmada:{c:T.acc,bg:T.accDim,l:"Confirmada"},en_curso:{c:T.blue,bg:T.blueDim,l:"En curso"},completada:{c:T.acc,bg:T.accDim,l:"Completada"},cancelada:{c:T.red,bg:T.redDim,l:"Cancelada"}};
 const CAT_COLOR={combustible:T.sec,mantenimiento:T.blue,seguros:T.purple,salarios:T.green,impuestos:T.red,servicios:T.acc,llantas:T.blue,repuestos:T.sec,hospedaje:"#06B6D4",alimentacion:"#EC4899",peajes:T.sec,oficina:T.mut,otros:T.sub};
 const CAT_GASTO=["combustible","mantenimiento","seguros","salarios","impuestos","servicios","llantas","repuestos","hospedaje","alimentacion","peajes","oficina","otros"];
-const CATALOGO=[{id:"c1",nombre:"Hyundai Verna (Sed├ín)",tipo:"Sed├ín",dia:300,sem:275,mes:250},{id:"c2",nombre:"Toyota RAV4 H├¡brida (SUV)",tipo:"SUV",dia:600,sem:575,mes:550},{id:"c3",nombre:"Suzuki XL7 3 filas (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c4",nombre:"Suzuki Jimny 5p 4x4 (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c5",nombre:"Mitsubishi L200 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c6",nombre:"Mahindra Pikup 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c7",nombre:"Nissan Urvan Wide 16p",tipo:"Microb├║s",dia:750,sem:700,mes:650},{id:"c8",nombre:"Bus tipo County",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c9",nombre:"Bus tipo Pullman",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c10",nombre:"Bus Escolar",tipo:"Bus",dia:600,sem:550,mes:500}];
-const GT={"Guatemala":["Guatemala","Mixco","Villa Nueva","San Miguel Petapa","Chinautla","Palencia","Fraijanes","Amatitl├ín"],"Alta Verapaz":["Cob├ín","San Pedro Carch├í","Tactic","Panz├│s","Senah├║","Lanqu├¡n","Cahab├│n","Chisec","Raxruh├í"],"Baja Verapaz":["Salam├í","Rabinal","Cubulco","Granados","San Jer├│nimo","Purulh├í"],"Chimaltenango":["Chimaltenango","Comalapa","Tecp├ín","Patz├║n","Patzic├¡a","Acatenango","Yepocapa"],"Chiquimula":["Chiquimula","Jocot├ín","Camot├ín","Olopa","Esquipulas","Quezaltepeque"],"El Progreso":["Guastatoya","Moraz├ín","San Agust├¡n Acasaguastl├ín","Sanarate"],"Escuintla":["Escuintla","Santa Luc├¡a Cotzumalguapa","Tiquisate","La Gomera","San Jos├®","Iztapa"],"Huehuetenango":["Huehuetenango","Chiantla","Cuilco","Jacaltenango","San Pedro Soloma","Todos Santos","Barillas"],"Izabal":["Puerto Barrios","Livingston","El Estor","Morales"],"Jalapa":["Jalapa","San Pedro Pinula","Monjas","Mataquescuintla"],"Jutiapa":["Jutiapa","Santa Catarina Mita","Asunci├│n Mita","Jalpatagua","Moyuta"],"Pet├®n":["Flores","San Benito","San Andr├®s","La Libertad","Dolores","San Luis","Sayaxch├®","Popt├║n"],"Quetzaltenango":["Quetzaltenango","Salcaj├í","Ostuncalco","Almolonga","Cantel","Zunil","Coatepeque"],"Quich├®":["Santa Cruz del Quich├®","Chichicastenango","Cun├®n","Nebaj","Sacapulas","Uspant├ín","Ixc├ín"],"Retalhuleu":["Retalhuleu","San Sebasti├ín","San Mart├¡n Zapotitl├ín","Champerico"],"Sacatep├®quez":["Antigua Guatemala","Jocotenango","Sumpango","San Lucas Sacatep├®quez","Ciudad Vieja"],"San Marcos":["San Marcos","Comitancillo","Tacan├í","Tajumulco","Malacat├ín","Catarina","Ayutla"],"Santa Rosa":["Cuilapa","Barberena","Casillas","Chiquimulilla","Taxisco"],"Solol├í":["Solol├í","Nahual├í","Panajachel","San Lucas Tolim├ín","Santiago Atitl├ín"],"Suchitep├®quez":["Mazatenango","Cuyotenango","Santo Domingo Suchitep├®quez","Chicacao"],"Totonicap├ín":["Totonicap├ín","San Crist├│bal Totonicap├ín","San Francisco El Alto","Momostenango"],"Zacapa":["Zacapa","Estanzuela","R├¡o Hondo","Gual├ín","Teculut├ín"]};
+const CATALOGO=[{id:"c1",nombre:"Hyundai Verna (Sedán)",tipo:"Sedán",dia:300,sem:275,mes:250},{id:"c2",nombre:"Toyota RAV4 Híbrida (SUV)",tipo:"SUV",dia:600,sem:575,mes:550},{id:"c3",nombre:"Suzuki XL7 3 filas (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c4",nombre:"Suzuki Jimny 5p 4x4 (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c5",nombre:"Mitsubishi L200 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c6",nombre:"Mahindra Pikup 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c7",nombre:"Nissan Urvan Wide 16p",tipo:"Microbús",dia:750,sem:700,mes:650},{id:"c8",nombre:"Bus tipo County",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c9",nombre:"Bus tipo Pullman",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c10",nombre:"Bus Escolar",tipo:"Bus",dia:600,sem:550,mes:500}];
+const GT={"Guatemala":["Guatemala","Mixco","Villa Nueva","San Miguel Petapa","Chinautla","Palencia","Fraijanes","Amatitlán"],"Alta Verapaz":["Cobán","San Pedro Carchá","Tactic","Panzós","Senahú","Lanquín","Cahabón","Chisec","Raxruhá"],"Baja Verapaz":["Salamá","Rabinal","Cubulco","Granados","San Jerónimo","Purulhá"],"Chimaltenango":["Chimaltenango","Comalapa","Tecpán","Patzún","Patzicía","Acatenango","Yepocapa"],"Chiquimula":["Chiquimula","Jocotán","Camotán","Olopa","Esquipulas","Quezaltepeque"],"El Progreso":["Guastatoya","Morazán","San Agustín Acasaguastlán","Sanarate"],"Escuintla":["Escuintla","Santa Lucía Cotzumalguapa","Tiquisate","La Gomera","San José","Iztapa"],"Huehuetenango":["Huehuetenango","Chiantla","Cuilco","Jacaltenango","San Pedro Soloma","Todos Santos","Barillas"],"Izabal":["Puerto Barrios","Livingston","El Estor","Morales"],"Jalapa":["Jalapa","San Pedro Pinula","Monjas","Mataquescuintla"],"Jutiapa":["Jutiapa","Santa Catarina Mita","Asunción Mita","Jalpatagua","Moyuta"],"Petén":["Flores","San Benito","San Andrés","La Libertad","Dolores","San Luis","Sayaxché","Poptún"],"Quetzaltenango":["Quetzaltenango","Salcajá","Ostuncalco","Almolonga","Cantel","Zunil","Coatepeque"],"Quiché":["Santa Cruz del Quiché","Chichicastenango","Cunén","Nebaj","Sacapulas","Uspantán","Ixcán"],"Retalhuleu":["Retalhuleu","San Sebastián","San Martín Zapotitlán","Champerico"],"Sacatepéquez":["Antigua Guatemala","Jocotenango","Sumpango","San Lucas Sacatepéquez","Ciudad Vieja"],"San Marcos":["San Marcos","Comitancillo","Tacaná","Tajumulco","Malacatán","Catarina","Ayutla"],"Santa Rosa":["Cuilapa","Barberena","Casillas","Chiquimulilla","Taxisco"],"Sololá":["Sololá","Nahualá","Panajachel","San Lucas Tolimán","Santiago Atitlán"],"Suchitepéquez":["Mazatenango","Cuyotenango","Santo Domingo Suchitepéquez","Chicacao"],"Totonicapán":["Totonicapán","San Cristóbal Totonicapán","San Francisco El Alto","Momostenango"],"Zacapa":["Zacapa","Estanzuela","Río Hondo","Gualán","Teculután"]};
 function Empty({icon,msg,action,onAction}){return <div style={{...S.card,textAlign:"center",padding:40,color:T.sub}}><div style={{fontSize:32,marginBottom:10}}>{icon}</div><div>{msg}</div>{action&&<button onClick={onAction} style={{...S.btn("primary"),marginTop:14,fontSize:12}}>{action}</button>}</div>;}
 function Fld({label,children,span2}){return <div style={span2?{gridColumn:"span 2"}:{}}><label style={S.lbl}>{label}</label>{children}</div>;}
-function Spinner(){return <div style={{textAlign:"center",padding:36,color:T.sub}}>ÔÅ│ Cargando...</div>;}
-function Toast({msg,type}){if(!msg)return null;const c=type==="ok"?T.acc:T.red;return <div style={{background:T.card,border:`1px solid ${c}`,borderRadius:10,padding:"11px 18px",fontSize:13,color:c,fontWeight:600,marginBottom:14}}>{type==="ok"?"Ô£à":"ÔØî"} {msg}</div>;}
+function Spinner(){return <div style={{textAlign:"center",padding:36,color:T.sub}}>⏳ Cargando...</div>;}
+function Toast({msg,type}){if(!msg)return null;const c=type==="ok"?T.acc:T.red;return <div style={{background:T.card,border:`1px solid ${c}`,borderRadius:10,padding:"11px 18px",fontSize:13,color:c,fontWeight:600,marginBottom:14}}>{type==="ok"?"✅":"❌"} {msg}</div>;}
 function Badge({color,bg,label,small}){return <span style={{display:"inline-block",padding:small?"2px 7px":"3px 10px",borderRadius:20,fontSize:small?10:11,fontWeight:600,color,background:bg}}>{label}</span>;}
 async function dbDel(t,id){try{await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:"DELETE",headers:H});}catch{}}
 async function dbUpd(t,id,d){try{const r=await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:"PATCH",headers:{...H,Prefer:"return=representation"},body:JSON.stringify(d)});return r.json();}catch{return null;}}
@@ -3003,9 +3003,9 @@ const today=()=>new Date().toISOString().slice(0,10);
     if(s instanceof Date){d=s;}
     let d;
   try{
-  if(!s||s==="Invalid Date"||s==="null"||s==="undefined")return"ÔÇö";
+  if(!s||s==="Invalid Date"||s==="null"||s==="undefined")return"—";
 const fmtD=s=>{
-const fmtK=n=>n>=1000?`Q ${(n/1000).toFixed(1)}k`:`Q ${fmt(n)}`;
+
 const fmt=n=>new Intl.NumberFormat("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const T={bg:"#0A0F1E",surf:"#111827",card:"#162032",bord:"#1E3A5F",acc:"#00D4AA",accDim:"#00D4AA22",sec:"#F59E0B",secDim:"#F59E0B22",red:"#EF4444",redDim:"#EF444422",blue:"#3B82F6",blueDim:"#3B82F622",purple:"#A855F7",purpleDim:"#A855F722",green:"#22C55E",greenDim:"#22C55E22",txt:"#F1F5F9",mut:"#64748B",sub:"#94A3B8"};
 const H={apikey:SK,Authorization:`Bearer ${SK}`,"Content-Type":"application/json"};
@@ -3025,7 +3025,7 @@ import React, { useState, useEffect, useRef } from "react";
       </div>
         </div>
           </div>
-            <button onClick={()=>guardar("enviada")} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"Guardando...":"Ô£à Guardar y enviar cotizaci├│n"}</button>
+            <button onClick={()=>guardar("enviada")} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"Guardando...":"✅ Guardar y enviar cotización"}</button>
             <button onClick={()=>guardar("borrador")} disabled={saving} style={{...S.btn("ghost"),width:"100%",marginBottom:8}}>{saving?"Guardando...":"­ƒÆ¥ Guardar como borrador"}</button>
           <div style={S.card}>
           </div>
@@ -3047,9 +3047,9 @@ import React, { useState, useEffect, useRef } from "react";
                   <Row l={"Aliment. (├ù"+d2+"d)"} v={"Q "+fmt(aT)}/>
                   <Row l={"Hospedaje (├ù"+d2+"d)"} v={"Q "+fmt(hT)}/>
                   <Row l={"Piloto (├ù"+d2+"d)"} v={"Q "+fmt(pT)}/>
-                  <Row l={"Veh├¡culo (├ù"+d2+"d)"} v={"Q "+fmt(vT)}/>
+                  <Row l={"Vehículo (├ù"+d2+"d)"} v={"Q "+fmt(vT)}/>
                 <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-                {tf.ruta&&<div style={{fontSize:12,color:T.acc,marginBottom:8}}>­ƒôì {tf.ruta} ┬À {Math.round(tkm)} km totales</div>}
+                {tf.ruta&&<div style={{fontSize:12,color:T.acc,marginBottom:8}}>­ƒôì {tf.ruta} · {Math.round(tkm)} km totales</div>}
               <>
             ):(
               </>
@@ -3064,12 +3064,12 @@ import React, { useState, useEffect, useRef } from "react";
                   {conTC&&<Row l="Recargo tarjeta (5%)" v={"Q "+fmt(recTC)} color={T.sec}/>}
                   <Row l={"IVA "+iva+"%"} v={"Q "+fmt(ivaAmt)}/>
                   <Row l="Subtotal" v={"Q "+fmt(sub)}/>
-                  <Row l="Tarifa" v={"Q "+fmt(rate)+"/d├¡a"}/>
+                  <Row l="Tarifa" v={"Q "+fmt(rate)+"/día"}/>
                 <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-                {selVeh&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {selVeh.nombre} ┬À {dias} d├¡a{dias!==1?"s":""}</div>}
+                {selVeh&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {selVeh.nombre} · {dias} día{dias!==1?"s":""}</div>}
               <>
             {tab==="renta"?(
-            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen del presupuesto</div>
+            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen del presupuesto</div>
           <div style={S.card}>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
         {/* RESUMEN */}
@@ -3077,12 +3077,12 @@ import React, { useState, useEffect, useRef } from "react";
           )}
             </div>
               </div>
-                <label htmlFor="conTC2" style={{fontSize:13,color:T.sub,cursor:"pointer"}}>­ƒÆ│ Incluir opci├│n con tarjeta (+5%)</label>
+                <label htmlFor="conTC2" style={{fontSize:13,color:T.sub,cursor:"pointer"}}>­ƒÆ│ Incluir opción con tarjeta (+5%)</label>
                 <input type="checkbox" id="conTC2" checked={tf.conTC} onChange={e=>stf("conTC",e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/>
               <div style={{gridColumn:"span 2",display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
               </Fld>
                 </div>
-                  <button onClick={()=>stf("pago","transferencia")} style={{...S.btn(tf.pago==="transferencia"?"primary":"ghost"),flex:1}}>­ƒÅª Transf.</button>
+                  <button onClick={()=>stf("pago","transferencia")} style={{...S.btn(tf.pago==="transferencia"?"primary":"ghost"),flex:1}}>🏦 Transf.</button>
                   <button onClick={()=>stf("pago","efectivo")} style={{...S.btn(tf.pago==="efectivo"?"primary":"ghost"),flex:1}}>­ƒÆÁ Efectivo</button>
                 <div style={{display:"flex",gap:8}}>
               <Fld label="PAGO" span2>
@@ -3095,16 +3095,16 @@ import React, { useState, useEffect, useRef } from "react";
               <Fld label="GASTOS VARIOS"><input style={S.inp} type="number" value={tf.varios} onChange={e=>stf("varios",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="KM REGRESO"><input style={S.inp} type="number" value={tf.kmr} onChange={e=>stf("kmr",e.target.value)} placeholder="0"/></Fld>
               <Fld label="KM IDA"><input style={S.inp} type="number" value={tf.kmi} onChange={e=>stf("kmi",e.target.value)} placeholder="0"/></Fld>
-              <Fld label="KM POR GAL├ôN"><input style={S.inp} type="number" value={tf.kpg} onChange={e=>stf("kpg",e.target.value)} placeholder="27"/></Fld>
-              <Fld label="PRECIO GAL├ôN (Q)"><input style={S.inp} type="number" value={tf.galon} onChange={e=>stf("galon",e.target.value)} placeholder="48"/></Fld>
-              <Fld label="ALIMENTACI├ôN/D├ìA"><input style={S.inp} type="number" value={tf.ali} onChange={e=>stf("ali",e.target.value)} placeholder="0.00"/></Fld>
+              <Fld label="KM POR GALÓN"><input style={S.inp} type="number" value={tf.kpg} onChange={e=>stf("kpg",e.target.value)} placeholder="27"/></Fld>
+              <Fld label="PRECIO GALÓN (Q)"><input style={S.inp} type="number" value={tf.galon} onChange={e=>stf("galon",e.target.value)} placeholder="48"/></Fld>
+              <Fld label="ALIMENTACIÓN/D├ìA"><input style={S.inp} type="number" value={tf.ali} onChange={e=>stf("ali",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="HOSPEDAJE/D├ìA"><input style={S.inp} type="number" value={tf.hos} onChange={e=>stf("hos",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="COSTO PILOTO/D├ìA"><input style={S.inp} type="number" value={tf.pil} onChange={e=>stf("pil",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="COSTO VEH├ìCULO/D├ìA"><input style={S.inp} type="number" value={tf.veh} onChange={e=>stf("veh",e.target.value)} placeholder="0.00"/></Fld>
               <Fld label="D├ìAS"><input style={S.inp} type="number" value={tf.dias} onChange={e=>stf("dias",e.target.value)}/></Fld>
               </Fld>
                 </select>
-                  {RUTAS.map(r=><option key={r.d} value={r.d}>{r.d} ÔÇö {r.km} km ┬À {r.dias}d</option>)}
+                  {RUTAS.map(r=><option key={r.d} value={r.d}>{r.d} — {r.km} km · {r.dias}d</option>)}
                   <option value="">Seleccionar destino...</option>
                 }}>
                   else stf("ruta",e.target.value);
@@ -3119,12 +3119,12 @@ import React, { useState, useEffect, useRef } from "react";
           ):(
             </div>
               </div>
-                <label htmlFor="conTC" style={{fontSize:13,color:T.sub,cursor:"pointer"}}>­ƒÆ│ Incluir opci├│n de pago con tarjeta (+5%)</label>
+                <label htmlFor="conTC" style={{fontSize:13,color:T.sub,cursor:"pointer"}}>­ƒÆ│ Incluir opción de pago con tarjeta (+5%)</label>
                 <input type="checkbox" id="conTC" checked={conTC} onChange={e=>setConTC(e.target.checked)} style={{width:18,height:18,cursor:"pointer"}}/>
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0"}}>
               </Fld>
                 </div>
-                  <button onClick={()=>setPago("transferencia")} style={{...S.btn(pago==="transferencia"?"primary":"ghost"),flex:1}}>­ƒÅª Transf.</button>
+                  <button onClick={()=>setPago("transferencia")} style={{...S.btn(pago==="transferencia"?"primary":"ghost"),flex:1}}>🏦 Transf.</button>
                   <button onClick={()=>setPago("efectivo")} style={{...S.btn(pago==="efectivo"?"primary":"ghost"),flex:1}}>­ƒÆÁ Efectivo</button>
                 <div style={{display:"flex",gap:8}}>
               <Fld label="M├ëTODO DE PAGO">
@@ -3132,13 +3132,13 @@ import React, { useState, useEffect, useRef } from "react";
               </Fld>
                 </select>
                   <option value={0}>Sin IVA</option>
-                  <option value={5}>5% Peque├▒o Contribuyente</option>
-                  <option value={12}>12% R├®gimen General</option>
+                  <option value={5}>5% Pequeño Contribuyente</option>
+                  <option value={12}>12% Régimen General</option>
                 <select style={S.sel} value={iva} onChange={e=>setIva(parseInt(e.target.value))}>
               <Fld label="IVA">
               </Fld>
                 </select>
-                  {CATALOGO.map(v=><option key={v.id} value={v.id}>{v.nombre} ÔÇö Q{fmt(v.dia)}/d├¡a</option>)}
+                  {CATALOGO.map(v=><option key={v.id} value={v.id}>{v.nombre} — Q{fmt(v.dia)}/día</option>)}
                   <option value="">Seleccionar...</option>
                 <select style={S.sel} value={selVeh?.id||""} onChange={e=>setSelVeh(CATALOGO.find(v=>v.id===e.target.value)||null)}>
               <Fld label="VEH├ìCULO">
@@ -3154,7 +3154,7 @@ import React, { useState, useEffect, useRef } from "react";
       </div>
         ))}
           <button key={t.id} onClick={()=>setTab(t.id)} style={{...S.btn(tab===t.id?"primary":"ghost")}}>{t.l}</button>
-        {[{id:"renta",l:"­ƒöæ Renta por d├¡as"},{id:"traslado",l:"­ƒù║ Traslado/Viaje"}].map(t=>(
+        {[{id:"renta",l:"­ƒöæ Renta por días"},{id:"traslado",l:"­ƒù║ Traslado/Viaje"}].map(t=>(
       <div style={{display:"flex",gap:8,marginBottom:16}}>
     <div>
   return(
@@ -3164,7 +3164,7 @@ import React, { useState, useEffect, useRef } from "react";
   };
     setSaving(false);
     else{showToast("Error al guardar","err");}
-    if(r&&!r.error){showToast(estado==="enviada"?"Cotizaci├│n guardada Ô£ö":"Borrador guardado Ô£ö");}
+    if(r&&!r.error){showToast(estado==="enviada"?"Cotización guardada ✔":"Borrador guardado ✔");}
     const r=await dbIns("cotizaciones",p);
     const p={empresa_id:empId,tipo:tab,cliente_nombre:cn,numero:"COT-"+Date.now().toString().slice(-6),dias:tab==="renta"?dias:d2,tasa_iva:tab==="renta"?iva:parseFloat(tf.iva)||5,metodo_pago:tab==="renta"?pago:tf.pago,tasa_cambio:tab==="renta"?exch:parseFloat(tf.exch)||7.70,subtotal:tab==="renta"?sub:tsub,total_iva:tab==="renta"?ivaAmt:tiva,recargo_tarjeta:tab==="renta"?recTC:ttcr,total_gtq:tab==="renta"?tot:ttot,total_usd:(tab==="renta"?tot:ttot)/(tab==="renta"?exch:parseFloat(tf.exch)||7.70),vehiculo_nombre:selVeh?.nombre||"",estado,km_ida:kmi,km_regreso:kmr,costo_vehiculo:parseFloat(tf.veh)||0,costo_piloto:parseFloat(tf.pil)||0,costo_hospedaje:parseFloat(tf.hos)||0,costo_alimentacion:parseFloat(tf.ali)||0,precio_galon:parseFloat(tf.galon)||0,km_por_galon:parseFloat(tf.kpg)||0,gastos_varios:misc};
     setSaving(true);
@@ -3219,7 +3219,7 @@ export default function PageCalculadora({showToast,empId}){
             </div>
               </div>
                 <button onClick={()=>setShowNew(false)} style={{...S.btn("ghost"),flex:1,fontSize:11,padding:"6px"}}>Cancelar</button>
-                <button onClick={agregarCliente} disabled={saving} style={{...S.btn("primary"),flex:1,fontSize:11,padding:"6px"}}>{saving?"...":"Ô£ö Guardar"}</button>
+                <button onClick={agregarCliente} disabled={saving} style={{...S.btn("primary"),flex:1,fontSize:11,padding:"6px"}}>{saving?"...":"✔ Guardar"}</button>
               <div style={{display:"flex",gap:6}}>
               </select>
                 <option value="persona">Persona</option>
@@ -3303,27 +3303,27 @@ function ClienteBuscador({value,onChange,empId}){
       </div>}
         </div>
           </div>
-            {[{v:12,l:"12% ÔÇö R├®gimen General"},{v:5,l:"5% ÔÇö Peque├▒o Contribuyente"},{v:0,l:"Sin IVA"}].map(o=><button key={o.v} onClick={()=>setIva(o.v)} style={{...S.btn(iva===o.v?"primary":"ghost"),textAlign:"left"}}>{o.l}</button>)}
+            {[{v:12,l:"12% — Régimen General"},{v:5,l:"5% — Pequeño Contribuyente"},{v:0,l:"Sin IVA"}].map(o=><button key={o.v} onClick={()=>setIva(o.v)} style={{...S.btn(iva===o.v?"primary":"ghost"),textAlign:"left"}}>{o.l}</button>)}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒº¥ R├®gimen Fiscal</div>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>🧾 Régimen Fiscal</div>
         <div style={S.card}>
         </div>
           <div style={{display:"flex",justifyContent:"space-between",marginTop:10,padding:"10px 14px",background:T.surf,borderRadius:9,fontSize:14}}><span style={{color:T.sub}}>1 USD =</span><span style={{fontWeight:800,color:T.acc}}>Q {fmt(exch)}</span></div>
           <input style={{...S.inp,fontSize:20,fontWeight:700,color:T.acc}} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/>
           <label style={S.lbl}>GTQ POR 1 USD</label>
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒÆ▒ Tasa de Cambio del D├¡a</div>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒÆ▒ Tasa de Cambio del Día</div>
         <div style={S.card}>
       {tab==="fiscal"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
       </div>}
-        <div style={{marginTop:10,fontSize:11,color:T.mut}}>* 1-7 d├¡as = diaria ┬À 8-29 d├¡as = semanal ┬À 30+ d├¡as = mensual</div>
+        <div style={{marginTop:10,fontSize:11,color:T.mut}}>* 1-7 días = diaria · 8-29 días = semanal · 30+ días = mensual</div>
         </table>
           </tr>)}</tbody>
-            <td style={S.td}><div style={{display:"flex",gap:4}}>{editId===v.id?<><button onClick={saveEdit} style={{...S.btn("primary"),padding:"4px 9px",fontSize:11}}>Ô£ö</button><button onClick={()=>setEditId(null)} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£ò</button></>:<><button onClick={()=>{setEditId(v.id);setEditVals({...v});}} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£Å´©Å</button><button onClick={()=>delVeh(v.id)} style={{...S.btn("danger"),padding:"4px 9px",fontSize:11}}>­ƒùæ´©Å</button></>}</div></td>
+            <td style={S.td}><div style={{display:"flex",gap:4}}>{editId===v.id?<><button onClick={saveEdit} style={{...S.btn("primary"),padding:"4px 9px",fontSize:11}}>✔</button><button onClick={()=>setEditId(null)} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£ò</button></>:<><button onClick={()=>{setEditId(v.id);setEditVals({...v});}} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£Å´©Å</button><button onClick={()=>delVeh(v.id)} style={{...S.btn("danger"),padding:"4px 9px",fontSize:11}}>­ƒùæ´©Å</button></>}</div></td>
             {["dia","sem","mes"].map(c=><td key={c} style={{...S.td,fontWeight:700,color:T.acc}}>{editId===v.id?<input style={{...S.inp,padding:"5px 8px",fontSize:12,width:80}} type="number" value={editVals[c]} onChange={e=>setEditVals(p=>({...p,[c]:parseFloat(e.target.value)||0}))}/>:`Q ${fmt(v[c])}`}</td>)}
             <td style={S.td}>{editId===v.id?<select style={{...S.sel,padding:"5px 8px",fontSize:12}} value={editVals.tipo} onChange={e=>setEditVals(p=>({...p,tipo:e.target.value}))}>{TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select>:v.tipo}</td>
             <td style={{...S.td,fontWeight:600}}>{editId===v.id?<input style={{...S.inp,padding:"5px 8px",fontSize:12}} value={editVals.nombre} onChange={e=>setEditVals(p=>({...p,nombre:e.target.value}))}/>:v.nombre}</td>
           <tbody>{catalogo.map(v=><tr key={v.id}>
-          <thead><tr>{["Veh├¡culo","Tipo","Q/D├¡a","Q/Semana","Q/Mes",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Vehículo","Tipo","Q/Día","Q/Semana","Q/Mes",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
         </div>}
           <button onClick={addVeh} style={{...S.btn("primary"),padding:"9px 14px",alignSelf:"flex-end"}}>+</button>
@@ -3334,15 +3334,15 @@ function ClienteBuscador({value,onChange,empId}){
           <Fld label="NOMBRE"><input style={S.inp} value={newVeh.nombre} onChange={e=>setNewVeh(p=>({...p,nombre:e.target.value}))} placeholder="Nombre..."/></Fld>
         {showNewVeh&&<div style={{background:T.surf,borderRadius:10,padding:14,marginBottom:14,display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr auto",gap:10,alignItems:"flex-end"}}>
         </div>
-          <button onClick={()=>setShowNewVeh(!showNewVeh)} style={{...S.btn(showNewVeh?"warn":"primary"),fontSize:12}}>{showNewVeh?"Cancelar":"+ Agregar veh├¡culo"}</button>
-          <div style={{fontSize:13,fontWeight:700}}>Cat├ílogo y Tarifas</div>
+          <button onClick={()=>setShowNewVeh(!showNewVeh)} style={{...S.btn(showNewVeh?"warn":"primary"),fontSize:12}}>{showNewVeh?"Cancelar":"+ Agregar vehículo"}</button>
+          <div style={{fontSize:13,fontWeight:700}}>Catálogo y Tarifas</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
       {tab==="tarifas"&&<div style={S.card}>
       </div>}
         </div>
           </div>
-            <div>­ƒÅª Banrural ÔÇö 3309159475</div>
-            <div>­ƒÅª Banco Industrial ÔÇö 853-000016-8</div>
+            <div>🏦 Banrural — 3309159475</div>
+            <div>🏦 Banco Industrial — 853-000016-8</div>
           <div style={{...S.card,marginTop:12,background:T.surf,fontSize:12,color:T.sub,lineHeight:2}}>
           </div>
             </div>
@@ -3361,7 +3361,7 @@ function ClienteBuscador({value,onChange,empId}){
         </div>
           </div>
             <div style={{gridColumn:"span 2"}}><button onClick={guardarEmp} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"Guardando...":"­ƒÆ¥ Guardar"}</button></div>
-            <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={emp.direccion||""} onChange={e=>se("direccion",e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3"/></Fld>
+            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={emp.direccion||""} onChange={e=>se("direccion",e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3"/></Fld>
             <Fld label="EMAIL" span2><input style={S.inp} value={emp.email||""} onChange={e=>se("email",e.target.value)} placeholder="tzununautorentas@gmail.com"/></Fld>
             <Fld label="TEL├ëFONO"><input style={S.inp} value={emp.telefono||""} onChange={e=>se("telefono",e.target.value)} placeholder="502-31221538"/></Fld>
             <Fld label="NIT"><input style={S.inp} value={emp.nit||""} onChange={e=>se("nit",e.target.value)} placeholder="16693949"/></Fld>
@@ -3371,36 +3371,36 @@ function ClienteBuscador({value,onChange,empId}){
         <div style={S.card}>
       {tab==="empresa"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       </div>
-        {[{id:"empresa",l:"­ƒÅó Empresa"},{id:"tarifas",l:"­ƒÆ░ Tarifas"},{id:"fiscal",l:"­ƒº¥ Fiscal"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 16px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+        {[{id:"empresa",l:"­ƒÅó Empresa"},{id:"tarifas",l:"💰 Tarifas"},{id:"fiscal",l:"🧾 Fiscal"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 16px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:20}}>
     <div>
   return(
-  const addVeh=()=>{if(!newVeh.nombre.trim()){showToast("Nombre requerido","err");return;}setCatalogo(p=>[...p,{...newVeh,id:`c${Date.now()}`,dia:parseFloat(newVeh.dia)||0,sem:parseFloat(newVeh.sem)||0,mes:parseFloat(newVeh.mes)||0}]);setNewVeh({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});setShowNewVeh(false);showToast("Agregado Ô£ö");};
+  const addVeh=()=>{if(!newVeh.nombre.trim()){showToast("Nombre requerido","err");return;}setCatalogo(p=>[...p,{...newVeh,id:`c${Date.now()}`,dia:parseFloat(newVeh.dia)||0,sem:parseFloat(newVeh.sem)||0,mes:parseFloat(newVeh.mes)||0}]);setNewVeh({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});setShowNewVeh(false);showToast("Agregado ✔");};
   const delVeh=id=>{if(!confirm("┬┐Eliminar?"))return;setCatalogo(p=>p.filter(v=>v.id!==id));};
-  const saveEdit=()=>{setCatalogo(p=>p.map(v=>v.id===editId?{...v,...editVals}:v));setEditId(null);showToast("Tarifa actualizada Ô£ö");};
+  const saveEdit=()=>{setCatalogo(p=>p.map(v=>v.id===editId?{...v,...editVals}:v));setEditId(null);showToast("Tarifa actualizada ✔");};
   const se=(k,v)=>setEmp(p=>({...p,[k]:v}));
-  const guardarEmp=async()=>{if(!emp.nombre?.trim()){showToast("Nombre requerido","err");return;}setSaving(true);if(empId)await dbUpd("empresas",empId,{nombre:emp.nombre,nit:emp.nit,direccion:emp.direccion,telefono:emp.telefono,email:emp.email});showToast("Guardado Ô£ö");setSaving(false);};
+  const guardarEmp=async()=>{if(!emp.nombre?.trim()){showToast("Nombre requerido","err");return;}setSaving(true);if(empId)await dbUpd("empresas",empId,{nombre:emp.nombre,nit:emp.nit,direccion:emp.direccion,telefono:emp.telefono,email:emp.email});showToast("Guardado ✔");setSaving(false);};
   useEffect(()=>{dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0]){setEmp(d[0]);setEmpId(d[0].id);}});},[]);
-  const TIPOS=["Sed├ín","SUV","Pickup","Van","Microb├║s","Bus"];
+  const TIPOS=["Sedán","SUV","Pickup","Van","Microbús","Bus"];
   const [showNewVeh,setShowNewVeh]=useState(false);const [newVeh,setNewVeh]=useState({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});
   const [editId,setEditId]=useState(null);const [editVals,setEditVals]=useState({});
   const [catalogo,setCatalogo]=useState(CATALOGO.map(v=>({...v})));
   const [exch,setExch]=useState(7.70);const [iva,setIva]=useState(5);
   const [tab,setTab]=useState("empresa");const [emp,setEmp]=useState({});const [empId,setEmpId]=useState(null);const [saving,setSaving]=useState(false);
 function PageConfiguracion({showToast}){
-// ÔòÉÔòÉÔòÉ CONFIGURACI├ôN ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ CONFIGURACIÓN ÔòÉÔòÉÔòÉ
 
 }
   );
     </div>
       {loading?<Spinner/>:data&&<>{tab==="ventas"&&<ReporteVentas data={data}/>}{tab==="flota"&&<ReporteFlota data={data}/>}{tab==="gastos"&&<ReporteGastos data={data}/>}{tab==="clientes"&&<ReporteClientes data={data}/>}</>}
       </div>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║ Actualizar</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺ Actualizar</button>
         {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
     <div>
   return(
-  const TABS=[{id:"ventas",l:"­ƒôè Ventas"},{id:"flota",l:"­ƒÜù Flota"},{id:"gastos",l:"­ƒÆ© Gastos"},{id:"clientes",l:"­ƒæÑ Clientes"}];
+  const TABS=[{id:"ventas",l:"📊 Ventas"},{id:"flota",l:"🚗 Flota"},{id:"gastos",l:"🛍️ Gastos"},{id:"clientes",l:"👥 Clientes"}];
   };
     setLoading(false);
     setData({vehiculos:Array.isArray(vehiculos)?vehiculos:[],reservas:Array.isArray(reservas)?reservas:[],cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],facturas:Array.isArray(facturas)?facturas:[],gastos:Array.isArray(gastos)?gastos:[],clientes:Array.isArray(clientes)?clientes:[],movimientos:Array.isArray(movimientos)?movimientos:[]});
@@ -3418,7 +3418,7 @@ function PageReportes(){
       {tab==="proveedores"&&<ModProveedores empId={empId} showToast={(m,tp)=>{showToast(m,tp);reloadProv();}}/>}
       {tab==="gastos"&&<ModGastos empId={empId} proveedores={proveedores} showToast={showToast}/>}
       </div>
-        {[{id:"gastos",l:"­ƒÆ© Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+        {[{id:"gastos",l:"🛍️ Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
       <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
     <div>
   return(
@@ -3436,11 +3436,11 @@ function PageGastos({showToast,empId}){
           </>}
             )}
               </tbody></table></div>
-              <tbody>{movsFil.map(m=><tr key={m.id}><td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(m.fecha)}</td><td style={{...S.td,maxWidth:180}}><div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:175}}>{m.descripcion}</div>{m.referencia&&<div style={{fontSize:9,color:T.mut}}>{m.referencia}</div>}</td><td style={S.td}><span style={{padding:"2px 6px",borderRadius:8,fontSize:10,fontWeight:600,background:(CC[m.categoria]||T.mut)+"22",color:CC[m.categoria]||T.mut}}>{m.categoria}</span></td><td style={{...S.td,fontWeight:700,color:m.tipo==="ingreso"?T.acc:T.red,whiteSpace:"nowrap"}}>{m.tipo==="ingreso"?"+ ":"ÔêÆ "}Q {fmt(m.monto)}</td><td style={S.td}><button onClick={()=>conciliar(m.id,!m.conciliado)} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,padding:0}}>{m.conciliado?"Ô£à":"Ô¼£"}</button></td><td style={S.td}><button onClick={async()=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("movimientos_bancarios",m.id);loadMovs(cuentaAct.id);}} style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}}>­ƒùæ´©Å</button></td></tr>)}
-              <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Fecha","Descripci├│n","Cat.","Monto","Ô£ô",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <tbody>{movsFil.map(m=><tr key={m.id}><td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(m.fecha)}</td><td style={{...S.td,maxWidth:180}}><div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:175}}>{m.descripcion}</div>{m.referencia&&<div style={{fontSize:9,color:T.mut}}>{m.referencia}</div>}</td><td style={S.td}><span style={{padding:"2px 6px",borderRadius:8,fontSize:10,fontWeight:600,background:(CC[m.categoria]||T.mut)+"22",color:CC[m.categoria]||T.mut}}>{m.categoria}</span></td><td style={{...S.td,fontWeight:700,color:m.tipo==="ingreso"?T.acc:T.red,whiteSpace:"nowrap"}}>{m.tipo==="ingreso"?"+ ":"ÔêÆ "}Q {fmt(m.monto)}</td><td style={S.td}><button onClick={()=>conciliar(m.id,!m.conciliado)} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,padding:0}}>{m.conciliado?"✅":"Ô¼£"}</button></td><td style={S.td}><button onClick={async()=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("movimientos_bancarios",m.id);loadMovs(cuentaAct.id);}} style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}}>­ƒùæ´©Å</button></td></tr>)}
+              <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Fecha","Descripción","Cat.","Monto","Ô£ô",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             {movsFil.length===0?<Empty icon="­ƒÆ│" msg="Sin movimientos" action="+ Registrar" onAction={()=>setShowForm(true)}/>:(
             </div>
-              {["todos","conciliado","pendiente"].map(t=><button key={t} onClick={()=>setFiltroC(t)} style={{...S.btn(filtroC===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todo":t==="conciliado"?"Ô£à Conciliados":"ÔÅ│ Pendientes"}</button>)}
+              {["todos","conciliado","pendiente"].map(t=><button key={t} onClick={()=>setFiltroC(t)} style={{...S.btn(filtroC===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todo":t==="conciliado"?"✅ Conciliados":"⏳ Pendientes"}</button>)}
               {["todos","ingreso","egreso"].map(t=><button key={t} onClick={()=>setFiltroT(t)} style={{...S.btn(filtroT===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todos":t==="ingreso"?"Ô¼å Ingresos":"Ô¼ç Egresos"}</button>)}
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
             </div>}
@@ -3450,7 +3450,7 @@ function PageGastos({showToast,empId}){
                 <Fld label="REFERENCIA"><input style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="N┬░ factura..."/></Fld>
                 <Fld label="CATEGOR├ìA"><select style={S.sel} value={f.categoria} onChange={e=>sf("categoria",e.target.value)}>{CATS.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}</select></Fld>
                 <Fld label="MONTO (GTQ)"><input style={S.inp} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/></Fld>
-                <Fld label="DESCRIPCI├ôN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Descripci├│n..."/></Fld>
+                <Fld label="DESCRIPCIÓN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Descripción..."/></Fld>
                 <Fld label="TIPO"><div style={{display:"flex",gap:8}}><button onClick={()=>sf("tipo","ingreso")} style={{...S.btn(f.tipo==="ingreso"?"primary":"ghost"),flex:1,fontSize:12}}>Ô¼å Ingreso</button><button onClick={()=>sf("tipo","egreso")} style={{...S.btn(f.tipo==="egreso"?"danger":"ghost"),flex:1,fontSize:12}}>Ô¼ç Egreso</button></div></Fld>
                 <Fld label="FECHA"><input style={S.inp} type="date" value={f.fecha} onChange={e=>sf("fecha",e.target.value)}/></Fld>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
@@ -3465,21 +3465,21 @@ function PageGastos({showToast,empId}){
           {cuentaAct&&<>
         <div>
         </div>
-          {loading?<Spinner/>:cuentas.length===0?<Empty icon="­ƒÅª" msg="Sin cuentas registradas"/>:cuentas.map(c=><div key={c.id} onClick={()=>setCuentaAct(c)} style={{...S.card,cursor:"pointer",border:`1px solid ${cuentaAct?.id===c.id?T.acc:T.bord}`,marginBottom:10,background:cuentaAct?.id===c.id?T.accDim:T.card}}><div style={{fontSize:13,fontWeight:700}}>{c.banco}</div><div style={{fontSize:11,color:T.sub}}>{c.numero_cuenta} ┬À {c.moneda}</div><div style={{fontSize:18,fontWeight:800,color:T.acc,marginTop:8}}>Q {fmt(c.saldo_actual)}</div></div>)}
+          {loading?<Spinner/>:cuentas.length===0?<Empty icon="🏦" msg="Sin cuentas registradas"/>:cuentas.map(c=><div key={c.id} onClick={()=>setCuentaAct(c)} style={{...S.card,cursor:"pointer",border:`1px solid ${cuentaAct?.id===c.id?T.acc:T.bord}`,marginBottom:10,background:cuentaAct?.id===c.id?T.accDim:T.card}}><div style={{fontSize:13,fontWeight:700}}>{c.banco}</div><div style={{fontSize:11,color:T.sub}}>{c.numero_cuenta} · {c.moneda}</div><div style={{fontSize:18,fontWeight:800,color:T.acc,marginTop:8}}>Q {fmt(c.saldo_actual)}</div></div>)}
           <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>MIS CUENTAS</div>
         <div>
       <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:18}}>
       </div>
         {[{l:"Saldo total GTQ",v:`Q ${fmt(saldoGTQ)}`,c:T.acc,bg:T.accDim},{l:"Ingresos",v:`Q ${fmt(ing)}`,c:T.acc,bg:T.accDim},{l:"Sin conciliar",v:movs.filter(m=>!m.conciliado).length,c:T.sec,bg:T.secDim}].map((s,i)=><div key={i} style={{background:s.bg,border:`1px solid ${s.c}44`,borderRadius:12,padding:"14px 18px"}}><div style={{fontSize:11,color:T.mut}}>{s.l}</div><div style={{fontSize:20,fontWeight:800,color:s.c,marginTop:4}}>{s.v}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
-      {exportar&&<ModalExportar titulo="Movimientos Bancarios" datos={movs} campos={[{label:"Fecha",key:"fecha"},{label:"Descripci├│n",key:"descripcion"},{label:"Categor├¡a",key:"categoria"},{label:"Tipo",key:"tipo"},{label:"Monto",key:"monto"},{label:"Referencia",key:"referencia"},{label:"Conciliado",key:"conciliado"}]} onClose={()=>setExportar(false)}/>}
+      {exportar&&<ModalExportar titulo="Movimientos Bancarios" datos={movs} campos={[{label:"Fecha",key:"fecha"},{label:"Descripción",key:"descripcion"},{label:"Categoría",key:"categoria"},{label:"Tipo",key:"tipo"},{label:"Monto",key:"monto"},{label:"Referencia",key:"referencia"},{label:"Conciliado",key:"conciliado"}]} onClose={()=>setExportar(false)}/>}
     <div>
   return(
   const saldoGTQ=cuentas.filter(c=>c.moneda==="GTQ").reduce((s,c)=>s+(parseFloat(c.saldo_actual)||0),0);
   const ing=movs.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+(parseFloat(m.monto)||0),0);
   const movsFil=movs.filter(m=>{if(filtroT!=="todos"&&m.tipo!==filtroT)return false;if(filtroC==="conciliado"&&!m.conciliado)return false;if(filtroC==="pendiente"&&m.conciliado)return false;return true;});
   const conciliar=async(id,val)=>{await dbUpd("movimientos_bancarios",id,{conciliado:val});loadMovs(cuentaAct.id);};
-  const guardarMov=async()=>{if(!f.descripcion.trim()||!(parseFloat(f.monto)>0)){showToast("Descripci├│n y monto requeridos","err");return;}setSaving(true);await dbIns("movimientos_bancarios",{empresa_id:empId,cuenta_id:cuentaAct.id,fecha:f.fecha,tipo:f.tipo,descripcion:f.descripcion,monto:parseFloat(f.monto),referencia:f.referencia,categoria:f.categoria,conciliado:f.conciliado,notas:f.notas});showToast("Guardado Ô£ö");setSaving(false);setShowForm(false);setF({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});loadMovs(cuentaAct.id);};
+  const guardarMov=async()=>{if(!f.descripcion.trim()||!(parseFloat(f.monto)>0)){showToast("Descripción y monto requeridos","err");return;}setSaving(true);await dbIns("movimientos_bancarios",{empresa_id:empId,cuenta_id:cuentaAct.id,fecha:f.fecha,tipo:f.tipo,descripcion:f.descripcion,monto:parseFloat(f.monto),referencia:f.referencia,categoria:f.categoria,conciliado:f.conciliado,notas:f.notas});showToast("Guardado ✔");setSaving(false);setShowForm(false);setF({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});loadMovs(cuentaAct.id);};
   useEffect(()=>{if(cuentaAct)loadMovs(cuentaAct.id);},[cuentaAct?.id]);
   const loadMovs=async(cid)=>{if(!cid)return;const m=await dbGet("movimientos_bancarios",`&cuenta_id=eq.${cid}`);setMovs(Array.isArray(m)?m:[]);};
   const loadCuentas=async()=>{setLoading(true);const c=await dbGet("cuentas_bancarias");const arr=Array.isArray(c)?c:[];setCuentas(arr);if(arr.length>0){const first=arr[0];setCuentaAct(first);}setLoading(false);};
@@ -3497,48 +3497,48 @@ function PageBanca({showToast,empId}){
     </div>
       )}
         </tbody></table></div>
-        <tbody>{filtered.map(r=>{const e=EST_FAC[r.estado]||EST_FAC.borrador;const saldo=parseFloat(r.saldo_pendiente)||0;const ant=parseFloat(r.anticipo_aplicado)||0;return <tr key={r.id}><td style={S.td}><div style={{fontFamily:"monospace",fontSize:11,color:T.acc,fontWeight:700}}>{r.numero}</div><div style={{fontSize:10,color:T.mut}}>{fmtD(r.fecha_emision)}</div>{r.numero_autorizacion&&<div style={{fontSize:9,color:T.acc}}>Ô£ô DTE</div>}{r.motivo_anulacion&&<div style={{fontSize:9,color:T.red}}>ÔÜá {r.motivo_anulacion.slice(0,20)}</div>}</td><td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{r.nombre_receptor}</div><div style={{fontSize:10,color:T.mut}}>{r.nit_receptor}</div></td><td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.total)}</td><td style={{...S.td,color:ant>0?T.acc:T.mut,fontSize:12}}>{ant>0?"Q "+fmt(ant):"ÔÇö"}</td><td style={{...S.td,fontWeight:700,color:saldo>0?T.sec:T.acc}}>{r.estado==="anulada"?"ÔÇö":"Q "+fmt(saldo)}</td><td style={S.td}><Badge color={e.c} bg={e.bg} label={e.l} small/></td><td style={S.td}><div style={{display:"flex",flexDirection:"column",gap:4,minWidth:90}}>{r.estado==="emitida"&&<button onClick={()=>{setAuthFac(r);setAuthId("");}} style={{...S.btn("blue"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒöÉ DTE</button>}{["emitida","certificada","parcial"].includes(r.estado)&&<button onClick={()=>setMPago(r)} style={{...S.btn("primary"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒÆ░ Pago</button>}{r.estado!=="anulada"&&<button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),padding:"3px 7px",fontSize:10,width:"100%"}}>Ô£Å´©Å</button>}{!["anulada","pagada"].includes(r.estado)&&<button onClick={()=>setMAnular(r)} style={{...S.btn("danger"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒÜ½</button>}</div></td></tr>;})}
+        <tbody>{filtered.map(r=>{const e=EST_FAC[r.estado]||EST_FAC.borrador;const saldo=parseFloat(r.saldo_pendiente)||0;const ant=parseFloat(r.anticipo_aplicado)||0;return <tr key={r.id}><td style={S.td}><div style={{fontFamily:"monospace",fontSize:11,color:T.acc,fontWeight:700}}>{r.numero}</div><div style={{fontSize:10,color:T.mut}}>{fmtD(r.fecha_emision)}</div>{r.numero_autorizacion&&<div style={{fontSize:9,color:T.acc}}>Ô£ô DTE</div>}{r.motivo_anulacion&&<div style={{fontSize:9,color:T.red}}>⚠️ {r.motivo_anulacion.slice(0,20)}</div>}</td><td style={S.td}><div style={{fontWeight:600,fontSize:12}}>{r.nombre_receptor}</div><div style={{fontSize:10,color:T.mut}}>{r.nit_receptor}</div></td><td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.total)}</td><td style={{...S.td,color:ant>0?T.acc:T.mut,fontSize:12}}>{ant>0?"Q "+fmt(ant):"—"}</td><td style={{...S.td,fontWeight:700,color:saldo>0?T.sec:T.acc}}>{r.estado==="anulada"?"—":"Q "+fmt(saldo)}</td><td style={S.td}><Badge color={e.c} bg={e.bg} label={e.l} small/></td><td style={S.td}><div style={{display:"flex",flexDirection:"column",gap:4,minWidth:90}}>{r.estado==="emitida"&&<button onClick={()=>{setAuthFac(r);setAuthId("");}} style={{...S.btn("blue"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒöÉ DTE</button>}{["emitida","certificada","parcial"].includes(r.estado)&&<button onClick={()=>setMPago(r)} style={{...S.btn("primary"),padding:"3px 7px",fontSize:10,width:"100%"}}>💰 Pago</button>}{r.estado!=="anulada"&&<button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),padding:"3px 7px",fontSize:10,width:"100%"}}>Ô£Å´©Å</button>}{!["anulada","pagada"].includes(r.estado)&&<button onClick={()=>setMAnular(r)} style={{...S.btn("danger"),padding:"3px 7px",fontSize:10,width:"100%"}}>­ƒÜ½</button>}</div></td></tr>;})}
         <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Factura","Cliente","Total","Anticipo","Saldo","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-      {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒº¥" msg="Sin facturas"/>:(
+      {loading?<Spinner/>:filtered.length===0?<Empty icon="🧾" msg="Sin facturas"/>:(
       </div>
                 <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
         <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>­ƒôñ Exportar</button>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
         {["todas","borrador","emitida","certificada","parcial","pagada","anulada"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
       </div>
         {[{l:"Total",v:rows.length,c:T.acc},{l:"Emitidas",v:rows.filter(r=>r.estado==="emitida").length,c:T.blue},{l:"Facturado",v:`Q ${fmt(tFac).split(".")[0]}`,c:T.purple},{l:"Saldos pend.",v:`Q ${fmt(tSaldo).split(".")[0]}`,c:tSaldo>0?T.sec:T.acc}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:i>=2?13:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
-      {authFac&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:460,padding:24}}><div style={{fontSize:14,fontWeight:700,color:T.acc,marginBottom:10}}>­ƒöÉ Registrar No. DTE</div><input style={{...S.inp,fontFamily:"monospace",marginBottom:14}} value={authId} onChange={e=>setAuthId(e.target.value)} placeholder="UUID SAT..."/><div style={{display:"flex",gap:8}}><button onClick={regAuth} style={{...S.btn("primary"),flex:1}}>Ô£à Certificar</button><button onClick={()=>{setAuthFac(null);setAuthId("");}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button></div></div></div>}
+      {authFac&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:460,padding:24}}><div style={{fontSize:14,fontWeight:700,color:T.acc,marginBottom:10}}>­ƒöÉ Registrar No. DTE</div><input style={{...S.inp,fontFamily:"monospace",marginBottom:14}} value={authId} onChange={e=>setAuthId(e.target.value)} placeholder="UUID SAT..."/><div style={{display:"flex",gap:8}}><button onClick={regAuth} style={{...S.btn("primary"),flex:1}}>✅ Certificar</button><button onClick={()=>{setAuthFac(null);setAuthId("");}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button></div></div></div>}
       <ModalPago factura={mPago} onConfirm={(mo,fe,me)=>regPago(mPago,mo,fe,me)} onCancel={()=>setMPago(null)}/>
       <ModalAnular factura={mAnular} onConfirm={m=>anular(mAnular,m)} onCancel={()=>setMAnular(null)}/>
       {exportar&&<ModalExportar titulo="Facturas" datos={rows} campos={[{label:"N┬░",key:"numero"},{label:"Cliente",key:"nombre_receptor"},{label:"NIT",key:"nit_receptor"},{label:"Fecha",key:"fecha_emision"},{label:"Total",key:"total"},{label:"Saldo",key:"saldo_pendiente"},{label:"Estado",key:"estado"}]} onClose={()=>setExportar(false)}/>}
     <div>
   return(
-  if(vista==="form")return <div><FormFactura initial={editItem} empId={empId} clientes={clientes} reservas={reservas} cotizaciones={cotizaciones} anticipos={anticipos} onSave={()=>{showToast("Guardada Ô£ö");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
+  if(vista==="form")return <div><FormFactura initial={editItem} empId={empId} clientes={clientes} reservas={reservas} cotizaciones={cotizaciones} anticipos={anticipos} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
   const tSaldo=rows.filter(r=>!["anulada","pagada"].includes(r.estado)).reduce((s,r)=>s+(parseFloat(r.saldo_pendiente)||0),0);
   const tFac=rows.filter(r=>!["anulada","borrador"].includes(r.estado)).reduce((s,r)=>s+(parseFloat(r.total)||0),0);
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro);
-  const regAuth=async()=>{if(!authId.trim()){showToast("Ingresa el No. autorizaci├│n","err");return;}await dbUpd("facturas",authFac.id,{numero_autorizacion:authId,estado:"certificada",fecha_certificacion:new Date().toISOString()});showToast("DTE certificado Ô£ö");setAuthFac(null);setAuthId("");load();};
-  const regPago=async(fac,monto,fecha,metodo)=>{const ns=Math.max(0,(parseFloat(fac.saldo_pendiente)||parseFloat(fac.total)||0)-monto);await dbUpd("facturas",fac.id,{saldo_pendiente:ns,estado:ns<=0?"pagada":"parcial",fecha_pago:fecha});await dbIns("movimientos_bancarios",{empresa_id:empId,fecha,tipo:"ingreso",descripcion:"Pago "+fac.numero+" ÔÇö "+fac.nombre_receptor,monto,referencia:fac.numero,categoria:"ventas",conciliado:true});showToast(ns<=0?"Pagada Ô£ö":"Pago parcial Ô£ö");setMPago(null);load();};
+  const regAuth=async()=>{if(!authId.trim()){showToast("Ingresa el No. autorización","err");return;}await dbUpd("facturas",authFac.id,{numero_autorizacion:authId,estado:"certificada",fecha_certificacion:new Date().toISOString()});showToast("DTE certificado ✔");setAuthFac(null);setAuthId("");load();};
+  const regPago=async(fac,monto,fecha,metodo)=>{const ns=Math.max(0,(parseFloat(fac.saldo_pendiente)||parseFloat(fac.total)||0)-monto);await dbUpd("facturas",fac.id,{saldo_pendiente:ns,estado:ns<=0?"pagada":"parcial",fecha_pago:fecha});await dbIns("movimientos_bancarios",{empresa_id:empId,fecha,tipo:"ingreso",descripcion:"Pago "+fac.numero+" — "+fac.nombre_receptor,monto,referencia:fac.numero,categoria:"ventas",conciliado:true});showToast(ns<=0?"Pagada ✔":"Pago parcial ✔");setMPago(null);load();};
   const anular=async(fac,mot)=>{await dbUpd("facturas",fac.id,{estado:"anulada",motivo_anulacion:mot});showToast("Anulada");setMAnular(null);load();};
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));dbGet("reservas","").then(d=>setReservas(Array.isArray(d)?d:[]));dbGet("cotizaciones","&estado=eq.aprobada").then(d=>setCotizaciones(Array.isArray(d)?d:[]));dbGet("movimientos_bancarios","&tipo=eq.ingreso").then(d=>setAnticipos(Array.isArray(d)?d:[]));load();},[]);
   };
     const w=window.open("","_blank");w.document.write(html);w.document.close();
     <script>window.onload=()=>window.print();</script></body></html>`;
     <div style="text-align:center;margin-top:12px;font-style:italic;color:#1B2D5C;font-size:11px"><em>Contribuyendo</em> juntos por Guatemala</div>
-    <div class="footer"><strong>Datos del certificador:</strong> Superintendencia de Administraci├│n Tributaria &nbsp; NIT: 16693949</div>
-    ${ivaPct===5?'<p style="font-size:9px;color:#64748B">* No genera derecho a cr├®dito fiscal</p>':""}
+    <div class="footer"><strong>Datos del certificador:</strong> Superintendencia de Administración Tributaria &nbsp; NIT: 16693949</div>
+    ${ivaPct===5?'<p style="font-size:9px;color:#64748B">* No genera derecho a crédito fiscal</p>':""}
     <tfoot><tr><td colspan="4"/><td class="right"><strong>TOTAL:</strong></td><td class="right"><strong>Q ${total.toFixed(2)}</strong></td></tr></tfoot></table>
     <tbody>${lineas.map((l,i)=>`<tr><td>${i+1}</td><td>${l.tipo||"Servicio"}</td><td class="right">${l.cantidad}</td><td>${l.descripcion}</td><td class="right">Q ${parseFloat(l.precio_unitario||0).toFixed(2)}</td><td class="right">Q ${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0)-(parseFloat(l.descuento)||0)).toFixed(2)}</td></tr>`).join("")}</tbody>
-    <table><thead><tr><th>#</th><th>B/S</th><th>Cant.</th><th>Descripci├│n</th><th class="right">P. Unitario</th><th class="right">Total</th></tr></thead>
+    <table><thead><tr><th>#</th><th>B/S</th><th>Cant.</th><th>Descripción</th><th class="right">P. Unitario</th><th class="right">Total</th></tr></thead>
     <div style="font-size:10px">NIT Receptor: ${r.nit_receptor||"CF"} &nbsp;|&nbsp; Nombre: <strong>${r.nombre_receptor}</strong> &nbsp;|&nbsp; Fecha: ${r.fecha_emision||""} &nbsp;|&nbsp; Moneda: GTQ</div>
     <hr/>
     </div>
-      <div class="autorizacion"><strong>N├ÜMERO DE AUTORIZACI├ôN:</strong><br/>${r.numero_autorizacion||"ÔÇö"}<br/>Serie: ${r.serie||"ÔÇö"} N├║mero DTE: ${r.numero_dte||"ÔÇö"}</div>
+      <div class="autorizacion"><strong>N├ÜMERO DE AUTORIZACIÓN:</strong><br/>${r.numero_autorizacion||"—"}<br/>Serie: ${r.serie||"—"} Número DTE: ${r.numero_dte||"—"}</div>
       <div class="emisor"><strong>VANESSA MAR├ìA, G├üLVEZ HERN├üNDEZ</strong><br/>Nit Emisor: 20160860<br/><strong>TRANSPORTES TZUNUN</strong><br/>6 AVENIDA 5-23 COLONIA LA CASTELLANA, zona 1, EL TEJAR, CHIMALTENANGO</div>
     <div style="display:flex;justify-content:space-between">
-    <div class="titulo">${ivaPct===5?"Factura Peque├▒o Contribuyente":"Factura"}</div>
+    <div class="titulo">${ivaPct===5?"Factura Pequeño Contribuyente":"Factura"}</div>
     const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${r.numero}</title><style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}.titulo{text-align:center;font-size:16px;font-weight:700;color:#1B2D5C;margin-bottom:8px}.emisor{color:#1B2D5C;font-size:10px;margin-bottom:4px}.right{text-align:right}.autorizacion{text-align:right;font-size:9px;color:#DC2626}table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10px}th{background:#1B2D5C;color:#fff;padding:5px 6px}td{padding:5px 6px;border-bottom:1px solid #E2E8F0}.footer{margin-top:10px;font-size:9px;color:#64748B;border-top:1px solid #E2E8F0;padding-top:6px}@media print{button{display:none}}</style></head><body>
     const total=parseFloat(r.total)||0;
     const ivaPct=parseFloat(r.tasa_iva)||5;
@@ -3548,7 +3548,7 @@ function PageBanca({showToast,empId}){
   const load=async()=>{setLoading(true);const d=await dbGet("facturas");setRows(Array.isArray(d)?d:[]);setLoading(false);};
   const [rows,setRows]=useState([]);const [clientes,setClientes]=useState([]);const [reservas,setReservas]=useState([]);const [cotizaciones,setCotizaciones]=useState([]);const [anticipos,setAnticipos]=useState([]);const [loading,setLoading]=useState(true);const [vista,setVista]=useState("lista");const [exportar,setExportar]=useState(false);const [editItem,setEditItem]=useState(null);const [filtro,setFiltro]=useState("todas");const [mAnular,setMAnular]=useState(null);const [mPago,setMPago]=useState(null);const [authFac,setAuthFac]=useState(null);const [authId,setAuthId]=useState("");
 function PageFacturacion({showToast,empId}){
-// ÔòÉÔòÉÔòÉ FACTURACI├ôN PAGE ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ FACTURACIÓN PAGE ÔòÉÔòÉÔòÉ
 
 }
   );
@@ -3560,23 +3560,23 @@ function PageFacturacion({showToast,empId}){
               </div>
                 </div>
                   <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"4px 9px",marginLeft:"auto"}}>­ƒùæ´©Å</button>
-                  {r.estado==="enviada"&&<button onClick={()=>chEst(r.id,"aprobada")} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>Ô£à</button>}
-                  {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>­ƒôª</button>}
+                  {r.estado==="enviada"&&<button onClick={()=>chEst(r.id,"aprobada")} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>✅</button>}
+                  {!r.orden_venta&&<button onClick={()=>chEst(r.id,"orden_venta")} style={{...S.btn("purple"),fontSize:11,padding:"4px 9px"}}>📦</button>}
                   <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£Å´©Å</button>
-                  <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>­ƒôï Clonar</button>
-                  <button onClick={()=>{const msg="Estimados, le comparto cotizaci├│n "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>­ƒÆ¼ WA</button>
-                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotizaci├│n "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotizaci├│n "+r.numero+" por Q "+fmt(total)+". Para m├ís informaci├│n: Oscar G├ílvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£ë´©Å</button>
+                  <button onClick={()=>{setEditItem({...r,__clon:true});setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>📋 Clonar</button>
+                  <button onClick={()=>{const msg="Estimados, le comparto cotización "+r.numero+" de Tz'unun AutoRentas por Q "+fmt(total)+". Para aprobar o consultar: 502-31221538";window.open("https://wa.me/?text="+encodeURIComponent(msg));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px",background:"#25D366",color:"white"}}>­ƒÆ¼ WA</button>
+                  <button onClick={()=>{window.open("mailto:?subject="+encodeURIComponent("Cotización "+r.numero)+"&body="+encodeURIComponent("Estimados, adjunto cotización "+r.numero+" por Q "+fmt(total)+". Para más información: Oscar Gálvez 502-31221538"));}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>Ô£ë´©Å</button>
                   <button onClick={()=>{const doc=makePDF();if(doc){const url=URL.createObjectURL(doc.output("blob"));const w=window.open(url);setTimeout(()=>w&&w.print(),1000);}}} style={{...S.btn("ghost"),fontSize:11,padding:"4px 9px"}}>­ƒû¿´©Å</button>
                   <button onClick={()=>{const doc=makePDF();if(doc)doc.save(r.numero+".pdf");}} style={{...S.btn("primary"),fontSize:11,padding:"4px 9px"}}>Ô¼ç PDF</button>
                   <button onClick={()=>setPreview(r)} style={{...S.btn("blue"),fontSize:11,padding:"4px 9px"}}>­ƒæü Ver</button>
                 <div style={{display:"flex",gap:5,paddingTop:10,borderTop:`1px solid ${T.bord}22`,flexWrap:"wrap"}}>
                 </div>
                   <div style={{textAlign:"right"}}><Badge color={e.c} bg={e.bg} label={e.l} small/><div style={{fontSize:15,fontWeight:700,color:T.acc,marginTop:4}}>Q {fmt(total)}</div></div>
-                  <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>{r.saludo&&<div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>"{r.saludo}"</div>}<div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {r.dias}d{r.vehiculo_nombre?" ┬À "+r.vehiculo_nombre:""}</div></div>
+                  <div><div style={{fontFamily:"monospace",fontSize:11,color:T.acc}}>{r.numero}</div><div style={{fontSize:14,fontWeight:700}}>{r.cliente_nombre}</div>{r.saludo&&<div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>"{r.saludo}"</div>}<div style={{fontSize:12,color:T.sub}}>{r.tipo==="renta"?"­ƒöæ":"­ƒù║"} {r.dias}d{r.vehiculo_nombre?" · "+r.vehiculo_nombre:""}</div></div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
               <div key={r.id} style={S.card}>
             return(
-            const makePDF=()=>generarPDF({numero:r.numero,fecha:r.fecha_emision||today(),fecha_vence:r.fecha_vence,cliente:r.cliente_nombre,nit:r.cliente_nit,dir_cliente:r.cliente_dir,saludo:r.saludo,servicio:r.descripcion_servicio,caract:r.caract||["Veh├¡culo","Aire acond.","Cinturones","Seguro"],incluidos:r.incluidos||["Combustible","Conductor","Atenci├│n"],beneficios:r.beneficios||["Viaje seguro","Puntualidad","Flexibilidad"],con_piloto:r.con_piloto!==false,sub:parseFloat(r.subtotal)||0,iva_pct:parseFloat(r.tasa_iva)||5,iva_amt:parseFloat(r.total_iva)||0,total_ef:total,total_tc:total*1.05,exch:parseFloat(r.tasa_cambio)||7.70,es_orden:r.orden_venta});
+            const makePDF=()=>generarPDF({numero:r.numero,fecha:r.fecha_emision||today(),fecha_vence:r.fecha_vence,cliente:r.cliente_nombre,nit:r.cliente_nit,dir_cliente:r.cliente_dir,saludo:r.saludo,servicio:r.descripcion_servicio,caract:r.caract||["Vehículo","Aire acond.","Cinturones","Seguro"],incluidos:r.incluidos||["Combustible","Conductor","Atención"],beneficios:r.beneficios||["Viaje seguro","Puntualidad","Flexibilidad"],con_piloto:r.con_piloto!==false,sub:parseFloat(r.subtotal)||0,iva_pct:parseFloat(r.tasa_iva)||5,iva_amt:parseFloat(r.total_iva)||0,total_ef:total,total_tc:total*1.05,exch:parseFloat(r.tasa_cambio)||7.70,es_orden:r.orden_venta});
             const total=parseFloat(r.total_gtq)||0;
             const e=r.orden_venta?EC.orden_venta:(EC[r.estado]||EC.borrador);
           {filtered.map(r=>{
@@ -3584,19 +3584,19 @@ function PageFacturacion({showToast,empId}){
       {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒô¡" msg="Sin cotizaciones"/>:(
       </div>
         <button onClick={()=>{setEditItem(null);setVista("form");}} style={{...S.btn("primary"),fontSize:12}}>+ Nueva</button>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║</button>
-        {["todas","borrador","enviada","aprobada","rechazada","orden_venta"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="orden_venta"?"­ƒôª ├ôrdenes":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>↺</button>
+        {["todas","borrador","enviada","aprobada","rechazada","orden_venta"].map(f=><button key={f} onClick={()=>setFiltro(f)} style={{...S.btn(filtro===f?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{f==="orden_venta"?"📦 Órdenes":f.charAt(0).toUpperCase()+f.slice(1)}</button>)}
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
       </div>
-        {[{l:"Total",v:rows.length,c:T.acc},{l:"Enviadas",v:rows.filter(r=>r.estado==="enviada").length,c:T.blue},{l:"Aprobadas",v:rows.filter(r=>r.estado==="aprobada").length,c:T.acc},{l:"├ôrdenes",v:rows.filter(r=>r.orden_venta).length,c:T.purple}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{l:"Total",v:rows.length,c:T.acc},{l:"Enviadas",v:rows.filter(r=>r.estado==="enviada").length,c:T.blue},{l:"Aprobadas",v:rows.filter(r=>r.estado==="aprobada").length,c:T.acc},{l:"Órdenes",v:rows.filter(r=>r.orden_venta).length,c:T.purple}].map((s,i)=><div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:18}}>
       {preview&&<ModalVistaPrevia cot={preview} onClose={()=>setPreview(null)}/>}
     <div>
   return(
-  if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} onSave={()=>{showToast("Guardada Ô£ö");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
+  if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
   const EC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},enviada:{c:T.blue,bg:T.blueDim,l:"Enviada"},aprobada:{c:T.acc,bg:T.accDim,l:"Aprobada"},rechazada:{c:T.red,bg:T.redDim,l:"Rechazada"},orden_venta:{c:T.purple,bg:T.purpleDim,l:"Orden de Venta"}};
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro||(filtro==="orden_venta"&&r.orden_venta));
-  const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("ÔåÆ "+estado);load();};
+  const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("→ "+estado);load();};
   const del=async id=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("cotizaciones",id);showToast("Eliminada");load();};
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));load();},[]);
   const load=async()=>{setLoading(true);const d=await dbGet("cotizaciones");setRows(Array.isArray(d)?d:[]);setLoading(false);};
@@ -3613,16 +3613,16 @@ function PageCotizaciones({showToast,empId}){
     </div>
       </div>
         <div style={S.card}><div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Flota</div>{d.pie.length>0?<><ResponsiveContainer width="100%" height={120}><PieChart><Pie data={d.pie} cx="50%" cy="50%" innerRadius={35} outerRadius={52} dataKey="value" paddingAngle={3}>{d.pie.map((e,i)=><Cell key={i} fill={e.color}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer>{d.pie.map((e,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:e.color}}/><span style={{color:T.sub}}>{e.name}</span></div><span style={{fontWeight:700,color:e.color}}>{e.value}</span></div>)}</>:<div style={{textAlign:"center",padding:30,color:T.sub,fontSize:12}}>Sin datos</div>}</div>
-        <div style={S.card}><div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos vs Egresos</div>{d.chart.length>0?<ResponsiveContainer width="100%" height={180}><BarChart data={d.chart}><XAxis dataKey="mes" tick={{fill:T.sub,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/><Tooltip contentStyle={{background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,fontSize:11}}/><Legend wrapperStyle={{fontSize:11}}/><Bar dataKey="Ingresos" fill={T.acc} radius={[4,4,0,0]}/><Bar dataKey="Egresos" fill={T.red} radius={[4,4,0,0]}/></BarChart></ResponsiveContainer>:<div style={{textAlign:"center",padding:40,color:T.sub,fontSize:13}}>Sin movimientos a├║n</div>}</div>
+        <div style={S.card}><div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos vs Egresos</div>{d.chart.length>0?<ResponsiveContainer width="100%" height={180}><BarChart data={d.chart}><XAxis dataKey="mes" tick={{fill:T.sub,fontSize:10}} axisLine={false} tickLine={false}/><YAxis tick={{fill:T.sub,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>v>=1000?v/1000+"k":v}/><Tooltip contentStyle={{background:T.surf,border:`1px solid ${T.bord}`,borderRadius:8,fontSize:11}}/><Legend wrapperStyle={{fontSize:11}}/><Bar dataKey="Ingresos" fill={T.acc} radius={[4,4,0,0]}/><Bar dataKey="Egresos" fill={T.red} radius={[4,4,0,0]}/></BarChart></ResponsiveContainer>:<div style={{textAlign:"center",padding:40,color:T.sub,fontSize:13}}>Sin movimientos aún</div>}</div>
       <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
       </div>
-        {[{icon:"­ƒÆ░",l:"Ingresos",v:fmtK(d.ing),c:T.acc,bg:T.accDim},{icon:"­ƒÆ©",l:"Egresos",v:fmtK(d.eg),c:T.red,bg:T.redDim},{icon:"­ƒÅª",l:"Saldo GTQ",v:fmtK(d.saldo),c:T.acc,bg:T.accDim},{icon:"­ƒº¥",l:"Facturado",v:fmtK(d.facTot),c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{icon:"💰",l:"Ingresos",v:fmtK(d.ing),c:T.acc,bg:T.accDim},{icon:"🛍️",l:"Egresos",v:fmtK(d.eg),c:T.red,bg:T.redDim},{icon:"🏦",l:"Saldo GTQ",v:fmtK(d.saldo),c:T.acc,bg:T.accDim},{icon:"🧾",l:"Facturado",v:fmtK(d.facTot),c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
       <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>FINANZAS</div>
       </div>
-        {[{icon:"­ƒÜù",l:"Flota",v:d.v.length,c:T.acc,bg:T.accDim},{icon:"Ô£à",l:"Disponibles",v:d.vDisp,c:T.acc,bg:T.accDim},{icon:"­ƒöæ",l:"Rentados",v:d.vRent,c:T.blue,bg:T.blueDim},{icon:"­ƒôà",l:"Res. activas",v:d.rAct,c:T.blue,bg:T.blueDim},{icon:"­ƒæÑ",l:"Clientes",v:d.clientes.length,c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
+        {[{icon:"🚗",l:"Flota",v:d.v.length,c:T.acc,bg:T.accDim},{icon:"✅",l:"Disponibles",v:d.vDisp,c:T.acc,bg:T.accDim},{icon:"­ƒöæ",l:"Rentados",v:d.vRent,c:T.blue,bg:T.blueDim},{icon:"📅",l:"Res. activas",v:d.rAct,c:T.blue,bg:T.blueDim},{icon:"👥",l:"Clientes",v:d.clientes.length,c:T.purple,bg:T.purpleDim}].map((s,i)=><div key={i} style={{...S.card,position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,right:0,height:3,background:s.c}}/><div style={{width:36,height:36,borderRadius:9,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,marginBottom:8}}>{s.icon}</div><div style={{fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div><div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div></div>)}
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:20}}>
-      <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>OPERACI├ôN</div>
+      <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>OPERACIÓN</div>
       {d.alertas.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>{d.alertas.map((a,i)=><div key={i} style={{background:T.card,border:`1px solid ${a.c}44`,borderRadius:10,padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:16}}>{a.icon}</span><span style={{fontSize:13}}>{a.msg}</span><div style={{marginLeft:"auto",width:8,height:8,borderRadius:"50%",background:a.c}}/></div>)}</div>}
     <div>
   return(
@@ -3633,9 +3633,9 @@ function PageCotizaciones({showToast,empId}){
     const pie=[{name:"Disponible",value:v.filter(x=>x.estado==="disponible").length,color:T.acc},{name:"Rentado",value:v.filter(x=>x.estado==="rentado").length,color:T.blue},{name:"Mantenim.",value:vMant,color:T.sec}].filter(x=>x.value>0);
     const chart=meses.map((mes,i)=>({mes,Ingresos:Math.round(m.filter(x=>x.tipo==="ingreso"&&new Date(x.fecha).getMonth()===i).reduce((s,x)=>s+(parseFloat(x.monto)||0),0)),Egresos:Math.round(m.filter(x=>x.tipo==="egreso"&&new Date(x.fecha).getMonth()===i).reduce((s,x)=>s+(parseFloat(x.monto)||0),0))})).filter(x=>x.Ingresos>0||x.Egresos>0);
     const meses=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-    if(c.filter(x=>x.estado==="enviada").length>0)alertas.push({icon:"­ƒôï",msg:`${c.filter(x=>x.estado==="enviada").length} cotizaciones esperando aprobaci├│n`,c:T.blue});
-    if(r.filter(x=>x.estado==="pendiente").length>0)alertas.push({icon:"­ƒôà",msg:`${r.filter(x=>x.estado==="pendiente").length} reservas pendientes`,c:T.sec});
-    if(vMant>0)alertas.push({icon:"­ƒöº",msg:`${vMant} veh├¡culo${vMant>1?"s":""} en mantenimiento`,c:T.sec});
+    if(c.filter(x=>x.estado==="enviada").length>0)alertas.push({icon:"📋",msg:`${c.filter(x=>x.estado==="enviada").length} cotizaciones esperando aprobación`,c:T.blue});
+    if(r.filter(x=>x.estado==="pendiente").length>0)alertas.push({icon:"📅",msg:`${r.filter(x=>x.estado==="pendiente").length} reservas pendientes`,c:T.sec});
+    if(vMant>0)alertas.push({icon:"🔧",msg:`${vMant} vehículo${vMant>1?"s":""} en mantenimiento`,c:T.sec});
     const alertas=[];
     const vMant=v.filter(x=>x.estado==="mantenimiento").length;
     const facTot=f.filter(x=>!["anulada","borrador"].includes(x.estado)).reduce((s,x)=>s+(parseFloat(x.total)||0),0);
@@ -3670,7 +3670,7 @@ function PageDashboard(){
                     <button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:11}}>­ƒùæ´©Å</button>
                   <td style={S.td}>
                   <td style={{...S.td,fontWeight:700,color:T.acc,whiteSpace:"nowrap"}}>Q {fmt(r.monto)}</td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{r.referencia||"ÔÇö"}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{r.referencia||"—"}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11}}>{r.metodo}</td>
                   <td style={{...S.td,fontWeight:500}}>{r.concepto}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(r.fecha)}</td>
@@ -3680,11 +3680,11 @@ function PageDashboard(){
             </thead>
               ))}</tr>
                 <th key={h} style={S.th}>{h}</th>
-              <tr>{["Fecha","Concepto","M├®todo","Referencia","Monto",""].map(h=>(
+              <tr>{["Fecha","Concepto","Método","Referencia","Monto",""].map(h=>(
             <thead>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
         <div style={S.card}>
-        <Empty icon="­ƒÆ░" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
+        <Empty icon="💰" msg="Sin pagos registrados" action="+ Registrar pago" onAction={()=>setShowForm(true)}/>:(
       {loading?<Spinner/>:rows.length===0?
       {/* Lista */}
 
@@ -3706,13 +3706,13 @@ function PageDashboard(){
               <input tabIndex={0} style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="REF-00001"/>
             <Fld label="REFERENCIA / N┬░ COMPROBANTE">
             </Fld>
-              <input tabIndex={0} style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Ej: Anticipo reserva Cob├ín, Pago factura FAC-001..."/>
+              <input tabIndex={0} style={S.inp} value={f.concepto} onChange={e=>sf("concepto",e.target.value)} placeholder="Ej: Anticipo reserva Cobán, Pago factura FAC-001..."/>
             <Fld label="CONCEPTO" span2>
             </Fld>
               </select>
                 ))}
                   </option>
-                    {re.numero} ÔÇö {re.cliente_nombre} ÔÇö Saldo: Q {fmt(re.saldo||re.monto)}
+                    {re.numero} — {re.cliente_nombre} — Saldo: Q {fmt(re.saldo||re.monto)}
                   <option key={re.id} value={re.id}>
                 {reservas.map(re=>(
                 <option value="">Sin reserva vinculada</option>
@@ -3722,7 +3722,7 @@ function PageDashboard(){
               </select>
                 ))}
                   </option>
-                    {fa.numero} ÔÇö {fa.nombre_receptor} ÔÇö Saldo: Q {fmt(fa.saldo_pendiente||fa.total)}
+                    {fa.numero} — {fa.nombre_receptor} — Saldo: Q {fmt(fa.saldo_pendiente||fa.total)}
                   <option key={fa.id} value={fa.id}>
                 {facturas.map(fa=>(
                 <option value="">Sin factura vinculada</option>
@@ -3731,18 +3731,18 @@ function PageDashboard(){
             </Fld>
               </select>
                 <option value="cheque">­ƒôä Cheque</option>
-                <option value="tarjeta">­ƒÆ│ Tarjeta de cr├®dito/d├®bito</option>
+                <option value="tarjeta">­ƒÆ│ Tarjeta de crédito/débito</option>
                 <option value="efectivo">­ƒÆÁ Efectivo</option>
-                <option value="deposito">­ƒÆ░ Dep├│sito en banco</option>
-                <option value="transferencia">­ƒÅª Transferencia bancaria</option>
+                <option value="deposito">💰 Depósito en banco</option>
+                <option value="transferencia">🏦 Transferencia bancaria</option>
               <select tabIndex={0} style={S.sel} value={f.metodo} onChange={e=>sf("metodo",e.target.value)}>
             <Fld label="M├ëTODO DE PAGO">
             </Fld>
-              {cuentas.length===0&&<div style={{fontSize:11,color:T.red,marginTop:3}}>ÔÜá No hay cuentas bancarias. Ve a La Banca para crearlas.</div>}
+              {cuentas.length===0&&<div style={{fontSize:11,color:T.red,marginTop:3}}>⚠️ No hay cuentas bancarias. Ve a La Banca para crearlas.</div>}
               </select>
                 ))}
                   </option>
-                    {cu.banco} ÔÇö {cu.numero_cuenta} ┬À Q {fmt(cu.saldo_actual||0)}
+                    {cu.banco} — {cu.numero_cuenta} · Q {fmt(cu.saldo_actual||0)}
                   <option key={cu.id} value={cu.id}>
                 {cuentas.map(cu=>(
                 <option value="">Seleccionar cuenta bancaria...</option>
@@ -3764,7 +3764,7 @@ function PageDashboard(){
         </button>
           {showForm?"Cancelar":"+ Registrar pago"}
         <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>
-        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>Ôå║ Actualizar</button>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺ Actualizar</button>
         <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>­ƒôñ Exportar</button>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
 
@@ -3787,7 +3787,7 @@ function PageDashboard(){
 
   ];
     {label:"Referencia",key:"referencia"},{label:"Notas",key:"notas"},
-    {label:"Monto",key:"monto"},{label:"M├®todo",key:"metodo"},
+    {label:"Monto",key:"monto"},{label:"Método",key:"metodo"},
     {label:"Fecha",key:"fecha"},{label:"Concepto",key:"concepto"},
   const CAMPOS=[
 
@@ -3799,7 +3799,7 @@ function PageDashboard(){
     load();
     showToast("Pago eliminado");
     await dbDel("pagos_recibidos",id);
-    if(!confirm("┬┐Eliminar este pago? Esta acci├│n no se puede deshacer."))return;
+    if(!confirm("┬┐Eliminar este pago? Esta acción no se puede deshacer."))return;
   const del=async id=>{
 
   };
@@ -3807,7 +3807,7 @@ function PageDashboard(){
       load();
       setF({fecha:today(),monto:"",metodo:"transferencia",referencia:"",factura_id:"",reserva_id:"",concepto:"",cuenta_id:"",notas:""});
       setSaving(false);setShowForm(false);
-      showToast("Pago registrado correctamente Ô£ö");
+      showToast("Pago registrado correctamente ✔");
       if(cu)await dbUpd("cuentas_bancarias",f.cuenta_id,{saldo_actual:(parseFloat(cu.saldo_actual)||0)+monto});
       const cu=cuentas.find(x=>x.id===f.cuenta_id);
       // 5. Actualizar saldo de cuenta bancaria
@@ -3827,7 +3827,7 @@ function PageDashboard(){
       const pago=await dbIns("pagos_recibidos",{empresa_id:empId,fecha:f.fecha,monto,metodo:f.metodo,referencia:f.referencia||"",concepto,cuenta_id:f.cuenta_id,notas:f.notas||"",factura_id:f.factura_id||null,reserva_id:f.reserva_id||null});
       // 1. Guardar pago
       }
-        concepto=fa?"Pago factura "+(fa.numero||"")+" ÔÇö "+fa.nombre_receptor:re?"Pago reserva "+(re.numero||"")+" ÔÇö "+re.cliente_nombre:"Pago recibido";
+        concepto=fa?"Pago factura "+(fa.numero||"")+" — "+fa.nombre_receptor:re?"Pago reserva "+(re.numero||"")+" — "+re.cliente_nombre:"Pago recibido";
         const re=reservas.find(x=>x.id===f.reserva_id);
         const fa=facturas.find(x=>x.id===f.factura_id);
       if(!concepto){
@@ -3883,7 +3883,7 @@ function PagePagos({showToast,empId}){
         <div style={{display:"flex",gap:10}}>
 
         </div>
-          Se exportar├ín <b style={{color:T.acc}}>{filtrar().length}</b> registros con {campos.length} campos.
+          Se exportarán <b style={{color:T.acc}}>{filtrar().length}</b> registros con {campos.length} campos.
         <div style={{fontSize:11,color:T.mut,marginBottom:16,padding:"8px 12px",background:T.surf,borderRadius:6}}>
 
         </div>
@@ -3893,13 +3893,13 @@ function PagePagos({showToast,empId}){
                 <span style={{fontSize:13}}>{l}</span>
                 <input type="radio" name="formato" value={v} checked={formato===v} onChange={()=>setFormato(v)} style={{width:16,height:16,accentColor:T.acc}}/>
               <label key={v} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 14px",borderRadius:8,background:formato===v?T.accDim:T.surf,border:"1px solid "+(formato===v?T.acc:T.bord)}}>
-            {[["csv","­ƒôä CSV (valor separado por coma)"],["xls","­ƒôè XLS (compatible con Microsoft Excel)"],["pdf","­ƒû¿´©Å PDF (para imprimir)"]].map(([v,l])=>(
+            {[["csv","­ƒôä CSV (valor separado por coma)"],["xls","📊 XLS (compatible con Microsoft Excel)"],["pdf","­ƒû¿´©Å PDF (para imprimir)"]].map(([v,l])=>(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <label style={S.lbl}>FORMATO DE EXPORTACI├ôN</label>
+          <label style={S.lbl}>FORMATO DE EXPORTACIÓN</label>
         <div style={{marginBottom:20}}>
 
         </div>
-          {(fechaIni||fechaFin)&&<div style={{fontSize:11,color:T.acc,marginTop:4}}>{filtrar().length} registros en el per├¡odo</div>}
+          {(fechaIni||fechaFin)&&<div style={{fontSize:11,color:T.acc,marginTop:4}}>{filtrar().length} registros en el período</div>}
           </div>
             <div><label style={{...S.lbl,fontSize:10}}>HASTA</label><input style={S.inp} type="date" value={fechaFin} onChange={e=>setFechaFin(e.target.value)}/></div>
             <div><label style={{...S.lbl,fontSize:10}}>DESDE</label><input style={S.inp} type="date" value={fechaIni} onChange={e=>setFechaIni(e.target.value)}/></div>
@@ -3909,7 +3909,7 @@ function PagePagos({showToast,empId}){
 
         </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",color:T.sub,cursor:"pointer",fontSize:18}}>Ô£ò</button>
-          <div style={{fontSize:16,fontWeight:800}}>­ƒôñ Exportar ÔÇö {titulo}</div>
+          <div style={{fontSize:16,fontWeight:800}}>­ƒôñ Exportar — {titulo}</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
       <div style={{background:T.card,borderRadius:16,border:"1px solid "+T.bord,width:"100%",maxWidth:480,padding:28}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -3933,8 +3933,8 @@ function PagePagos({showToast,empId}){
       </table><script>window.onload=()=>window.print();</script></body></html>`;
       <tbody>${body.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody>
       <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-      <p>Generado: ${new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})} ┬À ${rows.length} registros</p>
-      <h2>Tz'unun AutoRentas ÔÇö ${titulo}</h2>
+      <p>Generado: ${new Date().toLocaleDateString("es-GT",{day:"2-digit",month:"long",year:"numeric"})} · ${rows.length} registros</p>
+      <h2>Tz'unun AutoRentas — ${titulo}</h2>
       @media print{button{display:none}}</style></head><body>
       tr:nth-child(even){background:#F8FAFC}
       td{padding:5px 8px;border-bottom:1px solid #E2E8F0}
@@ -4000,7 +4000,7 @@ function ModalExportar({titulo,datos,campos,onClose}){
               </div>
                 ))}
                   <button tabIndex={0} key={v} onClick={()=>sf("pago",v)} style={{...S.btn(f.pago===v?"primary":"ghost"),flex:1,fontSize:11}}>{l}</button>
-                {[["efectivo","­ƒÆÁ Efectivo"],["transferencia","­ƒÅª Transferencia"],["tarjeta","­ƒÆ│ Tarjeta (+5%)"]].map(([v,l])=>(
+                {[["efectivo","­ƒÆÁ Efectivo"],["transferencia","🏦 Transferencia"],["tarjeta","­ƒÆ│ Tarjeta (+5%)"]].map(([v,l])=>(
               <div style={{display:"flex",gap:8}}>
             <Fld label="M├ëTODO DE PAGO" span2>
             </Fld>
@@ -4023,15 +4023,15 @@ function ModalExportar({titulo,datos,campos,onClose}){
             <Fld label="ORIGEN">
             </Fld>
               <input tabIndex={0} style={S.inp} type="date" value={f.fecha_fin} onChange={e=>sf("fecha_fin",e.target.value)}/>
-            <Fld label="FECHA DEVOLUCI├ôN">
+            <Fld label="FECHA DEVOLUCIÓN">
             </Fld>
               <input tabIndex={0} style={S.inp} type="date" value={f.fecha_inicio} onChange={e=>sf("fecha_inicio",e.target.value)}/>
             <Fld label="FECHA ENTREGA">
             </Fld>
               </select>
                 <option value={0}>Sin IVA</option>
-                <option value={5}>5% Peque├▒o Contrib.</option>
-                <option value={12}>12% R├®gimen General</option>
+                <option value={5}>5% Pequeño Contrib.</option>
+                <option value={12}>12% Régimen General</option>
               <select tabIndex={0} style={S.sel} value={f.iva} onChange={e=>sf("iva",parseInt(e.target.value))}>
             <Fld label="IVA">
             </Fld>
@@ -4039,8 +4039,8 @@ function ModalExportar({titulo,datos,campos,onClose}){
             <Fld label="CONDUCTOR">
             </Fld>
               </select>
-                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} ÔÇö Q {fmt(v.dia)}/d├¡a</option>)}
-                <option value="">Seleccionar veh├¡culo...</option>
+                {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q {fmt(v.dia)}/día</option>)}
+                <option value="">Seleccionar vehículo...</option>
               <select tabIndex={0} style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
             <Fld label="VEH├ìCULO" span2>
             </Fld>
@@ -4051,14 +4051,14 @@ function ModalExportar({titulo,datos,campos,onClose}){
                 <option value="cancelada">Ô£ù Cancelada</option>
                 <option value="completada">­ƒÅü Completada</option>
                 <option value="en_curso">ÔûÂ En curso</option>
-                <option value="confirmada">Ô£à Confirmada</option>
-                <option value="pendiente">ÔÅ│ Pendiente</option>
+                <option value="confirmada">✅ Confirmada</option>
+                <option value="pendiente">⏳ Pendiente</option>
               <select tabIndex={0} style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
             <Fld label="ESTADO">
             </Fld>
               </div>
                 <button tabIndex={0} onClick={()=>sf("tipo","traslado")} style={{...S.btn(f.tipo==="traslado"?"primary":"ghost"),flex:1}}>­ƒù║ Traslado</button>
-                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>­ƒöæ Renta de veh├¡culo</button>
+                <button tabIndex={0} onClick={()=>sf("tipo","renta")} style={{...S.btn(f.tipo==="renta"?"primary":"ghost"),flex:1}}>­ƒöæ Renta de vehículo</button>
               <div style={{display:"flex",gap:8}}>
             <Fld label="TIPO DE SERVICIO" span2>
             </Fld>
@@ -4076,7 +4076,7 @@ function ModalExportar({titulo,datos,campos,onClose}){
 
   );
     </div>
-      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona veh├¡culo y fechas</div>}
+      ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Selecciona vehículo y fechas</div>}
         </>
           </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,padding:"4px 0",color:saldo>0?T.sec:T.acc}}><span>Saldo</span><span>Q {fmt(saldo)}</span></div>
@@ -4089,12 +4089,12 @@ function ModalExportar({titulo,datos,campos,onClose}){
           </div>
             ))}
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:12,color:T.sub}}><span>{l}</span><span>{v}</span></div>
-            {[["Tarifa","Q "+fmt(tarifaDia)+"/d├¡a"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
+            {[["Tarifa","Q "+fmt(tarifaDia)+"/día"],["Subtotal","Q "+fmt(subtotal)],["IVA "+f.iva+"%","Q "+fmt(ivaAmt)],...(f.pago==="tarjeta"?[["Recargo TC 5%","Q "+fmt(recargoTC)]]:[])] .map(([l,v],i)=>(
           <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:10}}>
-          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {vehObj.nombre} ┬À {dias} d├¡a{dias!==1?"s":""}</div>
+          <div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {dias} día{dias!==1?"s":""}</div>
         <>
       {vehObj&&dias>0?(
-      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen</div>
+      <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
     <div style={S.card}>
   const Resumen=()=>(
 
@@ -4174,7 +4174,7 @@ function ModalExportar({titulo,datos,campos,onClose}){
     const fi=new Date(f.fecha_inicio+"T12:00:00");
     if(!f.fecha_inicio) return 0;
   const calcularDias=()=>{
-  // Calcular d├¡as
+  // Calcular días
 
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const [saving,setSaving]=useState(false);
@@ -4239,7 +4239,7 @@ const EMPTY={
                     <div style={{background:T.surf,borderRadius:4,height:6,overflow:"hidden"}}>
                     </div>
                       <span style={{color:pct>80?T.red:T.sub,fontWeight:600}}>Q {fmt(creditoUsado)} / Q {fmt(creditoLimite)}</span>
-                      <span>Cr├®dito usado</span>
+                      <span>Crédito usado</span>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:T.sub,marginBottom:4}}>
                   <div style={{marginBottom:12}}>
                 {creditoLimite>0&&(
@@ -4249,12 +4249,12 @@ const EMPTY={
                       <div style={{fontSize:12,fontWeight:500,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{val}</div>
                       <div style={{fontSize:10,color:T.mut}}>{lbl}</div>
                     <div key={lbl} style={{background:T.surf,borderRadius:7,padding:"7px 10px"}}>
-                  {[["Contacto",p.contacto||"ÔÇö"],["Tel├®fono",p.telefono||"ÔÇö"],["Email",p.email||"ÔÇö"],["Direcci├│n",p.direccion||"ÔÇö"]].map(([lbl,val])=>(
+                  {[["Contacto",p.contacto||"—"],["Teléfono",p.telefono||"—"],["Email",p.email||"—"],["Dirección",p.direccion||"—"]].map(([lbl,val])=>(
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
                 </div>
                   <CatBadge cat={p.categoria}/>
                   </div>
-                    <div style={{fontSize:11,color:T.sub,marginTop:2}}>NIT: {p.nit||"ÔÇö"}</div>
+                    <div style={{fontSize:11,color:T.sub,marginTop:2}}>NIT: {p.nit||"—"}</div>
                     <div style={{fontSize:14,fontWeight:700}}>{p.nombre}</div>
                   <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginTop:4,marginBottom:12}}>
@@ -4277,7 +4277,7 @@ const EMPTY={
               <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"Guardando...":"­ƒÆ¥ Guardar proveedor"}</button>
             <div style={{gridColumn:"span 2",display:"flex",gap:8}}>
             <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones..."/></Fld>
-            <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Direcci├│n del proveedor"/></Fld>
+            <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion} onChange={e=>sf("direccion",e.target.value)} placeholder="Dirección del proveedor"/></Fld>
             <Fld label="L├ìMITE DE CR├ëDITO (GTQ)"><input style={S.inp} type="number" value={f.credito_limite} onChange={e=>sf("credito_limite",e.target.value)} placeholder="0.00"/></Fld>
             <Fld label="EMAIL"><input style={S.inp} type="email" value={f.email} onChange={e=>sf("email",e.target.value)} placeholder="proveedor@email.com"/></Fld>
             <Fld label="TEL├ëFONO"><input style={S.inp} value={f.telefono} onChange={e=>sf("telefono",e.target.value)} placeholder="(502) 0000-0000"/></Fld>
@@ -4288,7 +4288,7 @@ const EMPTY={
               <select style={S.sel} value={f.categoria} onChange={e=>sf("categoria",e.target.value)}>
             <Fld label="CATEGOR├ìA">
             <Fld label="NIT"><input style={S.inp} value={f.nit} onChange={e=>sf("nit",e.target.value)} placeholder="1234567-8"/></Fld>
-            <Fld label="NOMBRE / RAZ├ôN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del proveedor"/></Fld>
+            <Fld label="NOMBRE / RAZÓN SOCIAL" span2><input style={S.inp} value={f.nombre} onChange={e=>sf("nombre",e.target.value)} placeholder="Nombre del proveedor"/></Fld>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
           <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>{editItem?"Editar proveedor":"Nuevo proveedor"}</div>
         <div style={{...S.card,marginBottom:16,maxWidth:640}}>
@@ -4305,7 +4305,7 @@ const EMPTY={
             <div style={{fontSize:11,color:T.sub,marginTop:2}}>{s.l}</div>
             <div style={{fontSize:i>0?16:22,fontWeight:800,color:s.c}}>{s.v}</div>
           <div key={i} style={{background:T.surf,borderRadius:10,padding:14,textAlign:"center"}}>
-        {[{l:"Proveedores activos",v:rows.filter(r=>r.activo).length,c:T.acc},{l:"Cr├®dito total usado",v:`Q ${fmt(totalCredito)}`,c:T.red},{l:"Categor├¡as",v:[...new Set(rows.map(r=>r.categoria))].length,c:T.blue}].map((s,i)=>(
+        {[{l:"Proveedores activos",v:rows.filter(r=>r.activo).length,c:T.acc},{l:"Crédito total usado",v:`Q ${fmt(totalCredito)}`,c:T.red},{l:"Categorías",v:[...new Set(rows.map(r=>r.categoria))].length,c:T.blue}].map((s,i)=>(
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
       {/* Stats */}
     <div>
@@ -4319,7 +4319,7 @@ const EMPTY={
     load();
     setF({nombre:"",nit:"",categoria:"combustible",contacto:"",telefono:"",email:"",direccion:"",credito_limite:"",notas:""});
     setShowForm(false);setEditItem(null);
-    showToast("Proveedor guardado Ô£ö");setSaving(false);
+    showToast("Proveedor guardado ✔");setSaving(false);
     else await dbIns("proveedores",payload);
     if(editItem?.id) await dbUpd("proveedores",editItem.id,payload);
     const payload={empresa_id:empId,nombre:f.nombre,nit:f.nit,categoria:f.categoria,contacto:f.contacto,telefono:f.telefono,email:f.email,direccion:f.direccion,credito_limite:parseFloat(f.credito_limite)||0,notas:f.notas,activo:true};
@@ -4368,7 +4368,7 @@ function ModProveedores({empId,showToast}){
             <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:12}}>POR CATEGOR├ìA</div>
           <div style={S.card}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {/* Sidebar categor├¡as */}
+        {/* Sidebar categorías */}
 
         </div>
           )}
@@ -4394,11 +4394,11 @@ function ModProveedores({empId,showToast}){
                         <td style={S.td}>
                         </td>
                           </span>
-                            {r.estado==="pagado"?"Ô£ö Pagado":"ÔÅ│ Pendiente"}
+                            {r.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}
                           <span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:r.estado==="pagado"?T.accDim:T.secDim,color:r.estado==="pagado"?T.acc:T.sec}}>
                         <td style={S.td}>
                         <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(r.total)}</td>
-                        <td style={{...S.td,fontSize:11,color:T.sub}}>{prov?.nombre||"ÔÇö"}</td>
+                        <td style={{...S.td,fontSize:11,color:T.sub}}>{prov?.nombre||"—"}</td>
                         <td style={S.td}><CatBadge cat={r.categoria}/></td>
                         </td>
                           {r.referencia&&<div style={{fontSize:10,color:T.mut,fontFamily:"monospace"}}>{r.referencia}</div>}
@@ -4410,10 +4410,10 @@ function ModProveedores({empId,showToast}){
                     const prov=proveedores.find(p=>p.id===r.proveedor_id);
                   {filtered.map(r=>{
                 <tbody>
-                <thead><tr>{["Fecha","Descripci├│n","Categor├¡a","Proveedor","Total","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Fecha","Descripción","Categoría","Proveedor","Total","Estado",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
             <div style={S.card}>
-          {loading?<Spinner/>:filtered.length===0?<Empty icon="­ƒÆ©" msg="Sin gastos registrados" action="+ Registrar primer gasto" onAction={()=>setShowForm(true)}/>:(
+          {loading?<Spinner/>:filtered.length===0?<Empty icon="🛍️" msg="Sin gastos registrados" action="+ Registrar primer gasto" onAction={()=>setShowForm(true)}/>:(
           {/* Tabla gastos */}
 
           )}
@@ -4426,8 +4426,8 @@ function ModProveedores({empId,showToast}){
                 <Fld label="NOTAS" span2><input style={S.inp} value={f.notas} onChange={e=>sf("notas",e.target.value)} placeholder="Observaciones adicionales..."/></Fld>
                 </Fld>
                   </select>
-                    <option value="pagado">Ô£à Pagado</option>
-                    <option value="pendiente">ÔÅ│ Pendiente de pago</option>
+                    <option value="pagado">✅ Pagado</option>
+                    <option value="pendiente">⏳ Pendiente de pago</option>
                   <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
                 <Fld label="ESTADO">
                 </Fld>
@@ -4444,11 +4444,11 @@ function ModProveedores({empId,showToast}){
                 <Fld label="MONTO SIN IVA (GTQ)">
                 </Fld>
                   </select>
-                    <option value="credito">­ƒôï Cr├®dito</option>
+                    <option value="credito">📋 Crédito</option>
                     <option value="cheque">­ƒôä Cheque</option>
                     <option value="tarjeta">­ƒÆ│ Tarjeta</option>
-                    <option value="deposito">­ƒÆ░ Dep├│sito</option>
-                    <option value="transferencia">­ƒÅª Transferencia</option>
+                    <option value="deposito">💰 Depósito</option>
+                    <option value="transferencia">🏦 Transferencia</option>
                     <option value="efectivo">­ƒÆÁ Efectivo</option>
                   <select style={S.sel} value={f.metodo_pago} onChange={e=>sf("metodo_pago",e.target.value)}>
                 <Fld label="M├ëTODO DE PAGO">
@@ -4458,7 +4458,7 @@ function ModProveedores({empId,showToast}){
                     <option value="">Sin proveedor</option>
                   <select style={S.sel} value={f.proveedor_id} onChange={e=>sf("proveedor_id",e.target.value)}>
                 <Fld label="PROVEEDOR">
-                <Fld label="DESCRIPCI├ôN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Di├®sel ÔÇö Toyota RAV4 viaje a Pet├®n"/></Fld>
+                <Fld label="DESCRIPCIÓN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Ej: Diésel — Toyota RAV4 viaje a Petén"/></Fld>
                 </Fld>
                   </select>
                     {CAT_GASTO.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
@@ -4473,14 +4473,14 @@ function ModProveedores({empId,showToast}){
 
           </div>
             <button onClick={()=>{setEditItem(null);setShowForm(!showForm);}} style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>{showForm?"Cancelar":"+ Nuevo gasto"}</button>
-            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>Ôå║</button>
+            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>↺</button>
             </select>
               {CAT_GASTO.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
-              <option value="todas">Todas las categor├¡as</option>
+              <option value="todas">Todas las categorías</option>
             <select style={{...S.sel,width:"auto",fontSize:11,padding:"5px 10px"}} value={filtroCat} onChange={e=>setFiltroCat(e.target.value)}>
             ))}
               </button>
-                {f==="todos"?"Todos":f==="pendiente"?"ÔÅ│ Pendientes":"Ô£à Pagados"}
+                {f==="todos"?"Todos":f==="pendiente"?"⏳ Pendientes":"✅ Pagados"}
               <button key={f} onClick={()=>setFiltroEst(f)} style={{...S.btn(filtroEst===f?"primary":"ghost"),fontSize:11,padding:"5px 12px"}}>
             {["todos","pendiente","pagado"].map(f=>(
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
@@ -4513,18 +4513,18 @@ function ModProveedores({empId,showToast}){
   const filtered=rows.filter(r=>{
 
   const del=async id=>{if(!confirm("┬┐Eliminar este gasto?"))return;await dbDel("gastos",id);showToast("Eliminado");load();};
-  const marcarPagado=async id=>{await dbUpd("gastos",id,{estado:"pagado",fecha_pago:today()});showToast("Marcado como pagado Ô£ö");load();};
+  const marcarPagado=async id=>{await dbUpd("gastos",id,{estado:"pagado",fecha_pago:today()});showToast("Marcado como pagado ✔");load();};
 
   };
     load();
     setF({fecha:today(),categoria:"combustible",descripcion:"",monto:"",iva:"",total:"",metodo_pago:"efectivo",referencia:"",estado:"pendiente",proveedor_id:"",vehiculo_ref:"",notas:""});
     setShowForm(false);setEditItem(null);
-    showToast("Gasto guardado Ô£ö");setSaving(false);
+    showToast("Gasto guardado ✔");setSaving(false);
     else await dbIns("gastos",payload);
     if(editItem?.id) await dbUpd("gastos",editItem.id,payload);
     const payload={empresa_id:empId,fecha:f.fecha,categoria:f.categoria,descripcion:f.descripcion,monto:parseFloat(f.monto)||0,iva:parseFloat(f.iva)||0,total:parseFloat(f.total)||0,metodo_pago:f.metodo_pago,referencia:f.referencia,estado:f.estado,proveedor_id:f.proveedor_id||null,notas:f.notas,fecha_pago:f.estado==="pagado"?f.fecha:null};
     setSaving(true);
-    if(!f.descripcion.trim()||!(parseFloat(f.total)>0)){showToast("Descripci├│n y total son requeridos","err");return;}
+    if(!f.descripcion.trim()||!(parseFloat(f.total)>0)){showToast("Descripción y total son requeridos","err");return;}
   const guardar=async()=>{
 
   };
@@ -4570,8 +4570,8 @@ function CatBadge({cat}){
                   <td style={{...S.td,fontWeight:700,color:c.ingresos>0?T.acc:T.mut}}>Q {fmt(c.ingresos)}</td>
                   <td style={{...S.td,fontWeight:600,color:T.purple,textAlign:"center"}}>{c.cotizaciones}</td>
                   <td style={{...S.td,fontWeight:600,color:T.blue,textAlign:"center"}}>{c.reservas}</td>
-                  <td style={{...S.td,color:T.sub}}>{c.telefono||"ÔÇö"}</td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"ÔÇö"}</td>
+                  <td style={{...S.td,color:T.sub}}>{c.telefono||"—"}</td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:11,color:T.mut}}>{c.nit||"—"}</td>
                   <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:tc.bg,color:tc.c}}>{c.tipo}</span></td>
                   <td style={{...S.td,fontWeight:600}}>{i===0&&"­ƒÑç "}{c.nombre}</td>
                 <tr key={c.id} style={{background:i===0?T.accDim:"transparent"}}>
@@ -4579,7 +4579,7 @@ function CatBadge({cat}){
               const tc=TC[c.tipo]||TC.empresa;
             {clientesData.map((c,i)=>{
           <tbody>
-          <thead><tr>{["Cliente","Tipo","NIT","Tel├®fono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos generados"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Clientes por ingresos generados</div>
       <div style={S.card}>
@@ -4590,19 +4590,19 @@ function CatBadge({cat}){
       <div style={{display:"flex",gap:8,marginBottom:12}}>
 
       </div>
-        <KpiCard icon="­ƒæñ" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
+        <KpiCard icon="👤" label="Personas" value={clientes.filter(c=>c.tipo==="persona").length} color={T.purple} bg={T.purpleDim}/>
         <KpiCard icon="­ƒÅø´©Å" label="Gobierno/ONG" value={clientes.filter(c=>c.tipo==="gobierno").length} color={T.blue} bg={T.blueDim}/>
         <KpiCard icon="­ƒÅó" label="Empresas" value={clientes.filter(c=>c.tipo==="empresa").length} color={T.sec} bg={T.secDim}/>
-        <KpiCard icon="­ƒæÑ" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="👥" label="Total clientes" value={clientes.length} color={T.acc} bg={T.accDim}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
     <div>
   return (
 
   const TC={empresa:{c:T.sec,bg:T.secDim},gobierno:{c:T.blue,bg:T.blueDim},persona:{c:T.acc,bg:T.accDim}};
 
-  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Tel├®fono","Reservas","Cotizaciones","Ingresos"],tablaRows);
-  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Tel├®fono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
-  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"ÔÇö",c.telefono||"ÔÇö",c.email||"ÔÇö",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
+  const imprimir=()=>imprimirTabla("Reporte de Clientes",["Cliente","Tipo","NIT","Teléfono","Reservas","Cotizaciones","Ingresos"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Clientes_TzununSA",["Cliente","Tipo","NIT","Teléfono","Email","Reservas","Cotizaciones","Ingresos generados"],tablaRows);
+  const tablaRows=clientesData.map(c=>[c.nombre,c.tipo,c.nit||"—",c.telefono||"—",c.email||"—",c.reservas,c.cotizaciones,`Q ${fmt(c.ingresos)}`]);
 
   }).sort((a,b)=>b.ingresos-a.ingresos);
     return {...c,reservas:resC.length,cotizaciones:cotC.length,ingresos};
@@ -4630,8 +4630,8 @@ function ReporteClientes({data}){
             </tbody>
               ))}
                 </tr>
-                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"Ô£ö Pagado":"ÔÅ│ Pendiente"}</span></td>
-                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"ÔÇö"}</td>
+                  <td style={S.td}><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:g.estado==="pagado"?T.accDim:T.secDim,color:g.estado==="pagado"?T.acc:T.sec}}>{g.estado==="pagado"?"✔ Pagado":"⏳ Pendiente"}</span></td>
+                  <td style={{...S.td,fontFamily:"monospace",fontSize:10,color:T.mut}}>{g.referencia||"—"}</td>
                   <td style={{...S.td,color:T.sub,fontSize:11}}>{g.metodo_pago}</td>
                   <td style={{...S.td,fontWeight:700,color:T.red}}>Q {fmt(g.total)}</td>
                   <td style={S.td}>Q {fmt(g.iva)}</td>
@@ -4642,7 +4642,7 @@ function ReporteClientes({data}){
                 <tr key={g.id}>
               {gastos.map(g=>(
             <tbody>
-            <thead><tr>{["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","M├®todo","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Fecha","Categoría","Descripción","Monto","IVA","Total","Método","Ref.","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
         <div style={{overflowX:"auto"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Gastos</div>
@@ -4683,21 +4683,21 @@ function ReporteClientes({data}){
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
             <div key={cat} style={{marginBottom:10}}>
           {porCat.map(({cat,total,count})=>(
-          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categor├¡a</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Gastos por categoría</div>
         <div style={S.card}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
 
       </div>
-        <KpiCard icon="ÔÅ│" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
-        <KpiCard icon="Ô£à" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
-        <KpiCard icon="­ƒÆ©" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
+        <KpiCard icon="⏳" label="Pendientes de pago" value={`Q ${fmt(totalPend).split(".")[0]}`} color={T.sec} bg={T.secDim}/>
+        <KpiCard icon="✅" label="Pagados" value={`Q ${fmt(totalGastos-totalPend).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="🛍️" label="Total gastos" value={`Q ${fmt(totalGastos).split(".")[0]}`} color={T.red} bg={T.redDim}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
     <div>
   return (
 
-  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","Estado"],tablaRows);
-  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categor├¡a","Descripci├│n","Monto","IVA","Total","M├®todo pago","Referencia","Estado"],tablaRows);
-  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"ÔÇö",g.estado]);
+  const imprimir=()=>imprimirTabla("Reporte de Gastos",["Fecha","Categoría","Descripción","Monto","IVA","Total","Estado"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Gastos_TzununSA",["Fecha","Categoría","Descripción","Monto","IVA","Total","Método pago","Referencia","Estado"],tablaRows);
+  const tablaRows=gastos.map(g=>[fmtD(g.fecha),g.categoria,g.descripcion,`Q ${fmt(g.monto)}`,`Q ${fmt(g.iva)}`,`Q ${fmt(g.total)}`,g.metodo_pago,g.referencia||"—",g.estado]);
 
   })).filter(x=>x.Gastos>0);
     Gastos:Math.round(gastos.filter(g=>new Date(g.fecha).getMonth()===i).reduce((s,g)=>s+(parseFloat(g.total)||0),0)),
@@ -4739,7 +4739,7 @@ function ReporteGastos({data}){
               <tr key={v.id}>
             {flotaData.map(v=>(
           <tbody>
-          <thead><tr>{["Placa","Veh├¡culo","Tipo","A├▒o","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Flota</div>
       <div style={S.card}>
@@ -4772,7 +4772,7 @@ function ReporteGastos({data}){
           <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Estado actual de flota</div>
         <div style={S.card}>
         </div>
-          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por veh├¡culo</div>}
+          ):<div style={{textAlign:"center",padding:24,color:T.sub,fontSize:12}}>Sin datos de ingresos por vehículo</div>}
             </ResponsiveContainer>
               </BarChart>
                 <Bar dataKey="Ingresos" fill={T.acc} radius={[0,4,4,0]}/>
@@ -4782,14 +4782,14 @@ function ReporteGastos({data}){
               <BarChart data={chartFlota} layout="vertical">
             <ResponsiveContainer width="100%" height={180}>
           {chartFlota.some(x=>x.Ingresos>0)?(
-          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por veh├¡culo</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ingresos por vehículo</div>
         <div style={S.card}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
     <div>
   return (
 
-  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Veh├¡culo","Tipo","A├▒o","Km","Viajes","Ingresos","Estado"],tablaRows);
-  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Veh├¡culo","Tipo","A├▒o","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
+  const imprimir=()=>imprimirTabla("Reporte de Flota",["Placa","Vehículo","Tipo","Año","Km","Viajes","Ingresos","Estado"],tablaRows);
+  const exportar=()=>exportCSV("Reporte_Flota_TzununSA",["Placa","Vehículo","Tipo","Año","Km actual","Viajes","Ingresos generados","Estado"],tablaRows);
   const tablaRows=flotaData.map(v=>[v.placa,`${v.marca} ${v.modelo}`,v.tipo,v.anio,(v.km_actual||0).toLocaleString()+" km",v.viajes,`Q ${fmt(v.ingresos)}`,v.estado]);
 
   ].filter(x=>x.value>0);
@@ -4823,14 +4823,14 @@ function ReporteFlota({data}){
                   <td style={{...S.td,color:T.acc}}>Q {fmt(r.anticipo)}</td>
                   <td style={{...S.td,fontWeight:700,color:T.acc}}>Q {fmt(r.monto)}</td>
                   <td style={{...S.td,color:T.sub,whiteSpace:"nowrap"}}>{fmtD(r.fecha_inicio)}</td>
-                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"ÔÇö"}</td>
+                  <td style={{...S.td,color:T.sub}}>{r.vehiculo_nombre||"—"}</td>
                   <td style={S.td}>{r.tipo==="renta"?"­ƒöæ Renta":"­ƒù║ Traslado"}</td>
                   <td style={{...S.td,fontWeight:600}}>{r.cliente_nombre}</td>
                   <td style={{...S.td,fontFamily:"monospace",color:T.acc}}>{r.numero}</td>
                 <tr key={r.id}>
               {reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>(
             <tbody>
-            <thead><tr>{["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}>
         <div style={{overflowX:"auto"}}>
         <div style={{fontSize:13,fontWeight:700,marginBottom:12}}>Detalle de Reservas</div>
@@ -4854,30 +4854,30 @@ function ReporteFlota({data}){
             <BarChart data={chartMensual}>
           <ResponsiveContainer width="100%" height={200}>
         {chartMensual.length>0?(
-        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales ÔÇö Reservas vs Cotizaciones</div>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:14}}>Ventas mensuales — Reservas vs Cotizaciones</div>
       <div style={{...S.card,marginBottom:16}}>
 
       </div>
-        <KpiCard icon="­ƒº¥" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
-        <KpiCard icon="­ƒôï" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
-        <KpiCard icon="­ƒôà" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
+        <KpiCard icon="🧾" label="Total facturado" value={`Q ${fmt(totalFac).split(".")[0]}`} color={T.purple} bg={T.purpleDim}/>
+        <KpiCard icon="📋" label="Cotizaciones enviadas" value={`Q ${fmt(totalCot).split(".")[0]}`} color={T.blue} bg={T.blueDim}/>
+        <KpiCard icon="📅" label="Total reservas (activas)" value={`Q ${fmt(totalRes).split(".")[0]}`} color={T.acc} bg={T.accDim}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
     <div>
   return (
 
   );
     tablaRows
-    ["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha","Monto","Anticipo","Saldo","Estado"],
+    ["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha","Monto","Anticipo","Saldo","Estado"],
   const imprimir=()=>imprimirTabla("Reporte de Ventas",
   );
     tablaRows
-    ["N┬░ Reserva","Cliente","Tipo","Veh├¡culo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
+    ["N┬░ Reserva","Cliente","Tipo","Vehículo","Fecha inicio","Monto","Anticipo","Saldo","Estado"],
   const exportar=()=>exportCSV("Reporte_Ventas_TzununSA",
 
   ]);
     `Q ${fmt(r.anticipo)}`,`Q ${fmt(r.saldo)}`,r.estado
-    r.vehiculo_nombre||"ÔÇö",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
-    r.numero||"ÔÇö",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
+    r.vehiculo_nombre||"—",fmtD(r.fecha_inicio),`Q ${fmt(r.monto)}`,
+    r.numero||"—",r.cliente_nombre,r.tipo==="renta"?"Renta":"Traslado",
   const tablaRows=reservas.filter(r=>r.estado!=="cancelada").slice(0,20).map(r=>[
 
   const totalFac=facturas.filter(f=>!["anulada","borrador"].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.total)||0),0);
@@ -4920,10 +4920,10 @@ function KpiCard({icon,label,value,sub,color,bg}){
   </body></html>`;
   <script>window.onload=()=>window.print();</script>
   </table>
-  <tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+(v||"ÔÇö")+"</td>").join("")+"</tr>").join("")}</tbody>
+  <tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+(v||"—")+"</td>").join("")+"</tr>").join("")}</tbody>
   <table><thead><tr>${headers.map(h=>"<th>"+h+"</th>").join("")}</tr></thead>
   <p>Generado: ${new Date().toLocaleDateString("es-GT",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</p>
-  <h2>Tz'unun AutoRentas ÔÇö ${titulo}</h2>
+  <h2>Tz'unun AutoRentas — ${titulo}</h2>
   </style></head><body>
     @media print{button{display:none}}
     .total{font-weight:bold;background:#E1F5EE!important}
@@ -4964,7 +4964,7 @@ function exportCSV(filename, headers, rows){
           {/* Acciones */}
 
           </div>
-            {ivaPct===5&&<div style={{marginTop:8,fontSize:11,color:T.mut,fontStyle:"italic"}}>* No genera derecho a cr├®dito fiscal</div>}
+            {ivaPct===5&&<div style={{marginTop:8,fontSize:11,color:T.mut,fontStyle:"italic"}}>* No genera derecho a crédito fiscal</div>}
             </div>
               </div>
                 <div style={{fontSize:11,color:T.sub,marginTop:3}}>$ {fmt(f.tasa_cambio>0?total/f.tasa_cambio:0)} USD</div>
@@ -5005,8 +5005,8 @@ function exportCSV(filename, headers, rows){
                   <div style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr auto",gap:6,alignItems:"flex-end"}}>
                   </div>
                     </div>
-                      <input style={{...S.inp,fontSize:12,padding:"5px 8px"}} value={l.descripcion} onChange={e=>updateLinea(idx,"descripcion",e.target.value)} placeholder="Descripci├│n del servicio o producto"/>
-                      <label style={{...S.lbl,fontSize:9}}>DESCRIPCI├ôN</label>
+                      <input style={{...S.inp,fontSize:12,padding:"5px 8px"}} value={l.descripcion} onChange={e=>updateLinea(idx,"descripcion",e.target.value)} placeholder="Descripción del servicio o producto"/>
+                      <label style={{...S.lbl,fontSize:9}}>DESCRIPCIÓN</label>
                     <div>
                     </div>
                       </select>
@@ -5020,13 +5020,13 @@ function exportCSV(filename, headers, rows){
               {lineas.map((l,idx)=>(
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
             </div>
-              <button onClick={addLinea} style={{...S.btn("primary"),fontSize:11,padding:"4px 10px"}}>+ Agregar l├¡nea</button>
+              <button onClick={addLinea} style={{...S.btn("primary"),fontSize:11,padding:"4px 10px"}}>+ Agregar línea</button>
               <div style={{fontSize:12,fontWeight:700,color:T.mut}}>DETALLE DE SERVICIOS / PRODUCTOS</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div style={S.card}>
-          {/* L├¡neas de detalle */}
+          {/* Líneas de detalle */}
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {/* Columna derecha - L├¡neas y resumen */}
+        {/* Columna derecha - Líneas y resumen */}
 
         </div>
           </div>
@@ -5034,7 +5034,7 @@ function exportCSV(filename, headers, rows){
               </Fld>
                 </select>
                   <option value="pagada">­ƒÆÜ Pagada</option>
-                  <option value="certificada">Ô£à Certificada (DTE)</option>
+                  <option value="certificada">✅ Certificada (DTE)</option>
                   <option value="emitida">­ƒôñ Emitida</option>
                   <option value="borrador">­ƒôØ Borrador</option>
                 <select style={S.sel} value={f.estado} onChange={e=>sf("estado",e.target.value)}>
@@ -5053,18 +5053,18 @@ function exportCSV(filename, headers, rows){
               <Fld label="ANTICIPO RECIBIDO (Q)">
               </Fld>
                 </select>
-                  {cotizaciones.map(c=><option key={c.id} value={c.id}>{c.numero} ÔÇö {c.cliente_nombre} ÔÇö Q {fmt(c.total_gtq)}</option>)}
-                  <option value="">Sin vinculaci├│n a cotizaci├│n</option>
+                  {cotizaciones.map(c=><option key={c.id} value={c.id}>{c.numero} — {c.cliente_nombre} — Q {fmt(c.total_gtq)}</option>)}
+                  <option value="">Sin vinculación a cotización</option>
                 <select style={S.sel} value={f.cotizacion_id} onChange={e=>onSelectCotizacion(e.target.value)}>
-              <Fld label="COTIZACI├ôN (opcional)">
+              <Fld label="COTIZACIÓN (opcional)">
               </Fld>
                 </select>
-                  {reservas.map(r=><option key={r.id} value={r.id}>{r.numero} ÔÇö {r.cliente_nombre} ÔÇö Q {fmt(r.monto)}</option>)}
-                  <option value="">Sin vinculaci├│n a reserva</option>
+                  {reservas.map(r=><option key={r.id} value={r.id}>{r.numero} — {r.cliente_nombre} — Q {fmt(r.monto)}</option>)}
+                  <option value="">Sin vinculación a reserva</option>
                 <select style={S.sel} value={f.reserva_id} onChange={e=>onSelectReserva(e.target.value)}>
               <Fld label="RESERVA (opcional)">
             <div style={{display:"grid",gridTemplateColumns:"1fr",gap:10}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>VINCULAR A RESERVA O COTIZACI├ôN</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>VINCULAR A RESERVA O COTIZACIÓN</div>
           <div style={S.card}>
           {/* Vincular */}
 
@@ -5073,18 +5073,18 @@ function exportCSV(filename, headers, rows){
               </Fld>
                 </select>
                   <option value="tarjeta">­ƒÆ│ Tarjeta</option>
-                  <option value="deposito">­ƒÆ░ Dep├│sito</option>
-                  <option value="transferencia">­ƒÅª Transferencia</option>
+                  <option value="deposito">💰 Depósito</option>
+                  <option value="transferencia">🏦 Transferencia</option>
                   <option value="efectivo">­ƒÆÁ Efectivo</option>
                 <select style={S.sel} value={f.metodo_pago} onChange={e=>sf("metodo_pago",e.target.value)}>
               <Fld label="M├ëTODO PAGO">
               <Fld label="CORREO"><input style={S.inp} type="email" value={f.correo_receptor} onChange={e=>sf("correo_receptor",e.target.value)} placeholder="email@cliente.com"/></Fld>
-              <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={f.direccion_receptor} onChange={e=>sf("direccion_receptor",e.target.value)} placeholder="Ciudad"/></Fld>
-              <Fld label="NOMBRE RECEPTOR"><input style={S.inp} value={f.nombre_receptor} onChange={e=>sf("nombre_receptor",e.target.value)} placeholder="Nombre o raz├│n social"/></Fld>
+              <Fld label="DIRECCIÓN" span2><input style={S.inp} value={f.direccion_receptor} onChange={e=>sf("direccion_receptor",e.target.value)} placeholder="Ciudad"/></Fld>
+              <Fld label="NOMBRE RECEPTOR"><input style={S.inp} value={f.nombre_receptor} onChange={e=>sf("nombre_receptor",e.target.value)} placeholder="Nombre o razón social"/></Fld>
               <Fld label="NIT RECEPTOR"><input style={S.inp} value={f.nit_receptor} onChange={e=>sf("nit_receptor",e.target.value)} placeholder="CF o NIT"/></Fld>
               </Fld>
                 </select>
-                  {clientes.map(c=><option key={c.id} value={c.id}>{c.codigo?c.codigo+" ÔÇö ":""}{c.nombre}</option>)}
+                  {clientes.map(c=><option key={c.id} value={c.id}>{c.codigo?c.codigo+" — ":""}{c.nombre}</option>)}
                   <option value="">Seleccionar cliente (auto-llena datos)...</option>
                 <select style={S.sel} value={f.cliente_id} onChange={e=>onSelectCliente(e.target.value)}>
               <Fld label="VINCULAR A CLIENTE" span2>
@@ -5095,22 +5095,22 @@ function exportCSV(filename, headers, rows){
 
           </div>
             </div>
-              <Fld label="FECHA CERTIFICACI├ôN"><input style={S.inp} type="date" value={f.fecha_certificacion} onChange={e=>sf("fecha_certificacion",e.target.value)}/></Fld>
-              <Fld label="FECHA EMISI├ôN"><input style={S.inp} type="date" value={f.fecha_emision} onChange={e=>sf("fecha_emision",e.target.value)}/></Fld>
+              <Fld label="FECHA CERTIFICACIÓN"><input style={S.inp} type="date" value={f.fecha_certificacion} onChange={e=>sf("fecha_certificacion",e.target.value)}/></Fld>
+              <Fld label="FECHA EMISIÓN"><input style={S.inp} type="date" value={f.fecha_emision} onChange={e=>sf("fecha_emision",e.target.value)}/></Fld>
               <Fld label="TASA DE CAMBIO ($)"><input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e=>sf("tasa_cambio",e.target.value)}/></Fld>
               </Fld>
                 </select>
                   <option value="NINGUNO">Sin impuestos</option>
-                  <option value="PEQUENIO">5% ÔÇö Peque├▒o Contribuyente</option>
-                  <option value="GENERAL">12% IVA ÔÇö R├®gimen General</option>
+                  <option value="PEQUENIO">5% — Pequeño Contribuyente</option>
+                  <option value="GENERAL">12% IVA — Régimen General</option>
                 <select style={S.sel} value={f.regimen} onChange={e=>sf("regimen",e.target.value)}>
               <Fld label="R├ëGIMEN FISCAL">
-              <Fld label="N┬░ ACCESO"><input style={S.inp} value={f.numero_acceso} onChange={e=>sf("numero_acceso",e.target.value)} placeholder="N├║mero de acceso"/></Fld>
+              <Fld label="N┬░ ACCESO"><input style={S.inp} value={f.numero_acceso} onChange={e=>sf("numero_acceso",e.target.value)} placeholder="Número de acceso"/></Fld>
               <Fld label="N┬░ DTE"><input style={S.inp} value={f.numero_dte} onChange={e=>sf("numero_dte",e.target.value)} placeholder="3370337239"/></Fld>
               <Fld label="SERIE"><input style={S.inp} value={f.serie} onChange={e=>sf("serie",e.target.value)} placeholder="TZAR2026"/></Fld>
               </Fld>
                 <input style={{...S.inp,fontFamily:"monospace",fontSize:11}} value={f.numero_autorizacion} onChange={e=>sf("numero_autorizacion",e.target.value)} placeholder="F047F606-C8E3-43D7-8B21-A77A28299F83"/>
-              <Fld label="N┬░ AUTORIZACI├ôN SAT" span2>
+              <Fld label="N┬░ AUTORIZACIÓN SAT" span2>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:10}}>DATOS SAT / DTE</div>
           <div style={S.card}>
@@ -5140,12 +5140,12 @@ function exportCSV(filename, headers, rows){
   ${f.notas?`<div style="margin-top:6px"><strong>Notas:</strong> ${f.notas}</div>`:""}
   </div>
     </div>
-      <div>Superintendencia de Administraci├│n Tributaria &nbsp; NIT: 16693949</div>
+      <div>Superintendencia de Administración Tributaria &nbsp; NIT: 16693949</div>
       <div style="font-weight:700;margin-bottom:3px">Datos del certificador</div>
     <div class="certificador">
   <div class="footer-grid">
 <div class="footer">
-${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera derecho a cr├®dito fiscal</p>':""}
+${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera derecho a crédito fiscal</p>':""}
 </div>
   </table>
     <tr class="total-row"><td>TOTAL</td><td class="right">Q ${total.toFixed(2)}</td></tr>
@@ -5158,24 +5158,24 @@ ${ivaPct===5?'<p style="margin-top:6px;font-size:9px;color:#64748B">* No genera 
   </tbody>
 ${lineas.filter(l=>l.descripcion).map((l,i)=>`    <tr><td>${i+1}</td><td>${l.tipo||"Servicio"}</td><td class="right">${l.cantidad}</td><td>${l.descripcion}</td><td class="right">${parseFloat(l.precio_unitario||0).toFixed(2)}</td><td class="right">${parseFloat(l.descuento||0).toFixed(2)}</td><td class="right">0.00</td><td class="right">${((parseFloat(l.cantidad)||0)*(parseFloat(l.precio_unitario)||0)-parseFloat(l.descuento||0)).toFixed(2)}</td></tr>`).join("\n")}
   <tbody>
-  <thead><tr><th>#No</th><th>B/S</th><th>Cantidad</th><th>Descripci├│n</th><th class="right">P. Unitario con IVA (Q)</th><th class="right">Descuentos (Q)</th><th class="right">Otros Desc.(Q)</th><th class="right">Total (Q)</th></tr></thead>
+  <thead><tr><th>#No</th><th>B/S</th><th>Cantidad</th><th>Descripción</th><th class="right">P. Unitario con IVA (Q)</th><th class="right">Descuentos (Q)</th><th class="right">Otros Desc.(Q)</th><th class="right">Total (Q)</th></tr></thead>
 <table>
 <div class="divider"/>
 </div>
   <div><span class="label">Moneda:</span> GTQ</div>
-  <div><span class="label">Direcci├│n comprador:</span> ${f.direccion_receptor||"CIUDAD"}</div>
-  <div><span class="label">Fecha y hora de certificaci├│n:</span> ${f.fecha_certificacion||"ÔÇö"} ${new Date().toLocaleTimeString("es-GT")}</div>
-  <div><span class="label">Nombre Receptor:</span> <strong>${f.nombre_receptor||"ÔÇö"}</strong></div>
-  <div><span class="label">Fecha y hora de emisi├│n:</span> ${f.fecha_emision||"ÔÇö"} ${new Date().toLocaleTimeString("es-GT")}</div>
+  <div><span class="label">Dirección comprador:</span> ${f.direccion_receptor||"CIUDAD"}</div>
+  <div><span class="label">Fecha y hora de certificación:</span> ${f.fecha_certificacion||"—"} ${new Date().toLocaleTimeString("es-GT")}</div>
+  <div><span class="label">Nombre Receptor:</span> <strong>${f.nombre_receptor||"—"}</strong></div>
+  <div><span class="label">Fecha y hora de emisión:</span> ${f.fecha_emision||"—"} ${new Date().toLocaleTimeString("es-GT")}</div>
   <div><span class="label">NIT Receptor:</span> ${f.nit_receptor||"CF"}</div>
 <div class="receptor-row">
 <div class="divider"/>
 </div>
   </div>
-    Numero Acceso: ${f.numero_acceso||"ÔÇö"}
-    Serie: ${f.serie||"ÔÇö"} &nbsp; N├║mero de DTE: ${f.numero_dte||"ÔÇö"}<br/>
-    ${f.numero_autorizacion||"ÔÇö"}<br/>
-    <span class="num">N├ÜMERO DE AUTORIZACI├ôN:</span><br/>
+    Numero Acceso: ${f.numero_acceso||"—"}
+    Serie: ${f.serie||"—"} &nbsp; Número de DTE: ${f.numero_dte||"—"}<br/>
+    ${f.numero_autorizacion||"—"}<br/>
+    <span class="num">N├ÜMERO DE AUTORIZACIÓN:</span><br/>
   <div class="autorizacion">
   </div>
     6 AVENIDA 5-23 COLONIA LA CASTELLANA, zona 1, EL TEJAR, CHIMALTENANGO
@@ -5184,7 +5184,7 @@ ${lineas.filter(l=>l.descripcion).map((l,i)=>`    <tr><td>${i+1}</td><td>${l.tip
     <strong>VANESSA MAR├ìA, G├üLVEZ HERN├üNDEZ</strong>
   <div class="emisor">
 <div class="header-top">
-<div class="titulo-factura">${f.regimen==="GENERAL"?"Factura":f.regimen==="PEQUENIO"?"Factura Peque├▒o Contribuyente":"Documento"}</div>
+<div class="titulo-factura">${f.regimen==="GENERAL"?"Factura":f.regimen==="PEQUENIO"?"Factura Pequeño Contribuyente":"Documento"}</div>
 </style></head><body>
 @media print{button{display:none}}
 .titulo-factura{text-align:center;font-size:16px;font-weight:700;color:#1B2D5C;margin-bottom:6px}
@@ -5234,7 +5234,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
     const payload={
     const numero="FAC-"+Date.now().toString().slice(-8);
     setSaving(true);
-    if(lineas.filter(l=>l.descripcion&&parseFloat(l.precio_unitario)>0).length===0){alert("Agrega al menos una l├¡nea con descripci├│n y precio");return;}
+    if(lineas.filter(l=>l.descripcion&&parseFloat(l.precio_unitario)>0).length===0){alert("Agrega al menos una línea con descripción y precio");return;}
     if(!f.nombre_receptor.trim()){alert("Nombre del receptor requerido");return;}
   const guardar=async()=>{
   // ÔöÇÔöÇ Guardar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -5247,7 +5247,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
   };
     }
       }
-        setLineas([{tipo:"Servicio",cantidad:1,descripcion:"Servicio de transporte / alquiler de veh├¡culo",precio_unitario:r.monto||"",descuento:0}]);
+        setLineas([{tipo:"Servicio",cantidad:1,descripcion:"Servicio de transporte / alquiler de vehículo",precio_unitario:r.monto||"",descuento:0}]);
       if(lineas.length===1&&!lineas[0].descripcion){
       else sf("nombre_receptor",r.cliente_nombre||"");
       if(c){sf("nit_receptor",c.nit||"");sf("nombre_receptor",c.nombre||"");sf("cliente_id",c.id||"");}
@@ -5267,7 +5267,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
   const total=subtotalBruto;
   const ivaAmt=subtotalBruto-subtotalSinIVA;
   const subtotalSinIVA=ivaPct>0?subtotalBruto/(1+ivaPct/100):subtotalBruto;
-  // For peque├▒o contribuyente, price already includes IVA
+  // For pequeño contribuyente, price already includes IVA
   const ivaPct=f.regimen==="GENERAL"?12:f.regimen==="PEQUENIO"?5:0;
 
   },0);
@@ -5276,7 +5276,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
     const p=parseFloat(l.precio_unitario)||0;
     const q=parseFloat(l.cantidad)||0;
   const subtotalBruto=lineas.reduce((s,l)=>{
-  // ÔöÇÔöÇ C├ílculos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ÔöÇÔöÇ Cálculos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const [saving,setSaving]=useState(false);
 
@@ -5288,7 +5288,7 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
     if(initial?.lineas&&initial.lineas.length>0) return initial.lineas;
   const [lineas,setLineas]=useState(()=>{
   const EMPTY_LINE={tipo:"Servicio",cantidad:1,descripcion:"",precio_unitario:"",descuento:0};
-  // ÔöÇÔöÇ L├¡neas de detalle ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ÔöÇÔöÇ Líneas de detalle ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   });
@@ -5321,15 +5321,15 @@ function FormFactura({initial,empId,clientes,reservas,cotizaciones,onSave,onCanc
       </div>
         </div>
           <button onClick={onCancel} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
-          <button onClick={()=>onConfirm(parseFloat(monto)||saldo,fecha,metodo)} style={{...S.btn("primary"),flex:1}}>Ô£à Registrar pago</button>
+          <button onClick={()=>onConfirm(parseFloat(monto)||saldo,fecha,metodo)} style={{...S.btn("primary"),flex:1}}>✅ Registrar pago</button>
         <div style={{display:"flex",gap:8}}>
         </div>
           </Fld>
             </select>
               <option value="cheque">­ƒôä Cheque</option>
               <option value="tarjeta">­ƒÆ│ Tarjeta</option>
-              <option value="deposito">­ƒÆ░ Dep├│sito</option>
-              <option value="transferencia">­ƒÅª Transferencia</option>
+              <option value="deposito">💰 Depósito</option>
+              <option value="transferencia">🏦 Transferencia</option>
               <option value="efectivo">­ƒÆÁ Efectivo</option>
             <select style={S.sel} value={metodo} onChange={e=>setMetodo(e.target.value)}>
           <Fld label="M├ëTODO" span2>
@@ -5345,8 +5345,8 @@ function FormFactura({initial,empId,clientes,reservas,cotizaciones,onSave,onCanc
           <div style={S.srow(false)}><span>Anticipo aplicado</span><span>Q {fmt(factura.anticipo_aplicado)}</span></div>
           <div style={S.srow(false)}><span>Total factura</span><span>Q {fmt(factura.total)}</span></div>
         <div style={{background:T.surf,borderRadius:9,padding:"10px 14px",marginBottom:16}}>
-        <div style={{fontSize:13,color:T.sub,marginBottom:4}}>{factura.numero} ┬À {factura.nombre_receptor}</div>
-        <div style={{fontSize:15,fontWeight:700,color:T.acc,marginBottom:6}}>­ƒÆ░ Registrar Pago</div>
+        <div style={{fontSize:13,color:T.sub,marginBottom:4}}>{factura.numero} · {factura.nombre_receptor}</div>
+        <div style={{fontSize:15,fontWeight:700,color:T.acc,marginBottom:6}}>💰 Registrar Pago</div>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.acc}`,width:"100%",maxWidth:440,padding:24}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
   return (
@@ -5363,14 +5363,14 @@ function ModalPago({factura,onConfirm,onCancel}){
       </div>
         </div>
           <button onClick={onCancel} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
-          <button onClick={()=>onConfirm(motivo)} disabled={!motivo.trim()} style={{...S.btn("danger"),flex:1,opacity:motivo.trim()?1:0.5}}>­ƒÜ½ Confirmar anulaci├│n</button>
+          <button onClick={()=>onConfirm(motivo)} disabled={!motivo.trim()} style={{...S.btn("danger"),flex:1,opacity:motivo.trim()?1:0.5}}>­ƒÜ½ Confirmar anulación</button>
         <div style={{display:"flex",gap:8}}>
         </div>
-          ÔÜá´©Å Esta acci├│n no se puede deshacer. La factura quedar├í marcada como ANULADA en el sistema.
+          ⚠️´©Å Esta acción no se puede deshacer. La factura quedará marcada como ANULADA en el sistema.
         <div style={{background:T.redDim,border:`1px solid ${T.red}44`,borderRadius:8,padding:"10px 14px",fontSize:12,color:T.red,marginBottom:16}}>
         <textarea style={{...S.inp,minHeight:70,resize:"vertical",marginBottom:16}} value={motivo} onChange={e=>setMotivo(e.target.value)} placeholder="Ej: Error en datos del receptor, duplicado, etc."/>
-        <label style={S.lbl}>MOTIVO DE ANULACI├ôN (requerido)</label>
-        <div style={{fontSize:13,color:T.sub,marginBottom:16}}>Factura <strong style={{color:T.txt}}>{factura.numero}</strong> ┬À Q {fmt(factura.total)}</div>
+        <label style={S.lbl}>MOTIVO DE ANULACIÓN (requerido)</label>
+        <div style={{fontSize:13,color:T.sub,marginBottom:16}}>Factura <strong style={{color:T.txt}}>{factura.numero}</strong> · Q {fmt(factura.total)}</div>
         <div style={{fontSize:15,fontWeight:700,color:T.red,marginBottom:6}}>­ƒÜ½ Anular Factura</div>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.red}`,width:"100%",maxWidth:440,padding:24}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -5411,7 +5411,7 @@ function ModalAnular({factura,onConfirm,onCancel}){
   const [open,setOpen]=useState(false);
 function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getLabel}){
 
-// ÔòÉÔòÉÔòÉ FACTURACI├ôN ÔòÉÔòÉÔòÉ
+// ÔòÉÔòÉÔòÉ FACTURACIÓN ÔòÉÔòÉÔòÉ
 
 
 
@@ -5421,12 +5421,12 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
       </div>
         </div>
           )}
-            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>Selecciona veh├¡culo y d├¡as para ver el resumen</div>
+            <div style={{textAlign:"center",padding:24,color:T.sub,fontSize:13}}>Selecciona vehículo y días para ver el resumen</div>
           ):(
             </>
               </div>
-                <button onClick={()=>guardar("orden_venta")} disabled={saving} style={{...S.btn("purple"),width:"100%"}}>{saving?"...":"­ƒôª Convertir a Orden de Venta"}</button>
-                <button onClick={()=>guardar(f.estado==="borrador"?"enviada":f.estado)} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"Ô£à Guardar cotizaci├│n"}</button>
+                <button onClick={()=>guardar("orden_venta")} disabled={saving} style={{...S.btn("purple"),width:"100%"}}>{saving?"...":"📦 Convertir a Orden de Venta"}</button>
+                <button onClick={()=>guardar(f.estado==="borrador"?"enviada":f.estado)} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"...":"✅ Guardar cotización"}</button>
                 <button onClick={()=>guardar("borrador")} disabled={saving} style={{...S.btn("ghost"),width:"100%"}}>{saving?"...":"­ƒÆ¥ Borrador"}</button>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
               </div>
@@ -5438,7 +5438,7 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
                   <span style={{fontSize:12,color:T.sub,alignSelf:"flex-end"}}>$ {fmt(total_ef/exch)}</span>
                   <span>Q {fmt(total_ef)}</span>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:20,fontWeight:800,color:T.acc}}>
-                <div style={{fontSize:10,fontWeight:700,color:T.acc,marginBottom:3}}>PRECIO BENEFICIO ÔÇö Efectivo/Dep├│sito/Transf.</div>
+                <div style={{fontSize:10,fontWeight:700,color:T.acc,marginBottom:3}}>PRECIO BENEFICIO — Efectivo/Depósito/Transf.</div>
               <div style={{background:T.accDim,border:`1px solid ${T.acc}55`,borderRadius:10,padding:"12px 16px",marginBottom:8}}>
               </div>
                 <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>Q {fmt(iva_amt)}</span></div>
@@ -5458,10 +5458,10 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
               {vehObj&&(
             <>
           {sub>0?(
-          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>­ƒÜù {vehObj.nombre} ┬À {f.dias} d├¡a{f.dias!==1?"s":""}</div>}
+          {vehObj&&<div style={{fontSize:12,color:T.sub,marginBottom:10}}>🚗 {vehObj.nombre} · {f.dias} día{f.dias!==1?"s":""}</div>}
           {f.saludo&&<div style={{fontSize:12,color:T.sub,fontStyle:"italic",marginBottom:8}}>{f.saludo}</div>}
-          {f.cliente_nombre&&<div style={{fontSize:13,fontWeight:700,marginBottom:4}}>­ƒæñ {f.cliente_nombre}</div>}
-          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒôè Resumen</div>
+          {f.cliente_nombre&&<div style={{fontSize:13,fontWeight:700,marginBottom:4}}>👤 {f.cliente_nombre}</div>}
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>📊 Resumen</div>
         <div style={S.card}>
         {/* RESUMEN */}
         </div>
@@ -5482,11 +5482,11 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
                 </div>
                   ))}
                     <button key={o.v} onClick={()=>sf("iva_pct",o.v)} style={{...S.btn(f.iva_pct===o.v?"primary":"ghost"),flex:1,fontSize:11}}>{o.l}</button>
-                  {[{v:12,l:"12% General"},{v:5,l:"5% Peque├▒o Cont."},{v:0,l:"Sin IVA"}].map(o=>(
+                  {[{v:12,l:"12% General"},{v:5,l:"5% Pequeño Cont."},{v:0,l:"Sin IVA"}].map(o=>(
                 <div style={{display:"flex",gap:8}}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>IVA</label>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒÆ░ FISCAL Y FECHAS</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>💰 FISCAL Y FECHAS</div>
           <div style={S.card}>
           {/* Fiscal */}
           </div>
@@ -5501,43 +5501,43 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
               <div style={{gridColumn:"span 2"}}>
               </div>
                 <textarea style={{...S.inp,minHeight:64,resize:"vertical"}} value={f.descripcion_servicio} onChange={e=>sf("descripcion_servicio",e.target.value)} placeholder="Ej: Servicio de traslado de personas de Ciudad Guatemala hacia Quetzaltenango, ida y vuelta, del 19 al 21 de marzo..."/>
-              <div style={{gridColumn:"span 2"}}><label style={S.lbl}>DESCRIPCI├ôN DEL SERVICIO</label>
+              <div style={{gridColumn:"span 2"}}><label style={S.lbl}>DESCRIPCIÓN DEL SERVICIO</label>
               </div>
                 </div>
                   <button onClick={()=>sf("con_piloto",false)} style={{...S.btn(!f.con_piloto?"warn":"ghost"),flex:1,fontSize:11}}>­ƒöæ Sin piloto</button>
                   <button onClick={()=>sf("con_piloto",true)} style={{...S.btn(f.con_piloto?"primary":"ghost"),flex:1,fontSize:11}}>­ƒºæÔÇìÔ£ê´©Å Con piloto</button>
                 <div style={{display:"flex",gap:8}}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>MODALIDAD</label>
-              <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e=>sf("precio_custom",e.target.value)} placeholder="Vac├¡o = cat├ílogo"/></div>
+              <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e=>sf("precio_custom",e.target.value)} placeholder="Vacío = catálogo"/></div>
               <div><label style={S.lbl}>D├ìAS</label><input style={S.inp} type="number" min="1" value={f.dias} onChange={e=>sf("dias",parseInt(e.target.value)||1)}/></div>
               </div>
                 </select>
-                  {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} ÔÇö Q{fmt(v.dia)}/d├¡a</option>)}
+                  {CATALOGO.map(v=><option key={v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/día</option>)}
                   <option value="">Seleccionar...</option>
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e=>sf("vehiculo_nombre",e.target.value)}>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>VEH├ìCULO</label>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒÜù SERVICIO</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>🚗 SERVICIO</div>
           <div style={S.card}>
           {/* Servicio */}
           </div>
             </div>
               </div>
-                <input style={S.inp} value={f.saludo} onChange={e=>sf("saludo",e.target.value)} placeholder="Ej: Estimados se├▒ores de Fundaci├│n Myrna Mack"/>
+                <input style={S.inp} value={f.saludo} onChange={e=>sf("saludo",e.target.value)} placeholder="Ej: Estimados señores de Fundación Myrna Mack"/>
               <div style={{gridColumn:"span 2"}}><label style={S.lbl}>SALUDO PERSONALIZADO</label>
-              <div><label style={S.lbl}>DIRECCI├ôN DEL CLIENTE</label><input style={S.inp} value={f.cliente_dir} onChange={e=>sf("cliente_dir",e.target.value)} placeholder="Ciudad, zona..."/></div>
+              <div><label style={S.lbl}>DIRECCIÓN DEL CLIENTE</label><input style={S.inp} value={f.cliente_dir} onChange={e=>sf("cliente_dir",e.target.value)} placeholder="Ciudad, zona..."/></div>
               <div><label style={S.lbl}>NIT</label><input style={S.inp} value={f.cliente_nit} onChange={e=>sf("cliente_nit",e.target.value)} placeholder="7032528"/></div>
               </div>
                 />
                   clientes={clientes}
-                  onSelect={c=>{sf("cliente_nombre",c.nombre);sf("cliente_nit",c.nit||"");sf("cliente_dir",c.direccion||"");sf("saludo","Estimados se├▒ores de "+c.nombre);}}
+                  onSelect={c=>{sf("cliente_nombre",c.nombre);sf("cliente_nit",c.nit||"");sf("cliente_dir",c.direccion||"");sf("saludo","Estimados señores de "+c.nombre);}}
                   onChange={v=>sf("cliente_nombre",v)}
                   value={f.cliente_nombre}
                 <ClienteAutocomplete
                 <label style={S.lbl}>CLIENTE (escribe para buscar)</label>
               <div style={{gridColumn:"span 2"}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
-            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>­ƒæñ DATOS DEL CLIENTE</div>
+            <div style={{fontSize:12,fontWeight:700,color:T.mut,marginBottom:12}}>👤 DATOS DEL CLIENTE</div>
           <div style={S.card}>
           {/* Cliente */}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -5546,7 +5546,7 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
       </div>
         <button onClick={onCancel} style={S.btn("ghost")}>ÔåÉ Volver</button>
         </div>
-          {isClone?"Clonar cotizaci├│n":initial?.id?"Editar cotizaci├│n":"Nueva cotizaci├│n"}
+          {isClone?"Clonar cotización":initial?.id?"Editar cotización":"Nueva cotización"}
         <div style={{fontSize:14,fontWeight:700,color:T.acc}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
     <div>
@@ -5556,7 +5556,7 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
     }catch(e){showToast("Error al guardar: "+e.message,"err");setSaving(false);}
       onSave(estado);
       setSaving(false);
-      showToast("Cotizaci├│n guardada Ô£ö");
+      showToast("Cotización guardada ✔");
       if(result&&result.error){showToast("Error: "+result.error,"err");setSaving(false);return;}
       else result=await dbIns("cotizaciones",payload);
       if(initial?.id&&!initial?.__clon) result=await dbUpd("cotizaciones",initial.id,payload);
@@ -5601,9 +5601,9 @@ function Autocomplete({value,onChange,onSelect,items,placeholder,renderItem,getL
     const file=e.target.files[0];
   const handleFile=e=>{
 
-  const beneficios=["Experiencia de viaje segura y c├│moda","Flexibilidad a sus necesidades","Puntualidad garantizada"];
-  const incluidos=f.con_piloto?["Combustible lleno (s├║per/di├®sel)","Conductor/piloto profesional","Servicio y atenci├│n especializada"]:["Veh├¡culo entregado con tanque lleno","Asistencia en ruta disponible","Servicio y atenci├│n especializada"];
-  const caract=vehObj?[vehObj.nombre,"Aire acondicionado","Cinturones de seguridad","Seguro total"]:["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"];
+  const beneficios=["Experiencia de viaje segura y cómoda","Flexibilidad a sus necesidades","Puntualidad garantizada"];
+  const incluidos=f.con_piloto?["Combustible lleno (súper/diésel)","Conductor/piloto profesional","Servicio y atención especializada"]:["Vehículo entregado con tanque lleno","Asistencia en ruta disponible","Servicio y atención especializada"];
+  const caract=vehObj?[vehObj.nombre,"Aire acondicionado","Cinturones de seguridad","Seguro total"]:["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"];
 
   const exch=parseFloat(f.exch)||7.70;
   const total_tc=total_ef*1.05;
@@ -5658,7 +5658,7 @@ function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
   saludo:"",descripcion_servicio:"",
   cliente_nombre:"",cliente_nit:"",cliente_dir:"",
 const EMPTY_F={
-// ÔöÇÔöÇ FORMULARIO COTIZACI├ôN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ FORMULARIO COTIZACIÓN ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 }
   );
@@ -5666,9 +5666,9 @@ const EMPTY_F={
       </div>
         </div>
           </div>
-            <button onClick={()=>{const subject=encodeURIComponent(`Cotizaci├│n ${cot.numero} ÔÇö Tz'unun AutoRentas`);const body=encodeURIComponent(`Estimados,\n\nAdjunto cotizaci├│n ${cot.numero} por Q ${fmt(total_ef)}.\n\nSaludos,\nOscar G├ílvez\nTz'unun AutoRentas\n502-31221538`);window.open(`mailto:?subject=${subject}&body=${body}`);}} style={{...S.btn("ghost"),fontSize:12}}>Ô£ë´©Å Email</button>
-            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atenci├│n especializada"],beneficios:cot.beneficios||["Viaje seguro y c├│modo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc){const blob=doc.output("blob");const url=URL.createObjectURL(blob);window.open(url,"_blank");}}} style={{...S.btn("blue"),fontSize:12}}>­ƒû¿´©Å Imprimir</button>
-            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Veh├¡culo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atenci├│n especializada"],beneficios:cot.beneficios||["Viaje seguro y c├│modo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc)doc.save(`${cot.numero}.pdf`);}} style={{...S.btn("primary"),fontSize:12}}>Ô¼ç Descargar PDF</button>
+            <button onClick={()=>{const subject=encodeURIComponent(`Cotización ${cot.numero} — Tz'unun AutoRentas`);const body=encodeURIComponent(`Estimados,\n\nAdjunto cotización ${cot.numero} por Q ${fmt(total_ef)}.\n\nSaludos,\nOscar Gálvez\nTz'unun AutoRentas\n502-31221538`);window.open(`mailto:?subject=${subject}&body=${body}`);}} style={{...S.btn("ghost"),fontSize:12}}>Ô£ë´©Å Email</button>
+            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atención especializada"],beneficios:cot.beneficios||["Viaje seguro y cómodo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc){const blob=doc.output("blob");const url=URL.createObjectURL(blob);window.open(url,"_blank");}}} style={{...S.btn("blue"),fontSize:12}}>­ƒû¿´©Å Imprimir</button>
+            <button onClick={()=>{const doc=generarPDF({numero:cot.numero,fecha:cot.fecha_emision||today(),fecha_vence:cot.fecha_vence,cliente:cot.cliente_nombre,nit:cot.cliente_nit,dir_cliente:cot.cliente_dir,saludo:cot.saludo,servicio:cot.descripcion_servicio,caract:cot.caract||["Vehículo seleccionado","Aire acondicionado","Cinturones","Seguro total"],incluidos:cot.incluidos||["Combustible lleno","Conductor profesional","Atención especializada"],beneficios:cot.beneficios||["Viaje seguro y cómodo","Puntualidad","Flexibilidad"],con_piloto:cot.con_piloto!==false,sub,iva_pct,iva_amt,total_ef,total_tc,exch});if(doc)doc.save(`${cot.numero}.pdf`);}} style={{...S.btn("primary"),fontSize:12}}>Ô¼ç Descargar PDF</button>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:T.sec,marginTop:6}}><span>Con Tarjeta C/D</span><span>Q {fmt(total_tc)}</span></div>
@@ -5681,11 +5681,11 @@ const EMPTY_F={
           <div style={{background:T.surf,borderRadius:10,padding:12,marginBottom:12}}>
           {/* Financiero */}
           {cot.descripcion_servicio&&<div style={{marginBottom:12,fontSize:12,color:T.sub,fontStyle:"italic"}}>{cot.descripcion_servicio}</div>}
-          {/* Descripci├│n */}
+          {/* Descripción */}
           {cot.saludo&&<div style={{background:"#00D4AA11",border:"1px solid #00D4AA33",borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.sub,fontStyle:"italic"}}>"{cot.saludo}"</div>}
           {/* Saludo */}
           </div>
-            <div style={{fontSize:12,color:T.sub}}>NIT: {cot.cliente_nit||"ÔÇö"} ┬À {cot.cliente_dir||""}</div>
+            <div style={{fontSize:12,color:T.sub}}>NIT: {cot.cliente_nit||"—"} · {cot.cliente_dir||""}</div>
             <div style={{fontSize:14,fontWeight:700}}>{cot.cliente_nombre}</div>
             <div style={{fontSize:10,color:T.mut,fontWeight:700,marginBottom:4}}>FACTURAR A:</div>
           <div style={{marginBottom:12}}>
@@ -5694,11 +5694,11 @@ const EMPTY_F={
             </div>
               <div style={{fontSize:11,color:T.sub}}>{cot.fecha_emision||cot.created_at?.slice(0,10)}</div>
               <div style={{fontSize:12,color:"#fff"}}>#{cot.numero}</div>
-              <div style={{fontSize:16,fontWeight:800,color:T.acc}}>{cot.orden_venta?"ORDEN DE VENTA":"COTIZACI├ôN"}</div>
+              <div style={{fontSize:16,fontWeight:800,color:T.acc}}>{cot.orden_venta?"ORDEN DE VENTA":"COTIZACIÓN"}</div>
             <div style={{textAlign:"right"}}>
             </div>
               </div>
-                <div style={{fontSize:10,color:T.sub}}>502-31221538 ┬À tzununautorentas@gmail.com</div>
+                <div style={{fontSize:10,color:T.sub}}>502-31221538 · tzununautorentas@gmail.com</div>
                 <div style={{fontSize:14,fontWeight:800,color:T.acc}}>TZ'UNUN AUTORENTAS</div>
               <div>
               <img src={`data:image/png;base64,${LOGO_B64}`} style={{width:44,height:44,borderRadius:10}} alt="logo"/>
@@ -5708,7 +5708,7 @@ const EMPTY_F={
         <div style={{padding:20}}>
         </div>
           <button onClick={onClose} style={{...S.btn("ghost"),padding:"4px 10px"}}>Ô£ò</button>
-          <div style={{fontSize:14,fontWeight:700,color:T.acc}}>Vista previa ÔÇö {cot.numero}</div>
+          <div style={{fontSize:14,fontWeight:700,color:T.acc}}>Vista previa — {cot.numero}</div>
         <div style={{padding:"16px 20px",borderBottom:`1px solid ${T.bord}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{background:T.card,borderRadius:16,border:`1px solid ${T.bord}`,width:"100%",maxWidth:700,maxHeight:"90vh",overflowY:"auto"}}>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -5726,19 +5726,19 @@ function ModalVistaPrevia({cot, onClose}){
   return doc;
 
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas   |   Guatemala",W/2,HP-11,{align:"center"});
-  doc.text("TZ'UNUN AUTORENTAS  ÔÇö  M├ís comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
+  doc.text("TZ'UNUN AUTORENTAS  —  Más comodidad, rapidez y mejores precios",W/2,HP-21,{align:"center"});
   doc.setTextColor(148,163,184); doc.setFontSize(6.5); doc.setFont("helvetica","normal");
   doc.setFillColor(...TEAL); doc.rect(0,HP-36,W,2,"F");
   doc.setFillColor(...NAVY); doc.rect(0,HP-36,W,36,"F");
   // Pie
 
-  doc.text("Adjunto cotizaci├│n, quedamos a la espera de su aprobaci├│n.",W/2,y+21,{align:"center"});
+  doc.text("Adjunto cotización, quedamos a la espera de su aprobación.",W/2,y+21,{align:"center"});
   doc.setTextColor(...GRAY); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
   doc.text("Muchas gracias por su preferencia, esperamos poder servirle.",W/2,y+11,{align:"center"});
   doc.setTextColor(0,200,150); doc.setFontSize(8.5); doc.setFont("helvetica","bolditalic");
   doc.text("Cel. 502 31221538   |   @TzununAutorentas",22,y+21);
   doc.setTextColor(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
-  doc.text("Oscar G├ílvez",22,y+11);
+  doc.text("Oscar Gálvez",22,y+11);
   doc.setTextColor(27,45,92); doc.setFontSize(8); doc.setFont("helvetica","bold");
   doc.setDrawColor(203,213,225); doc.setLineWidth(0.6); doc.line(22,y,180,y);
   // Firma y cierre
@@ -5760,18 +5760,18 @@ function ModalVistaPrevia({cot, onClose}){
   doc.setFontSize(7.2); doc.setFont("helvetica","normal"); doc.setTextColor(...DKGRAY);
   ];
     "ÔÇó El saldo restante se cancela al finalizar el servicio.",
-    "ÔÇó El veh├¡culo debe devolverse limpio (recargo Q.75.00 si no cumple).",
-    d.con_piloto?"ÔÇó Combustible incluido seg├║n el recorrido acordado.":"ÔÇó Veh├¡culo entregado con tanque lleno ÔÇö devolver lleno.",
+    "ÔÇó El vehículo debe devolverse limpio (recargo Q.75.00 si no cumple).",
+    d.con_piloto?"ÔÇó Combustible incluido según el recorrido acordado.":"ÔÇó Vehículo entregado con tanque lleno — devolver lleno.",
     "ÔÇó Anticipo del 75% para confirmar el servicio.",
     "ÔÇó Se requiere copia de DPI del responsable del grupo.",
-    "ÔÇó Nuestros veh├¡culos son higienizados antes y despu├®s de cada servicio.",
+    "ÔÇó Nuestros vehículos son higienizados antes y después de cada servicio.",
   const terms=[
   doc.text("T├ëRMINOS Y CONDICIONES",30,y+10);
   doc.setTextColor(27,45,92); doc.setFontSize(7.5); doc.setFont("helvetica","bold");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,termH,"F");
   doc.setFillColor(241,245,249); doc.roundedRect(22,y,W-44,termH,4,4,"F");
   const termH=66;
-  // T├®rminos y cuentas
+  // Términos y cuentas
 
   y+=10;
   });
@@ -5794,9 +5794,9 @@ function ModalVistaPrevia({cot, onClose}){
   doc.setFillColor(...NAVY); doc.rect(22,y,W-44,16,"F");
   const cW=[310,100,90];
   ];
-    ["Con Tarjeta de Cr├®dito / D├®bito",fmt(d.total_tc),fmt(d.total_tc/d.exch),false,true],
-    ["PRECIO BENEFICIO ÔÇö Efectivo / Dep├│sito / Transferencia",fmt(d.total_ef),fmt(d.total_ef/d.exch),true,false],
-    ["Impuesto "+d.iva_pct+"% ("+(d.iva_pct===5?"Peque├▒o Contribuyente":"R├®gimen General")+")",fmt(d.iva_amt),fmt(d.iva_amt/d.exch),false,false],
+    ["Con Tarjeta de Crédito / Débito",fmt(d.total_tc),fmt(d.total_tc/d.exch),false,true],
+    ["PRECIO BENEFICIO — Efectivo / Depósito / Transferencia",fmt(d.total_ef),fmt(d.total_ef/d.exch),true,false],
+    ["Impuesto "+d.iva_pct+"% ("+(d.iva_pct===5?"Pequeño Contribuyente":"Régimen General")+")",fmt(d.iva_amt),fmt(d.iva_amt/d.exch),false,false],
     ["Subtotal (precio base)",fmt(d.sub),fmt(d.sub/d.exch),false,false],
   const finRows=[
   doc.text("RESUMEN FINANCIERO",30,y+8); y+=14;
@@ -5806,7 +5806,7 @@ function ModalVistaPrevia({cot, onClose}){
 
   }
     y+=18;
-    doc.text("ÔÜá  SIN PILOTO: Veh├¡culo entregado con tanque lleno ÔÇö debe devolverse con tanque lleno.",32,y+8);
+    doc.text("⚠️  SIN PILOTO: Vehículo entregado con tanque lleno — debe devolverse con tanque lleno.",32,y+8);
     doc.setTextColor(146,64,14); doc.setFontSize(7.2); doc.setFont("helvetica","bold");
     doc.setFillColor(...AMBER); doc.rect(22,y,3,13,"F");
     doc.setFillColor(255,248,231); doc.roundedRect(22,y,W-44,13,3,3,"F");
@@ -5840,20 +5840,20 @@ function ModalVistaPrevia({cot, onClose}){
     sl.slice(0,3).forEach((ln,i)=>doc.text(ln,22,y+(i*10)));
     const sl=doc.splitTextToSize(d.servicio,W-44);
     doc.setTextColor(...DKGRAY); doc.setFontSize(8); doc.setFont("helvetica","italic");
-    doc.text("DESCRIPCI├ôN DEL SERVICIO",30,y+8); y+=16;
+    doc.text("DESCRIPCIÓN DEL SERVICIO",30,y+8); y+=16;
     doc.setTextColor(27,45,92); doc.setFontSize(8.5); doc.setFont("helvetica","bold");
     doc.setFillColor(...TEAL2); doc.rect(22,y,3,12,"F");
   if(d.servicio){
-  // Descripci├│n
+  // Descripción
 
   y+=58;
   introL.slice(0,3).forEach((ln,i)=>doc.text(ln,32,y+25+(i*9)));
   const introL=doc.splitTextToSize(intro,W-88);
-  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de veh├¡culos, viajes de turismo y traslado de personas en Guatemala y Centroam├®rica. Con mucho gusto le presentamos la siguiente cotizaci├│n:";
+  const intro="En Transportes Tz'unun nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas en renta de vehículos, viajes de turismo y traslado de personas en Guatemala y Centroamérica. Con mucho gusto le presentamos la siguiente cotización:";
   doc.setTextColor(...DKGRAY); doc.setFontSize(7.8); doc.setFont("helvetica","normal");
   doc.text(saludoLines[0].slice(0, 80), 32, y+13);
   const saludoLines = doc.splitTextToSize(saludoText, W-70);
-  const saludoText = (d.saludo||"Estimados se├▒ores de "+(d.cliente||"")) + ":";
+  const saludoText = (d.saludo||"Estimados señores de "+(d.cliente||"")) + ":";
   doc.setTextColor(27,45,92); doc.setFontSize(9); doc.setFont("helvetica","bold");
   doc.setFillColor(...TEAL2); doc.rect(22,y,3,46,"F");
   doc.setFillColor(232,245,240); doc.roundedRect(22,y,W-44,46,4,4,"F");
@@ -5875,12 +5875,12 @@ function ModalVistaPrevia({cot, onClose}){
   let y = 110;
 
   doc.setDrawColor(...TEAL); doc.setLineWidth(2); doc.line(0,92,W,92);
-  doc.text("V├ílida hasta: "+(d.fecha_vence||"15 d├¡as"),W-20,72,{align:"right"});
-  doc.text("Emisi├│n:      "+d.fecha,W-20,61,{align:"right"});
+  doc.text("Válida hasta: "+(d.fecha_vence||"15 días"),W-20,72,{align:"right"});
+  doc.text("Emisión:      "+d.fecha,W-20,61,{align:"right"});
   doc.setTextColor(148,163,184); doc.setFontSize(7.5); doc.setFont("helvetica","normal");
   doc.text("# "+d.numero,W-20,48,{align:"right"});
   doc.setTextColor(...WHITE); doc.setFontSize(10);
-  doc.text(d.es_orden?"ORDEN DE VENTA":"COTIZACI├ôN",W-20,33,{align:"right"});
+  doc.text(d.es_orden?"ORDEN DE VENTA":"COTIZACIÓN",W-20,33,{align:"right"});
   doc.setTextColor(0,212,170); doc.setFontSize(20); doc.setFont("helvetica","bold");
   doc.text("502-31221538   |   tzununautorentas@gmail.com   |   @TzununAutorentas",100,72);
   doc.text("2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala",100,61);
@@ -5899,9 +5899,9 @@ function ModalVistaPrevia({cot, onClose}){
   const HP = doc.internal.pageSize.getHeight();
   const W = doc.internal.pageSize.getWidth();
   const doc = new jsPDF({orientation:"portrait",unit:"pt",format:"letter"});
-  if(!jsPDF){alert("jsPDF no carg├│. Intenta de nuevo en unos segundos.");return;}
+  if(!jsPDF){alert("jsPDF no cargó. Intenta de nuevo en unos segundos.");return;}
   const {jsPDF} = window.jspdf;
-  if(!window.jspdf){alert("PDF no disponible. Recarga la p├ígina e intenta de nuevo.");return null;}
+  if(!window.jspdf){alert("PDF no disponible. Recarga la página e intenta de nuevo.");return null;}
 function generarPDF(d){
 
 }
@@ -5911,7 +5911,7 @@ function generarPDF(d){
         </div>
           ))}
             </div>
-              <div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"ÔÇö"} ┬À {c.tipo}</div>
+              <div style={{fontSize:11,color:T.sub}}>NIT: {c.nit||"—"} · {c.tipo}</div>
               <div style={{fontWeight:600,color:T.txt}}>{c.nombre}</div>
               onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
               onMouseEnter={e=>e.currentTarget.style.background=T.accDim}
@@ -5960,17 +5960,17 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
     </div>
       </div>
         </div>
-          TzununSA ┬À Acceso exclusivo para personal autorizado
+          TzununSA · Acceso exclusivo para personal autorizado
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: T.mut }}>
 
         </div>
           </div>
-            Ve a Supabase ÔåÆ Authentication ÔåÆ Users ÔåÆ Invite user y agrega el correo de cada empleado. Ellos recibir├ín un correo para crear su contrase├▒a.
+            Ve a Supabase → Authentication → Users → Invite user y agrega el correo de cada empleado. Ellos recibirán un correo para crear su contraseña.
             <div style={{ fontWeight: 600, color: T.mut, marginBottom: 4 }}>┬┐PRIMER ACCESO?</div>
           <div style={{ marginTop: 20, padding: "12px 14px", background: T.surf, borderRadius: 8, fontSize: 12, color: T.sub }}>
 
           </button>
-            {loading ? "Verificando..." : "Entrar ÔåÆ"}
+            {loading ? "Verificando..." : "Entrar →"}
           >
             style={{ width: "100%", padding: "13px", background: loading ? T.mut : T.acc, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#0A0F1E", cursor: loading ? "not-allowed" : "pointer" }}
             disabled={loading}
@@ -5994,23 +5994,23 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
               type="email" value={email} onChange={e => setEmail(e.target.value)}
               style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
             <input
-            <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CORREO ELECTR├ôNICO</label>
+            <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>CORREO ELECTRÓNICO</label>
           <div style={{ marginBottom: 14 }}>
 
           )}
             </div>
-              ÔØî {error}
+              ❌ {error}
             <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>
           {error && (
 
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.txt, marginBottom: 24, textAlign: "center" }}>Iniciar sesi├│n</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.txt, marginBottom: 24, textAlign: "center" }}>Iniciar sesión</div>
         <div style={{ background: T.card, border: `1px solid ${T.bord}`, borderRadius: 16, padding: 32 }}>
         {/* Card login */}
 
         </div>
-          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gesti├│n Integral</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gestión Integral</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.acc }}>Tz'unun AutoRentas</div>
-          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>­ƒÉª</div>
+          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>🐦</div>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
         {/* Logo */}
       <div style={{ width: "100%", maxWidth: 420 }}>
@@ -6020,10 +6020,10 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
   };
     setLoading(false);
     }
-      setError("Error de conexi├│n. Verifica tu internet.");
+      setError("Error de conexión. Verifica tu internet.");
     } catch {
       }
-        setError("Correo o contrase├▒a incorrectos");
+        setError("Correo o contraseña incorrectos");
       } else {
         onLogin(data.access_token, data.user);
         localStorage.setItem("tzunun_user", JSON.stringify({ email: data.user?.email, name: data.user?.user_metadata?.name || data.user?.email }));
@@ -6035,7 +6035,7 @@ function ClienteAutocomplete({value, onChange, onSelect, clientes}){
     setLoading(true);
     }
       return;
-      setError("Ingresa tu correo y contrase├▒a");
+      setError("Ingresa tu correo y contraseña");
     if (!email.trim() || !password.trim()) {
   const handleLogin = async () => {
 
@@ -6054,7 +6054,7 @@ function LoginScreen({ onLogin }) {
           )}
             </>
               </button>
-                {loading ? "Guardando..." : "Crear contrase├▒a ÔåÆ"}
+                {loading ? "Guardando..." : "Crear contraseña →"}
                 style={{ width: "100%", padding: "13px", background: loading ? T.mut : T.acc, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#0A0F1E", cursor: loading ? "not-allowed" : "pointer" }}>
               <button onClick={handleSet} disabled={loading}
               </div>
@@ -6066,18 +6066,18 @@ function LoginScreen({ onLogin }) {
               </div>
                   type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó" />
                 <input style={{ width: "100%", background: T.surf, border: `1px solid ${T.bord}`, borderRadius: 8, padding: "11px 14px", color: T.txt, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-                <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>NUEVA CONTRASE├æA (m├¡nimo 8 caracteres)</label>
+                <label style={{ fontSize: 11, color: T.mut, display: "block", marginBottom: 4, fontWeight: 600 }}>NUEVA CONTRASE├æA (mínimo 8 caracteres)</label>
               <div style={{ marginBottom: 14 }}>
-              {error && <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>ÔØî {error}</div>}
+              {error && <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red, marginBottom: 16 }}>❌ {error}</div>}
             <>
           ) : (
             <div style={{ textAlign: "center", fontSize: 16, color: T.acc, padding: 20 }}>{msg}</div>
           {msg ? (
         <div style={{ background: T.card, border: `1px solid ${T.bord}`, borderRadius: 16, padding: 32 }}>
         </div>
-          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Tz'unun AutoRentas ÔÇö Primer acceso</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T.acc }}>Crear contrase├▒a</div>
-          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>­ƒÉª</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Tz'unun AutoRentas — Primer acceso</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.acc }}>Crear contraseña</div>
+          <div style={{ width: 80, height: 80, borderRadius: 20, background: "linear-gradient(135deg,#00D4AA,#3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 16px" }}>🐦</div>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
     <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: T.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -6086,15 +6086,15 @@ function LoginScreen({ onLogin }) {
   };
     setLoading(false);
     }
-      setError("Error al guardar. Pide una nueva invitaci├│n.");
+      setError("Error al guardar. Pide una nueva invitación.");
     } else {
       setTimeout(onDone, 2000);
-      setMsg("Ô£à Contrase├▒a creada. Ya puedes iniciar sesi├│n.");
+      setMsg("✅ Contraseña creada. Ya puedes iniciar sesión.");
     if (data.id) {
     const data = await sbSetPassword(token, pwd);
     setLoading(true); setError("");
-    if (pwd !== pwd2) { setError("Las contrase├▒as no coinciden"); return; }
-    if (pwd.length < 8) { setError("La contrase├▒a debe tener al menos 8 caracteres"); return; }
+    if (pwd !== pwd2) { setError("Las contraseñas no coinciden"); return; }
+    if (pwd.length < 8) { setError("La contraseña debe tener al menos 8 caracteres"); return; }
   const handleSet = async () => {
 
   const [error, setError] = useState("");
@@ -6112,7 +6112,7 @@ function SetPasswordScreen({ token, onDone }) {
     method: "PUT",
   const r = await fetch(`${SB}/auth/v1/user`, {
 async function sbSetPassword(token, newPassword) {
-// ÔöÇÔöÇ PANTALLA: CREAR/CAMBIAR CONTRASE├æA (desde link de invitaci├│n) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ PANTALLA: CREAR/CAMBIAR CONTRASE├æA (desde link de invitación) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 
 }
@@ -6146,51 +6146,51 @@ async function sbSignIn(email, password) {
   "oscar@tzununautorentas.com",
 const USERS_ALLOWED = [
 // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
-// AUTENTICACI├ôN ÔÇö Login con Supabase Auth
+// AUTENTICACIÓN — Login con Supabase Auth
 // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 ];
-  {d:"Jocotan Chiquimula",km:210,dias:1},{d:"Zacualpa Quich├®",km:210,dias:1},
+  {d:"Jocotan Chiquimula",km:210,dias:1},{d:"Zacualpa Quiché",km:210,dias:1},
   {d:"Playa El Tunco El Salvador",km:275,dias:1},{d:"Suchitoto El Salvador",km:253,dias:1},
-  {d:"Nebaj Quich├®",km:235,dias:1},{d:"Chisec Alta Verapaz",km:350,dias:1},
-  {d:"Totonicap├ín",km:185,dias:1},{d:"Zacapa",km:160,dias:1},
-  {d:"Tecp├ín",km:93,dias:1},{d:"Tikal Pet├®n",km:536,dias:1},
-  {d:"Solol├í",km:145,dias:1},{d:"Suchitep├®quez",km:164,dias:1},
+  {d:"Nebaj Quiché",km:235,dias:1},{d:"Chisec Alta Verapaz",km:350,dias:1},
+  {d:"Totonicapán",km:185,dias:1},{d:"Zacapa",km:160,dias:1},
+  {d:"Tecpán",km:93,dias:1},{d:"Tikal Petén",km:536,dias:1},
+  {d:"Sololá",km:145,dias:1},{d:"Suchitepéquez",km:164,dias:1},
   {d:"Santa Rosa",km:57,dias:1},{d:"Semuc Champey",km:300,dias:1},
   {d:"San Marcos",km:284,dias:1},{d:"San Pedro La Laguna",km:180,dias:1},
-  {d:"San Jos├® / Iztapa",km:115,dias:1},{d:"San Lucas Sacatep├®quez",km:25,dias:1},
-  {d:"Ruinas Cop├ín Honduras",km:235,dias:1},{d:"Sacatep├®quez",km:45,dias:1},
-  {d:"R├¡o Dulce",km:300,dias:1},{d:"R├¡o Hondo Zacapa",km:145,dias:1},
+  {d:"San José / Iztapa",km:115,dias:1},{d:"San Lucas Sacatepéquez",km:25,dias:1},
+  {d:"Ruinas Copán Honduras",km:235,dias:1},{d:"Sacatepéquez",km:45,dias:1},
+  {d:"Río Dulce",km:300,dias:1},{d:"Río Hondo Zacapa",km:145,dias:1},
   {d:"Rabinal Baja Verapaz",km:185,dias:1},{d:"Retalhuleu",km:200,dias:1},
-  {d:"Quich├® (Sta. Cruz)",km:269,dias:1},{d:"Quirigu├í",km:215,dias:1},
+  {d:"Quiché (Sta. Cruz)",km:269,dias:1},{d:"Quiriguá",km:215,dias:1},
   {d:"Puerto Barrios",km:315,dias:1},{d:"Quetzaltenango",km:210,dias:1},
-  {d:"Panajachel",km:140,dias:1},{d:"Pet├®n (Flores)",km:525,dias:1},
+  {d:"Panajachel",km:140,dias:1},{d:"Petén (Flores)",km:525,dias:1},
   {d:"Livingston",km:300,dias:1},{d:"Monterrico",km:140,dias:1},
   {d:"Jalapa",km:112,dias:1},{d:"Jutiapa",km:205,dias:1},
-  {d:"Ixc├ín Quich├®",km:385,dias:1},{d:"Izabal",km:245,dias:1},
+  {d:"Ixcán Quiché",km:385,dias:1},{d:"Izabal",km:245,dias:1},
   {d:"Huehuetenango",km:275,dias:1},{d:"Irtra Retalhuleu",km:190,dias:1},
-  {d:"Flores Pet├®n",km:520,dias:1},{d:"Frontera Mesilla",km:320,dias:1},
+  {d:"Flores Petén",km:520,dias:1},{d:"Frontera Mesilla",km:320,dias:1},
   {d:"Esquipulas",km:215,dias:1},{d:"Escuintla",km:68,dias:1},
   {d:"El Estor Izabal",km:590,dias:1},{d:"El Progreso",km:135,dias:1},
-  {d:"Cob├ín",km:215,dias:1},{d:"Coatep├®que",km:225,dias:1},
+  {d:"Cobán",km:215,dias:1},{d:"Coatepéque",km:225,dias:1},
   {d:"Chimaltenango",km:110,dias:1},{d:"Chiquimula",km:180,dias:1},
   {d:"Champerico",km:230,dias:1},{d:"Chichicastenango",km:150,dias:1},
   {d:"Antigua Guatemala",km:40,dias:1},{d:"Baja Verapaz",km:165,dias:1},
 const RUTAS=[
 // ÔòÉÔòÉÔòÉ TABLA DE RUTAS Y DISTANCIAS (de tarifario Tz'unun) ÔòÉÔòÉÔòÉ
 
-const FLUJO_RES={pendiente:[{v:"confirmada",l:"Ô£ô Confirmar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],confirmada:[{v:"en_curso",l:"ÔûÂ Iniciar",s:"blue"},{v:"cancelada",l:"Ô£ù",s:"danger"}],en_curso:[{v:"completada",l:"Ô£ô Completar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"Ôå║",s:"ghost"}]};
+const FLUJO_RES={pendiente:[{v:"confirmada",l:"Ô£ô Confirmar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],confirmada:[{v:"en_curso",l:"ÔûÂ Iniciar",s:"blue"},{v:"cancelada",l:"Ô£ù",s:"danger"}],en_curso:[{v:"completada",l:"Ô£ô Completar",s:"primary"},{v:"cancelada",l:"Ô£ù",s:"danger"}],completada:[],cancelada:[{v:"pendiente",l:"↺",s:"ghost"}]};
 const EST_FAC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},emitida:{c:T.blue,bg:T.blueDim,l:"Emitida"},certificada:{c:T.acc,bg:T.accDim,l:"Certificada"},pagada:{c:T.acc,bg:T.accDim,l:"Pagada"},parcial:{c:T.sec,bg:T.secDim,l:"Pago parcial"},anulada:{c:T.red,bg:T.redDim,l:"Anulada"}};
 const EST_VEH={disponible:{c:T.acc,bg:T.accDim,l:"Disponible"},rentado:{c:T.blue,bg:T.blueDim,l:"Rentado"},mantenimiento:{c:T.sec,bg:T.secDim,l:"Mantenim."}};
 const EST_RES={pendiente:{c:T.mut,bg:"#1E293B",l:"Pendiente"},confirmada:{c:T.acc,bg:T.accDim,l:"Confirmada"},en_curso:{c:T.blue,bg:T.blueDim,l:"En curso"},completada:{c:T.acc,bg:T.accDim,l:"Completada"},cancelada:{c:T.red,bg:T.redDim,l:"Cancelada"}};
 const CAT_COLOR={combustible:T.sec,mantenimiento:T.blue,seguros:T.purple,salarios:T.green,impuestos:T.red,servicios:T.acc,llantas:T.blue,repuestos:T.sec,hospedaje:"#06B6D4",alimentacion:"#EC4899",peajes:T.sec,oficina:T.mut,otros:T.sub};
 const CAT_GASTO=["combustible","mantenimiento","seguros","salarios","impuestos","servicios","llantas","repuestos","hospedaje","alimentacion","peajes","oficina","otros"];
-const CATALOGO=[{id:"c1",nombre:"Hyundai Verna (Sed├ín)",tipo:"Sed├ín",dia:300,sem:275,mes:250},{id:"c2",nombre:"Toyota RAV4 H├¡brida (SUV)",tipo:"SUV",dia:600,sem:575,mes:550},{id:"c3",nombre:"Suzuki XL7 3 filas (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c4",nombre:"Suzuki Jimny 5p 4x4 (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c5",nombre:"Mitsubishi L200 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c6",nombre:"Mahindra Pikup 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c7",nombre:"Nissan Urvan Wide 16p",tipo:"Microb├║s",dia:750,sem:700,mes:650},{id:"c8",nombre:"Bus tipo County",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c9",nombre:"Bus tipo Pullman",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c10",nombre:"Bus Escolar",tipo:"Bus",dia:600,sem:550,mes:500}];
-const GT={"Guatemala":["Guatemala","Mixco","Villa Nueva","San Miguel Petapa","Chinautla","Palencia","Fraijanes","Amatitl├ín"],"Alta Verapaz":["Cob├ín","San Pedro Carch├í","Tactic","Panz├│s","Senah├║","Lanqu├¡n","Cahab├│n","Chisec","Raxruh├í"],"Baja Verapaz":["Salam├í","Rabinal","Cubulco","Granados","San Jer├│nimo","Purulh├í"],"Chimaltenango":["Chimaltenango","Comalapa","Tecp├ín","Patz├║n","Patzic├¡a","Acatenango","Yepocapa"],"Chiquimula":["Chiquimula","Jocot├ín","Camot├ín","Olopa","Esquipulas","Quezaltepeque"],"El Progreso":["Guastatoya","Moraz├ín","San Agust├¡n Acasaguastl├ín","Sanarate"],"Escuintla":["Escuintla","Santa Luc├¡a Cotzumalguapa","Tiquisate","La Gomera","San Jos├®","Iztapa"],"Huehuetenango":["Huehuetenango","Chiantla","Cuilco","Jacaltenango","San Pedro Soloma","Todos Santos","Barillas"],"Izabal":["Puerto Barrios","Livingston","El Estor","Morales"],"Jalapa":["Jalapa","San Pedro Pinula","Monjas","Mataquescuintla"],"Jutiapa":["Jutiapa","Santa Catarina Mita","Asunci├│n Mita","Jalpatagua","Moyuta"],"Pet├®n":["Flores","San Benito","San Andr├®s","La Libertad","Dolores","San Luis","Sayaxch├®","Popt├║n"],"Quetzaltenango":["Quetzaltenango","Salcaj├í","Ostuncalco","Almolonga","Cantel","Zunil","Coatepeque"],"Quich├®":["Santa Cruz del Quich├®","Chichicastenango","Cun├®n","Nebaj","Sacapulas","Uspant├ín","Ixc├ín"],"Retalhuleu":["Retalhuleu","San Sebasti├ín","San Mart├¡n Zapotitl├ín","Champerico"],"Sacatep├®quez":["Antigua Guatemala","Jocotenango","Sumpango","San Lucas Sacatep├®quez","Ciudad Vieja"],"San Marcos":["San Marcos","Comitancillo","Tacan├í","Tajumulco","Malacat├ín","Catarina","Ayutla"],"Santa Rosa":["Cuilapa","Barberena","Casillas","Chiquimulilla","Taxisco"],"Solol├í":["Solol├í","Nahual├í","Panajachel","San Lucas Tolim├ín","Santiago Atitl├ín"],"Suchitep├®quez":["Mazatenango","Cuyotenango","Santo Domingo Suchitep├®quez","Chicacao"],"Totonicap├ín":["Totonicap├ín","San Crist├│bal Totonicap├ín","San Francisco El Alto","Momostenango"],"Zacapa":["Zacapa","Estanzuela","R├¡o Hondo","Gual├ín","Teculut├ín"]};
+const CATALOGO=[{id:"c1",nombre:"Hyundai Verna (Sedán)",tipo:"Sedán",dia:300,sem:275,mes:250},{id:"c2",nombre:"Toyota RAV4 Híbrida (SUV)",tipo:"SUV",dia:600,sem:575,mes:550},{id:"c3",nombre:"Suzuki XL7 3 filas (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c4",nombre:"Suzuki Jimny 5p 4x4 (SUV)",tipo:"SUV",dia:550,sem:500,mes:450},{id:"c5",nombre:"Mitsubishi L200 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c6",nombre:"Mahindra Pikup 4x4 (Pickup)",tipo:"Pickup",dia:550,sem:500,mes:450},{id:"c7",nombre:"Nissan Urvan Wide 16p",tipo:"Microbús",dia:750,sem:700,mes:650},{id:"c8",nombre:"Bus tipo County",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c9",nombre:"Bus tipo Pullman",tipo:"Bus",dia:600,sem:550,mes:500},{id:"c10",nombre:"Bus Escolar",tipo:"Bus",dia:600,sem:550,mes:500}];
+const GT={"Guatemala":["Guatemala","Mixco","Villa Nueva","San Miguel Petapa","Chinautla","Palencia","Fraijanes","Amatitlán"],"Alta Verapaz":["Cobán","San Pedro Carchá","Tactic","Panzós","Senahú","Lanquín","Cahabón","Chisec","Raxruhá"],"Baja Verapaz":["Salamá","Rabinal","Cubulco","Granados","San Jerónimo","Purulhá"],"Chimaltenango":["Chimaltenango","Comalapa","Tecpán","Patzún","Patzicía","Acatenango","Yepocapa"],"Chiquimula":["Chiquimula","Jocotán","Camotán","Olopa","Esquipulas","Quezaltepeque"],"El Progreso":["Guastatoya","Morazán","San Agustín Acasaguastlán","Sanarate"],"Escuintla":["Escuintla","Santa Lucía Cotzumalguapa","Tiquisate","La Gomera","San José","Iztapa"],"Huehuetenango":["Huehuetenango","Chiantla","Cuilco","Jacaltenango","San Pedro Soloma","Todos Santos","Barillas"],"Izabal":["Puerto Barrios","Livingston","El Estor","Morales"],"Jalapa":["Jalapa","San Pedro Pinula","Monjas","Mataquescuintla"],"Jutiapa":["Jutiapa","Santa Catarina Mita","Asunción Mita","Jalpatagua","Moyuta"],"Petén":["Flores","San Benito","San Andrés","La Libertad","Dolores","San Luis","Sayaxché","Poptún"],"Quetzaltenango":["Quetzaltenango","Salcajá","Ostuncalco","Almolonga","Cantel","Zunil","Coatepeque"],"Quiché":["Santa Cruz del Quiché","Chichicastenango","Cunén","Nebaj","Sacapulas","Uspantán","Ixcán"],"Retalhuleu":["Retalhuleu","San Sebastián","San Martín Zapotitlán","Champerico"],"Sacatepéquez":["Antigua Guatemala","Jocotenango","Sumpango","San Lucas Sacatepéquez","Ciudad Vieja"],"San Marcos":["San Marcos","Comitancillo","Tacaná","Tajumulco","Malacatán","Catarina","Ayutla"],"Santa Rosa":["Cuilapa","Barberena","Casillas","Chiquimulilla","Taxisco"],"Sololá":["Sololá","Nahualá","Panajachel","San Lucas Tolimán","Santiago Atitlán"],"Suchitepéquez":["Mazatenango","Cuyotenango","Santo Domingo Suchitepéquez","Chicacao"],"Totonicapán":["Totonicapán","San Cristóbal Totonicapán","San Francisco El Alto","Momostenango"],"Zacapa":["Zacapa","Estanzuela","Río Hondo","Gualán","Teculután"]};
 function Empty({icon,msg,action,onAction}){return <div style={{...S.card,textAlign:"center",padding:40,color:T.sub}}><div style={{fontSize:32,marginBottom:10}}>{icon}</div><div>{msg}</div>{action&&<button onClick={onAction} style={{...S.btn("primary"),marginTop:14,fontSize:12}}>{action}</button>}</div>;}
 function Fld({label,children,span2}){return <div style={span2?{gridColumn:"span 2"}:{}}><label style={S.lbl}>{label}</label>{children}</div>;}
-function Spinner(){return <div style={{textAlign:"center",padding:36,color:T.sub}}>ÔÅ│ Cargando...</div>;}
-function Toast({msg,type}){if(!msg)return null;const c=type==="ok"?T.acc:T.red;return <div style={{background:T.card,border:`1px solid ${c}`,borderRadius:10,padding:"11px 18px",fontSize:13,color:c,fontWeight:600,marginBottom:14}}>{type==="ok"?"Ô£à":"ÔØî"} {msg}</div>;}
+function Spinner(){return <div style={{textAlign:"center",padding:36,color:T.sub}}>⏳ Cargando...</div>;}
+function Toast({msg,type}){if(!msg)return null;const c=type==="ok"?T.acc:T.red;return <div style={{background:T.card,border:`1px solid ${c}`,borderRadius:10,padding:"11px 18px",fontSize:13,color:c,fontWeight:600,marginBottom:14}}>{type==="ok"?"✅":"❌"} {msg}</div>;}
 function Badge({color,bg,label,small}){return <span style={{display:"inline-block",padding:small?"2px 7px":"3px 10px",borderRadius:20,fontSize:small?10:11,fontWeight:600,color,background:bg}}>{label}</span>;}
 async function dbDel(t,id){try{await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:"DELETE",headers:H});}catch{}}
 async function dbUpd(t,id,d){try{const r=await fetch(`${SB}/rest/v1/${t}?id=eq.${id}`,{method:"PATCH",headers:{...H,Prefer:"return=representation"},body:JSON.stringify(d)});return r.json();}catch{return null;}}
@@ -6208,9 +6208,9 @@ const today=()=>new Date().toISOString().slice(0,10);
     if(s instanceof Date){d=s;}
     let d;
   try{
-  if(!s||s==="Invalid Date"||s==="null"||s==="undefined")return"ÔÇö";
+  if(!s||s==="Invalid Date"||s==="null"||s==="undefined")return"—";
 const fmtD=s=>{
-const fmtK=n=>n>=1000?`Q ${(n/1000).toFixed(1)}k`:`Q ${fmt(n)}`;
+
 const fmt=n=>new Intl.NumberFormat("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const T={bg:"#0A0F1E",surf:"#111827",card:"#162032",bord:"#1E3A5F",acc:"#00D4AA",accDim:"#00D4AA22",sec:"#F59E0B",secDim:"#F59E0B22",red:"#EF4444",redDim:"#EF444422",blue:"#3B82F6",blueDim:"#3B82F622",purple:"#A855F7",purpleDim:"#A855F722",green:"#22C55E",greenDim:"#22C55E22",txt:"#F1F5F9",mut:"#64748B",sub:"#94A3B8"};
 const H={apikey:SK,Authorization:`Bearer ${SK}`,"Content-Type":"application/json"};
@@ -6222,4 +6222,5 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tool
 import React, { useState, useEffect, useRef } from "react";
 /** @jsx React.createElement */
 /** @jsxRuntime classic */
+
 
