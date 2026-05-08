@@ -137,9 +137,6 @@ export const S = {
 };
 
 // --- UTILS ---
-export const fmt = (n) =>
-  new Intl.NumberFormat("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
-
 export const fmtK = (n) => {
   const num = parseFloat(n) || 0;
   if (num >= 1000) return "Q " + (num / 1000).toFixed(1) + "k";
