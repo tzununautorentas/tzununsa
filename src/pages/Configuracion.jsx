@@ -2,7 +2,109 @@
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS } from '../config.js';
 import { Toast, Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, BotonesCompartir, ErrBoundary } from '../components/shared.jsx';
 
-export default function PageBanca({showToast,empId}){
+export default function PageConfiguracion({showToast}){
+// ÔòÉÔòÉÔòÉ CONFIGURACI├ôN ÔòÉÔòÉÔòÉ
+
+}
+  );
+    </div>
+      {loading?<Spinner/>:data&&<>{tab==="ventas"&&<ReporteVentas data={data}/>}{tab==="flota"&&<ReporteFlota data={data}/>}{tab==="gastos"&&<ReporteGastos data={data}/>}{tab==="clientes"&&<ReporteClientes data={data}/>}</>}
+      </div>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║ Actualizar</button>
+        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
+    <div>
+  return(
+  const TABS=[{id:"ventas",l:"­ƒôè Ventas"},{id:"flota",l:"­ƒÜù Flota"},{id:"gastos",l:"­ƒÆ© Gastos"},{id:"clientes",l:"­ƒæÑ Clientes"}];
+  };
+    setLoading(false);
+    setData({vehiculos:Array.isArray(vehiculos)?vehiculos:[],reservas:Array.isArray(reservas)?reservas:[],cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],facturas:Array.isArray(facturas)?facturas:[],gastos:Array.isArray(gastos)?gastos:[],clientes:Array.isArray(clientes)?clientes:[],movimientos:Array.isArray(movimientos)?movimientos:[]});
+    const [vehiculos,reservas,cotizaciones,facturas,gastos,clientes,movimientos]=await Promise.all([dbGet("vehiculos",""),dbGet("reservas",""),dbGet("cotizaciones",""),dbGet("facturas",""),dbGet("gastos",""),dbGet("clientes",""),dbGet("movimientos_bancarios","")]);
+    setLoading(true);
+  const load=async()=>{
+  useEffect(()=>{load();},[]);
+  const [tab,setTab]=useState("ventas");const [data,setData]=useState(null);const [loading,setLoading]=useState(true);
+function PageReportes(){
+// ÔòÉÔòÉÔòÉ REPORTES PAGE ÔòÉÔòÉÔòÉ
+
+}
+  );
+    </div>
+      {tab==="proveedores"&&<ModProveedores empId={empId} showToast={(m,tp)=>{showToast(m,tp);reloadProv();}}/>}
+      {tab==="gastos"&&<ModGastos empId={empId} proveedores={proveedores} showToast={showToast}/>}
+      </div>
+        {[{id:"gastos",l:"­ƒÆ© Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
+    <div>
+  return(
+  const reloadProv=()=>dbGet("proveedores","").then(d=>setProveedores(Array.isArray(d)?d:[]));
+  useEffect(()=>{dbGet("proveedores","").then(d=>setProveedores(Array.isArray(d)?d:[]));},[]);
+  const [tab,setTab]=useState("gastos");const [proveedores,setProveedores]=useState([]);
+function PageGastos({showToast,empId}){
+// ÔòÉÔòÉÔòÉ GASTOS PAGE ÔòÉÔòÉÔòÉ
+
+}
+  );
+    </div>
+      </div>
+        </div>
+          </>}
+            )}
+              </tbody></table></div>
+              <tbody>{movsFil.map(m=><tr key={m.id}><td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(m.fecha)}</td><td style={{...S.td,maxWidth:180}}><div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:175}}>{m.descripcion}</div>{m.referencia&&<div style={{fontSize:9,color:T.mut}}>{m.referencia}</div>}</td><td style={S.td}><span style={{padding:"2px 6px",borderRadius:8,fontSize:10,fontWeight:600,background:(CC[m.categoria]||T.mut)+"22",color:CC[m.categoria]||T.mut}}>{m.categoria}</span></td><td style={{...S.td,fontWeight:700,color:m.tipo==="ingreso"?T.acc:T.red,whiteSpace:"nowrap"}}>{m.tipo==="ingreso"?"+ ":"ÔêÆ "}Q {fmt(m.monto)}</td><td style={S.td}><button onClick={()=>conciliar(m.id,!m.conciliado)} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,padding:0}}>{m.conciliado?"Ô£à":"Ô¼£"}</button></td><td style={S.td}><button onClick={async()=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("movimientos_bancarios",m.id);loadMovs(cuentaAct.id);}} style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}}>­ƒùæ´©Å</button></td></tr>)}
+              <div style={S.card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Fecha","Descripci├│n","Cat.","Monto","Ô£ô",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            {movsFil.length===0?<Empty icon="­ƒÆ│" msg="Sin movimientos" action="+ Registrar" onAction={()=>setShowForm(true)}/>:(
+            </div>
+              {["todos","conciliado","pendiente"].map(t=><button key={t} onClick={()=>setFiltroC(t)} style={{...S.btn(filtroC===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todo":t==="conciliado"?"Ô£à Conciliados":"ÔÅ│ Pendientes"}</button>)}
+              {["todos","ingreso","egreso"].map(t=><button key={t} onClick={()=>setFiltroT(t)} style={{...S.btn(filtroT===t?"primary":"ghost"),fontSize:11,padding:"5px 10px"}}>{t==="todos"?"Todos":t==="ingreso"?"Ô¼å Ingresos":"Ô¼ç Egresos"}</button>)}
+            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            </div>}
+              </div>
+                <div style={{gridColumn:"span 2",display:"flex",gap:8}}><button onClick={guardarMov} disabled={saving} style={{...S.btn("primary"),flex:1}}>{saving?"...":"­ƒÆ¥ Guardar"}</button><button onClick={()=>setShowForm(false)} style={{...S.btn("ghost"),flex:1}}>Cancelar</button></div>
+                <div style={{display:"flex",alignItems:"center",gap:10,paddingTop:18}}><input type="checkbox" checked={f.conciliado} onChange={e=>sf("conciliado",e.target.checked)} style={{width:16,height:16}}/><label style={{...S.lbl,marginBottom:0}}>CONCILIADO</label></div>
+                <Fld label="REFERENCIA"><input style={S.inp} value={f.referencia} onChange={e=>sf("referencia",e.target.value)} placeholder="N┬░ factura..."/></Fld>
+                <Fld label="CATEGOR├ìA"><select style={S.sel} value={f.categoria} onChange={e=>sf("categoria",e.target.value)}>{CATS.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}</select></Fld>
+                <Fld label="MONTO (GTQ)"><input style={S.inp} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/></Fld>
+                <Fld label="DESCRIPCI├ôN" span2><input style={S.inp} value={f.descripcion} onChange={e=>sf("descripcion",e.target.value)} placeholder="Descripci├│n..."/></Fld>
+                <Fld label="TIPO"><div style={{display:"flex",gap:8}}><button onClick={()=>sf("tipo","ingreso")} style={{...S.btn(f.tipo==="ingreso"?"primary":"ghost"),flex:1,fontSize:12}}>Ô¼å Ingreso</button><button onClick={()=>sf("tipo","egreso")} style={{...S.btn(f.tipo==="egreso"?"danger":"ghost"),flex:1,fontSize:12}}>Ô¼ç Egreso</button></div></Fld>
+                <Fld label="FECHA"><input style={S.inp} type="date" value={f.fecha} onChange={e=>sf("fecha",e.target.value)}/></Fld>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+            {showForm&&<div style={{...S.card,marginBottom:14}}>
+            </div>
+              </div>
+                <button onClick={()=>setShowForm(!showForm)} style={{...S.btn(showForm?"warn":"primary"),fontSize:12}}>{showForm?"Cancelar":"+ Movimiento"}</button>
+                <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>­ƒôñ Exportar</button>
+              <div style={{display:"flex",gap:6}}>
+              <div><div style={{fontSize:14,fontWeight:700}}>{cuentaAct.banco}</div><div style={{fontSize:12,color:T.sub}}>{cuentaAct.numero_cuenta}</div></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          {cuentaAct&&<>
+        <div>
+        </div>
+          {loading?<Spinner/>:cuentas.length===0?<Empty icon="­ƒÅª" msg="Sin cuentas registradas"/>:cuentas.map(c=><div key={c.id} onClick={()=>setCuentaAct(c)} style={{...S.card,cursor:"pointer",border:`1px solid ${cuentaAct?.id===c.id?T.acc:T.bord}`,marginBottom:10,background:cuentaAct?.id===c.id?T.accDim:T.card}}><div style={{fontSize:13,fontWeight:700}}>{c.banco}</div><div style={{fontSize:11,color:T.sub}}>{c.numero_cuenta} ┬À {c.moneda}</div><div style={{fontSize:18,fontWeight:800,color:T.acc,marginTop:8}}>Q {fmt(c.saldo_actual)}</div></div>)}
+          <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:10}}>MIS CUENTAS</div>
+        <div>
+      <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:18}}>
+      </div>
+        {[{l:"Saldo total GTQ",v:`Q ${fmt(saldoGTQ)}`,c:T.acc,bg:T.accDim},{l:"Ingresos",v:`Q ${fmt(ing)}`,c:T.acc,bg:T.accDim},{l:"Sin conciliar",v:movs.filter(m=>!m.conciliado).length,c:T.sec,bg:T.secDim}].map((s,i)=><div key={i} style={{background:s.bg,border:`1px solid ${s.c}44`,borderRadius:12,padding:"14px 18px"}}><div style={{fontSize:11,color:T.mut}}>{s.l}</div><div style={{fontSize:20,fontWeight:800,color:s.c,marginTop:4}}>{s.v}</div></div>)}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+      {exportar&&<ModalExportar titulo="Movimientos Bancarios" datos={movs} campos={[{label:"Fecha",key:"fecha"},{label:"Descripci├│n",key:"descripcion"},{label:"Categor├¡a",key:"categoria"},{label:"Tipo",key:"tipo"},{label:"Monto",key:"monto"},{label:"Referencia",key:"referencia"},{label:"Conciliado",key:"conciliado"}]} onClose={()=>setExportar(false)}/>}
+    <div>
+  return(
+  const saldoGTQ=cuentas.filter(c=>c.moneda==="GTQ").reduce((s,c)=>s+(parseFloat(c.saldo_actual)||0),0);
+  const ing=movs.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+(parseFloat(m.monto)||0),0);
+  const movsFil=movs.filter(m=>{if(filtroT!=="todos"&&m.tipo!==filtroT)return false;if(filtroC==="conciliado"&&!m.conciliado)return false;if(filtroC==="pendiente"&&m.conciliado)return false;return true;});
+  const conciliar=async(id,val)=>{await dbUpd("movimientos_bancarios",id,{conciliado:val});loadMovs(cuentaAct.id);};
+  const guardarMov=async()=>{if(!f.descripcion.trim()||!(parseFloat(f.monto)>0)){showToast("Descripci├│n y monto requeridos","err");return;}setSaving(true);await dbIns("movimientos_bancarios",{empresa_id:empId,cuenta_id:cuentaAct.id,fecha:f.fecha,tipo:f.tipo,descripcion:f.descripcion,monto:parseFloat(f.monto),referencia:f.referencia,categoria:f.categoria,conciliado:f.conciliado,notas:f.notas});showToast("Guardado Ô£ö");setSaving(false);setShowForm(false);setF({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});loadMovs(cuentaAct.id);};
+  useEffect(()=>{if(cuentaAct)loadMovs(cuentaAct.id);},[cuentaAct?.id]);
+  const loadMovs=async(cid)=>{if(!cid)return;const m=await dbGet("movimientos_bancarios",`&cuenta_id=eq.${cid}`);setMovs(Array.isArray(m)?m:[]);};
+  const loadCuentas=async()=>{setLoading(true);const c=await dbGet("cuentas_bancarias");const arr=Array.isArray(c)?c:[];setCuentas(arr);if(arr.length>0){const first=arr[0];setCuentaAct(first);}setLoading(false);};
+  useEffect(()=>{loadCuentas();},[]);
+  const CC={ventas:T.acc,combustible:T.sec,mantenimiento:T.blue,salarios:T.green,seguros:T.purple,servicios:T.acc,oficina:T.mut,otros:T.sub};
+  const CATS=["ventas","combustible","mantenimiento","salarios","seguros","servicios","oficina","otros"];
+  const sf=(k,v)=>setF(p=>({...p,[k]:v}));
+  const [f,setF]=useState({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});
+  const [cuentas,setCuentas]=useState([]);const [movs,setMovs]=useState([]);const [cuentaAct,setCuentaAct]=useState(null);const [loading,setLoading]=useState(true);const [showForm,setShowForm]=useState(false);const [saving,setSaving]=useState(false);const [filtroT,setFiltroT]=useState("todos");const [filtroC,setFiltroC]=useState("todos");const [exportar,setExportar]=useState(false);
+function PageBanca({showToast,empId}){
 // ÔòÉÔòÉÔòÉ LA BANCA ÔòÉÔòÉÔòÉ
 
 }
@@ -2736,6 +2838,224 @@ import React, { useState, useEffect, useRef } from "react";
 /** @jsx React.createElement */
 /** @jsxRuntime classic */
 
+
+
+}
+  );
+    </div>
+      )}
+        </div>
+          )}
+            </div>
+              </div>
+                <button onClick={()=>setShowNew(false)} style={{...S.btn("ghost"),flex:1,fontSize:11,padding:"6px"}}>Cancelar</button>
+                <button onClick={agregarCliente} disabled={saving} style={{...S.btn("primary"),flex:1,fontSize:11,padding:"6px"}}>{saving?"...":"Ô£ö Guardar"}</button>
+              <div style={{display:"flex",gap:6}}>
+              </select>
+                <option value="persona">Persona</option>
+                <option value="gobierno">Gobierno/ONG</option>
+                <option value="empresa">Empresa</option>
+              <select style={{...S.sel,marginBottom:6,fontSize:12}} value={newTipo} onChange={e=>setNewTipo(e.target.value)}>
+              <input style={{...S.inp,marginBottom:6,fontSize:12}} value={newNombre} onChange={e=>setNewNombre(e.target.value)} placeholder="Nombre del cliente"/>
+            <div style={{padding:10,borderTop:"1px solid "+T.bord}}>
+          ):(
+            </div>
+              <span>+</span> Agregar nuevo cliente
+              style={{padding:"8px 12px",cursor:"pointer",fontSize:12,color:T.acc,fontWeight:600,borderTop:"1px solid "+T.bord,display:"flex",alignItems:"center",gap:6}}>
+            <div onClick={()=>{setShowNew(true);setNewNombre(value);}}
+          {!showNew?(
+          {/* Agregar nuevo */}
+          {filtered.length===0&&<div style={{padding:"8px 12px",fontSize:12,color:T.mut}}>No encontrado</div>}
+          ))}
+            </div>
+              <span style={{fontSize:10,color:T.mut}}>{c.tipo}</span>
+              <span>{c.nombre}</span>
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              onMouseEnter={e=>e.currentTarget.style.background=T.surf}
+              style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:"1px solid "+T.bord+"33",display:"flex",justifyContent:"space-between",alignItems:"center"}}
+            <div key={i} onClick={()=>{onChange(c.nombre);setOpen(false);}}
+          {filtered.map((c,i)=>(
+        <div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:"1px solid "+T.bord,borderRadius:8,zIndex:100,maxHeight:220,overflowY:"auto",marginTop:2}}>
+      {open&&(
+      />
+        placeholder="Escribe para buscar cliente..."
+        onFocus={()=>setOpen(true)}
+        onChange={e=>{onChange(e.target.value);setOpen(true);setShowNew(false);}}
+        style={S.inp} value={value}
+      <input
+    <div ref={ref} style={{position:"relative"}}>
+  return(
+
+  };
+    setSaving(false);
+    }
+      setShowNew(false);setNewNombre("");setOpen(false);
+      setClientes(p=>[...p,{nombre:newNombre,tipo:newTipo}]);
+      onChange(newNombre);
+    if(r&&!r.error){
+    const r=await dbIns("clientes",{nombre:newNombre,tipo:newTipo,empresa_id:empId});
+    setSaving(true);
+    if(!newNombre.trim())return;
+  const agregarCliente=async()=>{
+
+  const filtered=value.length>0?clientes.filter(c=>c.nombre.toLowerCase().includes(value.toLowerCase())):clientes.slice(0,8);
+
+  },[]);
+    return()=>document.removeEventListener("mousedown",h);
+    document.addEventListener("mousedown",h);
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+  useEffect(()=>{
+
+  },[]);
+    dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));
+  useEffect(()=>{
+
+  const ref=useRef(null);
+  const [newTipo,setNewTipo]=useState("empresa");
+  const [newNombre,setNewNombre]=useState("");
+  const [showNew,setShowNew]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [open,setOpen]=useState(false);
+  const [clientes,setClientes]=useState([]);
+function ClienteBuscador({value,onChange,empId}){
+// ÔöÇÔöÇ Buscador de clientes con autocompletado ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+
+
+// ÔòÉÔòÉÔòÉ MANTENIMIENTO DE VEH├ìCULOS ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+
+
+// ÔòÉÔòÉÔòÉ APP PRINCIPAL ÔòÉÔòÉÔòÉ
+
+}
+  );
+    </div>
+      </div>}
+        </div>
+          </div>
+            {[{v:12,l:"12% ÔÇö R├®gimen General"},{v:5,l:"5% ÔÇö Peque├▒o Contribuyente"},{v:0,l:"Sin IVA"}].map(o=><button key={o.v} onClick={()=>setIva(o.v)} style={{...S.btn(iva===o.v?"primary":"ghost"),textAlign:"left"}}>{o.l}</button>)}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒº¥ R├®gimen Fiscal</div>
+        <div style={S.card}>
+        </div>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:10,padding:"10px 14px",background:T.surf,borderRadius:9,fontSize:14}}><span style={{color:T.sub}}>1 USD =</span><span style={{fontWeight:800,color:T.acc}}>Q {fmt(exch)}</span></div>
+          <input style={{...S.inp,fontSize:20,fontWeight:700,color:T.acc}} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/>
+          <label style={S.lbl}>GTQ POR 1 USD</label>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>­ƒÆ▒ Tasa de Cambio del D├¡a</div>
+        <div style={S.card}>
+      {tab==="fiscal"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      </div>}
+        <div style={{marginTop:10,fontSize:11,color:T.mut}}>* 1-7 d├¡as = diaria ┬À 8-29 d├¡as = semanal ┬À 30+ d├¡as = mensual</div>
+        </table>
+          </tr>)}</tbody>
+            <td style={S.td}><div style={{display:"flex",gap:4}}>{editId===v.id?<><button onClick={saveEdit} style={{...S.btn("primary"),padding:"4px 9px",fontSize:11}}>Ô£ö</button><button onClick={()=>setEditId(null)} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£ò</button></>:<><button onClick={()=>{setEditId(v.id);setEditVals({...v});}} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Ô£Å´©Å</button><button onClick={()=>delVeh(v.id)} style={{...S.btn("danger"),padding:"4px 9px",fontSize:11}}>­ƒùæ´©Å</button></>}</div></td>
+            {["dia","sem","mes"].map(c=><td key={c} style={{...S.td,fontWeight:700,color:T.acc}}>{editId===v.id?<input style={{...S.inp,padding:"5px 8px",fontSize:12,width:80}} type="number" value={editVals[c]} onChange={e=>setEditVals(p=>({...p,[c]:parseFloat(e.target.value)||0}))}/>:`Q ${fmt(v[c])}`}</td>)}
+            <td style={S.td}>{editId===v.id?<select style={{...S.sel,padding:"5px 8px",fontSize:12}} value={editVals.tipo} onChange={e=>setEditVals(p=>({...p,tipo:e.target.value}))}>{TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select>:v.tipo}</td>
+            <td style={{...S.td,fontWeight:600}}>{editId===v.id?<input style={{...S.inp,padding:"5px 8px",fontSize:12}} value={editVals.nombre} onChange={e=>setEditVals(p=>({...p,nombre:e.target.value}))}/>:v.nombre}</td>
+          <tbody>{catalogo.map(v=><tr key={v.id}>
+          <thead><tr>{["Veh├¡culo","Tipo","Q/D├¡a","Q/Semana","Q/Mes",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+        </div>}
+          <button onClick={addVeh} style={{...S.btn("primary"),padding:"9px 14px",alignSelf:"flex-end"}}>+</button>
+          <Fld label="Q/MES"><input style={S.inp} type="number" value={newVeh.mes} onChange={e=>setNewVeh(p=>({...p,mes:e.target.value}))} placeholder="0"/></Fld>
+          <Fld label="Q/SEM"><input style={S.inp} type="number" value={newVeh.sem} onChange={e=>setNewVeh(p=>({...p,sem:e.target.value}))} placeholder="0"/></Fld>
+          <Fld label="Q/D├ìA"><input style={S.inp} type="number" value={newVeh.dia} onChange={e=>setNewVeh(p=>({...p,dia:e.target.value}))} placeholder="0"/></Fld>
+          <Fld label="TIPO"><select style={S.sel} value={newVeh.tipo} onChange={e=>setNewVeh(p=>({...p,tipo:e.target.value}))}>{TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select></Fld>
+          <Fld label="NOMBRE"><input style={S.inp} value={newVeh.nombre} onChange={e=>setNewVeh(p=>({...p,nombre:e.target.value}))} placeholder="Nombre..."/></Fld>
+        {showNewVeh&&<div style={{background:T.surf,borderRadius:10,padding:14,marginBottom:14,display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr auto",gap:10,alignItems:"flex-end"}}>
+        </div>
+          <button onClick={()=>setShowNewVeh(!showNewVeh)} style={{...S.btn(showNewVeh?"warn":"primary"),fontSize:12}}>{showNewVeh?"Cancelar":"+ Agregar veh├¡culo"}</button>
+          <div style={{fontSize:13,fontWeight:700}}>Cat├ílogo y Tarifas</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+      {tab==="tarifas"&&<div style={S.card}>
+      </div>}
+        </div>
+          </div>
+            <div>­ƒÅª Banrural ÔÇö 3309159475</div>
+            <div>­ƒÅª Banco Industrial ÔÇö 853-000016-8</div>
+          <div style={{...S.card,marginTop:12,background:T.surf,fontSize:12,color:T.sub,lineHeight:2}}>
+          </div>
+            </div>
+              <div>­ƒåö NIT: {emp.nit||"16693949"}</div>
+              <div>Ô£ë´©Å {emp.email||"tzununautorentas@gmail.com"}</div>
+              <div>­ƒô× {emp.telefono||"502-31221538"}</div>
+              <div>­ƒôì {emp.direccion||"2da. Av. 0-68, Col. Bran, Zona 3"}</div>
+            <div style={{fontSize:11,color:T.sub,lineHeight:1.8}}>
+            </div>
+              <div><div style={{fontSize:14,fontWeight:800,color:T.acc}}>{emp.nombre||"Tz'unun AutoRentas"}</div><div style={{fontSize:10,color:T.sub}}>M├üS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS</div></div>
+              <img src={`data:image/png;base64,${LOGO_B64}`} style={{width:44,height:44,borderRadius:10}} alt="logo"/>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+          <div style={{background:T.surf,borderRadius:10,padding:16,border:`1px solid ${T.bord}`}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.acc,marginBottom:12}}>Vista previa encabezado</div>
+        <div style={S.card}>
+        </div>
+          </div>
+            <div style={{gridColumn:"span 2"}}><button onClick={guardarEmp} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>{saving?"Guardando...":"­ƒÆ¥ Guardar"}</button></div>
+            <Fld label="DIRECCI├ôN" span2><input style={S.inp} value={emp.direccion||""} onChange={e=>se("direccion",e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3"/></Fld>
+            <Fld label="EMAIL" span2><input style={S.inp} value={emp.email||""} onChange={e=>se("email",e.target.value)} placeholder="tzununautorentas@gmail.com"/></Fld>
+            <Fld label="TEL├ëFONO"><input style={S.inp} value={emp.telefono||""} onChange={e=>se("telefono",e.target.value)} placeholder="502-31221538"/></Fld>
+            <Fld label="NIT"><input style={S.inp} value={emp.nit||""} onChange={e=>se("nit",e.target.value)} placeholder="16693949"/></Fld>
+            <Fld label="NOMBRE" span2><input style={S.inp} value={emp.nombre||""} onChange={e=>se("nombre",e.target.value)} placeholder="Tz'unun AutoRentas"/></Fld>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+          <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Datos de la Empresa</div>
+        <div style={S.card}>
+      {tab==="empresa"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+      </div>
+        {[{id:"empresa",l:"­ƒÅó Empresa"},{id:"tarifas",l:"­ƒÆ░ Tarifas"},{id:"fiscal",l:"­ƒº¥ Fiscal"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 16px",background:"transparent",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:20}}>
+    <div>
+  return(
+  const addVeh=()=>{if(!newVeh.nombre.trim()){showToast("Nombre requerido","err");return;}setCatalogo(p=>[...p,{...newVeh,id:`c${Date.now()}`,dia:parseFloat(newVeh.dia)||0,sem:parseFloat(newVeh.sem)||0,mes:parseFloat(newVeh.mes)||0}]);setNewVeh({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});setShowNewVeh(false);showToast("Agregado Ô£ö");};
+  const delVeh=id=>{if(!confirm("┬┐Eliminar?"))return;setCatalogo(p=>p.filter(v=>v.id!==id));};
+  const saveEdit=()=>{setCatalogo(p=>p.map(v=>v.id===editId?{...v,...editVals}:v));setEditId(null);showToast("Tarifa actualizada Ô£ö");};
+  const se=(k,v)=>setEmp(p=>({...p,[k]:v}));
+  const guardarEmp=async()=>{if(!emp.nombre?.trim()){showToast("Nombre requerido","err");return;}setSaving(true);if(empId)await dbUpd("empresas",empId,{nombre:emp.nombre,nit:emp.nit,direccion:emp.direccion,telefono:emp.telefono,email:emp.email});showToast("Guardado Ô£ö");setSaving(false);};
+  useEffect(()=>{dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0]){setEmp(d[0]);setEmpId(d[0].id);}});},[]);
+  const TIPOS=["Sed├ín","SUV","Pickup","Van","Microb├║s","Bus"];
+  const [showNewVeh,setShowNewVeh]=useState(false);const [newVeh,setNewVeh]=useState({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});
+  const [editId,setEditId]=useState(null);const [editVals,setEditVals]=useState({});
+  const [catalogo,setCatalogo]=useState(CATALOGO.map(v=>({...v})));
+  const [exch,setExch]=useState(7.70);const [iva,setIva]=useState(5);
+  const [tab,setTab]=useState("empresa");const [emp,setEmp]=useState({});const [empId,setEmpId]=useState(null);const [saving,setSaving]=useState(false);
+export default function PageConfiguracion({showToast}){
+// ÔòÉÔòÉÔòÉ CONFIGURACI├ôN ÔòÉÔòÉÔòÉ
+
+}
+  );
+    </div>
+      {loading?<Spinner/>:data&&<>{tab==="ventas"&&<ReporteVentas data={data}/>}{tab==="flota"&&<ReporteFlota data={data}/>}{tab==="gastos"&&<ReporteGastos data={data}/>}{tab==="clientes"&&<ReporteClientes data={data}/>}</>}
+      </div>
+        <button onClick={load} style={{...S.btn("ghost"),fontSize:11,marginLeft:"auto"}}>Ôå║ Actualizar</button>
+        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
+    <div>
+  return(
+  const TABS=[{id:"ventas",l:"­ƒôè Ventas"},{id:"flota",l:"­ƒÜù Flota"},{id:"gastos",l:"­ƒÆ© Gastos"},{id:"clientes",l:"­ƒæÑ Clientes"}];
+  };
+    setLoading(false);
+    setData({vehiculos:Array.isArray(vehiculos)?vehiculos:[],reservas:Array.isArray(reservas)?reservas:[],cotizaciones:Array.isArray(cotizaciones)?cotizaciones:[],facturas:Array.isArray(facturas)?facturas:[],gastos:Array.isArray(gastos)?gastos:[],clientes:Array.isArray(clientes)?clientes:[],movimientos:Array.isArray(movimientos)?movimientos:[]});
+    const [vehiculos,reservas,cotizaciones,facturas,gastos,clientes,movimientos]=await Promise.all([dbGet("vehiculos",""),dbGet("reservas",""),dbGet("cotizaciones",""),dbGet("facturas",""),dbGet("gastos",""),dbGet("clientes",""),dbGet("movimientos_bancarios","")]);
+    setLoading(true);
+  const load=async()=>{
+  useEffect(()=>{load();},[]);
+  const [tab,setTab]=useState("ventas");const [data,setData]=useState(null);const [loading,setLoading]=useState(true);
+function PageReportes(){
+// ÔòÉÔòÉÔòÉ REPORTES PAGE ÔòÉÔòÉÔòÉ
+
+}
+  );
+    </div>
+      {tab==="proveedores"&&<ModProveedores empId={empId} showToast={(m,tp)=>{showToast(m,tp);reloadProv();}}/>}
+      {tab==="gastos"&&<ModGastos empId={empId} proveedores={proveedores} showToast={showToast}/>}
+      </div>
+        {[{id:"gastos",l:"­ƒÆ© Gastos y Compras"},{id:"proveedores",l:"­ƒÅ¬ Proveedores"}].map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===t.id?T.acc:T.sub,borderBottom:tab===t.id?`2px solid ${T.acc}`:"2px solid transparent"}}>{t.l}</button>)}
+      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:16}}>
+    <div>
+  return(
+  const reloadProv=()=>dbGet("proveedores","").then(d=>setProveedores(Array.isArray(d)?d:[]));
+  useEffect(()=>{dbGet("proveedores","").then(d=>setProveedores(Array.isArray(d)?d:[]));},[]);
+  const [tab,setTab]=useState("gastos");const [proveedores,setProveedores]=useState([]);
+function PageGastos({showToast,empId}){
 // ÔòÉÔòÉÔòÉ GASTOS PAGE ÔòÉÔòÉÔòÉ
 
 }
@@ -2799,7 +3119,7 @@ import React, { useState, useEffect, useRef } from "react";
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
   const [f,setF]=useState({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});
   const [cuentas,setCuentas]=useState([]);const [movs,setMovs]=useState([]);const [cuentaAct,setCuentaAct]=useState(null);const [loading,setLoading]=useState(true);const [showForm,setShowForm]=useState(false);const [saving,setSaving]=useState(false);const [filtroT,setFiltroT]=useState("todos");const [filtroC,setFiltroC]=useState("todos");const [exportar,setExportar]=useState(false);
-export default function PageBanca({showToast,empId}){
+function PageBanca({showToast,empId}){
 // ÔòÉÔòÉÔòÉ LA BANCA ÔòÉÔòÉÔòÉ
 
 }
