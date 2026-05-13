@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, Component } from 'react';
-import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS, LOGO_B64 } from '../config.js';
+import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, EST_VEH, EST_FAC, FLUJO_RES, RUTAS, LOGO_B64, CAT_GASTO } from '../config.js';
 import { Toast, Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, BotonesCompartir, ErrBoundary } from '../components/shared.jsx';
 export default function PageFlota({showToast,empId}){
   const [rows,setRows]=useState([]);
