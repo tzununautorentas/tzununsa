@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from "react";
-import { T, S, fmt, today, getEmpId, dbGet, dbIns, dbUpd, dbDel } from "../config.js";
+import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, EST_VEH, EST_FAC, FLUJO_RES, RUTAS, LOGO_B64, CAT_GASTO } from '../config.js';
 import { Toast, Spinner, Empty, Fld, ModalExportar } from "../components/shared.jsx";
 
 const CATEGORIAS_PROD = ["transporte", "turismo", "renta vehículo", "traslado", "servicio especial", "paquete corporativo", "otro"];
