@@ -64,7 +64,7 @@ export default function PageCalculadora({showToast,empId}){
           {tab==="renta"?(
             <div style={{display:"grid",gap:11}}>
               <Fld label="CLIENTE">
-                <ClienteBuscador value={cli} onChange={setCli} empId={empId}/>
+                <BuscadorCliente value={cli} onChange={setCli} empId={empId}/>
               </Fld>
               <Fld label="D├ìAS"><input style={S.inp} type="number" min="1" value={dias} onChange={e=>setDias(Math.max(1,parseInt(e.target.value)||1))}/></Fld>
               <Fld label="VEH├ìCULO">
@@ -95,7 +95,7 @@ export default function PageCalculadora({showToast,empId}){
           ):(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
               <Fld label="CLIENTE" span2>
-                <ClienteBuscador value={tf.cliente} onChange={v=>stf("cliente",v)} empId={empId}/>
+                <BuscadorCliente value={tf.cliente} onChange={v=>stf("cliente",v)} empId={empId}/>
               </Fld>
               <Fld label="DESTINO (tabla de rutas)" span2>
                 <select style={S.sel} value={tf.ruta} onChange={e=>{
