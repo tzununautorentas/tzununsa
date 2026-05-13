@@ -145,7 +145,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
         <div style={S.card}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
             <Fld label="CLIENTE" span2>
-              <ClienteBuscador value={f.cliente_nombre} onChange={v=>sf("cliente_nombre",v)} empId={empId}/>
+              <BuscadorCliente value={f.cliente_nombre} onChange={v=>sf("cliente_nombre",v)} empId={empId}/>
             </Fld>
             <Fld label="TIPO DE SERVICIO" span2>
               <div style={{display:"flex",gap:8}}>
