@@ -83,7 +83,7 @@ function FormReserva({initial,onSave,onCancel,empId}){
         empresa_id:empId,
         cliente_nombre:f.cliente_nombre.trim(),
         tipo:f.tipo,
-        numero:initial?.id?"RES-"+initial.numero?.slice(-6)||numId():"RES-"+numId(),
+        numero:initial?.id?"RES-"+(initial.numero?.slice(-6)||newId()):"RES-"+newId(),
         vehiculo_nombre:f.vehiculo_nombre||"",
         conductor_nombre:f.conductor_nombre||"",
         fecha_inicio:f.fecha_inicio+(f.hora_recogida?"T"+f.hora_recogida+":00":"T08:00:00"),
