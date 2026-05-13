@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, Component } from "react";
-import { T, S, fmt, fmtD, dbGet, dbIns } from "../config.js";
+import { Toast, Spinner, Empty, Fld, Badge, BuscadorCliente, ErrBoundary } from '../components/shared.jsx';
 
 // ÔöÇÔöÇ Error Boundary ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 export class ErrBoundary extends Component {
