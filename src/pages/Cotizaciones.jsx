@@ -305,7 +305,7 @@ const EMPTY_F={
   imagen_url:"",
 };
 
-function FormCotizacion({initial, empId, clientes, onSave, onCancel}){
+function FormCotizacion({initial, empId, clientes, onSave, onCancel, showToast}){
   const isClone = initial?.__clon;
   const [f,setF]=useState(()=>{
     if(!initial) return {...EMPTY_F};
