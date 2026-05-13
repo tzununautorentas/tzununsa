@@ -1,14 +1,11 @@
-﻿import React, { useState } from "react";
-import { T, S } from "../config.js";
-import { Empty } from "../components/shared.jsx";
-
-export default function PageProveedores({ showToast, empId }) {
+import React from 'react';
+import { T } from '../config.js';
+export default function PageProveedores({ showToast }) {
   return (
-    <div style={S.card}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: T.acc, marginBottom: 16 }}>Proveedores</div>
-      <Empty icon="🏭" msg="Módulo de Proveedores (Estructura base generada)" />
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:60, textAlign:"center" }}>
+      <div style={{ fontSize:48, marginBottom:16 }}>🏪</div>
+      <div style={{ fontSize:18, fontWeight:700, color:T.txt, marginBottom:8 }}>Proveedores</div>
+      <div style={{ fontSize:14, color:T.sub }}>Módulo en desarrollo.</div>
     </div>
   );
 }
-
-
