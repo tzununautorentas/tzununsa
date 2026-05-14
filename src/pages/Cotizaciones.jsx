@@ -547,6 +547,35 @@ export default function PageCotizaciones({showToast,empId}){
   useEffect(()=>{dbGet("clientes","").then(d=>setClientes(Array.isArray(d)?d:[]));load();},[]);
   const del=async id=>{if(!confirm("┬┐Eliminar?"))return;await dbDel("cotizaciones",id);showToast("Eliminada");load();};
   const chEst=async(id,estado)=>{await dbUpd("cotizaciones",id,{estado,orden_venta:estado==="orden_venta"});showToast("→ "+estado);load();};
+  const convertirAReserva = async (cot) => {
+  if (!confirm(`Convertir cotización ${cot.numero} en Reserva confirmada?`)) return;
+  const numero = "RES-" + Date.now().toString().slice(-6);
+  const reservaPayload = {
+    empresa_id: empId,
+    cliente_nombre: cot.cliente_nombre,
+    tipo: cot.tipo || "renta",
+    numero,
+    vehiculo_nombre: cot.vehiculo_nombre || "",
+    conductor_nombre: "",
+    monto: parseFloat(cot.total_gtq) || 0,
+    anticipo: 0,
+    saldo: parseFloat(cot.total_gtq) || 0,
+    tasa_iva: parseFloat(cot.tasa_iva) || 5,
+    metodo_pago: cot.metodo_pago || "efectivo",
+    tasa_cambio: parseFloat(cot.tasa_cambio) || 7.70,
+    estado: "confirmada",
+    cotizacion_id: cot.id,
+    notas: "Generada desde cotizacion " + cot.numero,
+  };
+  const reserva = await dbIns("reservas", reservaPayload);
+  if (reserva && !reserva.error) {
+    await dbUpd("cotizaciones", cot.id, { reserva_id: reserva.id, estado: "aprobada" });
+    showToast("Reserva " + numero + " creada y vinculada");
+    load();
+  } else {
+    showToast("Error al crear reserva", "err");
+  }
+};
   const filtered=filtro==="todas"?rows:rows.filter(r=>r.estado===filtro||(filtro==="orden_venta"&&r.orden_venta));
   const EC={borrador:{c:T.mut,bg:"#1E293B",l:"Borrador"},enviada:{c:T.blue,bg:T.blueDim,l:"Enviada"},aprobada:{c:T.acc,bg:T.accDim,l:"Aprobada"},rechazada:{c:T.red,bg:T.redDim,l:"Rechazada"},orden_venta:{c:T.purple,bg:T.purpleDim,l:"Orden de Venta"}};
   if(vista==="form")return <div><FormCotizacion initial={editItem} empId={empId} clientes={clientes} showToast={showToast} onSave={()=>{showToast("Guardada ✔");setEditItem(null);setVista("lista");load();}} onCancel={()=>{setEditItem(null);setVista("lista");}}/></div>;
