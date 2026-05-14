@@ -1,39 +1,39 @@
-﻿import React, { useState, useEffect, useRef, Component } from "react";
-import { Toast, Spinner, Empty, Fld, Badge, BuscadorCliente, ErrBoundary } from '../components/shared.jsx';
+import React, { useState, useEffect, useRef, Component } from "react";
+import { T, S, fmt, fmtD, dbGet, dbIns } from "../config.js";
 
-// ÔöÇÔöÇ Error Boundary ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Error Boundary ---
 export class ErrBoundary extends Component {
   constructor(p) { super(p); this.state = { err: null }; }
   static getDerivedStateFromError(e) { return { err: e }; }
   render() {
     if (this.state.err) return (
       <div style={{ ...S.card, margin: 16 }}>
-        <div style={{ color: T.red, fontWeight: 700, marginBottom: 8 }}>⚠️´©Å Error en este módulo</div>
+        <div style={{ color: T.red, fontWeight: 700, marginBottom: 8 }}>Error en este modulo</div>
         <div style={{ fontSize: 12, color: T.sub, fontFamily: "monospace", marginBottom: 12 }}>{String(this.state.err)}</div>
-        <button onClick={() => this.setState({ err: null })} style={S.btn("primary")}>↺ Reintentar</button>
+        <button onClick={() => this.setState({ err: null })} style={S.btn("primary")}>Reintentar</button>
       </div>
     );
     return this.props.children;
   }
 }
 
-// ÔöÇÔöÇ Toast ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Toast ---
 export function Toast({ msg, type }) {
   if (!msg) return null;
   const c = type === "err" ? T.red : T.acc;
   return (
     <div style={{ background: T.card, border: `1px solid ${c}`, borderRadius: 10, padding: "11px 18px", fontSize: 13, color: c, fontWeight: 600, marginBottom: 14 }}>
-      {type === "err" ? "❌" : "✅"} {msg}
+      {type === "err" ? "[X]" : "[OK]"} {msg}
     </div>
   );
 }
 
-// ÔöÇÔöÇ Spinner ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Spinner ---
 export function Spinner() {
-  return <div style={{ textAlign: "center", padding: 48, color: T.sub, fontSize: 14 }}>⏳ Cargando...</div>;
+  return <div style={{ textAlign: "center", padding: 48, color: T.sub, fontSize: 14 }}>Cargando...</div>;
 }
 
-// ÔöÇÔöÇ Empty ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Empty ---
 export function Empty({ icon, msg, action, onAction }) {
   return (
     <div style={{ ...S.card, textAlign: "center", padding: 48, color: T.sub }}>
@@ -44,7 +44,7 @@ export function Empty({ icon, msg, action, onAction }) {
   );
 }
 
-// ÔöÇÔöÇ Fld (Field wrapper) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Fld (Field wrapper) ---
 export function Fld({ label, children, span2 }) {
   return (
     <div style={span2 ? { gridColumn: "span 2" } : {}}>
@@ -54,7 +54,7 @@ export function Fld({ label, children, span2 }) {
   );
 }
 
-// ÔöÇÔöÇ Badge ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Badge ---
 export function Badge({ c, bg, l, small }) {
   return (
     <span style={{ display: "inline-block", padding: small ? "2px 8px" : "3px 10px", borderRadius: 20, fontSize: small ? 10 : 11, fontWeight: 700, color: c, background: bg }}>
@@ -63,7 +63,7 @@ export function Badge({ c, bg, l, small }) {
   );
 }
 
-// ÔöÇÔöÇ Modal Exportar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Modal Exportar ---
 export function ModalExportar({ titulo, datos, campos, onClose }) {
   const [formato, setFormato] = useState("csv");
   const [fi, setFi] = useState("");
@@ -83,8 +83,8 @@ export function ModalExportar({ titulo, datos, campos, onClose }) {
       table{width:100%;border-collapse:collapse}th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left}
       td{padding:5px 8px;border-bottom:1px solid #E2E8F0}@media print{button{display:none}}</style>
       </head><body>
-      <h2>Tz'unun AutoRentas — ${titulo}</h2>
-      <p>${filtered.length} registros · ${new Date().toLocaleDateString("es-GT")}</p>
+      <h2>Tz'unun AutoRentas - ${titulo}</h2>
+      <p>${filtered.length} registros - ${new Date().toLocaleDateString("es-GT")}</p>
       <table><thead><tr>${campos.map(c => `<th>${c.label}</th>`).join("")}</tr></thead>
       <tbody>${filtered.map(r => `<tr>${campos.map(c => `<td>${r[c.key] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody>
       </table><script>window.onload=()=>window.print();</script></body></html>`;
@@ -109,16 +109,16 @@ export function ModalExportar({ titulo, datos, campos, onClose }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ ...S.card, width: "100%", maxWidth: 460 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>­ƒôñ Exportar — {titulo}</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 22 }}>Ô£ò</button>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Exportar - {titulo}</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 22 }}>X</button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
           <Fld label="DESDE"><input style={S.inp} type="date" value={fi} onChange={e => setFi(e.target.value)} /></Fld>
           <Fld label="HASTA"><input style={S.inp} type="date" value={ff} onChange={e => setFf(e.target.value)} /></Fld>
         </div>
-        <Fld label="FORMATO DE EXPORTACIÓN">
+        <Fld label="FORMATO">
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {[["csv", "­ƒôä CSV (Excel compatible)"], ["xls", "📊 XLS (Microsoft Excel)"], ["pdf", "­ƒû¿´©Å PDF (imprimir)"]].map(([v, l]) => (
+            {[["csv", "CSV (Excel compatible)"], ["xls", "XLS (Microsoft Excel)"], ["pdf", "PDF (imprimir)"]].map(([v, l]) => (
               <label key={v} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "9px 12px", borderRadius: 8, background: formato === v ? T.accD : T.surf, border: `1px solid ${formato === v ? T.acc : T.bord}` }}>
                 <input type="radio" name="fmt" checked={formato === v} onChange={() => setFormato(v)} style={{ accentColor: T.acc }} />
                 <span style={{ fontSize: 13 }}>{l}</span>
@@ -127,10 +127,10 @@ export function ModalExportar({ titulo, datos, campos, onClose }) {
           </div>
         </Fld>
         <div style={{ fontSize: 11, color: T.mut, marginBottom: 14, padding: "8px 12px", background: T.surf, borderRadius: 6 }}>
-          Se exportarán <b style={{ color: T.acc }}>{filtered.length}</b> registros
+          Se exportaran <b style={{ color: T.acc }}>{filtered.length}</b> registros
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={exportar} style={{ ...S.btn("primary"), flex: 2, padding: 11, fontSize: 13 }}>­ƒôñ Exportar</button>
+          <button onClick={exportar} style={{ ...S.btn("primary"), flex: 2, padding: 11, fontSize: 13 }}>Exportar</button>
           <button onClick={onClose} style={{ ...S.btn("ghost"), flex: 1, padding: 11 }}>Cancelar</button>
         </div>
       </div>
@@ -138,7 +138,7 @@ export function ModalExportar({ titulo, datos, campos, onClose }) {
   );
 }
 
-// ÔöÇÔöÇ Buscador de Clientes ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Buscador de Clientes ---
 export function BuscadorCliente({ value, onChange, empId }) {
   const [clientes, setClientes] = useState([]);
   const [open, setOpen] = useState(false);
@@ -148,7 +148,7 @@ export function BuscadorCliente({ value, onChange, empId }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    dbGet("clientes", "&order=codigo.asc,nombre.asc").then(d => setClientes(Array.isArray(d) ? d : []));
+    dbGet("clientes", "&order=nombre.asc").then(d => setClientes(Array.isArray(d) ? d : []));
   }, []);
 
   useEffect(() => {
@@ -165,16 +165,25 @@ export function BuscadorCliente({ value, onChange, empId }) {
     if (!newNombre.trim()) return;
     setSaving(true);
     const r = await dbIns("clientes", { nombre: newNombre, tipo: "empresa", empresa_id: empId });
-    if (!r.error) { setClientes(p => [...p, r]); onChange(newNombre); setShowNew(false); setNewNombre(""); setOpen(false); }
+    if (!r.error) {
+      setClientes(p => [...p, r]);
+      onChange(newNombre);
+      setShowNew(false);
+      setNewNombre("");
+      setOpen(false);
+    }
     setSaving(false);
   };
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <input style={S.inp} value={value}
+      <input
+        style={S.inp}
+        value={value}
         onChange={e => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        placeholder="Escribe nombre o código del cliente..." />
+        placeholder="Escribe nombre o codigo del cliente..."
+      />
       {open && (
         <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: T.card, border: `1px solid ${T.bord}`, borderRadius: 8, zIndex: 100, maxHeight: 240, overflowY: "auto", marginTop: 2 }}>
           {filtered.map((c, i) => (
@@ -186,39 +195,59 @@ export function BuscadorCliente({ value, onChange, empId }) {
               <span style={{ fontSize: 11, color: T.mut }}>{c.codigo || ""}</span>
             </div>
           ))}
-          {filtered.length === 0 && <div style={{ padding: "8px 12px", fontSize: 12, color: T.mut }}>No encontrado</div>}
-          {!showNew
-            ? <div onClick={() => { setShowNew(true); setNewNombre(value); }}
-                style={{ padding: "8px 12px", cursor: "pointer", fontSize: 12, color: T.acc, fontWeight: 600, borderTop: `1px solid ${T.bord}` }}>
-                Ô×ò Agregar nuevo cliente
+          {filtered.length === 0 && (
+            <div style={{ padding: "8px 12px", fontSize: 12, color: T.mut }}>No encontrado</div>
+          )}
+          {!showNew ? (
+            <div
+              onClick={() => { setShowNew(true); setNewNombre(value); }}
+              style={{ padding: "8px 12px", cursor: "pointer", fontSize: 12, color: T.acc, fontWeight: 600, borderTop: `1px solid ${T.bord}` }}>
+              + Agregar nuevo cliente
+            </div>
+          ) : (
+            <div style={{ padding: 10, borderTop: `1px solid ${T.bord}` }}>
+              <input
+                style={{ ...S.inp, marginBottom: 6, fontSize: 12 }}
+                value={newNombre}
+                onChange={e => setNewNombre(e.target.value)}
+                placeholder="Nombre del cliente"
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={agregar} disabled={saving} style={{ ...S.btn("primary"), flex: 1, fontSize: 11, padding: 6 }}>
+                  {saving ? "..." : "Guardar"}
+                </button>
+                <button onClick={() => setShowNew(false)} style={{ ...S.btn("ghost"), flex: 1, fontSize: 11, padding: 6 }}>
+                  Cancelar
+                </button>
               </div>
-            : <div style={{ padding: 10, borderTop: `1px solid ${T.bord}` }}>
-                <input style={{ ...S.inp, marginBottom: 6, fontSize: 12 }} value={newNombre} onChange={e => setNewNombre(e.target.value)} placeholder="Nombre del cliente" />
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={agregar} disabled={saving} style={{ ...S.btn("primary"), flex: 1, fontSize: 11, padding: 6 }}>{saving ? "..." : "✔ Guardar"}</button>
-                  <button onClick={() => setShowNew(false)} style={{ ...S.btn("ghost"), flex: 1, fontSize: 11, padding: 6 }}>Ô£ò</button>
-                </div>
-              </div>
-          }
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ÔöÇÔöÇ Botones Compartir ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// --- Botones Compartir ---
 export function BotonesCompartir({ numero, total, tipo }) {
-  const msg = `Tz'unun AutoRentas — ${tipo} ${numero} por Q ${fmt(total)}. Más información: 502-31221538`;
+  const msg = `Tz'unun AutoRentas - ${tipo} ${numero} por Q ${fmt(total)}. Mas informacion: 502-31221538`;
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-      <button onClick={() => window.open("https://wa.me/?text=" + encodeURIComponent(msg))}
-        style={{ ...S.btn("ghost"), background: "#25D366", color: "#fff", fontSize: 11, padding: "5px 10px" }}>­ƒÆ¼ WhatsApp</button>
-      <button onClick={() => window.open("mailto:?subject=" + encodeURIComponent(tipo + " " + numero) + "&body=" + encodeURIComponent(msg))}
-        style={{ ...S.btn("ghost"), fontSize: 11, padding: "5px 10px" }}>Ô£ë´©Å Correo</button>
-      <button onClick={() => window.open("tg://msg?text=" + encodeURIComponent(msg))}
-        style={{ ...S.btn("ghost"), background: "#2CA5E0", color: "#fff", fontSize: 11, padding: "5px 10px" }}>Ô£ê´©Å Telegram</button>
+      <button
+        onClick={() => window.open("https://wa.me/?text=" + encodeURIComponent(msg))}
+        style={{ ...S.btn("ghost"), background: "#25D366", color: "#fff", fontSize: 11, padding: "5px 10px" }}>
+        WhatsApp
+      </button>
+      <button
+        onClick={() => window.open("mailto:?subject=" + encodeURIComponent(tipo + " " + numero) + "&body=" + encodeURIComponent(msg))}
+        style={{ ...S.btn("ghost"), fontSize: 11, padding: "5px 10px" }}>
+        Correo
+      </button>
+      <button
+        onClick={() => window.open("tg://msg?text=" + encodeURIComponent(msg))}
+        style={{ ...S.btn("ghost"), background: "#2CA5E0", color: "#fff", fontSize: 11, padding: "5px 10px" }}>
+        Telegram
+      </button>
     </div>
   );
 }
-
-
