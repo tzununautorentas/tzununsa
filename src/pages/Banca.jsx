@@ -11,7 +11,32 @@ export default function PageBanca({showToast,empId}){
   const loadCuentas=async()=>{setLoading(true);const c=await dbGet("cuentas_bancarias");const arr=Array.isArray(c)?c:[];setCuentas(arr);if(arr.length>0){const first=arr[0];setCuentaAct(first);}setLoading(false);};
   const loadMovs=async(cid)=>{if(!cid)return;const m=await dbGet("movimientos_bancarios",`&cuenta_id=eq.${cid}`);setMovs(Array.isArray(m)?m:[]);};
   useEffect(()=>{if(cuentaAct)loadMovs(cuentaAct.id);},[cuentaAct?.id]);
-  const guardarMov=async()=>{if(!f.descripcion.trim()||!(parseFloat(f.monto)>0)){showToast("Descripción y monto requeridos","err");return;}setSaving(true);await dbIns("movimientos_bancarios",{empresa_id:empId,cuenta_id:cuentaAct.id,fecha:f.fecha,tipo:f.tipo,descripcion:f.descripcion,monto:parseFloat(f.monto),referencia:f.referencia,categoria:f.categoria,conciliado:f.conciliado,notas:f.notas});showToast("Guardado ✔");setSaving(false);setShowForm(false);setF({fecha:today(),tipo:"ingreso",descripcion:"",monto:"",referencia:"",categoria:"ventas",conciliado:false,notas:""});loadMovs(cuentaAct.id);};
+  const guardarMov = async () => {
+  if (!f.descripcion.trim() || !(parseFloat(f.monto) > 0)) {
+    showToast("Descripcion y monto requeridos", "err"); return;
+  }
+  setSaving(true);
+  const mov = await dbIns("movimientos_bancarios", {
+    empresa_id: empId, cuenta_id: cuentaAct.id,
+    fecha: f.fecha, tipo: f.tipo, descripcion: f.descripcion,
+    monto: parseFloat(f.monto), referencia: f.referencia,
+    categoria: f.categoria, conciliado: f.conciliado, notas: f.notas,
+  });
+  if (mov && mov.error) { showToast("Error: " + mov.error, "err"); setSaving(false); return; }
+
+  // Actualizar saldo de la cuenta
+  const delta = f.tipo === "ingreso" ? parseFloat(f.monto) : -parseFloat(f.monto);
+  const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
+  await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
+  setCuentaAct(prev => ({ ...prev, saldo_actual: nuevoSaldo }));
+  setCuentas(prev => prev.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
+
+  showToast("Guardado correctamente");
+  setSaving(false);
+  setShowForm(false);
+  setF({ fecha: today(), tipo: "ingreso", descripcion: "", monto: "", referencia: "", categoria: "ventas", conciliado: false, notas: "" });
+  loadMovs(cuentaAct.id);
+};
   const conciliar=async(id,val)=>{await dbUpd("movimientos_bancarios",id,{conciliado:val});loadMovs(cuentaAct.id);};
   const movsFil=movs.filter(m=>{if(filtroT!=="todos"&&m.tipo!==filtroT)return false;if(filtroC==="conciliado"&&!m.conciliado)return false;if(filtroC==="pendiente"&&m.conciliado)return false;return true;});
   const ing=movs.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+(parseFloat(m.monto)||0),0);
