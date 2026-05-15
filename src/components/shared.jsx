@@ -228,6 +228,23 @@ export function BuscadorCliente({ value, onChange, empId }) {
   );
 }
 
+// --- CatBadge (badge de categoría con color) ---
+const CAT_COLORS = {
+  combustible: "#F59E0B", mantenimiento: "#3B82F6", salarios: "#22C55E",
+  seguros: "#A855F7", servicios: "#00D4AA", ventas: "#00D4AA",
+  oficina: "#64748B", alimentacion: "#F97316", llantas: "#EF4444",
+  repuestos: "#3B82F6", hospedaje: "#8B5CF6", peajes: "#6B7280",
+  impuestos: "#DC2626", otros: "#94A3B8",
+};
+export function CatBadge({ cat }) {
+  const c = CAT_COLORS[cat] || "#94A3B8";
+  return (
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: c + "22", color: c, whiteSpace: "nowrap" }}>
+      {cat || "—"}
+    </span>
+  );
+}
+
 // --- Botones Compartir ---
 export function BotonesCompartir({ numero, total, tipo }) {
   const msg = `Tz'unun AutoRentas - ${tipo} ${numero} por Q ${fmt(total)}. Mas informacion: 502-31221538`;
