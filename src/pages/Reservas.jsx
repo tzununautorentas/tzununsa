@@ -33,6 +33,15 @@ function FormReserva({initial,onSave,onCancel,empId}){
   const [saving,setSaving]=useState(false);
   const sf=(k,v)=>setF(p=>({...p,[k]:v}));
 
+const addToGoogleCalendar = (r) => {
+  const fmt = (d) => d ? d.replace(/[-:T]/g,"").slice(0,15) : "";
+  const inicio = fmt(r.fecha_inicio) || fmt(today() + "T08:00:00");
+  const fin    = fmt(r.fecha_fin)    || fmt(today() + "T18:00:00");
+  const title  = encodeURIComponent(`Reserva Tz'unun — ${r.cliente_nombre}`);
+  const det    = encodeURIComponent(`Vehiculo: ${r.vehiculo_nombre||"—"}\nCliente: ${r.cliente_nombre}\nTotal: Q ${r.monto||0}\nEstado: ${r.estado}`);
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${inicio}/${fin}&details=${det}&location=Guatemala+City`, "_blank");
+};
+
   // Calcular días
   const calcularDias=()=>{
     if(!f.fecha_inicio) return 0;
