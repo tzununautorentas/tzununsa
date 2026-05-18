@@ -397,7 +397,18 @@ export default function PageReservas({showToast,empId}){
                 </div>
                 <div style={{display:"flex",gap:6,paddingTop:10,borderTop:"1px solid "+T.bord+"22",flexWrap:"wrap"}}>
                   {sig.map(s=><button key={s.v} onClick={()=>chEst(r.id,s.v)} style={{...S.btn(s.s),fontSize:11,padding:"5px 10px"}}>{s.l}</button>)}
+                <button onClick={() => {
+  const ini = (r.fecha_inicio||"").replace(/[-:T]/g,"").slice(0,15)||"";
+  const fin = (r.fecha_fin||r.fecha_inicio||"").replace(/[-:T]/g,"").slice(0,15)||"";
+  const t = encodeURIComponent("Reserva Tz'unun — "+(r.cliente_nombre||""));
+  const d = encodeURIComponent("Vehiculo: "+(r.vehiculo_nombre||"—")+"\nTotal: Q "+(r.monto||0));
+  window.open("https://calendar.google.com/calendar/render?action=TEMPLATE&text="+t+"&dates="+ini+"/"+fin+"&details="+d+"&location=Guatemala","_blank");
+}} style={{...S.btn("ghost"), fontSize:11, padding:"4px 9px", color:"#4285F4", border:"1px solid #4285F4"}}>
+  + GCal
+</button>
+                  
                   <button onClick={()=>{setEditItem(r);setVista("form");}} style={{...S.btn("ghost"),fontSize:11,padding:"5px 10px"}}>Ô£Å´©Å Editar</button>
+                  
                   <button onClick={()=>del(r.id)} style={{...S.btn("danger"),fontSize:11,padding:"5px 10px"}}>­ƒùæ´©Å</button>
                 </div>
               </div>
