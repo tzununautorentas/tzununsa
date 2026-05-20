@@ -826,8 +826,3 @@ export default function PageContabilidad({ showToast, empId }) {
     </div>
   );
 }
-
-      <div style={{ fontSize:14, color:T.sub }}>Módulo Contable_realizado por Oscar Gálvez.</div>
-    </div>
-  );
-}
