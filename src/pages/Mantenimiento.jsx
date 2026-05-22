@@ -89,7 +89,7 @@ export default function PageMantenimiento({showToast,empId}){
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:14}}>
         <button onClick={load} style={{...S.btn("ghost"),fontSize:12}}>↺</button>
-        <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>­ƒôñ Exportar</button>
+        <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:12}}>Exportar</button>
         <button onClick={abrirNuevo} style={{...S.btn("primary"),fontSize:12}}>+ Registrar mantenimiento</button>
       </div>
       {showForm&&(
