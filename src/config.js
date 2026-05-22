@@ -73,6 +73,12 @@ export async function sbLogout(token) {
 
 // ─── SISTEMA DE TEMAS ─────────────────────────────────────────────────────────
 // Lee la preferencia guardada (por defecto: oscuro)
+// ─── TEMAS ────────────────────────────────────────────────────────
+export const isDark = localStorage.getItem("tz_theme") !== "light";
+export const toggleTheme = () => {
+  localStorage.setItem("tz_theme", isDark ? "light" : "dark");
+  window.location.reload();
+};
 export const isDark = localStorage.getItem("tz_theme") !== "light";
 
 // Colores tema OSCURO (original)
