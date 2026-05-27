@@ -1,235 +1,174 @@
-﻿import React, { useState, useEffect } from "react";
-import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, EST_VEH, EST_FAC, FLUJO_RES, RUTAS, LOGO_B64, CAT_GASTO } from '../config.js';
-import { Toast, Spinner, Empty, Fld, ModalExportar } from "../components/shared.jsx";
+import React, { useState, useEffect } from 'react';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { Spinner, Empty, Fld, ModalExportar } from '../components/shared.jsx';
 
-const CATEGORIAS_PROD = ["transporte", "turismo", "renta vehículo", "traslado", "servicio especial", "paquete corporativo", "otro"];
-
-function FormProducto({ initial, empId, onSave, onCancel }) {
-  const [f, setF] = useState({
-    codigo: initial?.codigo || "",
-    nombre: initial?.nombre || "",
-    descripcion: initial?.descripcion || "",
-    categoria: initial?.categoria || "transporte",
-    precio_base: initial?.precio_base || "",
-    precio_tarjeta: initial?.precio_tarjeta || "",
-    unidad: initial?.unidad || "servicio",
-    aplica_iva: initial?.aplica_iva !== false,
-    tasa_iva: initial?.tasa_iva || 5,
-    activo: initial?.activo !== false,
-    imagen_emoji: initial?.imagen_emoji || "🚗",
-    notas: initial?.notas || "",
-  });
-  const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
-  const [saving, setSaving] = useState(false);
-
-  const precioConIVA = f.aplica_iva ? parseFloat(f.precio_base || 0) * (1 + (f.tasa_iva || 0) / 100) : parseFloat(f.precio_base || 0);
-
-  const guardar = async () => {
-    if (!f.nombre.trim()) { alert("El nombre es requerido"); return; }
-    if (!f.precio_base || parseFloat(f.precio_base) <= 0) { alert("El precio base es requerido"); return; }
-    setSaving(true);
-    const eid = empId || await getEmpId();
-    const payload = { ...f, empresa_id: eid, precio_base: parseFloat(f.precio_base), precio_tarjeta: parseFloat(f.precio_tarjeta) || parseFloat(f.precio_base) * 1.05, tasa_iva: parseInt(f.tasa_iva) || 0 };
-    const result = initial?.id ? await dbUpd("catalogo_servicios", initial.id, payload) : await dbIns("catalogo_servicios", payload);
-    if (result?.error) { alert("Error: " + result.error); setSaving(false); return; }
-    setSaving(false); onSave();
-  };
-
-  const EMOJIS = ["🚗", "­ƒÜî", "­ƒÅì´©Å", "­ƒÜÉ", "­ƒø╗", "Ô£ê´©Å", "­ƒîÄ", "­ƒÅö´©Å", "­ƒÅû´©Å", "­ƒÅó", "👥", "📦", "Ô¡É", "­ƒÆ╝", "­ƒÄ»"];
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: T.acc }}>{initial?.id ? "Editar servicio" : "Nuevo servicio / producto"}</div>
-        <button onClick={onCancel} style={S.btn("ghost")}>ÔåÉ Volver</button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
-          <div style={{ gridColumn: "span 2" }}>
-            <label style={S.lbl}>├ìCONO</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {EMOJIS.map(e => (
-                <button key={e} onClick={() => sf("imagen_emoji", e)} style={{ fontSize: 22, width: 40, height: 40, borderRadius: 8, border: `2px solid ${f.imagen_emoji === e ? T.acc : T.bord}`, background: f.imagen_emoji === e ? T.accD : T.surf, cursor: "pointer" }}>{e}</button>
-              ))}
-            </div>
-          </div>
-          <Fld label="CÓDIGO"><input style={S.inp} value={f.codigo} onChange={e => sf("codigo", e.target.value)} placeholder="SRV-001" /></Fld>
-          <Fld label="CATEGOR├ìA">
-            <select style={S.sel} value={f.categoria} onChange={e => sf("categoria", e.target.value)}>
-              {CATEGORIAS_PROD.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-            </select>
-          </Fld>
-          <Fld label="NOMBRE DEL SERVICIO" span2><input style={S.inp} value={f.nombre} onChange={e => sf("nombre", e.target.value)} placeholder="Ej: Traslado aeropuerto zona 10" /></Fld>
-          <Fld label="DESCRIPCIÓN" span2><textarea style={{ ...S.inp, minHeight: 70, resize: "vertical" }} value={f.descripcion} onChange={e => sf("descripcion", e.target.value)} placeholder="Descripción del servicio para el cliente..." /></Fld>
-          <Fld label="UNIDAD DE COBRO">
-            <select style={S.sel} value={f.unidad} onChange={e => sf("unidad", e.target.value)}>
-              <option value="servicio">Por servicio</option>
-              <option value="dia">Por día</option>
-              <option value="km">Por kilómetro</option>
-              <option value="hora">Por hora</option>
-              <option value="persona">Por persona</option>
-            </select>
-          </Fld>
-          <Fld label="ESTADO">
-            <select style={S.sel} value={f.activo ? "activo" : "inactivo"} onChange={e => sf("activo", e.target.value === "activo")}>
-              <option value="activo">✅ Activo</option>
-              <option value="inactivo">ÔÅ© Inactivo</option>
-            </select>
-          </Fld>
-          <Fld label="NOTAS INTERNAS" span2><input style={S.inp} value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Notas para el equipo..." /></Fld>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={S.card}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>PRECIOS</div>
-            <div style={{ display: "grid", gap: 11 }}>
-              <Fld label="PRECIO BASE (sin IVA, en GTQ)"><input style={{ ...S.inp, fontWeight: 700 }} type="number" step="0.01" value={f.precio_base} onChange={e => sf("precio_base", e.target.value)} placeholder="0.00" /></Fld>
-              <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 10px", borderRadius: 8, background: T.surf }}>
-                <input type="checkbox" id="aplIVA" checked={f.aplica_iva} onChange={e => sf("aplica_iva", e.target.checked)} style={{ width: 16, height: 16 }} />
-                <label htmlFor="aplIVA" style={{ fontSize: 13, cursor: "pointer" }}>Aplica IVA</label>
-                {f.aplica_iva && (
-                  <select style={{ ...S.sel, width: "auto", marginLeft: "auto" }} value={f.tasa_iva} onChange={e => sf("tasa_iva", parseInt(e.target.value))}>
-                    <option value={12}>12%</option>
-                    <option value={5}>5%</option>
-                  </select>
-                )}
-              </div>
-              {f.aplica_iva && <div style={{ background: T.accD, borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
-                <div style={{ color: T.sub }}>Precio con IVA incluido</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: T.acc }}>Q {fmt(precioConIVA)}</div>
-              </div>}
-              <Fld label="PRECIO CON TARJETA (+5%, se calcula solo)"><input style={S.inp} type="number" step="0.01" value={f.precio_tarjeta || ""} onChange={e => sf("precio_tarjeta", e.target.value)} placeholder={fmt(precioConIVA * 1.05)} /></Fld>
-            </div>
-          </div>
-          {/* Vista previa */}
-          <div style={S.card}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>VISTA PREVIA EN CAT├üLOGO</div>
-            <div style={{ background: T.surf, borderRadius: 12, padding: 16, border: `1px solid ${T.bord}` }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>{f.imagen_emoji}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{f.nombre || "Nombre del servicio"}</div>
-              <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{f.descripcion || "Descripción del servicio"}</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: T.acc }}>Q {fmt(precioConIVA)}</div>
-                  <div style={{ fontSize: 10, color: T.sub }}>por {f.unidad}</div>
-                </div>
-                <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: f.activo ? T.greenD : T.redD, color: f.activo ? T.green : T.red }}>{f.activo ? "Activo" : "Inactivo"}</span>
-              </div>
-            </div>
-          </div>
-          <div style={S.card}>
-            <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary"), width: "100%", padding: 11, fontSize: 13 }}>{saving ? "Guardando..." : "­ƒÆ¥ Guardar servicio"}</button>
-            <button onClick={onCancel} style={{ ...S.btn("ghost"), width: "100%", padding: 11, marginTop: 8 }}>Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+const TIPOS = ["Traslado","Renta diaria","Renta semanal","Renta mensual","Tour","Servicio especial","Aeropuerto","Otro"];
+const EF = { codigo:"", nombre:"", tipo:"Traslado", descripcion:"", precio_base:0, precio_dia:0, precio_sem:0, precio_mes:0, activo:true, notas:"" };
 
 export default function PageCatalogo({ showToast, empId }) {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [vista, setVista] = useState("catalogo");
+  const [rows,     setRows]     = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [vista,    setVista]    = useState("lista");
   const [editItem, setEditItem] = useState(null);
-  const [buscar, setBuscar] = useState("");
-  const [filtroCat, setFiltroCat] = useState("todas");
+  const [saving,   setSaving]   = useState(false);
+  const [filtro,   setFiltro]   = useState("todos");
   const [exportar, setExportar] = useState(false);
-  const [tableExists, setTableExists] = useState(true);
+  const [f, setF] = useState({ ...EF });
+  const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
   const load = async () => {
     setLoading(true);
-    const d = await dbGet("catalogo_servicios", "&order=categoria.asc,nombre.asc");
-    if (!Array.isArray(d) || (d.length === 0 && d.error)) setTableExists(false);
+    const d = await dbGet("servicios", "&order=codigo.asc,nombre.asc");
     setRows(Array.isArray(d) ? d : []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
-  const del = async (id) => {
-    if (!confirm("┬┐Eliminar este servicio del catálogo?")) return;
-    await dbDel("catalogo_servicios", id);
-    showToast("Eliminado"); load();
+  const abrirEditar = s => {
+    setF({ codigo:s.codigo||"", nombre:s.nombre||"", tipo:s.tipo||"Traslado",
+      descripcion:s.descripcion||"", precio_base:s.precio_base||0,
+      precio_dia:s.precio_dia||0, precio_sem:s.precio_sem||0,
+      precio_mes:s.precio_mes||0, activo:s.activo!==false, notas:s.notas||"" });
+    setEditItem(s); setVista("form");
   };
+
+  const guardar = async () => {
+    if (!f.nombre.trim()) { showToast("Nombre requerido","err"); return; }
+    setSaving(true);
+    const p = { ...f, empresa_id:empId,
+      precio_base:parseFloat(f.precio_base)||0, precio_dia:parseFloat(f.precio_dia)||0,
+      precio_sem:parseFloat(f.precio_sem)||0,   precio_mes:parseFloat(f.precio_mes)||0 };
+    if (editItem?.id) await dbUpd("servicios", editItem.id, p);
+    else await dbIns("servicios", p);
+    showToast("Servicio guardado"); setSaving(false); setVista("lista"); load();
+  };
+
+  const del = async id => {
+    if (!confirm("Eliminar este servicio?")) return;
+    await dbDel("servicios", id); showToast("Eliminado"); load();
+  };
+
   const toggleActivo = async (id, activo) => {
-    await dbUpd("catalogo_servicios", id, { activo: !activo });
-    showToast(!activo ? "Activado ✔" : "Desactivado"); load();
+    await dbUpd("servicios", id, { activo: !activo });
+    showToast(!activo ? "Servicio activado" : "Servicio pausado"); load();
   };
 
-  const filtered = rows.filter(r => {
-    const matchCat = filtroCat === "todas" || r.categoria === filtroCat;
-    const matchBuscar = !buscar || r.nombre?.toLowerCase().includes(buscar.toLowerCase()) || r.codigo?.toLowerCase().includes(buscar.toLowerCase());
-    return matchCat && matchBuscar;
-  });
-
-  const categorias = ["todas", ...new Set(rows.map(r => r.categoria).filter(Boolean))];
-  const CAMPOS_EXP = [{ label: "Código", key: "codigo" }, { label: "Nombre", key: "nombre" }, { label: "Categoría", key: "categoria" }, { label: "Precio base", key: "precio_base" }, { label: "Unidad", key: "unidad" }, { label: "Activo", key: "activo" }];
-
-  if (!tableExists) return (
-    <div style={S.card}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: T.red, marginBottom: 12 }}>⚠️´©Å Tabla no encontrada</div>
-      <div style={{ fontSize: 13, color: T.sub, marginBottom: 16 }}>La tabla <code>catalogo_servicios</code> no existe en Supabase. Ejecuta este SQL:</div>
-      <div style={{ background: "#0D1117", borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: "#7DD3FC", lineHeight: 1.8 }}>
-        {`CREATE TABLE catalogo_servicios (\\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\\n  empresa_id UUID,\\n  codigo TEXT,\\n  nombre TEXT NOT NULL,\\n  descripcion TEXT,\\n  categoria TEXT DEFAULT 'transporte',\\n  precio_base DECIMAL(12,2) DEFAULT 0,\\n  precio_tarjeta DECIMAL(12,2) DEFAULT 0,\\n  unidad TEXT DEFAULT 'servicio',\\n  aplica_iva BOOLEAN DEFAULT true,\\n  tasa_iva INTEGER DEFAULT 5,\\n  activo BOOLEAN DEFAULT true,\\n  imagen_emoji TEXT DEFAULT '🚗',\\n  notas TEXT,\\n  created_at TIMESTAMPTZ DEFAULT NOW()\\n);\\nALTER TABLE catalogo_servicios DISABLE ROW LEVEL SECURITY;`}
-      </div>
-      <button onClick={load} style={{ ...S.btn("primary"), marginTop: 14 }}>↺ Reintentar después de crear la tabla</button>
-    </div>
-  );
+  const filtrados = rows.filter(r => filtro === "todos" ? true : filtro === "activo" ? r.activo !== false : r.activo === false);
 
   if (vista === "form") return (
-    <FormProducto initial={editItem} empId={empId}
-      onSave={() => { setVista("catalogo"); setEditItem(null); load(); showToast("Guardado ✔"); }}
-      onCancel={() => { setVista("catalogo"); setEditItem(null); }} />
+    <div style={{ maxWidth:620 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+        <div style={{ fontSize:16, fontWeight:800, color:T.acc }}>{editItem ? "Editar servicio" : "Nuevo servicio"}</div>
+        <button onClick={() => { setVista("lista"); setEditItem(null); }} style={S.btn("ghost")}>Volver</button>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <div style={S.card}>
+          <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>DATOS DEL SERVICIO</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <Fld label="CODIGO">
+              <input style={{ ...S.inp, fontFamily:"monospace", fontWeight:700 }} value={f.codigo}
+                onChange={e => sf("codigo", e.target.value.toUpperCase())} placeholder="SRV-001" />
+            </Fld>
+            <Fld label="TIPO">
+              <select style={S.sel} value={f.tipo} onChange={e => sf("tipo", e.target.value)}>
+                {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Fld>
+            <Fld label="NOMBRE DEL SERVICIO *" span2>
+              <input style={S.inp} value={f.nombre} onChange={e => sf("nombre", e.target.value)} placeholder="Nombre del servicio" />
+            </Fld>
+            <Fld label="DESCRIPCION" span2>
+              <textarea style={{ ...S.inp, minHeight:70, resize:"vertical" }} value={f.descripcion}
+                onChange={e => sf("descripcion", e.target.value)} placeholder="Descripcion del servicio..." />
+            </Fld>
+          </div>
+        </div>
+        <div style={S.card}>
+          <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>PRECIOS (Q)</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <Fld label="PRECIO BASE"><input style={S.inp} type="number" step="0.01" value={f.precio_base} onChange={e => sf("precio_base", e.target.value)} placeholder="0.00" /></Fld>
+            <Fld label="PRECIO POR DIA"><input style={S.inp} type="number" step="0.01" value={f.precio_dia} onChange={e => sf("precio_dia", e.target.value)} placeholder="0.00" /></Fld>
+            <Fld label="PRECIO SEMANAL"><input style={S.inp} type="number" step="0.01" value={f.precio_sem} onChange={e => sf("precio_sem", e.target.value)} placeholder="0.00" /></Fld>
+            <Fld label="PRECIO MENSUAL"><input style={S.inp} type="number" step="0.01" value={f.precio_mes} onChange={e => sf("precio_mes", e.target.value)} placeholder="0.00" /></Fld>
+          </div>
+        </div>
+        <div style={{ ...S.card, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontSize:13, color:T.txt }}>Servicio activo</span>
+          <button onClick={() => sf("activo", !f.activo)}
+            style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background:f.activo?T.acc:T.bord, position:"relative", transition:"background .2s" }}>
+            <div style={{ width:18, height:18, borderRadius:"50%", background:"white", position:"absolute", top:3, left:f.activo?22:3, transition:"left .2s" }} />
+          </button>
+        </div>
+        <div style={S.card}>
+          <Fld label="NOTAS"><input style={S.inp} value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." /></Fld>
+        </div>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={() => { setVista("lista"); setEditItem(null); }} style={{ ...S.btn("ghost"), flex:1 }}>Cancelar</button>
+          <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary"), flex:2 }}>
+            {saving ? "Guardando..." : editItem ? "Actualizar servicio" : "Guardar servicio"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 
   return (
     <div>
-      {exportar && <ModalExportar titulo="Catálogo de Servicios" datos={rows} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />}
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
-        {[{ l: "Total servicios", v: rows.length, c: T.acc }, { l: "Activos", v: rows.filter(r => r.activo !== false).length, c: T.green }, { l: "Inactivos", v: rows.filter(r => r.activo === false).length, c: T.red }, { l: "Categorías", v: new Set(rows.map(r => r.categoria)).size, c: T.blue }].map((s, i) => (
-          <div key={i} style={{ background: T.surf, borderRadius: 10, padding: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: s.c }}>{s.v}</div>
-            <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{s.l}</div>
-          </div>
-        ))}
+      {exportar && <ModalExportar titulo="Catalogo de Servicios" datos={filtrados} campos={[
+        {label:"Codigo",key:"codigo"},{label:"Nombre",key:"nombre"},{label:"Tipo",key:"tipo"},
+        {label:"Precio Base",key:"precio_base"},{label:"Precio Dia",key:"precio_dia"},
+        {label:"Precio Sem.",key:"precio_sem"},{label:"Precio Mes.",key:"precio_mes"}
+      ]} onClose={() => setExportar(false)} />}
+
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+        <div style={{ fontSize:15, fontWeight:700, color:T.txt }}>Catalogo de Servicios ({rows.length})</div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize:11 }}>Exportar</button>
+          <button onClick={() => { setF({...EF}); setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize:12 }}>+ Nuevo servicio</button>
+        </div>
       </div>
-      {/* Controles */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        <input style={{ ...S.inp, maxWidth: 260 }} value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="­ƒöì Buscar por nombre o código..." />
-        {categorias.map(c => (
-          <button key={c} onClick={() => setFiltroCat(c)} style={{ ...S.btn(filtroCat === c ? "primary" : "ghost"), fontSize: 11, padding: "5px 10px" }}>
-            {c === "todas" ? "Todas" : c.charAt(0).toUpperCase() + c.slice(1)}
+
+      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+        {["todos","activo","inactivo"].map(f2 => (
+          <button key={f2} onClick={() => setFiltro(f2)} style={{ ...S.btn(filtro===f2?"primary":"ghost"), fontSize:11, padding:"5px 10px" }}>
+            {f2==="todos"?"Todos":f2==="activo"?"Activos":"Inactivos"}
           </button>
         ))}
-        <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>­ƒôñ Exportar</button>
-        <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 11 }}>↺</button>
-        <button onClick={() => { setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize: 12, marginLeft: "auto" }}>+ Agregar servicio</button>
       </div>
-      {/* Grid de tarjetas tipo catálogo */}
-      {loading ? <Spinner /> : filtered.length === 0 ? (
-        <Empty icon="📦" msg="Sin servicios en el catálogo" action="+ Agregar primer servicio" onAction={() => { setEditItem(null); setVista("form"); }} />
+
+      {loading ? <Spinner /> : filtrados.length === 0 ? (
+        <Empty icon="S" msg="Sin servicios registrados" action="+ Nuevo servicio" onAction={() => { setF({...EF}); setVista("form"); }} />
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 16 }}>
-          {filtered.map(r => (
-            <div key={r.id} style={{ ...S.card, opacity: r.activo === false ? 0.6 : 1, transition: "transform .15s", cursor: "default", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ fontSize: 36 }}>{r.imagen_emoji || "🚗"}</div>
-                <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: r.activo !== false ? T.greenD : T.redD, color: r.activo !== false ? T.green : T.red }}>{r.activo !== false ? "Activo" : "Inactivo"}</span>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:14 }}>
+          {filtrados.map(s => (
+            <div key={s.id} style={{ ...S.card, borderTop:`3px solid ${s.activo!==false?T.acc:T.bord}`, opacity:s.activo!==false?1:0.6 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:T.txt }}>{s.nombre}</div>
+                  <div style={{ display:"flex", gap:6, marginTop:4 }}>
+                    {s.codigo && <span style={{ fontSize:10, fontFamily:"monospace", color:T.acc, background:T.accDim, padding:"1px 6px", borderRadius:6 }}>{s.codigo}</span>}
+                    <span style={{ fontSize:10, color:T.sub, background:T.surf, padding:"1px 6px", borderRadius:6 }}>{s.tipo}</span>
+                  </div>
+                </div>
+                <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10, background:s.activo!==false?T.greenDim:T.redDim, color:s.activo!==false?T.green:T.red }}>
+                  {s.activo!==false?"Activo":"Inactivo"}
+                </span>
               </div>
-              {r.codigo && <div style={{ fontFamily: "monospace", fontSize: 10, color: T.mut }}>{r.codigo}</div>}
-              <div style={{ fontSize: 14, fontWeight: 700 }}>{r.nombre}</div>
-              {r.descripcion && <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4 }}>{r.descripcion}</div>}
-              <div style={{ padding: "8px 0", borderTop: `1px solid ${T.bord}22` }}>
-                <div style={{ fontSize: 11, color: T.mut, marginBottom: 2 }}>{r.categoria} · por {r.unidad}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: T.acc }}>Q {fmt(r.aplica_iva ? (r.precio_base || 0) * (1 + (r.tasa_iva || 0) / 100) : r.precio_base)}</div>
-                {r.aplica_iva && <div style={{ fontSize: 11, color: T.sub }}>Incluye IVA {r.tasa_iva}% · sin IVA: Q {fmt(r.precio_base)}</div>}
-                {r.precio_tarjeta > 0 && <div style={{ fontSize: 11, color: T.sec }}>­ƒÆ│ Con tarjeta: Q {fmt(r.precio_tarjeta)}</div>}
+              {s.descripcion && <div style={{ fontSize:12, color:T.sub, marginBottom:10, lineHeight:1.5 }}>{s.descripcion}</div>}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6, marginBottom:12 }}>
+                {[["Base",s.precio_base],["Dia",s.precio_dia],["Sem.",s.precio_sem],["Mes",s.precio_mes]].map(([l,v]) => (
+                  <div key={l} style={{ background:T.surf, borderRadius:8, padding:"6px 8px", textAlign:"center" }}>
+                    <div style={{ fontSize:9, color:T.mut }}>{l}</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.acc }}>Q{fmt(v)}</div>
+                  </div>
+                ))}
               </div>
-              {r.notas && <div style={{ fontSize: 11, color: T.mut, fontStyle: "italic" }}>{r.notas}</div>}
-              <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: `1px solid ${T.bord}22` }}>
-                <button onClick={() => { setEditItem(r); setVista("form"); }} style={{ ...S.btn("ghost"), flex: 1, fontSize: 11, padding: "5px 8px" }}>Ô£Å´©Å Editar</button>
-                <button onClick={() => toggleActivo(r.id, r.activo)} style={{ ...S.btn(r.activo !== false ? "warn" : "green"), flex: 1, fontSize: 11, padding: "5px 8px" }}>{r.activo !== false ? "ÔÅ© Pausar" : "ÔûÂ Activar"}</button>
-                <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), fontSize: 11, padding: "5px 8px" }}>­ƒùæ´©Å</button>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={() => toggleActivo(s.id, s.activo)} style={{ ...S.btn("ghost"), fontSize:11, padding:"4px 10px" }}>
+                  {s.activo!==false?"Pausar":"Activar"}
+                </button>
+                <button onClick={() => abrirEditar(s)} style={{ ...S.btn("ghost"), fontSize:11, padding:"4px 10px" }}>Editar</button>
+                <button onClick={() => del(s.id)} style={{ ...S.btn("danger"), fontSize:11, padding:"4px 10px" }}>Eliminar</button>
               </div>
             </div>
           ))}
@@ -238,6 +177,3 @@ export default function PageCatalogo({ showToast, empId }) {
     </div>
   );
 }
-
-
-
