@@ -1,328 +1,634 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+// src/pages/Facturacion.jsx
+// ══════════════════════════════════════════════════════════════════
+// MÓDULO FACTURACIÓN FEL — Tz'ununSA
+// Tabla: facturas (confirmada en Supabase)
+// ══════════════════════════════════════════════════════════════════
+import React, { useState, useEffect, useCallback } from 'react';
+import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
 import { Spinner, Empty, Fld, ModalExportar, BuscadorCliente } from '../components/shared.jsx';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
+// ─── API directa con manejo de errores explícito ──────────────────
+async function apiFetch(path, opts = {}) {
+  const { extraHeaders, ...rest } = opts;
+  const res = await fetch(`${SB}/rest/v1${path}`, {
+    headers: { ...H, ...(extraHeaders || {}) },
+    ...rest,
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = text;
+    try { msg = JSON.parse(text).message || JSON.parse(text).hint || text; } catch {}
+    throw new Error(`[${res.status}] ${msg}`);
+  }
+  if (!text || text === 'null') return null;
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+// ─── Estados de factura ───────────────────────────────────────────
 const ESTADOS = {
-  borrador:    { c:T.mut,   bg:"#1E293B",  l:"Borrador"    },
-  emitida:     { c:T.blue,  bg:T.blueDim,  l:"Emitida"     },
-  certificada: { c:T.acc,   bg:T.accDim,   l:"Certificada" },
-  pagada:      { c:T.green, bg:T.greenDim, l:"Pagada"      },
-  parcial:     { c:T.sec,   bg:T.secDim,   l:"Pago parcial"},
-  anulada:     { c:T.red,   bg:T.redDim,   l:"Anulada"     },
+  borrador:    { c: T.mut,   bg: '#1E293B',  l: 'Borrador'     },
+  emitida:     { c: T.blue,  bg: T.blueDim,  l: 'Emitida'      },
+  certificada: { c: T.acc,   bg: T.accDim,   l: 'Certificada'  },
+  pagada:      { c: T.green, bg: T.greenDim, l: 'Pagada'       },
+  parcial:     { c: T.sec,   bg: T.secDim,   l: 'Pago parcial' },
+  anulada:     { c: T.red,   bg: T.redDim,   l: 'Anulada'      },
 };
 
 const EF = {
-  numero_factura:"", serie:"", fecha:today(),
-  cliente_nombre:"", cliente_nit:"CF", cliente_id:"",
-  descripcion:"", subtotal:0, impuestos:0, total:0,
-  metodo_pago:"efectivo", estado:"borrador", notas:"",
-  reserva_id:"", tasa_iva:12,
+  numero_factura: '', serie: '', fecha: today(),
+  cliente_nombre: '', cliente_nit: 'CF', cliente_id: '',
+  descripcion: '', subtotal: '', tasa_iva: 12, impuestos: '', total: '',
+  metodo_pago: 'efectivo', estado: 'borrador', notas: '', reserva_id: '',
 };
 
-export default function PageFacturacion({ showToast, empId }) {
-  const [rows,      setRows]      = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [vista,     setVista]     = useState("lista");
-  const [editItem,  setEditItem]  = useState(null);
-  const [saving,    setSaving]    = useState(false);
-  const [filtro,    setFiltro]    = useState("todos");
-  const [busqueda,  setBusqueda]  = useState("");
-  const [exportar,  setExportar]  = useState(false);
-  const [showSAT,   setShowSAT]   = useState(false);
-  const [f, setF] = useState({ ...EF });
-  const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
-
-  const load = async () => {
-    setLoading(true);
-    const d = await dbGet("facturas", "&order=fecha.desc,created_at.desc");
-    setRows(Array.isArray(d) ? d : []);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
-
-  const calcular = (sub, iva) => {
-    const s = parseFloat(sub) || 0;
-    const i = parseFloat(iva) || 0;
-    const impuesto = Math.round(s * (i / 100) * 100) / 100;
-    sf("impuestos", impuesto);
-    sf("total", s + impuesto);
-  };
-
-  const abrirNuevo = () => {
-    const numero = "FEL-" + Date.now().toString().slice(-6);
-    setF({ ...EF, numero_factura: numero }); setEditItem(null); setVista("form");
-  };
-
-  const abrirEditar = r => {
-    setF({ numero_factura:r.numero_factura||"", serie:r.serie||"", fecha:r.fecha||today(),
-      cliente_nombre:r.cliente_nombre||"", cliente_nit:r.cliente_nit||"CF", cliente_id:r.cliente_id||"",
-      descripcion:r.descripcion||"", subtotal:r.subtotal||0, impuestos:r.impuestos||0,
-      total:r.total||0, metodo_pago:r.metodo_pago||"efectivo",
-      estado:r.estado||"borrador", notas:r.notas||"", tasa_iva:r.tasa_iva||12 });
-    setEditItem(r); setVista("form");
-  };
-
-  const guardar = async () => {
-    if (!f.cliente_nombre.trim()) { showToast("Cliente requerido","err"); return; }
-    if (!(parseFloat(f.total) > 0)) { showToast("Total debe ser mayor a 0","err"); return; }
-    setSaving(true);
-    const p = { ...f, empresa_id:empId,
-      subtotal:parseFloat(f.subtotal)||0, impuestos:parseFloat(f.impuestos)||0,
-      total:parseFloat(f.total)||0, tasa_iva:parseFloat(f.tasa_iva)||12 };
-    if (editItem?.id) await dbUpd("facturas", editItem.id, p);
-    else await dbIns("facturas", p);
-    showToast("Factura guardada"); setSaving(false); setVista("lista"); load();
-  };
-
-  const del = async id => {
-    if (!confirm("Eliminar esta factura?")) return;
-    await dbDel("facturas", id); showToast("Eliminada"); load();
-  };
-
-  const cambiarEstado = async (id, est) => {
-    await dbUpd("facturas", id, { estado: est }); showToast("Estado actualizado"); load();
-  };
-
-  const imprimirFactura = (r) => {
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Factura ${r.numero_factura}</title>
-    <style>body{font-family:Arial,sans-serif;padding:40px;font-size:12px;color:#1E293B}
-    .header{display:flex;justify-content:space-between;margin-bottom:30px}
-    h1{color:#1B2D5C;font-size:22px;margin:0}
-    .info{background:#F8FAFC;border-radius:8px;padding:16px;margin-bottom:20px}
+// ─── Imprimir factura (ventana HTML) ─────────────────────────────
+const imprimirFactura = (r) => {
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <title>Factura ${r.numero_factura || ''}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Arial',sans-serif;padding:32px;font-size:11px;color:#1E293B;background:#fff}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #1B2D5C}
+    .logo-area h1{color:#1B2D5C;font-size:20px;font-weight:800;margin-bottom:4px}
+    .logo-area p{color:#64748B;font-size:10px}
+    .factura-info{text-align:right}
+    .factura-info .num{font-size:18px;font-weight:800;color:#1B2D5C}
+    .factura-info p{font-size:10px;color:#64748B;margin-top:2px}
+    .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700;background:#00D4AA22;color:#00D4AA;margin-top:4px}
+    .section{margin-bottom:20px}
+    .section-title{font-size:9px;font-weight:700;color:#94A3B8;letter-spacing:1.5px;margin-bottom:8px}
+    .client-box{background:#F8FAFC;border-radius:8px;padding:14px;border-left:3px solid #1B2D5C}
+    .client-box strong{font-size:13px;color:#1B2D5C}
     table{width:100%;border-collapse:collapse;margin-bottom:20px}
-    th{background:#1B2D5C;color:#fff;padding:8px 12px;text-align:left}
-    td{padding:8px 12px;border-bottom:1px solid #E2E8F0}
-    .total{text-align:right;font-size:18px;font-weight:bold;color:#1B2D5C}
-    @media print{body{padding:20px}}</style>
-    </head><body>
-    <div class="header">
-      <div><h1>Tz'unun AutoRentas</h1><div>Sistema de Facturacion FEL</div></div>
-      <div style="text-align:right">
-        <div style="font-size:18px;font-weight:bold">FACTURA FEL</div>
-        <div>No. ${r.numero_factura}</div>
-        ${r.serie ? `<div>Serie: ${r.serie}</div>` : ""}
-        <div>Fecha: ${fmtD(r.fecha)}</div>
-      </div>
+    thead tr{background:#1B2D5C}
+    th{color:#fff;padding:8px 12px;text-align:left;font-size:10px;font-weight:600}
+    td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
+    .amounts{margin-left:auto;width:280px}
+    .amount-row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569}
+    .amount-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1B2D5C;font-size:16px;font-weight:800;color:#1B2D5C}
+    .footer{margin-top:28px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
+    @media print{.no-print{display:none}}
+  </style></head><body>
+  <div class="header">
+    <div class="logo-area">
+      <h1>Tz'unun AutoRentas</h1>
+      <p>Servicios de Transporte y Renta de Vehiculos</p>
+      <p>Guatemala City, Guatemala</p>
     </div>
-    <div class="info">
-      <strong>Cliente:</strong> ${r.cliente_nombre}<br/>
-      <strong>NIT:</strong> ${r.cliente_nit || "CF"}<br/>
+    <div class="factura-info">
+      <div class="num">FACTURA FEL</div>
+      <p>No. ${r.numero_factura || '—'}</p>
+      ${r.serie ? `<p>Serie: ${r.serie}</p>` : ''}
+      <p>Fecha: ${fmtD(r.fecha)}</p>
+      <div class="badge">${ESTADOS[r.estado]?.l || r.estado}</div>
     </div>
+  </div>
+  <div class="section">
+    <div class="section-title">DATOS DEL CLIENTE</div>
+    <div class="client-box">
+      <strong>${r.cliente_nombre || 'Consumidor Final'}</strong>
+      <p style="margin-top:4px;color:#475569">NIT: ${r.cliente_nit || 'CF'}</p>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">DETALLE DEL SERVICIO</div>
     <table>
-      <thead><tr><th>Descripcion</th><th style="text-align:right">Monto</th></tr></thead>
+      <thead><tr><th>Descripcion</th><th style="text-align:right">Monto Q</th></tr></thead>
       <tbody>
-        <tr><td>${r.descripcion || "Servicios de renta"}</td><td style="text-align:right">Q ${fmt(r.subtotal)}</td></tr>
-        <tr><td>IVA (${r.tasa_iva || 12}%)</td><td style="text-align:right">Q ${fmt(r.impuestos)}</td></tr>
+        <tr><td>${r.descripcion || 'Servicios de transporte y renta'}</td>
+        <td style="text-align:right;font-weight:600">Q ${fmt(r.subtotal)}</td></tr>
       </tbody>
     </table>
-    <div class="total">TOTAL: Q ${fmt(r.total)}</div>
-    <div style="margin-top:30px;font-size:10px;color:#94A3B8;text-align:center">
-      Documento generado por Tz'unun AutoRentas — ${new Date().toLocaleDateString("es-GT")}
-    </div>
-    <script>window.onload=()=>window.print()<\/script>
-    </body></html>`;
-    const w = window.open("","_blank"); w.document.write(html); w.document.close();
+  </div>
+  <div class="amounts">
+    <div class="amount-row"><span>Subtotal</span><span>Q ${fmt(r.subtotal)}</span></div>
+    <div class="amount-row"><span>IVA (${r.tasa_iva || 12}%)</span><span>Q ${fmt(r.impuestos)}</span></div>
+    <div class="amount-total"><span>TOTAL</span><span>Q ${fmt(r.total)}</span></div>
+  </div>
+  ${r.metodo_pago ? `<p style="margin-top:12px;font-size:10px;color:#64748B">Metodo de pago: ${r.metodo_pago}</p>` : ''}
+  <div class="footer">
+    Documento generado por Tz'unun AutoRentas &nbsp;|&nbsp;
+    ${new Date().toLocaleDateString('es-GT', { day:'2-digit', month:'long', year:'numeric' })}
+  </div>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+};
+
+// ════════════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ════════════════════════════════════════════════════════════════════
+export default function PageFacturacion({ showToast, empId }) {
+  const [rows,     setRows]     = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [vista,    setVista]    = useState('lista');
+  const [editItem, setEditItem] = useState(null);
+  const [saving,   setSaving]   = useState(false);
+  const [filtro,   setFiltro]   = useState('todos');
+  const [busqueda, setBusqueda] = useState('');
+  const [exportar, setExportar] = useState(false);
+  const [showSAT,  setShowSAT]  = useState(false);
+  const [f,        setF]        = useState({ ...EF });
+  const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  // ─── Carga de datos ────────────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const d = await apiFetch('/facturas?order=fecha.desc,created_at.desc&select=*');
+      setRows(Array.isArray(d) ? d : []);
+    } catch (e) {
+      showToast('Error cargando facturas: ' + e.message, 'err');
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ─── Calcular IVA y total ──────────────────────────────────────
+  const calcular = (sub, tasaIva) => {
+    const s = parseFloat(sub) || 0;
+    const t = parseInt(tasaIva) || 0;
+    const imp = Math.round(s * (t / 100) * 100) / 100;
+    setF(p => ({ ...p, impuestos: imp.toFixed(2), total: (s + imp).toFixed(2) }));
   };
 
+  // ─── Abrir nuevo ──────────────────────────────────────────────
+  const abrirNuevo = () => {
+    const numero = 'FEL-' + Date.now().toString().slice(-6);
+    setF({ ...EF, numero_factura: numero, fecha: today() });
+    setEditItem(null);
+    setVista('form');
+  };
+
+  // ─── Abrir editar ─────────────────────────────────────────────
+  const abrirEditar = (r) => {
+    setF({
+      numero_factura: r.numero_factura || '',
+      serie:          r.serie          || '',
+      fecha:          r.fecha          || today(),
+      cliente_nombre: r.cliente_nombre || '',
+      cliente_nit:    r.cliente_nit    || 'CF',
+      cliente_id:     r.cliente_id     || '',
+      descripcion:    r.descripcion    || '',
+      subtotal:       r.subtotal       || '',
+      tasa_iva:       r.tasa_iva       ?? 12,
+      impuestos:      r.impuestos      || '',
+      total:          r.total          || '',
+      metodo_pago:    r.metodo_pago    || 'efectivo',
+      estado:         r.estado         || 'borrador',
+      notas:          r.notas          || '',
+      reserva_id:     r.reserva_id     || '',
+    });
+    setEditItem(r);
+    setVista('form');
+  };
+
+  // ─── Guardar factura ──────────────────────────────────────────
+  const guardar = async () => {
+    // Validaciones explícitas
+    if (!f.cliente_nombre.trim()) {
+      showToast('El nombre del cliente es requerido', 'err'); return;
+    }
+    if (!f.fecha) {
+      showToast('La fecha es requerida', 'err'); return;
+    }
+    if (!(parseFloat(f.total) > 0)) {
+      showToast('El total debe ser mayor a 0', 'err'); return;
+    }
+    if (!empId) {
+      showToast('Error: empresa no identificada. Recarga la pagina.', 'err'); return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = {
+        empresa_id:     empId,
+        numero_factura: f.numero_factura || ('FEL-' + Date.now().toString().slice(-6)),
+        serie:          f.serie          || null,
+        fecha:          f.fecha,
+        cliente_nombre: f.cliente_nombre.trim(),
+        cliente_nit:    f.cliente_nit.trim() || 'CF',
+        cliente_id:     f.cliente_id     || null,
+        descripcion:    f.descripcion    || null,
+        subtotal:       parseFloat(f.subtotal)  || 0,
+        tasa_iva:       parseInt(f.tasa_iva)    || 12,
+        impuestos:      parseFloat(f.impuestos) || 0,
+        total:          parseFloat(f.total)     || 0,
+        metodo_pago:    f.metodo_pago    || 'efectivo',
+        estado:         f.estado         || 'borrador',
+        notas:          f.notas          || null,
+        reserva_id:     f.reserva_id     || null,
+      };
+
+      if (editItem?.id) {
+        await apiFetch(`/facturas?id=eq.${editItem.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        showToast('Factura actualizada');
+      } else {
+        await apiFetch('/facturas', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          extraHeaders: { Prefer: 'return=minimal' },
+        });
+        showToast('Factura creada correctamente');
+      }
+
+      setVista('lista');
+      setEditItem(null);
+      load();
+    } catch (e) {
+      showToast('Error al guardar: ' + e.message, 'err');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Eliminar ─────────────────────────────────────────────────
+  const del = async (id) => {
+    if (!confirm('Eliminar esta factura?')) return;
+    try {
+      await apiFetch(`/facturas?id=eq.${id}`, { method: 'DELETE' });
+      showToast('Factura eliminada');
+      load();
+    } catch (e) {
+      showToast('Error al eliminar: ' + e.message, 'err');
+    }
+  };
+
+  // ─── Cambiar estado ───────────────────────────────────────────
+  const cambiarEstado = async (id, estado) => {
+    try {
+      await apiFetch(`/facturas?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ estado }),
+      });
+      showToast('Estado actualizado');
+      load();
+    } catch (e) {
+      showToast('Error: ' + e.message, 'err');
+    }
+  };
+
+  // ─── Filtrado ─────────────────────────────────────────────────
   const filtrados = rows.filter(r => {
-    if (filtro !== "todos" && r.estado !== filtro) return false;
+    if (filtro !== 'todos' && r.estado !== filtro) return false;
     if (busqueda && !r.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()) &&
         !r.numero_factura?.toLowerCase().includes(busqueda.toLowerCase())) return false;
     return true;
   });
 
   const totales = {
-    emitidas:    rows.filter(r => r.estado !== "anulada").reduce((s,r) => s+(parseFloat(r.total)||0), 0),
-    cobradas:    rows.filter(r => r.estado === "pagada").reduce((s,r) => s+(parseFloat(r.total)||0), 0),
-    pendientes:  rows.filter(r => ["emitida","certificada","parcial"].includes(r.estado)).length,
+    facturado:  rows.filter(r => r.estado !== 'anulada').reduce((s, r) => s + (parseFloat(r.total) || 0), 0),
+    cobrado:    rows.filter(r => r.estado === 'pagada').reduce((s, r) => s + (parseFloat(r.total) || 0), 0),
+    pendiente:  rows.filter(r => ['emitida','certificada','parcial'].includes(r.estado)).reduce((s, r) => s + (parseFloat(r.total) || 0), 0),
+    anuladas:   rows.filter(r => r.estado === 'anulada').length,
   };
 
-  if (vista === "form") return (
-    <div style={{ maxWidth:680 }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-        <div style={{ fontSize:16, fontWeight:800, color:T.acc }}>{editItem ? "Editar factura" : "Nueva factura FEL"}</div>
-        <button onClick={() => { setVista("lista"); setEditItem(null); }} style={S.btn("ghost")}>Volver</button>
+  // ════════════════════════════════════════════════════════════════
+  // VISTA: FORMULARIO
+  // ════════════════════════════════════════════════════════════════
+  if (vista === 'form') return (
+    <div style={{ maxWidth: 720 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: T.acc }}>
+            {editItem ? 'Editar factura' : 'Nueva factura FEL'}
+          </div>
+          {editItem && (
+            <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>
+              {editItem.numero_factura}
+            </div>
+          )}
+        </div>
+        <button onClick={() => { setVista('lista'); setEditItem(null); }} style={S.btn('ghost')}>
+          Volver
+        </button>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Columna izquierda */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={S.card}>
-            <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>DATOS DE FACTURA</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>
+              DATOS DE FACTURA
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
               <Fld label="NUMERO FACTURA">
-                <input style={{ ...S.inp, fontFamily:"monospace" }} value={f.numero_factura}
-                  onChange={e => sf("numero_factura", e.target.value)} placeholder="FEL-000001" />
+                <input style={{ ...S.inp, fontFamily: 'monospace', fontWeight: 700 }}
+                  value={f.numero_factura}
+                  onChange={e => sf('numero_factura', e.target.value)}
+                  placeholder="FEL-000001" />
               </Fld>
               <Fld label="SERIE">
-                <input style={S.inp} value={f.serie} onChange={e => sf("serie", e.target.value)} placeholder="A" />
+                <input style={S.inp} value={f.serie}
+                  onChange={e => sf('serie', e.target.value.toUpperCase())}
+                  placeholder="A" />
               </Fld>
-              <Fld label="FECHA">
-                <input style={S.inp} type="date" value={f.fecha} onChange={e => sf("fecha", e.target.value)} />
+              <Fld label="FECHA *">
+                <input style={S.inp} type="date" value={f.fecha}
+                  onChange={e => sf('fecha', e.target.value)} />
               </Fld>
               <Fld label="ESTADO">
-                <select style={S.sel} value={f.estado} onChange={e => sf("estado", e.target.value)}>
-                  {Object.entries(ESTADOS).map(([k,v]) => <option key={k} value={k}>{v.l}</option>)}
+                <select style={S.sel} value={f.estado}
+                  onChange={e => sf('estado', e.target.value)}>
+                  {Object.entries(ESTADOS).map(([k, v]) => (
+                    <option key={k} value={k}>{v.l}</option>
+                  ))}
                 </select>
               </Fld>
             </div>
           </div>
+
           <div style={S.card}>
-            <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>CLIENTE</div>
-            <div style={{ display:"grid", gap:11 }}>
-              <Fld label="CLIENTE *">
-                <BuscadorCliente value={f.cliente_nombre} onChange={v => sf("cliente_nombre", v)} empId={empId} />
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>
+              CLIENTE *
+            </div>
+            <div style={{ display: 'grid', gap: 11 }}>
+              <Fld label="NOMBRE / RAZON SOCIAL *">
+                <BuscadorCliente value={f.cliente_nombre}
+                  onChange={v => sf('cliente_nombre', v)} empId={empId} />
               </Fld>
-              <Fld label="NIT CLIENTE">
-                <input style={S.inp} value={f.cliente_nit} onChange={e => sf("cliente_nit", e.target.value)} placeholder="CF o NIT" />
+              <Fld label="NIT DEL CLIENTE">
+                <input style={S.inp} value={f.cliente_nit}
+                  onChange={e => sf('cliente_nit', e.target.value)}
+                  placeholder="CF o NIT del cliente" />
               </Fld>
             </div>
           </div>
+
           <div style={S.card}>
             <Fld label="DESCRIPCION DEL SERVICIO">
-              <textarea style={{ ...S.inp, minHeight:80, resize:"vertical" }}
-                value={f.descripcion} onChange={e => sf("descripcion", e.target.value)}
-                placeholder="Descripcion del servicio facturado..." />
+              <textarea style={{ ...S.inp, minHeight: 90, resize: 'vertical' }}
+                value={f.descripcion}
+                onChange={e => sf('descripcion', e.target.value)}
+                placeholder="Descripcion detallada del servicio facturado..." />
             </Fld>
           </div>
         </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+
+        {/* Columna derecha */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={S.card}>
-            <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>MONTOS (Q)</div>
-            <div style={{ display:"grid", gap:11 }}>
-              <Fld label="IVA">
-                <select style={S.sel} value={f.tasa_iva} onChange={e => { sf("tasa_iva", e.target.value); calcular(f.subtotal, e.target.value); }}>
-                  <option value={12}>12% Regimen General</option>
-                  <option value={5}>5% Pequeno Contribuyente</option>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>
+              MONTOS (Quetzales)
+            </div>
+            <div style={{ display: 'grid', gap: 11 }}>
+              <Fld label="REGIMEN DE IVA">
+                <select style={S.sel} value={f.tasa_iva}
+                  onChange={e => { sf('tasa_iva', e.target.value); calcular(f.subtotal, e.target.value); }}>
+                  <option value={12}>12% — Regimen General</option>
+                  <option value={5}>5% — Pequeno Contribuyente</option>
                   <option value={0}>Sin IVA</option>
                 </select>
               </Fld>
               <Fld label="SUBTOTAL">
-                <input style={S.inp} type="number" step="0.01" value={f.subtotal}
-                  onChange={e => { sf("subtotal", e.target.value); calcular(e.target.value, f.tasa_iva); }} placeholder="0.00" />
+                <input style={S.inp} type="number" step="0.01" min="0"
+                  value={f.subtotal}
+                  onChange={e => { sf('subtotal', e.target.value); calcular(e.target.value, f.tasa_iva); }}
+                  placeholder="0.00" />
               </Fld>
-              <Fld label={`IVA (${f.tasa_iva}%)`}>
-                <input style={{ ...S.inp, background:T.card }} value={fmt(f.impuestos)} readOnly />
+              <Fld label={`IVA CALCULADO (${f.tasa_iva}%)`}>
+                <input style={{ ...S.inp, background: T.card, color: T.sub }}
+                  value={f.impuestos ? `Q ${fmt(f.impuestos)}` : '0.00'}
+                  readOnly />
               </Fld>
-              <div style={{ background:T.accDim, border:`1px solid ${T.acc}44`, borderRadius:10, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontSize:13, color:T.sub }}>TOTAL FACTURA</span>
-                <span style={{ fontSize:20, fontWeight:800, color:T.acc }}>Q {fmt(f.total)}</span>
+              <div style={{ background: T.accDim, border: `1px solid ${T.acc}44`, borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>TOTAL FACTURA</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: T.acc }}>
+                  Q {fmt(f.total || 0)}
+                </div>
               </div>
             </div>
           </div>
+
           <div style={S.card}>
-            <Fld label="METODO DE PAGO">
-              <div style={{ display:"flex", gap:8 }}>
-                {["efectivo","transferencia","tarjeta","cheque"].map(p => (
-                  <button key={p} onClick={() => sf("metodo_pago", p)}
-                    style={{ ...S.btn(f.metodo_pago===p?"primary":"ghost"), flex:1, fontSize:11 }}>
-                    {p.charAt(0).toUpperCase()+p.slice(1)}
-                  </button>
-                ))}
-              </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>
+              METODO DE PAGO
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {['efectivo', 'transferencia', 'tarjeta', 'cheque', 'deposito', 'credito'].map(p => (
+                <button key={p} onClick={() => sf('metodo_pago', p)}
+                  style={{
+                    ...S.btn(f.metodo_pago === p ? 'primary' : 'ghost'),
+                    fontSize: 11, padding: '7px 10px',
+                  }}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={S.card}>
+            <Fld label="NOTAS INTERNAS">
+              <textarea style={{ ...S.inp, minHeight: 60, resize: 'vertical' }}
+                value={f.notas}
+                onChange={e => sf('notas', e.target.value)}
+                placeholder="Observaciones internas (no aparecen en factura)..." />
             </Fld>
           </div>
-          <div style={S.card}>
-            <Fld label="NOTAS">
-              <textarea style={{ ...S.inp, minHeight:60, resize:"vertical" }}
-                value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." />
-            </Fld>
-          </div>
-          <div style={{ display:"flex", gap:10 }}>
-            <button onClick={() => { setVista("lista"); setEditItem(null); }} style={{ ...S.btn("ghost"), flex:1 }}>Cancelar</button>
-            <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary"), flex:2 }}>
-              {saving ? "Guardando..." : editItem ? "Actualizar factura" : "Crear factura"}
+
+          {/* Botones de accion */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => { setVista('lista'); setEditItem(null); }}
+              style={{ ...S.btn('ghost'), flex: 1 }}>
+              Cancelar
+            </button>
+            <button onClick={guardar} disabled={saving}
+              style={{ ...S.btn('primary'), flex: 2 }}>
+              {saving ? 'Guardando...' : editItem ? 'Actualizar factura' : 'Crear factura'}
             </button>
           </div>
+
+          {/* Debug info visible solo si hay empresa_id */}
+          {!empId && (
+            <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: '10px 14px', fontSize: 11, color: T.red }}>
+              Advertencia: empresa_id no disponible. Recarga la pagina.
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 
+  // ════════════════════════════════════════════════════════════════
+  // VISTA: LISTA
+  // ════════════════════════════════════════════════════════════════
   return (
     <div>
-      {exportar && <ModalExportar titulo="Facturas FEL" datos={filtrados} campos={[
-        {label:"No. Factura",key:"numero_factura"},{label:"Serie",key:"serie"},{label:"Fecha",key:"fecha"},
-        {label:"Cliente",key:"cliente_nombre"},{label:"NIT",key:"cliente_nit"},
-        {label:"Subtotal",key:"subtotal"},{label:"IVA",key:"impuestos"},{label:"Total",key:"total"},
-        {label:"Metodo",key:"metodo_pago"},{label:"Estado",key:"estado"}
-      ]} onClose={() => setExportar(false)} />}
+      {/* Modal exportar */}
+      {exportar && (
+        <ModalExportar titulo="Facturas FEL" datos={filtrados}
+          campos={[
+            { label: 'No. Factura',  key: 'numero_factura' },
+            { label: 'Serie',        key: 'serie'          },
+            { label: 'Fecha',        key: 'fecha'          },
+            { label: 'Cliente',      key: 'cliente_nombre' },
+            { label: 'NIT',          key: 'cliente_nit'    },
+            { label: 'Subtotal',     key: 'subtotal'       },
+            { label: 'IVA',          key: 'impuestos'      },
+            { label: 'Total',        key: 'total'          },
+            { label: 'Metodo',       key: 'metodo_pago'    },
+            { label: 'Estado',       key: 'estado'         },
+          ]}
+          onClose={() => setExportar(false)} />
+      )}
 
-      {showSAT && <ImportadorSAT tipo="ventas" empId={empId} showToast={showToast}
-        onClose={() => setShowSAT(false)} onImportado={load} />}
+      {/* Modal importador SAT */}
+      {showSAT && (
+        <ImportadorSAT tipo="ventas" empId={empId} showToast={showToast}
+          onClose={() => setShowSAT(false)} onImportado={load} />
+      )}
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:18 }}>
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { l:"Total facturado", v:`Q ${fmt(totales.emitidas)}`,  c:T.acc   },
-          { l:"Total cobrado",   v:`Q ${fmt(totales.cobradas)}`,  c:T.green },
-          { l:"Pendientes",      v:totales.pendientes,            c:T.sec   },
-        ].map((s,i) => (
-          <div key={i} style={{ background:T.surf, borderRadius:10, padding:"14px 16px" }}>
-            <div style={{ fontSize:11, color:T.mut }}>{s.l}</div>
-            <div style={{ fontSize:i===2?24:16, fontWeight:800, color:s.c, marginTop:4 }}>{s.v}</div>
+          { l: 'Total facturado',  v: `Q ${fmt(totales.facturado)}`,  c: T.acc,   bg: T.accDim  },
+          { l: 'Total cobrado',    v: `Q ${fmt(totales.cobrado)}`,    c: T.green, bg: T.greenDim },
+          { l: 'Por cobrar',       v: `Q ${fmt(totales.pendiente)}`,  c: T.sec,   bg: T.secDim  },
+          { l: 'Facturas totales', v: rows.length,                    c: T.blue,  bg: T.blueDim },
+        ].map((s, i) => (
+          <div key={i} style={{ background: s.bg, border: `1px solid ${s.c}44`, borderRadius: 12, padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, color: T.mut }}>{s.l}</div>
+            <div style={{ fontSize: i === 3 ? 24 : 16, fontWeight: 800, color: s.c, marginTop: 4 }}>{s.v}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
-        {["todos",...Object.keys(ESTADOS)].map(est => (
+      {/* Filtros de estado */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        {['todos', ...Object.keys(ESTADOS)].map(est => (
           <button key={est} onClick={() => setFiltro(est)}
-            style={{ ...S.btn(filtro===est?"primary":"ghost"), fontSize:11, padding:"5px 10px" }}>
-            {est==="todos"?"Todos":ESTADOS[est]?.l||est}
+            style={{ ...S.btn(filtro === est ? 'primary' : 'ghost'), fontSize: 11, padding: '5px 10px' }}>
+            {est === 'todos' ? `Todas (${rows.length})` : `${ESTADOS[est]?.l} (${rows.filter(r => r.estado === est).length})`}
           </button>
         ))}
-        <div style={{ flex:1 }} />
-        <button onClick={() => setShowSAT(true)} style={{ ...S.btn("blue"), fontSize:11 }}>Importar SAT</button>
-        <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize:11 }}>Exportar</button>
-        <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize:12 }}>+ Nueva factura</button>
       </div>
 
-      <div style={{ marginBottom:14 }}>
-        <input style={S.inp} placeholder="Buscar por cliente o numero de factura..."
+      {/* Barra de acciones */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input style={{ ...S.inp, flex: 1, minWidth: 200 }}
+          placeholder="Buscar por cliente o numero de factura..."
           value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        <button onClick={() => setShowSAT(true)}
+          style={{ ...S.btn('blue'), fontSize: 11, whiteSpace: 'nowrap' }}>
+          Importar SAT
+        </button>
+        <button onClick={() => setExportar(true)}
+          style={{ ...S.btn('ghost'), fontSize: 11 }}>
+          Exportar
+        </button>
+        <button onClick={abrirNuevo}
+          style={{ ...S.btn('primary'), fontSize: 12, whiteSpace: 'nowrap' }}>
+          + Nueva factura
+        </button>
       </div>
 
+      {/* Tabla */}
       {loading ? <Spinner /> : filtrados.length === 0 ? (
-        <Empty icon="F" msg="Sin facturas registradas" action="+ Nueva factura" onAction={abrirNuevo} />
+        <Empty icon="F" msg={rows.length === 0 ? 'Sin facturas registradas' : 'Sin resultados'}
+          action="+ Nueva factura" onAction={abrirNuevo} />
       ) : (
         <div style={S.card}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead><tr>
-              {["No. Factura","Fecha","Cliente","NIT","Total","Metodo","Estado",""].map(h => (
-                <th key={h} style={S.th}>{h}</th>
-              ))}
-            </tr></thead>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['No. Factura', 'Fecha', 'Cliente', 'NIT', 'Total', 'Metodo', 'Estado', 'Acciones'].map(h => (
+                  <th key={h} style={S.th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
               {filtrados.map(r => {
                 const est = ESTADOS[r.estado] || ESTADOS.borrador;
                 return (
                   <tr key={r.id}
-                    onMouseEnter={e => e.currentTarget.style.background=T.surf}
-                    onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-                    <td style={{ ...S.td, fontFamily:"monospace", fontSize:11, color:T.acc }}>
-                      {r.numero_factura}
-                      {r.serie && <div style={{ fontSize:9, color:T.mut }}>Serie: {r.serie}</div>}
+                    onMouseEnter={e => e.currentTarget.style.background = T.surf}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 11, color: T.acc }}>
+                      {r.numero_factura || '—'}
+                      {r.serie && <div style={{ fontSize: 9, color: T.mut }}>Serie: {r.serie}</div>}
                     </td>
-                    <td style={{ ...S.td, fontSize:11, color:T.sub, whiteSpace:"nowrap" }}>{fmtD(r.fecha)}</td>
-                    <td style={{ ...S.td, fontWeight:600 }}>{r.cliente_nombre}</td>
-                    <td style={{ ...S.td, fontSize:11, fontFamily:"monospace", color:T.mut }}>{r.cliente_nit||"CF"}</td>
-                    <td style={{ ...S.td, fontWeight:700, color:T.acc }}>Q {fmt(r.total)}</td>
-                    <td style={{ ...S.td, fontSize:11, color:T.sub }}>{r.metodo_pago||"—"}</td>
-                    <td style={S.td}>
-                      <span style={{ padding:"2px 8px", borderRadius:10, fontSize:10, fontWeight:600, color:est.c, background:est.bg }}>{est.l}</span>
+                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: 'nowrap' }}>
+                      {fmtD(r.fecha)}
+                    </td>
+                    <td style={{ ...S.td, fontWeight: 600, maxWidth: 160 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 155 }}>
+                        {r.cliente_nombre}
+                      </div>
+                    </td>
+                    <td style={{ ...S.td, fontSize: 11, fontFamily: 'monospace', color: T.mut }}>
+                      {r.cliente_nit || 'CF'}
+                    </td>
+                    <td style={{ ...S.td, fontWeight: 700, color: T.acc, whiteSpace: 'nowrap' }}>
+                      Q {fmt(r.total)}
+                    </td>
+                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>
+                      {r.metodo_pago || '—'}
                     </td>
                     <td style={S.td}>
-                      <div style={{ display:"flex", gap:4 }}>
-                        <button onClick={() => imprimirFactura(r)} style={{ ...S.btn("ghost"), padding:"3px 7px", fontSize:10 }}>Imprimir</button>
-                        {r.estado === "borrador" && <button onClick={() => cambiarEstado(r.id,"emitida")} style={{ ...S.btn("primary"), padding:"3px 7px", fontSize:10 }}>Emitir</button>}
-                        {r.estado === "emitida"  && <button onClick={() => cambiarEstado(r.id,"pagada")}  style={{ ...S.btn("green"),   padding:"3px 7px", fontSize:10 }}>Cobrada</button>}
-                        <button onClick={() => abrirEditar(r)} style={{ ...S.btn("ghost"), padding:"3px 7px", fontSize:10 }}>Editar</button>
-                        {r.estado === "borrador" && <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), padding:"3px 7px", fontSize:10 }}>Eliminar</button>}
+                      <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, color: est.c, background: est.bg }}>
+                        {est.l}
+                      </span>
+                    </td>
+                    <td style={S.td}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <button onClick={() => imprimirFactura(r)}
+                          style={{ ...S.btn('ghost'), padding: '3px 7px', fontSize: 10 }}>
+                          Imprimir
+                        </button>
+                        {r.estado === 'borrador' && (
+                          <button onClick={() => cambiarEstado(r.id, 'emitida')}
+                            style={{ ...S.btn('primary'), padding: '3px 7px', fontSize: 10 }}>
+                            Emitir
+                          </button>
+                        )}
+                        {r.estado === 'emitida' && (
+                          <button onClick={() => cambiarEstado(r.id, 'pagada')}
+                            style={{ ...S.btn('green'), padding: '3px 7px', fontSize: 10 }}>
+                            Cobrada
+                          </button>
+                        )}
+                        {['emitida','certificada','parcial'].includes(r.estado) && (
+                          <button onClick={() => cambiarEstado(r.id, 'anulada')}
+                            style={{ ...S.btn('danger'), padding: '3px 7px', fontSize: 10 }}>
+                            Anular
+                          </button>
+                        )}
+                        <button onClick={() => abrirEditar(r)}
+                          style={{ ...S.btn('ghost'), padding: '3px 7px', fontSize: 10 }}>
+                          Editar
+                        </button>
+                        {r.estado === 'borrador' && (
+                          <button onClick={() => del(r.id)}
+                            style={{ ...S.btn('danger'), padding: '3px 7px', fontSize: 10 }}>
+                            Eliminar
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr style={{ background: T.surf }}>
+                <td colSpan={4} style={{ padding: '9px 10px', fontSize: 11, fontWeight: 700, color: T.mut }}>
+                  {filtrados.length} facturas
+                </td>
+                <td style={{ padding: '9px 10px', fontWeight: 800, color: T.acc, fontSize: 14 }}>
+                  Q {fmt(filtrados.reduce((s, r) => s + (parseFloat(r.total) || 0), 0))}
+                </td>
+                <td colSpan={3} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
