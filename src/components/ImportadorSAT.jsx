@@ -488,10 +488,10 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead style={{ position: 'sticky', top: 0 }}>
                     <tr>
-                      {tipoDetect === 'ventas'
+                      {(tipoDetect === 'ventas'
                         ? ['NIT', 'Cliente', 'No. Factura', 'Fecha', 'Subtotal', 'IVA', 'Total']
                         : ['NIT', 'Proveedor', 'No. Factura', 'Fecha', 'Subtotal', 'IVA', 'Total']
-                      }.map(h => <th key={h} style={S.th}>{h}</th>)}
+                      ).map(h => <th key={h} style={S.th}>{h}</th>)}
                     </tr>
                   </thead>
                   <tbody>
