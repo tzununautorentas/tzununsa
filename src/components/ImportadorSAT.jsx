@@ -1,7 +1,7 @@
-// IMPORTADOR SAT GUATEMALA — Tz'ununSA
+// IMPORTADOR SAT GUATEMALA â€” Tz'ununSA
 // Compatible con exportaciones de Agencia Virtual SAT Guatemala
 // Soporta: facturas emitidas (ventas) y facturas recibidas (compras)
-// ══════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 import React, { useState, useRef } from 'react';
 import { T, S, SB, H, fmt, today } from '../config.js';
 
@@ -20,7 +20,7 @@ async function api(path, opts = {}) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
-// ─── Cargar SheetJS desde CDN ─────────────────────────────────────
+// â”€â”€â”€ Cargar SheetJS desde CDN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const cargarXLSX = () => new Promise((resolve, reject) => {
   if (window.XLSX) { resolve(window.XLSX); return; }
   const s = document.createElement('script');
@@ -30,7 +30,7 @@ const cargarXLSX = () => new Promise((resolve, reject) => {
   document.head.appendChild(s);
 });
 
-// ─── Normalizar NIT ───────────────────────────────────────────────
+// â”€â”€â”€ Normalizar NIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const normNIT = (v) => String(v || '').trim().replace(/\s+/g, '').toUpperCase();
 
 const normText = (v) => String(v || '')
@@ -40,7 +40,7 @@ const normText = (v) => String(v || '')
   .replace(/\s+/g, ' ')
   .trim();
 
-// ─── Normalizar fecha SAT (dd/mm/yyyy → yyyy-mm-dd) ───────────────
+// â”€â”€â”€ Normalizar fecha SAT (dd/mm/yyyy â†’ yyyy-mm-dd) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const normFecha = (v) => {
   if (!v) return today();
   const s = String(v).trim();
@@ -53,10 +53,10 @@ const normFecha = (v) => {
   return today();
 };
 
-// ─── Normalizar monto ─────────────────────────────────────────────
+// â”€â”€â”€ Normalizar monto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const normMonto = (v) => parseFloat(String(v||'0').replace(/[Q,\s]/g,'').replace(/[^0-9.-]/g,'')) || 0;
 
-// ─── Buscar índice de columna por palabras clave ──────────────────
+// â”€â”€â”€ Buscar Ã­ndice de columna por palabras clave â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const findCol = (headers, claves) => {
   const h = headers.map(normText);
   for (const c of claves) {
@@ -75,10 +75,10 @@ const findCol = (headers, claves) => {
 const getVal = (row, idx) => idx >= 0 ? String(row[idx] || '').trim() : '';
 const pick = (row, headers, claves) => getVal(row, findCol(headers, claves));
 
-// ─── Detectar tipo de archivo SAT ─────────────────────────────────
+// â”€â”€â”€ Detectar tipo de archivo SAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SAT exporta dos tipos:
-// VENTAS  → columnas: NIT RECEPTOR, NOMBRE RECEPTOR, SERIE, NO. DOCUMENTO...
-// COMPRAS → columnas: NIT EMISOR/VENDEDOR, NOMBRE EMISOR/VENDEDOR, SERIE, NO. DOCUMENTO...
+// VENTAS  â†’ columnas: NIT RECEPTOR, NOMBRE RECEPTOR, SERIE, NO. DOCUMENTO...
+// COMPRAS â†’ columnas: NIT EMISOR/VENDEDOR, NOMBRE EMISOR/VENDEDOR, SERIE, NO. DOCUMENTO...
 const detectarTipo = (headers) => {
   const h = normText(headers.join(' '));
   if (h.includes('id del receptor') && h.includes('nit del emisor')) return 'ventas';
@@ -88,7 +88,7 @@ const detectarTipo = (headers) => {
   return 'desconocido';
 };
 
-// ─── Parsear fila de VENTAS (facturas emitidas) ───────────────────
+// â”€â”€â”€ Parsear fila de VENTAS (facturas emitidas) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const parsearVenta = (row, headers) => {
   const autorizacion = pick(row, headers, ['numero de autorizacion', 'autorizacion']);
   const nitRec    = normNIT(pick(row, headers, ['id del receptor', 'nit del receptor', 'nit receptor', 'nit comprador']));
@@ -150,7 +150,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
   const [headers,    setHeaders]    = useState([]);
   const inputRef = useRef(null);
 
-  // ─── Leer y parsear archivo ────────────────────────────────────
+  // â”€â”€â”€ Leer y parsear archivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const leerArchivo = async (file) => {
     if (!file) return;
     setCargando(true);
@@ -164,7 +164,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
       const ws = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
-      // Encontrar fila de encabezados — SAT suele tener 1-3 filas de metadata arriba
+      // Encontrar fila de encabezados â€” SAT suele tener 1-3 filas de metadata arriba
       let headerRow = 0;
       for (let i = 0; i < Math.min(data.length, 8); i++) {
         const row = data[i] || [];
@@ -199,12 +199,12 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     }
   };
 
-  // ─── Importar VENTAS → tabla facturas ─────────────────────────
+  // â”€â”€â”€ Importar VENTAS â†’ tabla facturas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const importarVentas = async () => {
     const res = { importados: 0, duplicados: 0, clientesCreados: 0, errores: [] };
     setProgreso('Consultando facturas existentes...');
 
-    // Cargar claves existentes para deduplicación
+    // Cargar claves existentes para deduplicaciÃ³n
     const existing = await api(`/facturas?empresa_id=eq.${empId}&select=numero_factura,serie,cliente_nit&limit=5000`).catch(() => []);
     const existSet = new Set(
       (existing || [])
@@ -221,7 +221,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
       const f = filas[i];
       setProgreso(`Procesando ${i + 1} de ${filas.length}...`);
 
-      // Deduplicación robusta — solo si tiene número de documento
+      // DeduplicaciÃ³n robusta â€” solo si tiene nÃºmero de documento
       const clave = claveDoc(f.numDoc, f.serie, f.nitRec);
       if (clave && existSet.has(clave)) { res.duplicados++; continue; }
 
@@ -253,7 +253,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             cliente_nombre: f.nombreRec || 'Consumidor Final',
             cliente_nit:    f.nitRec   || 'CF',
             cliente_id:     clienteId,
-            descripcion:    `Importado SAT — ${f.tipo || 'Factura'} ${f.serie || ''}-${f.numDoc || ''}`.trim(),
+            descripcion:    `Importado SAT â€” ${f.tipo || 'Factura'} ${f.serie || ''}-${f.numDoc || ''}`.trim(),
             subtotal:       f.subtotal,
             tasa_iva:       12,
             impuestos:      f.iva,
@@ -275,7 +275,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     return res;
   };
 
-  // ─── Importar COMPRAS → tabla gastos ──────────────────────────
+  // â”€â”€â”€ Importar COMPRAS â†’ tabla gastos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const importarCompras = async () => {
     const res = { importados: 0, duplicados: 0, proveedoresCreados: 0, errores: [] };
     setProgreso('Consultando gastos existentes...');
@@ -291,7 +291,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     const provMap = {};
     (provExist || []).forEach(p => { if (p.nit) provMap[normNIT(p.nit)] = p; });
 
-    // Contar proveedores para generar código
+    // Contar proveedores para generar cÃ³digo
     let contProv = Object.keys(provMap).length;
 
     for (let i = 0; i < filas.length; i++) {
@@ -324,7 +324,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
           }
         }
 
-        // Detectar categoría por nombre de proveedor
+        // Detectar categorÃ­a por nombre de proveedor
         const nom = (f.nombreEmi || '').toLowerCase();
         let categoria = 'otros';
         if (nom.match(/combustible|gasolinera|puma|texaco|shell|petroleo|gulf/)) categoria = 'combustible';
@@ -341,7 +341,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             empresa_id:     empId,
             fecha:          f.fecha,
             categoria,
-            descripcion:    `${f.tipo || 'Compra'} ${f.serie || ''}-${f.numDoc || ''} — ${f.nombreEmi || ''}`.trim(),
+            descripcion:    `${f.tipo || 'Compra'} ${f.serie || ''}-${f.numDoc || ''} â€” ${f.nombreEmi || ''}`.trim(),
             proveedor:      f.nombreEmi || '',
             proveedor_id:   proveedorId,
             proveedor_nit:  f.nitEmi || '',
@@ -368,7 +368,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     return res;
   };
 
-  // ─── Ejecutar importación ──────────────────────────────────────
+  // â”€â”€â”€ Ejecutar importaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const ejecutar = async () => {
     if (!empId) {
       showToast('Empresa no identificada. Recarga la pagina antes de importar.', 'err');
@@ -400,7 +400,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
   const totalMonto = filas.reduce((s, f) => s + (f.total || 0), 0);
   const totalIVA   = filas.reduce((s, f) => s + (f.iva   || 0), 0);
 
-  // ════════════════════════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={paso < 2 ? onClose : undefined}>
@@ -414,17 +414,17 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
               Importar desde SAT Guatemala
             </div>
             <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>
-              {esVentas ? 'Facturas emitidas (ventas)' : 'Facturas recibidas (compras/gastos)'} · Paso {paso} de 3
+              {esVentas ? 'Facturas emitidas (ventas)' : 'Facturas recibidas (compras/gastos)'} Â· Paso {paso} de 3
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: T.mut, cursor: 'pointer', fontSize: 22, lineHeight: 1 }}>
-            ×
+            Ã—
           </button>
         </div>
 
         <div style={{ padding: '20px 24px' }}>
 
-          {/* ══ PASO 1: Subir archivo ══ */}
+          {/* â•â• PASO 1: Subir archivo â•â• */}
           {paso === 1 && (
             <div>
               <div style={{ background: T.card, borderRadius: 12, padding: '16px 18px', marginBottom: 20, fontSize: 12, color: T.sub, lineHeight: 1.8 }}>
@@ -432,7 +432,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
                   Como exportar desde SAT Agencia Virtual:
                 </div>
                 <div>1. Ingresa a <strong style={{ color: T.txt }}>portal.sat.gob.gt</strong> con tu usuario</div>
-                <div>2. Ve a <strong style={{ color: T.txt }}>Servicios → Consulta de documentos DTE</strong></div>
+                <div>2. Ve a <strong style={{ color: T.txt }}>Servicios â†’ Consulta de documentos DTE</strong></div>
                 <div>3. Selecciona: <strong style={{ color: T.txt }}>{esVentas ? 'Documentos emitidos' : 'Documentos recibidos'}</strong></div>
                 <div>4. Filtra por periodo y descarga en formato <strong style={{ color: T.txt }}>Excel (.xlsx)</strong></div>
                 <div>5. Sube el archivo aqui abajo</div>
@@ -445,16 +445,16 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
                 style={{ border: `2px dashed ${drag ? T.acc : T.bord}`, borderRadius: 14, padding: '44px 24px', textAlign: 'center', cursor: 'pointer', background: drag ? T.accDim : 'transparent', transition: 'all .15s' }}>
                 {cargando ? (
                   <div>
-                    <div style={{ fontSize: 32, marginBottom: 10, color: T.acc }}>⏳</div>
+                    <div style={{ fontSize: 32, marginBottom: 10, color: T.acc }}>â³</div>
                     <div style={{ fontSize: 14, color: T.acc, fontWeight: 600 }}>{progreso}</div>
                   </div>
                 ) : (
                   <div>
-                    <div style={{ fontSize: 44, marginBottom: 12 }}>📂</div>
+                    <div style={{ fontSize: 44, marginBottom: 12 }}>ðŸ“‚</div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: T.txt, marginBottom: 6 }}>
                       Arrastra el archivo Excel de SAT o haz clic para seleccionar
                     </div>
-                    <div style={{ fontSize: 12, color: T.sub }}>Formatos: .xlsx · .xls · .csv</div>
+                    <div style={{ fontSize: 12, color: T.sub }}>Formatos: .xlsx Â· .xls Â· .csv</div>
                     <div style={{ fontSize: 11, color: T.acc, marginTop: 8 }}>
                       Deteccion automatica de columnas SAT Guatemala
                     </div>
@@ -466,16 +466,16 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             </div>
           )}
 
-          {/* ══ PASO 2: Preview y confirmación ══ */}
+          {/* â•â• PASO 2: Preview y confirmaciÃ³n â•â• */}
           {paso === 2 && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.txt }}>
-                    Vista previa — {filas.length} registros encontrados
+                    Vista previa â€” {filas.length} registros encontrados
                   </div>
                   <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>
-                    {nombre} · {esVentas ? 'Facturas emitidas (ventas)' : 'Facturas recibidas (compras)'}
+                    {nombre} Â· {esVentas ? 'Facturas emitidas (ventas)' : 'Facturas recibidas (compras)'}
                   </div>
                 </div>
                 <button onClick={() => { setFilas([]); setPaso(1); }} style={S.btn('ghost')}>
@@ -539,7 +539,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
                     </table>
                     {filas.length > 100 && (
                       <div style={{ padding: '8px 14px', fontSize: 11, color: T.mut, textAlign: 'center', borderTop: `1px solid ${T.bord}` }}>
-                        Mostrando 100 de {filas.length} — todos seran importados
+                        Mostrando 100 de {filas.length} â€” todos seran importados
                       </div>
                     )}
                   </div>
@@ -552,13 +552,13 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
                 <div style={{ color: T.sub, lineHeight: 1.9 }}>
                   {esVentas ? (
                     <>
-                      Buscara cada cliente por NIT — si no existe lo creara automaticamente<br/>
+                      Buscara cada cliente por NIT â€” si no existe lo creara automaticamente<br/>
                       Evitara duplicados comparando numero de documento + fecha + NIT<br/>
                       Creara registros en Facturacion con estado "Certificada"
                     </>
                   ) : (
                     <>
-                      Buscara cada proveedor por NIT — si no existe lo creara con codigo PROV-XXXX<br/>
+                      Buscara cada proveedor por NIT â€” si no existe lo creara con codigo PROV-XXXX<br/>
                       Evitara duplicados comparando numero de documento + fecha + NIT<br/>
                       Detectara categoria automaticamente (combustible, seguros, taller, etc.)<br/>
                       Creara registros en Gastos con estado "Aprobado"
@@ -586,11 +586,11 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             </div>
           )}
 
-          {/* ══ PASO 3: Resultado ══ */}
+          {/* â•â• PASO 3: Resultado â•â• */}
           {paso === 3 && resultado && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div style={{ fontSize: 56, marginBottom: 16 }}>
-                {resultado.errores.length === 0 ? '✅' : '⚠️'}
+                {resultado.errores.length === 0 ? 'âœ…' : 'âš ï¸'}
               </div>
               <div style={{ fontSize: 18, fontWeight: 800, color: resultado.errores.length === 0 ? T.green : T.sec, marginBottom: 6 }}>
                 {resultado.importados > 0 ? 'Importacion completada' : resultado.duplicados > 0 ? 'Registros ya existentes' : 'Sin registros nuevos'}
@@ -631,5 +631,3 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     </div>
   );
 }
-ENDFILE
-echo "ImportadorSAT.jsx: $(wc -l < /home/claude/tzunun/ImportadorSAT.jsx) lineas"
