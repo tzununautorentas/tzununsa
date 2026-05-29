@@ -3,11 +3,7 @@
 // Soporta: facturas emitidas (ventas) y facturas recibidas (compras)
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useRef } from 'react';
-import { T, S, fmt, fmtD, dbIns, today } from '../config.js';
-
-const SB = "https://fmijbpatkddkbxlkfoza.supabase.co";
-const SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaWpicGF0a2Rka2J4bGtmb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTQ3NDAsImV4cCI6MjA5MDQ5MDc0MH0.zEVmDgLUQWv9gnQrJggGhAmTuqRcQyhGbMvcL_i8joA";
-const H = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
+import { T, S, SB, H, fmt, today } from '../config.js';
 
 async function api(path, opts = {}) {
   const { extraHeaders, ...rest } = opts;
@@ -37,10 +33,19 @@ const cargarXLSX = () => new Promise((resolve, reject) => {
 // ─── Normalizar NIT ───────────────────────────────────────────────
 const normNIT = (v) => String(v || '').trim().replace(/\s+/g, '').toUpperCase();
 
+const normText = (v) => String(v || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+  .trim();
+
 // ─── Normalizar fecha SAT (dd/mm/yyyy → yyyy-mm-dd) ───────────────
 const normFecha = (v) => {
   if (!v) return today();
   const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}\s/.test(s)) return s.slice(0, 10);
   const m1 = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
   if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
   const m2 = s.match(/^(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})$/);
@@ -53,85 +58,77 @@ const normMonto = (v) => parseFloat(String(v||'0').replace(/[Q,\s]/g,'').replace
 
 // ─── Buscar índice de columna por palabras clave ──────────────────
 const findCol = (headers, claves) => {
-  const h = headers.map(x => String(x||'').toLowerCase().trim());
+  const h = headers.map(normText);
   for (const c of claves) {
-    const idx = h.findIndex(x => x.includes(c.toLowerCase()));
+    const needle = normText(c);
+    const idx = h.findIndex(x => x === needle);
+    if (idx >= 0) return idx;
+  }
+  for (const c of claves) {
+    const needle = normText(c);
+    const idx = h.findIndex(x => x.includes(needle));
     if (idx >= 0) return idx;
   }
   return -1;
 };
 
 const getVal = (row, idx) => idx >= 0 ? String(row[idx] || '').trim() : '';
+const pick = (row, headers, claves) => getVal(row, findCol(headers, claves));
 
 // ─── Detectar tipo de archivo SAT ─────────────────────────────────
 // SAT exporta dos tipos:
 // VENTAS  → columnas: NIT RECEPTOR, NOMBRE RECEPTOR, SERIE, NO. DOCUMENTO...
 // COMPRAS → columnas: NIT EMISOR/VENDEDOR, NOMBRE EMISOR/VENDEDOR, SERIE, NO. DOCUMENTO...
 const detectarTipo = (headers) => {
-  const h = headers.join(' ').toLowerCase();
+  const h = normText(headers.join(' '));
+  if (h.includes('id del receptor') && h.includes('nit del emisor')) return 'ventas';
+  if (h.includes('nit del emisor') && h.includes('nombre completo del emisor')) return 'compras';
   if (h.includes('receptor') || h.includes('comprador')) return 'ventas';
   if (h.includes('emisor')   || h.includes('vendedor') || h.includes('proveedor')) return 'compras';
-  // Fallback: buscar por contexto
-  if (h.includes('iva') && h.includes('serie')) return 'compras';
   return 'desconocido';
 };
 
 // ─── Parsear fila de VENTAS (facturas emitidas) ───────────────────
 const parsearVenta = (row, headers) => {
-  const g = (claves) => getVal(row, findCol(headers, claves));
+  const autorizacion = pick(row, headers, ['numero de autorizacion', 'autorizacion']);
+  const nitRec    = normNIT(pick(row, headers, ['id del receptor', 'nit del receptor', 'nit receptor', 'nit comprador']));
+  const nombreRec = pick(row, headers, ['nombre completo del receptor', 'nombre del receptor', 'nombre receptor', 'comprador', 'cliente']);
+  const serie     = pick(row, headers, ['serie']);
+  const numDoc    = pick(row, headers, ['numero del dte', 'numero dte', 'numero de dte', 'no. documento', 'numero documento']).replace(/^0+/,'');
+  const fecha     = normFecha(pick(row, headers, ['fecha de emision', 'fecha emision', 'emision', 'fecha']));
+  const granTotal = normMonto(pick(row, headers, ['gran total (moneda original)', 'gran total', 'total']));
+  const iva       = normMonto(pick(row, headers, ['iva (monto de este impuesto)', 'iva']));
+  const estado    = pick(row, headers, ['estado']);
+  const tipo      = pick(row, headers, ['tipo de dte (nombre)', 'tipo dte', 'tipo documento']);
+  const anulado   = pick(row, headers, ['marca de anulado']);
+  const subtotal  = Math.max(0, Math.round((granTotal - iva) * 100) / 100);
 
-  // SAT Agencia Virtual columnas para facturas emitidas:
-  // NIT, NOMBRE DEL RECEPTOR, SERIE, NÚMERO DTE, FECHA EMISIÓN,
-  // FECHA CERTIFICACIÓN, GRAN TOTAL, IVA, TIPO, ESTADO
-  const nitRec    = normNIT(g(['nit receptor','nit del receptor','receptor nit','nit comprador','nit']));
-  const nombreRec = g(['nombre receptor','nombre del receptor','receptor','comprador','cliente','nombre']);
-  const serie     = g(['serie']);
-  const numDoc    = g(['numero','nro','no.','documento','dte','factura']).replace(/^0+/,'') || g(['numero documento','no. documento','número dte']);
-  const fecha     = normFecha(g(['fecha emision','fecha de emision','emision','fecha']));
-  const granTotal = normMonto(g(['gran total','total','monto']));
-  const iva       = normMonto(g(['iva','impuesto']));
-  const estado    = g(['estado']);
-  const tipo      = g(['tipo documento','tipo de documento','tipo']);
-
-  const subtotal  = granTotal > 0 && iva > 0 ? granTotal - iva
-    : granTotal > 0 ? Math.round(granTotal / 1.12 * 100) / 100
-    : 0;
-
-  return { nitRec, nombreRec, serie, numDoc, fecha, subtotal, iva, total: granTotal, estado, tipo };
+  return { autorizacion, nitRec, nombreRec, serie, numDoc, fecha, subtotal, iva, total: granTotal, estado, tipo, anulado };
 };
 
-// ─── Parsear fila de COMPRAS (facturas recibidas) ─────────────────
 const parsearCompra = (row, headers) => {
-  const g = (claves) => getVal(row, findCol(headers, claves));
+  const autorizacion = pick(row, headers, ['numero de autorizacion', 'autorizacion']);
+  const nitEmi    = normNIT(pick(row, headers, ['nit del emisor', 'nit emisor', 'nit vendedor', 'nit proveedor']));
+  const nombreEmi = pick(row, headers, ['nombre completo del emisor', 'nombre del emisor', 'nombre emisor', 'vendedor', 'proveedor']);
+  const serie     = pick(row, headers, ['serie']);
+  const numDoc    = pick(row, headers, ['numero del dte', 'numero dte', 'numero de dte', 'no. documento', 'numero documento']).replace(/^0+/,'');
+  const fecha     = normFecha(pick(row, headers, ['fecha de emision', 'fecha emision', 'emision', 'fecha']));
+  const granTotal = normMonto(pick(row, headers, ['gran total (moneda original)', 'gran total', 'total']));
+  const iva       = normMonto(pick(row, headers, ['iva (monto de este impuesto)', 'iva']));
+  const estado    = pick(row, headers, ['estado']);
+  const tipo      = pick(row, headers, ['tipo de dte (nombre)', 'tipo dte', 'tipo documento']);
+  const anulado   = pick(row, headers, ['marca de anulado']);
+  const subtotal  = Math.max(0, Math.round((granTotal - iva) * 100) / 100);
 
-  // SAT Agencia Virtual columnas para facturas recibidas:
-  // NIT EMISOR, NOMBRE EMISOR, SERIE, NÚMERO DTE, FECHA EMISIÓN,
-  // FECHA CERTIFICACIÓN, GRAN TOTAL, IVA, TIPO, ESTADO
-  const nitEmi    = normNIT(g(['nit emisor','nit del emisor','emisor nit','nit vendedor','nit proveedor','nit']));
-  const nombreEmi = g(['nombre emisor','nombre del emisor','emisor','vendedor','proveedor','nombre']);
-  const serie     = g(['serie']);
-  const numDoc    = g(['numero','nro','no.','documento','dte','factura']).replace(/^0+/,'') || g(['numero documento','no. documento','número dte']);
-  const fecha     = normFecha(g(['fecha emision','fecha de emision','emision','fecha']));
-  const granTotal = normMonto(g(['gran total','total','monto']));
-  const iva       = normMonto(g(['iva','impuesto']));
-  const estado    = g(['estado']);
-  const tipo      = g(['tipo documento','tipo de documento','tipo']);
-
-  const subtotal  = granTotal > 0 && iva > 0 ? granTotal - iva
-    : granTotal > 0 ? Math.round(granTotal / 1.12 * 100) / 100
-    : 0;
-
-  return { nitEmi, nombreEmi, serie, numDoc, fecha, subtotal, iva, total: granTotal, estado, tipo };
+  return { autorizacion, nitEmi, nombreEmi, serie, numDoc, fecha, subtotal, iva, total: granTotal, estado, tipo, anulado };
 };
 
-// ─── Generar clave única de duplicado (robusta) ───────────────────
-// SOLO marca como duplicado si tiene número de documento Y fecha
-const claveDoc = (numDoc, fecha, nit) => {
-  if (!numDoc || numDoc === '0' || !fecha) return null; // sin clave = no se puede deduplicar
-  return `${numDoc}|${fecha}|${normNIT(nit)}`;
+// SOLO marca como duplicado si tiene numero de documento real.
+const claveDoc = (numDoc, serie, nit) => {
+  if (!numDoc || numDoc === '0') return null; // sin clave = no se puede deduplicar
+  return `${String(serie || '').trim()}|${String(numDoc || '').trim()}|${normNIT(nit)}`;
 };
 
-// ════════════════════════════════════════════════════════════════════
 export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImportado }) {
   const [paso,       setPaso]       = useState(1);
   const [cargando,   setCargando]   = useState(false);
@@ -200,15 +197,15 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     setProgreso('Consultando facturas existentes...');
 
     // Cargar claves existentes para deduplicación
-    const existing = await api('/facturas?select=numero_factura,cliente_nit,fecha&limit=5000').catch(() => []);
+    const existing = await api(`/facturas?empresa_id=eq.${empId}&select=numero_factura,serie,cliente_nit&limit=5000`).catch(() => []);
     const existSet = new Set(
       (existing || [])
-        .map(f => claveDoc(f.numero_factura, f.fecha, f.cliente_nit))
+        .map(f => claveDoc(f.numero_factura, f.serie, f.cliente_nit))
         .filter(Boolean)
     );
 
     // Cargar clientes existentes por NIT
-    const cliExist = await api('/clientes?select=id,nombre,nit').catch(() => []);
+    const cliExist = await api(`/clientes?empresa_id=eq.${empId}&select=id,nombre,nit`).catch(() => []);
     const cliMap = {};
     (cliExist || []).forEach(c => { if (c.nit) cliMap[normNIT(c.nit)] = c; });
 
@@ -217,7 +214,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
       setProgreso(`Procesando ${i + 1} de ${filas.length}...`);
 
       // Deduplicación robusta — solo si tiene número de documento
-      const clave = claveDoc(f.numDoc, f.fecha, f.nitRec);
+      const clave = claveDoc(f.numDoc, f.serie, f.nitRec);
       if (clave && existSet.has(clave)) { res.duplicados++; continue; }
 
       try {
@@ -254,8 +251,8 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             impuestos:      f.iva,
             total:          f.total,
             metodo_pago:    'efectivo',
-            estado:         f.estado?.toLowerCase() === 'anulado' ? 'anulada' : 'certificada',
-            notas:          `Estado SAT: ${f.estado || 'Vigente'} | Importado desde Agencia Virtual SAT`,
+            estado:         normText(f.estado).includes('anulad') || normText(f.anulado) === 'si' ? 'anulada' : 'certificada',
+            notas:          `Autorizacion SAT: ${f.autorizacion || ''} | Estado SAT: ${f.estado || 'Vigente'} | Importado desde Agencia Virtual SAT`,
           }),
           extraHeaders: { Prefer: 'return=minimal' },
         });
@@ -275,14 +272,14 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     const res = { importados: 0, duplicados: 0, proveedoresCreados: 0, errores: [] };
     setProgreso('Consultando gastos existentes...');
 
-    const existing = await api('/gastos?select=numero_factura,proveedor_nit,fecha&limit=5000').catch(() => []);
+    const existing = await api(`/gastos?empresa_id=eq.${empId}&select=numero_factura,proveedor_nit&limit=5000`).catch(() => []);
     const existSet = new Set(
       (existing || [])
-        .map(f => claveDoc(f.numero_factura, f.fecha, f.proveedor_nit))
+        .map(f => claveDoc(f.numero_factura, '', f.proveedor_nit))
         .filter(Boolean)
     );
 
-    const provExist = await api('/proveedores?select=id,nombre,nit').catch(() => []);
+    const provExist = await api(`/proveedores?empresa_id=eq.${empId}&select=id,nombre,nit`).catch(() => []);
     const provMap = {};
     (provExist || []).forEach(p => { if (p.nit) provMap[normNIT(p.nit)] = p; });
 
@@ -293,7 +290,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
       const f = filas[i];
       setProgreso(`Procesando ${i + 1} de ${filas.length}...`);
 
-      const clave = claveDoc(f.numDoc, f.fecha, f.nitEmi);
+      const clave = claveDoc(f.numDoc, '', f.nitEmi);
       if (clave && existSet.has(clave)) { res.duplicados++; continue; }
 
       try {
@@ -348,7 +345,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             estado:         'aprobado',
             moneda:         'GTQ',
             contabilizado:  false,
-            notas:          `Serie: ${f.serie||''} | Estado SAT: ${f.estado||'Vigente'} | Importado desde SAT Guatemala`,
+            notas:          `Serie: ${f.serie||''} | Autorizacion SAT: ${f.autorizacion || ''} | Estado SAT: ${f.estado||'Vigente'} | Importado desde SAT Guatemala`,
           }),
           extraHeaders: { Prefer: 'return=minimal' },
         });
@@ -365,6 +362,10 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
 
   // ─── Ejecutar importación ──────────────────────────────────────
   const ejecutar = async () => {
+    if (!empId) {
+      showToast('Empresa no identificada. Recarga la pagina antes de importar.', 'err');
+      return;
+    }
     setImportando(true);
     try {
       const res = tipoDetect === 'ventas'
