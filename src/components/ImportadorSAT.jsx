@@ -376,7 +376,8 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     }
     setImportando(true);
     try {
-      const res = tipoDetect === 'ventas'
+      const modo = tipoForzado || tipoDetect;
+      const res = modo === 'ventas'
         ? await importarVentas()
         : await importarCompras();
       setResultado(res);
