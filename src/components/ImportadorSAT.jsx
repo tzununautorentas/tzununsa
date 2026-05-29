@@ -205,10 +205,10 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     setProgreso('Consultando facturas existentes...');
 
     // Cargar claves existentes para deduplicaciÃ³n
-    const existing = await api(`/facturas?empresa_id=eq.${empId}&select=numero_factura,serie,cliente_nit&limit=5000`).catch(() => []);
+    const existing = await api(`/facturas?empresa_id=eq.${empId}&select=numero,numero_factura,serie,cliente_nit&limit=5000`).catch(() => []);
     const existSet = new Set(
       (existing || [])
-        .map(f => claveDoc(f.numero_factura, f.serie, f.cliente_nit))
+        .map(f => claveDoc(f.numero_factura || f.numero, f.serie, f.cliente_nit))
         .filter(Boolean)
     );
 
@@ -247,6 +247,7 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
           method: 'POST',
           body: JSON.stringify({
             empresa_id:     empId,
+            numero:         f.numDoc || `${f.serie || 'SAT'}-${Date.now()}-${i + 1}`,
             numero_factura: f.numDoc || null,
             serie:          f.serie  || null,
             fecha:          f.fecha,
