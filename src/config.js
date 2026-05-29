@@ -41,8 +41,20 @@ export async function dbUpd(table, id, data) {
 
 export async function dbDel(table, id) {
   try {
-    await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`, { method: "DELETE", headers: H });
-  } catch {}
+    const r = await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`, {
+      method: "DELETE",
+      headers: { ...H, Prefer: "return=representation" },
+    });
+    const text = await r.text();
+    let j = null;
+    try { j = text ? JSON.parse(text) : null; } catch {}
+    if (!r.ok) {
+      return { error: j?.message || j?.hint || text || `Error ${r.status} al eliminar` };
+    }
+    return { ok: true, data: Array.isArray(j) ? j : [] };
+  } catch (e) {
+    return { error: e.message || "Error de conexion al eliminar" };
+  }
 }
 
 export async function getEmpId() {
@@ -50,7 +62,7 @@ export async function getEmpId() {
   return d && d[0] ? d[0].id : null;
 }
 
-// --- AUTH ---
+// --- SUPABASE AUTH ---
 export async function sbLogin(email, password) {
   try {
     const r = await fetch(`${SB}/auth/v1/token?grant_type=password`, {
@@ -72,17 +84,20 @@ export async function sbLogout(token) {
 }
 
 // --- THEME ---
+// Nota: cada color tiene dos alias: "D" y "Dim" apuntan al mismo valor
 export const T = {
   bg:      "#0A0F1E",
   surf:    "#111827",
   card:    "#162032",
   bord:    "#1E3A5F",
+
   acc:     "#00D4AA", accD:    "#00D4AA22", accDim:    "#00D4AA22",
   sec:     "#F59E0B", secD:    "#F59E0B22", secDim:    "#F59E0B22",
   red:     "#EF4444", redD:    "#EF444422", redDim:    "#EF444422",
   blue:    "#3B82F6", blueD:   "#3B82F622", blueDim:   "#3B82F622",
   purple:  "#A855F7", purpleD: "#A855F722", purpleDim: "#A855F722",
   green:   "#22C55E", greenD:  "#22C55E22", greenDim:  "#22C55E22",
+
   txt: "#F1F5F9",
   mut: "#64748B",
   sub: "#94A3B8",
@@ -124,6 +139,7 @@ export const S = {
       v === "green"   ? T.green  : v === "warn"     ? T.sec    : T.card,
     color: (v === "primary" || v === "green") ? "#0A0F1E" : T.txt,
   }),
+  // Fila de resumen financiero: srow(true) = resaltado, srow(false) = normal
   srow: (hi) => ({
     display: "flex", justifyContent: "space-between",
     fontSize: 13, padding: "4px 0",
@@ -146,7 +162,8 @@ export const fmtD = (s) => {
   if (!s || s === "null" || s === "Invalid Date") return "\u2014";
   try {
     const d = s.includes("T") ? new Date(s) : new Date(s + "T12:00:00");
-    return isNaN(d.getTime()) ? "\u2014"
+    return isNaN(d.getTime())
+      ? "\u2014"
       : d.toLocaleDateString("es-GT", { day: "2-digit", month: "short", year: "numeric" });
   } catch { return "\u2014"; }
 };
@@ -154,7 +171,7 @@ export const fmtD = (s) => {
 export const today = () => new Date().toISOString().slice(0, 10);
 export const newId = () => Date.now().toString().slice(-6);
 
-// --- CATALOGO ---
+// --- CATALOGO DE VEHICULOS ---
 export const CATALOGO = [
   { id:"c1", nombre:"Hyundai Verna (Sedan)",    tipo:"Sedan",    dia:300,  sem:275,  mes:250  },
   { id:"c2", nombre:"Toyota RAV4 Hibrida",      tipo:"SUV",      dia:600,  sem:575,  mes:550  },
@@ -174,39 +191,75 @@ export const tarifaVeh = (v, dias) => {
   return v.dia;
 };
 
-// --- RUTAS ---
+// --- RUTAS (Guatemala) ---
 export const RUTAS = [
-  { d:"Antigua Guatemala",          km:40,  dias:1 },
-  { d:"Escuintla",                  km:68,  dias:1 },
-  { d:"Chimaltenango",              km:110, dias:1 },
-  { d:"Solola / Panajachel",        km:145, dias:1 },
-  { d:"Chichicastenango",           km:150, dias:1 },
-  { d:"Quiche (Sta. Cruz)",         km:269, dias:1 },
-  { d:"Coban",                      km:215, dias:2 },
-  { d:"Peten (Flores)",             km:525, dias:3 },
-  { d:"Quetzaltenango",             km:210, dias:2 },
-  { d:"Huehuetenango",              km:275, dias:3 },
-  { d:"Puerto Barrios",             km:315, dias:3 },
-  { d:"Chiquimula / Esquipulas",    km:215, dias:1 },
-  { d:"Zacapa",                     km:160, dias:1 },
-  { d:"Monterrico",                 km:140, dias:1 },
-  { d:"Semuc Champey",              km:300, dias:2 },
+  { d:"Antigua Guatemala",            km:40,  dias:1 },
+  { d:"Escuintla",                    km:68,  dias:1 },
+  { d:"Sacatepequez",                 km:45,  dias:1 },
+  { d:"Chimaltenango",                km:110, dias:1 },
+  { d:"Tecpan",                       km:93,  dias:1 },
+  { d:"Solola",                       km:145, dias:1 },
+  { d:"Panajachel",                   km:140, dias:1 },
+  { d:"Chichicastenango",             km:150, dias:1 },
+  { d:"Quiche (Sta. Cruz)",           km:269, dias:1 },
+  { d:"Ixcan Quiche",                 km:385, dias:3 },
+  { d:"Nebaj",                        km:235, dias:2 },
+  { d:"Coban",                        km:215, dias:2 },
+  { d:"Chisec Alta Verapaz",          km:350, dias:1 },
+  { d:"Baja Verapaz (Salama)",        km:165, dias:1 },
+  { d:"Jalapa",                       km:112, dias:1 },
+  { d:"Jutiapa",                      km:205, dias:2 },
+  { d:"Santa Rosa (Cuilapa)",         km:57,  dias:1 },
+  { d:"Chiquimula",                   km:180, dias:1 },
+  { d:"Esquipulas",                   km:215, dias:1 },
+  { d:"Zacapa",                       km:160, dias:1 },
+  { d:"El Progreso",                  km:135, dias:1 },
+  { d:"Puerto Barrios",               km:315, dias:3 },
+  { d:"Rio Dulce",                    km:300, dias:1 },
+  { d:"Livingston",                   km:300, dias:1 },
+  { d:"El Estor Izabal",              km:590, dias:4 },
+  { d:"Peten (Flores)",               km:525, dias:3 },
+  { d:"Tikal",                        km:536, dias:4 },
+  { d:"Quetzaltenango",               km:210, dias:2 },
+  { d:"Coatepeque",                   km:225, dias:1 },
+  { d:"Retalhuleu",                   km:200, dias:1 },
+  { d:"Mazatenango",                  km:164, dias:1 },
+  { d:"San Marcos",                   km:284, dias:1 },
+  { d:"Huehuetenango",                km:275, dias:3 },
+  { d:"Frontera Mesilla",             km:320, dias:1 },
+  { d:"Totonicapan",                  km:185, dias:2 },
+  { d:"Monterrico",                   km:140, dias:1 },
+  { d:"San Jose / Iztapa",            km:115, dias:1 },
+  { d:"Semuc Champey",                km:300, dias:2 },
+  { d:"Quirigua",                     km:215, dias:1 },
+  { d:"Ruinas Copan Honduras",        km:235, dias:1 },
+  { d:"Playa El Tunco El Salvador",   km:275, dias:2 },
 ];
 
+// --- DEPARTAMENTOS DE GUATEMALA ---
 export const GT = {
-  "Guatemala":      ["Guatemala","Mixco","Villa Nueva","Amatitlan"],
-  "Alta Verapaz":   ["Coban","San Pedro Carcha","Chisec"],
-  "Baja Verapaz":   ["Salama","Rabinal"],
-  "Chimaltenango":  ["Chimaltenango","Tecpan","Patzun"],
-  "Chiquimula":     ["Chiquimula","Esquipulas"],
-  "Escuintla":      ["Escuintla","Santa Lucia Cotzumalguapa"],
-  "Huehuetenango":  ["Huehuetenango","Todos Santos"],
-  "Izabal":         ["Puerto Barrios","Livingston","El Estor"],
-  "Peten":          ["Flores","San Benito","La Libertad"],
-  "Quetzaltenango": ["Quetzaltenango","Coatepeque"],
-  "Quiche":         ["Santa Cruz del Quiche","Chichicastenango","Nebaj"],
-  "Solola":         ["Solola","Panajachel","Santiago Atitlan"],
-  "Zacapa":         ["Zacapa","Estanzuela","Rio Hondo"],
+  "Guatemala":      ["Guatemala","Mixco","Villa Nueva","Amatitlan","Chinautla"],
+  "Alta Verapaz":   ["Coban","San Pedro Carcha","Chisec","Raxruha"],
+  "Baja Verapaz":   ["Salama","Rabinal","Cubulco"],
+  "Chimaltenango":  ["Chimaltenango","Tecpan","Patzun","Comalapa"],
+  "Chiquimula":     ["Chiquimula","Esquipulas","Jocotan"],
+  "El Progreso":    ["Guastatoya","Sanarate"],
+  "Escuintla":      ["Escuintla","Santa Lucia Cotzumalguapa","Tiquisate"],
+  "Huehuetenango":  ["Huehuetenango","Chiantla","Todos Santos","Jacaltenango"],
+  "Izabal":         ["Puerto Barrios","Livingston","El Estor","Morales"],
+  "Jalapa":         ["Jalapa","Monjas"],
+  "Jutiapa":        ["Jutiapa","Asuncion Mita"],
+  "Peten":          ["Flores","San Benito","La Libertad","Sayaxche","Popun"],
+  "Quetzaltenango": ["Quetzaltenango","Coatepeque","Zunil","Almolonga"],
+  "Quiche":         ["Santa Cruz del Quiche","Chichicastenango","Nebaj","Ixcan"],
+  "Retalhuleu":     ["Retalhuleu","Champerico","San Sebastian"],
+  "Sacatepequez":   ["Antigua Guatemala","Jocotenango","San Lucas Sacatepequez"],
+  "San Marcos":     ["San Marcos","Malacatan","Tajumulco","Catarina"],
+  "Santa Rosa":     ["Cuilapa","Barberena","Chiquimulilla"],
+  "Solola":         ["Solola","Panajachel","Santiago Atitlan","San Pedro La Laguna"],
+  "Suchitepequez":  ["Mazatenango","Cuyotenango"],
+  "Totonicapan":    ["Totonicapan","Momostenango","San Francisco El Alto"],
+  "Zacapa":         ["Zacapa","Estanzuela","Rio Hondo","Gualan"],
 };
 
 export const CAT_GASTO = [
@@ -215,13 +268,13 @@ export const CAT_GASTO = [
   "peajes","oficina","otros",
 ];
 
-// --- ESTADOS ---
+// --- ESTADOS Y FLUJOS ---
 export const EST_RES = {
-  pendiente:  { c: T.mut,   bg: "#1E293B", l: "Pendiente"  },
-  confirmada: { c: T.acc,   bg: T.accD,    l: "Confirmada" },
-  en_curso:   { c: T.blue,  bg: T.blueD,   l: "En curso"   },
-  completada: { c: T.green, bg: T.greenD,  l: "Completada" },
-  cancelada:  { c: T.red,   bg: T.redD,    l: "Cancelada"  },
+  pendiente:  { c: T.mut,   bg: "#1E293B",  l: "Pendiente"  },
+  confirmada: { c: T.acc,   bg: T.accD,     l: "Confirmada" },
+  en_curso:   { c: T.blue,  bg: T.blueD,    l: "En curso"   },
+  completada: { c: T.green, bg: T.greenD,   l: "Completada" },
+  cancelada:  { c: T.red,   bg: T.redD,     l: "Cancelada"  },
 };
 
 export const EST_VEH = {
@@ -231,12 +284,12 @@ export const EST_VEH = {
 };
 
 export const EST_FAC = {
-  borrador:    { c: T.mut,   bg: "#1E293B", l: "Borrador"     },
-  emitida:     { c: T.blue,  bg: T.blueD,  l: "Emitida"      },
-  certificada: { c: T.acc,   bg: T.accD,   l: "Certificada"  },
-  pagada:      { c: T.green, bg: T.greenD, l: "Pagada"       },
-  parcial:     { c: T.sec,   bg: T.secD,   l: "Pago parcial" },
-  anulada:     { c: T.red,   bg: T.redD,   l: "Anulada"      },
+  borrador:    { c: T.mut,   bg: "#1E293B",  l: "Borrador"     },
+  emitida:     { c: T.blue,  bg: T.blueD,   l: "Emitida"      },
+  certificada: { c: T.acc,   bg: T.accD,    l: "Certificada"  },
+  pagada:      { c: T.green, bg: T.greenD,  l: "Pagada"       },
+  parcial:     { c: T.sec,   bg: T.secD,    l: "Pago parcial" },
+  anulada:     { c: T.red,   bg: T.redD,    l: "Anulada"      },
 };
 
 export const FLUJO_RES = {
@@ -253,7 +306,10 @@ export const FLUJO_RES = {
     { v:"cancelada",  l:"Cancelar",  s:"danger"  },
   ],
   completada: [],
-  cancelada:  [{ v:"pendiente", l:"Reactivar", s:"ghost" }],
+  cancelada:  [
+    { v:"pendiente",  l:"Reactivar", s:"ghost"   },
+  ],
 };
 
+// --- LOGO (base64) ---
 export const LOGO_B64 = "";
