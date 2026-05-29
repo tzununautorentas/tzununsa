@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CAT_GASTO } from '../config.js';
 import { Spinner, Empty, Fld, CatBadge } from '../components/shared.jsx';
+import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
 // ─── Estados del gasto ────────────────────────────────────────────
 const ESTADOS = {
@@ -667,6 +668,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
   const [filtroEmp, setFiltroEmp] = useState('');
   const [filtroCat, setFiltroCat] = useState('todas');
   const [filtroPer, setFiltroPer] = useState('');
+  const [showSAT,   setShowSAT]   = useState(false);
   const [userName] = useState(() => { try { return JSON.parse(localStorage.getItem('tzunun_session'))?.user?.email?.split('@')[0] || 'Usuario'; } catch { return 'Usuario'; } });
 
   const load = async () => {
@@ -772,6 +774,11 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
 
   return (
     <div>
+      {showSAT && (
+        <ImportadorSAT tipo="compras" empId={empId} showToast={showToast}
+          onClose={() => setShowSAT(false)} onImportado={load} />
+      )}
+
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 18 }}>
         {[
@@ -811,6 +818,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
         <input type="month" style={{ ...S.inp, width: 150, fontSize: 11, padding: '5px 10px' }} value={filtroPer} onChange={e => setFiltroPer(e.target.value)} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <button onClick={load} style={{ ...S.btn('ghost'), fontSize: 11 }}>Actualizar</button>
+          <button onClick={() => setShowSAT(true)} style={{ ...S.btn('blue'), fontSize: 11 }}>Importar SAT</button>
           <button onClick={() => exportarPDF(filtered, `Estado: ${filtroEst}`)} style={{ ...S.btn('blue'), fontSize: 11 }}>PDF</button>
           <button onClick={() => exportarExcel(filtered)} style={{ ...S.btn('green'), fontSize: 11 }}>Excel</button>
           <button onClick={() => setVista('reporte')} style={{ ...S.btn('ghost'), fontSize: 11 }}>Reportes</button>
