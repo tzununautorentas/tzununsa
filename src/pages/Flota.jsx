@@ -16,10 +16,16 @@ export default function PageFlota({ showToast, empId }) {
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const TIPOS = ["Sedan", "SUV", "Pickup", "Van", "Microbus", "Bus"];
 
-  const load = async () => {
+   const load = async () => {
     setLoading(true);
-    const d = await dbGet("vehiculos", "&order=codigo.asc,marca.asc");
-    setRows(Array.isArray(d) ? d : []);
+    const d = await dbGet("vehiculos", "");
+    const arr = Array.isArray(d) ? d : [];
+    arr.sort((a, b) => {
+      const ca = (a.codigo || "").match(/\d+/)?.[0] || "999999";
+      const cb = (b.codigo || "").match(/\d+/)?.[0] || "999999";
+      return parseInt(ca) - parseInt(cb);
+    });
+    setRows(arr);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
