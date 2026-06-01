@@ -17,11 +17,20 @@ export default function PageClientes({ showToast, empId }) {
 
   const load = async () => {
     setLoading(true);
-    const d = await dbGet("clientes", "&order=codigo.asc,nombre.asc");
+    const d = await dbGet("clientes", "&order=codigo.asc");
     setRows(Array.isArray(d) ? d : []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const genCodigo = () => {
+    let max = 0;
+    rows.forEach(r => {
+      const m = (r.codigo || "").match(/^(\d+)/);
+      if (m) { const n = parseInt(m[1]); if (n > max) max = n; }
+    });
+    return String(max + 1).padStart(3, "0") + "C";
+  };
 
   const abrirEditar = c => {
     setF({
@@ -33,7 +42,7 @@ export default function PageClientes({ showToast, empId }) {
   };
 
   const abrirNuevo = () => {
-    setF({ codigo: '', nombre: '', tipo: 'empresa', nit: '', direccion: '', telefono: '', email: '', contacto: '', notas: '' });
+    setF({ codigo: genCodigo(), nombre: '', tipo: 'empresa', nit: '', direccion: '', telefono: '', email: '', contacto: '', notas: '' });
     setEditItem(null); setVista("form");
   };
 
@@ -41,8 +50,10 @@ export default function PageClientes({ showToast, empId }) {
     if (!f.nombre.trim()) { showToast("Nombre requerido", "err"); return; }
     setSaving(true);
     const p = { ...f, empresa_id: empId };
-    if (editItem?.id) await dbUpd("clientes", editItem.id, p);
-    else await dbIns("clientes", p);
+    let res;
+    if (editItem?.id) res = await dbUpd("clientes", editItem.id, p);
+    else res = await dbIns("clientes", p);
+    if (res?.error) { showToast(res.error, "err"); setSaving(false); return; }
     showToast("Cliente guardado"); setSaving(false); setVista("lista"); setEditItem(null); load();
   };
 
@@ -77,7 +88,7 @@ export default function PageClientes({ showToast, empId }) {
         <Fld label="CODIGO DE CLIENTE">
           <input style={{ ...S.inp, fontFamily: "monospace", fontWeight: 700 }}
             value={f.codigo} onChange={e => sf("codigo", e.target.value.toUpperCase())}
-            placeholder="001" />
+            placeholder="001C" />
         </Fld>
         <Fld label="TIPO DE CLIENTE">
           <select style={S.sel} value={f.tipo} onChange={e => sf("tipo", e.target.value)}>
