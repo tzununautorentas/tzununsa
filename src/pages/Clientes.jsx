@@ -17,7 +17,7 @@ export default function PageClientes({ showToast, empId }) {
 
   const load = async () => {
     setLoading(true);
-    const d = await dbGet("clientes", "&order=codigo.asc");
+    const d = await dbGet("clientes", "&order=codigo.asc.nullslast");
     setRows(Array.isArray(d) ? d : []);
     setLoading(false);
   };
