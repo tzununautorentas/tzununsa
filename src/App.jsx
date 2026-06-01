@@ -17,6 +17,7 @@ import PageContabilidad  from "./pages/Contabilidad.jsx";
 import PageReportes      from "./pages/Reportes.jsx";
 import PageProveedores   from "./pages/Proveedores.jsx";
 import PageEmpleados     from "./pages/Empleados.jsx";
+import PageContratos     from "./pages/Contratos.jsx";
 
 // ─── Error Boundary ───────────────────────────────────────────────
 class ErrBoundary extends Component {
@@ -25,9 +26,7 @@ class ErrBoundary extends Component {
   render() {
     if (this.state.err) return (
       <div style={{ ...S.card, margin: 16 }}>
-        <div style={{ color: T.red, fontWeight: 700, marginBottom: 8 }}>
-          Error en este modulo
-        </div>
+        <div style={{ color: T.red, fontWeight: 700, marginBottom: 8 }}>Error en este modulo</div>
         <div style={{ fontSize: 12, color: T.sub, fontFamily: "monospace", marginBottom: 12 }}>
           {String(this.state.err)}
         </div>
@@ -42,22 +41,23 @@ class ErrBoundary extends Component {
 
 // ─── Modulos ──────────────────────────────────────────────────────
 const MODS = [
-  { id: "dashboard",     label: "Dashboard",       letters: "DB", c1: "#00D4AA", c2: "#009a7a" },
-  { id: "calculadora",   label: "Calculadora",     letters: "CA", c1: "#3B82F6", c2: "#1d4ed8" },
-  { id: "cotizaciones",  label: "Cotizaciones",    letters: "CO", c1: "#6366f1", c2: "#4338ca" },
-  { id: "reservas",      label: "Reservas",        letters: "RE", c1: "#A855F7", c2: "#7e22ce" },
-  { id: "flota",         label: "Flota",           letters: "FL", c1: "#10B981", c2: "#047857" },
-  { id: "mantenimiento", label: "Mantenim.",       letters: "MT", c1: "#F59E0B", c2: "#b45309" },
-  { id: "clientes",      label: "Clientes",        letters: "CL", c1: "#22C55E", c2: "#15803d" },
-  { id: "catalogo",      label: "Catalogo",        letters: "KT", c1: "#06B6D4", c2: "#0e7490" },
-  { id: "facturacion",   label: "Facturas FEL",    letters: "FA", c1: "#00D4AA", c2: "#00796b" },
-  { id: "banca",         label: "La Banca",        letters: "BA", c1: "#2563EB", c2: "#1e40af" },
-  { id: "gastos",        label: "Gastos",          letters: "GS", c1: "#EF4444", c2: "#b91c1c" },
-  { id: "pagos",         label: "Pagos",           letters: "PG", c1: "#22C55E", c2: "#166534" },
-  { id: "proveedores",   label: "Proveedores",     letters: "PV", c1: "#F97316", c2: "#c2410c" },
-  { id: "empleados",     label: "Empleados",       letters: "EM", c1: "#14B8A6", c2: "#0f766e" },
-  { id: "contabilidad",  label: "Contabilidad",    letters: "AC", c1: "#8B5CF6", c2: "#6d28d9" },
-  { id: "reportes",      label: "Reportes",        letters: "RP", c1: "#EC4899", c2: "#be185d" },
+  { id: "dashboard",     label: "Dashboard",      letters: "DB", c1: "#00D4AA", c2: "#009a7a" },
+  { id: "calculadora",   label: "Calculadora",    letters: "CA", c1: "#3B82F6", c2: "#1d4ed8" },
+  { id: "cotizaciones",  label: "Cotizaciones",   letters: "CO", c1: "#6366f1", c2: "#4338ca" },
+  { id: "reservas",      label: "Reservas",       letters: "RE", c1: "#A855F7", c2: "#7e22ce" },
+  { id: "flota",         label: "Flota",          letters: "FL", c1: "#10B981", c2: "#047857" },
+  { id: "mantenimiento", label: "Mantenim.",      letters: "MT", c1: "#F59E0B", c2: "#b45309" },
+  { id: "clientes",      label: "Clientes",       letters: "CL", c1: "#22C55E", c2: "#15803d" },
+  { id: "catalogo",      label: "Catalogo",       letters: "KT", c1: "#06B6D4", c2: "#0e7490" },
+  { id: "facturacion",   label: "Facturas FEL",   letters: "FA", c1: "#00D4AA", c2: "#00796b" },
+  { id: "banca",         label: "La Banca",       letters: "BA", c1: "#2563EB", c2: "#1e40af" },
+  { id: "gastos",        label: "Gastos",         letters: "GS", c1: "#EF4444", c2: "#b91c1c" },
+  { id: "pagos",         label: "Pagos",          letters: "PG", c1: "#22C55E", c2: "#166534" },
+  { id: "proveedores",   label: "Proveedores",    letters: "PV", c1: "#F97316", c2: "#c2410c" },
+  { id: "empleados",     label: "Empleados",      letters: "EM", c1: "#14B8A6", c2: "#0f766e" },
+  { id: "contratos",     label: "Contratos",      letters: "CT", c1: "#6366F1", c2: "#4338ca" },
+  { id: "contabilidad",  label: "Contabilidad",   letters: "AC", c1: "#8B5CF6", c2: "#6d28d9" },
+  { id: "reportes",      label: "Reportes",       letters: "RP", c1: "#EC4899", c2: "#be185d" },
 ];
 
 const TITULOS = {
@@ -75,9 +75,36 @@ const TITULOS = {
   pagos:         "Pagos Recibidos",
   proveedores:   "Proveedores",
   empleados:     "Empleados y Colaboradores",
+  contratos:     "Contratos",
   contabilidad:  "Contabilidad",
   reportes:      "Reportes",
 };
+
+const DESKTOP_NAV = [
+  { sep: true,  label: "PRINCIPAL"    },
+  { id: "dashboard",     label: "Dashboard",        c: "#00D4AA" },
+  { sep: true,  label: "PRESUPUESTOS" },
+  { id: "calculadora",   label: "Calculadora",      c: "#3B82F6" },
+  { id: "cotizaciones",  label: "Cotizaciones",     c: "#6366f1" },
+  { id: "reservas",      label: "Reservas",         c: "#A855F7" },
+  { sep: true,  label: "OPERACION"    },
+  { id: "flota",         label: "Flota",            c: "#10B981" },
+  { id: "mantenimiento", label: "Mantenimiento",    c: "#F59E0B" },
+  { id: "clientes",      label: "Clientes",         c: "#22C55E" },
+  { id: "catalogo",      label: "Catalogo",         c: "#06B6D4" },
+  { sep: true,  label: "FINANZAS"     },
+  { id: "facturacion",   label: "Facturacion FEL",  c: "#00D4AA" },
+  { id: "banca",         label: "La Banca",         c: "#2563EB" },
+  { id: "gastos",        label: "Gastos / Compras", c: "#EF4444" },
+  { id: "pagos",         label: "Pagos Recibidos",  c: "#22C55E" },
+  { sep: true,  label: "EQUIPO"       },
+  { id: "proveedores",   label: "Proveedores",      c: "#F97316" },
+  { id: "empleados",     label: "Empleados",        c: "#14B8A6" },
+  { id: "contratos",     label: "Contratos",        c: "#6366F1" },
+  { sep: true,  label: "ANALISIS"     },
+  { id: "contabilidad",  label: "Contabilidad",     c: "#8B5CF6" },
+  { id: "reportes",      label: "Reportes",         c: "#EC4899" },
+];
 
 const BOTTOM_TABS = [
   { id: "dashboard",    label: "Inicio",   mods: ["dashboard"] },
@@ -87,40 +114,15 @@ const BOTTOM_TABS = [
   { id: "__menu__",     label: "Mas",      mods: [] },
 ];
 
-const DESKTOP_NAV = [
-  { sep: true,  label: "PRINCIPAL"     },
-  { id: "dashboard",     label: "Dashboard",        c: "#00D4AA" },
-  { sep: true,  label: "PRESUPUESTOS"  },
-  { id: "calculadora",   label: "Calculadora",      c: "#3B82F6" },
-  { id: "cotizaciones",  label: "Cotizaciones",     c: "#6366f1" },
-  { id: "reservas",      label: "Reservas",         c: "#A855F7" },
-  { sep: true,  label: "OPERACION"     },
-  { id: "flota",         label: "Flota",            c: "#10B981" },
-  { id: "mantenimiento", label: "Mantenimiento",    c: "#F59E0B" },
-  { id: "clientes",      label: "Clientes",         c: "#22C55E" },
-  { id: "catalogo",      label: "Catalogo",         c: "#06B6D4" },
-  { sep: true,  label: "FINANZAS"      },
-  { id: "facturacion",   label: "Facturacion FEL",  c: "#00D4AA" },
-  { id: "banca",         label: "La Banca",         c: "#2563EB" },
-  { id: "gastos",        label: "Gastos / Compras", c: "#EF4444" },
-  { id: "pagos",         label: "Pagos Recibidos",  c: "#22C55E" },
-  { sep: true,  label: "EQUIPO"        },
-  { id: "proveedores",   label: "Proveedores",      c: "#F97316" },
-  { id: "empleados",     label: "Empleados",        c: "#14B8A6" },
-  { sep: true,  label: "ANALISIS"      },
-  { id: "contabilidad",  label: "Contabilidad",     c: "#8B5CF6" },
-  { id: "reportes",      label: "Reportes",         c: "#EC4899" },
-];
-
 const MENU_SECTIONS = [
   { label: "PRESUPUESTOS", ids: ["calculadora","cotizaciones","reservas"] },
   { label: "OPERACION",    ids: ["flota","mantenimiento","clientes","catalogo"] },
   { label: "FINANZAS",     ids: ["facturacion","banca","gastos","pagos"] },
-  { label: "EQUIPO",       ids: ["proveedores","empleados"] },
+  { label: "EQUIPO",       ids: ["proveedores","empleados","contratos"] },
   { label: "ANALISIS",     ids: ["contabilidad","reportes"] },
 ];
 
-const QUICK_ACCESS = ["cotizaciones","reservas","flota","gastos","empleados","facturacion"];
+const QUICK_ACCESS = ["cotizaciones","reservas","contratos","gastos","empleados","facturacion"];
 
 // ─── Icono de modulo ──────────────────────────────────────────────
 function ModIcon({ mod, size = 52 }) {
@@ -156,13 +158,14 @@ function RenderPage({ pag, empId, showToast }) {
     pagos:         <PagePagos         {...p} />,
     proveedores:   <PageProveedores   {...p} />,
     empleados:     <PageEmpleados     {...p} />,
+    contratos:     <PageContratos     {...p} />,
     contabilidad:  <PageContabilidad  {...p} />,
     reportes:      <PageReportes      {...p} />,
   };
   return pages[pag] || pages.dashboard;
 }
 
-// ─── Toast global ────────────────────────────────────────────────
+// ─── Toast ────────────────────────────────────────────────────────
 function Toast({ toast }) {
   if (!toast) return null;
   const c = toast.type === "err" ? T.red : T.acc;
@@ -179,7 +182,7 @@ function Toast({ toast }) {
   );
 }
 
-// ─── Menu movil completo (bottom sheet) ──────────────────────────
+// ─── Menu movil ───────────────────────────────────────────────────
 function MenuMobile({ pag, onSelect, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 500 }}
@@ -252,7 +255,6 @@ function HomeMovil({ setPag, userName }) {
 
   return (
     <div>
-      {/* Bienvenida */}
       <div style={{
         background: `linear-gradient(135deg, ${T.card}, ${T.bord})`,
         borderRadius: 20, padding: "20px 18px", marginBottom: 20,
@@ -278,10 +280,7 @@ function HomeMovil({ setPag, userName }) {
         </div>
       </div>
 
-      {/* Accesos rapidos */}
-      <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>
-        ACCESOS RAPIDOS
-      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>ACCESOS RAPIDOS</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
         {QUICK_ACCESS.map(id => {
           const m = MODS.find(x => x.id === id);
@@ -317,9 +316,9 @@ function HomeMovil({ setPag, userName }) {
 // ─── Layout Movil ─────────────────────────────────────────────────
 function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail }) {
   const [showMenu, setShowMenu] = useState(false);
-  const [onHome, setOnHome]     = useState(true);
-  const userName = userEmail.split("@")[0];
-  const navegar  = (id) => { setPag(id); setOnHome(false); setShowMenu(false); };
+  const [onHome,   setOnHome]   = useState(true);
+  const userName  = userEmail.split("@")[0];
+  const navegar   = (id) => { setPag(id); setOnHome(false); setShowMenu(false); };
   const activeTab = BOTTOM_TABS.find(t => t.mods.includes(pag))?.id || (onHome ? "dashboard" : "__menu__");
 
   return (
@@ -380,7 +379,6 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
             : activeTab === tab.id && !onHome;
           const m     = MODS.find(x => x.id === tab.id);
           const color = m?.c1 || T.acc;
-
           return (
             <button key={tab.id}
               onClick={() => {
@@ -428,9 +426,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
         })}
       </div>
 
-      {showMenu && (
-        <MenuMobile pag={pag} onSelect={navegar} onClose={() => setShowMenu(false)} />
-      )}
+      {showMenu && <MenuMobile pag={pag} onSelect={navegar} onClose={() => setShowMenu(false)} />}
       <Toast toast={toast} />
     </div>
   );
@@ -438,10 +434,10 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
 
 // ─── Login ────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
-  const [email, setEmail]     = useState("");
-  const [pwd, setPwd]         = useState("");
+  const [email,   setEmail]   = useState("");
+  const [pwd,     setPwd]     = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [error,   setError]   = useState("");
 
   const login = async (e) => {
     e.preventDefault();
@@ -466,13 +462,10 @@ function LoginScreen({ onLogin }) {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 30, fontWeight: 900, color: "white",
             margin: "0 auto 16px", boxShadow: "0 8px 24px #00D4AA44",
-          }}>
-            T
-          </div>
+          }}>T</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: T.acc }}>Tz'unun SA</div>
           <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gestion</div>
         </div>
-
         <form onSubmit={login} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label style={S.lbl}>CORREO</label>
@@ -483,14 +476,10 @@ function LoginScreen({ onLogin }) {
           <div>
             <label style={S.lbl}>CONTRASENA</label>
             <input style={S.inp} type="password" value={pwd}
-              onChange={e => setPwd(e.target.value)}
-              placeholder="........" />
+              onChange={e => setPwd(e.target.value)} placeholder="........" />
           </div>
           {error && (
-            <div style={{
-              background: T.redD, border: `1px solid ${T.red}44`,
-              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red,
-            }}>
+            <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red }}>
               {error}
             </div>
           )}
@@ -499,7 +488,6 @@ function LoginScreen({ onLogin }) {
             {loading ? "Ingresando..." : "Entrar"}
           </button>
         </form>
-
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: T.mut }}>
           tzununsa.vercel.app
         </div>
@@ -538,9 +526,7 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
             background: "linear-gradient(135deg,#00D4AA,#009a7a)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 14, fontWeight: 900, color: "white", flexShrink: 0,
-          }}>
-            T
-          </div>
+          }}>T</div>
           {!collapsed && (
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.acc }}>Tz'unun</div>
@@ -549,7 +535,7 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
           )}
         </div>
 
-        {/* Nav items */}
+        {/* Nav */}
         <div style={{ flex: 1, overflowY: "auto", padding: "6px 0" }}>
           {DESKTOP_NAV.map((item, i) => {
             if (item.sep) {
@@ -607,7 +593,7 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
         </div>
       </div>
 
-      {/* Contenido principal */}
+      {/* Contenido */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
         <div style={{
@@ -651,9 +637,9 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem("tzunun_session")); }
     catch { return null; }
   });
-  const [pag,     setPag]     = useState("dashboard");
-  const [empId,   setEmpId]   = useState(null);
-  const [toast,   setToast]   = useState(null);
+  const [pag,      setPag]      = useState("dashboard");
+  const [empId,    setEmpId]    = useState(null);
+  const [toast,    setToast]    = useState(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth < 768
   );
@@ -697,6 +683,6 @@ export default function App() {
   };
 
   return isMobile
-    ? <LayoutMovil    {...props} />
-    : <LayoutDesktop  {...props} />;
+    ? <LayoutMovil   {...props} />
+    : <LayoutDesktop {...props} />;
 }
