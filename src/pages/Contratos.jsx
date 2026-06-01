@@ -582,14 +582,68 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
   const guardar = async () => {
     if (!f.cliente_nombre.trim()) { showToast('Nombre del arrendatario requerido', 'err'); return; }
     setSaving(true);
+    // Convierte cadenas vacías en null para campos UUID y fecha
+    // Supabase/PostgreSQL no acepta "" en columnas UUID o DATE
+    const uuid  = (v) => (v && String(v).trim().length > 8 ? v : null);
+    const fecha = (v) => (v && String(v).trim().length >= 8 ? v : null);
     try {
-      const payload = { ...f, empresa_id: empId,
-        total_gtq:       parseFloat(f.total_gtq)       || 0,
-        km_salida:       parseInt(f.km_salida)          || 0,
-        km_retorno:      parseInt(f.km_retorno)         || 0,
-        deducible_colision:  parseFloat(f.deducible_colision)  || 5000,
-        deducible_robo:      parseFloat(f.deducible_robo)      || 10000,
-        deducible_terceros:  parseFloat(f.deducible_terceros)  || 3000,
+      const payload = {
+        // Campos de texto — se envían tal cual
+        empresa_id:           empId,
+        numero:               f.numero               || null,
+        tipo:                 f.tipo                 || 'renta',
+        estado:               f.estado               || 'borrador',
+        fecha:                fecha(f.fecha)         || today(),
+        representante_nombre: f.representante_nombre || null,
+        representante_dpi:    f.representante_dpi    || null,
+        patente_comercio:     f.patente_comercio     || null,
+        cliente_nombre:       f.cliente_nombre       || null,
+        cliente_nit:          f.cliente_nit          || 'CF',
+        cliente_dpi:          f.cliente_dpi          || null,
+        cliente_nacionalidad: f.cliente_nacionalidad || 'guatemalteca',
+        cliente_representando:f.cliente_representando|| null,
+        vehiculo_marca:       f.vehiculo_marca       || null,
+        vehiculo_modelo:      f.vehiculo_modelo      || null,
+        vehiculo_tipo:        f.vehiculo_tipo        || null,
+        vehiculo_color:       f.vehiculo_color       || null,
+        vehiculo_placa:       f.vehiculo_placa       || null,
+        combustible_salida:   f.combustible_salida   || 'Lleno',
+        combustible_retorno:  f.combustible_retorno  || null,
+        hora_salida:          f.hora_salida          || '08:00',
+        hora_retorno:         f.hora_retorno         || '18:00',
+        concepto:             f.tipo                 || 'renta',
+        metodo_pago:          f.metodo_pago          || 'efectivo',
+        banco:                f.banco                || null,
+        numero_cuenta:        f.numero_cuenta        || null,
+        tipo_cuenta:          f.tipo_cuenta          || null,
+        factura_nombre:       f.factura_nombre       || f.cliente_nombre || null,
+        factura_nit:          f.factura_nit          || 'CF',
+        conductores:          f.conductores          || '[]',
+        checklist_salida:     f.checklist_salida     || '{}',
+        checklist_retorno:    f.checklist_retorno    || '{}',
+        firma_arrendador:     f.firma_arrendador     || null,
+        firma_arrendatario:   f.firma_arrendatario   || null,
+        fotos_salida:         f.fotos_salida         || '[]',
+        fotos_retorno:        f.fotos_retorno        || '[]',
+        foto_dpi:             f.foto_dpi             || null,
+        foto_licencia:        f.foto_licencia        || null,
+        danos_previos:        f.danos_previos        || null,
+        observaciones:        f.observaciones        || null,
+        // Campos numéricos
+        total_gtq:            parseFloat(f.total_gtq)            || 0,
+        km_salida:            parseInt(f.km_salida)              || 0,
+        km_retorno:           parseInt(f.km_retorno)             || 0,
+        deducible_colision:   parseFloat(f.deducible_colision)   || 5000,
+        deducible_robo:       parseFloat(f.deducible_robo)       || 10000,
+        deducible_terceros:   parseFloat(f.deducible_terceros)   || 3000,
+        // Campos UUID — null si están vacíos (nunca "")
+        cliente_id:    uuid(f.cliente_id),
+        vehiculo_id:   uuid(f.vehiculo_id),
+        reserva_id:    uuid(f.reserva_id),
+        cotizacion_id: uuid(f.cotizacion_id),
+        // Campos DATE — null si están vacíos (nunca "")
+        fecha_salida:  fecha(f.fecha_salida),
+        fecha_retorno: fecha(f.fecha_retorno),
       };
       if (initial?.id) {
         await api(`/contratos?id=eq.${initial.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
