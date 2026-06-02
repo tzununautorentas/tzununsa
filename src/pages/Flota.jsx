@@ -20,7 +20,11 @@ export default function PageFlota({ showToast, empId }) {
     setLoading(true);
     const d = await dbGet("vehiculos", "");
     const arr = Array.isArray(d) ? d : [];
+    const PRIO = { propio: 0, socio: 1, alquilado: 2 };
     arr.sort((a, b) => {
+      const pa = PRIO[a.propietario] ?? 9;
+      const pb = PRIO[b.propietario] ?? 9;
+      if (pa !== pb) return pa - pb;
       const ca = (a.codigo || "").match(/\d+/)?.[0] || "999999";
       const cb = (b.codigo || "").match(/\d+/)?.[0] || "999999";
       return parseInt(ca) - parseInt(cb);
