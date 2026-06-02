@@ -144,15 +144,16 @@ export async function loadDashboardData() {
       total: parseFloat(x.total_gtq) || 0,
     }));
 
-  // Alertas combinadas
+  // Alertas combinadas (con id único para seguimiento de lectura)
   const alertas = [];
-  if (vMant > 0) alertas.push({ icon: 'MT', msg: `${vMant} vehiculo${vMant > 1 ? 's' : ''} en mantenimiento`, nivel: 'warning' });
-  if (rPend > 0) alertas.push({ icon: 'RS', msg: `${rPend} reserva${rPend > 1 ? 's' : ''} pendiente${rPend > 1 ? 's' : ''} de confirmacion`, nivel: 'info' });
-  if (cotsPend.length > 0) alertas.push({ icon: 'CT', msg: `${cotsPend.length} cotizacion${cotsPend.length > 1 ? 'es' : ''} esperando respuesta`, nivel: 'warning' });
-  if (pagosPend.length > 0) alertas.push({ icon: 'PG', msg: `${pagosPend.length} pago${pagosPend.length > 1 ? 's' : ''} pendiente${pagosPend.length > 1 ? 's' : ''} de cobro`, nivel: 'danger' });
-  if (contratosPend.length > 0) alertas.push({ icon: 'CT', msg: `${contratosPend.length} contrato${contratosPend.length > 1 ? 's' : ''} pendiente${contratosPend.length > 1 ? 's' : ''} de firma`, nivel: 'warning' });
-  if (mantosCriticos.filter(x => x.tipo === 'urgente').length > 0) alertas.push({
-    icon: 'UR', msg: `${mantosCriticos.filter(x => x.tipo === 'urgente').length} vehiculo${mantosCriticos.filter(x => x.tipo === 'urgente').length > 1 ? 's' : ''} requiere${mantosCriticos.filter(x => x.tipo === 'urgente').length === 1 ? '' : 'n'} mantenimiento URGENTE`, nivel: 'danger',
+  if (vMant > 0) alertas.push({ id: `dash_mt_${vMant}`, icon: 'MT', msg: `${vMant} vehiculo${vMant > 1 ? 's' : ''} en mantenimiento`, nivel: 'warning' });
+  if (rPend > 0) alertas.push({ id: `dash_rs_${rPend}`, icon: 'RS', msg: `${rPend} reserva${rPend > 1 ? 's' : ''} pendiente${rPend > 1 ? 's' : ''} de confirmacion`, nivel: 'info' });
+  if (cotsPend.length > 0) alertas.push({ id: `dash_ct_cots_${cotsPend.length}`, icon: 'CT', msg: `${cotsPend.length} cotizacion${cotsPend.length > 1 ? 'es' : ''} esperando respuesta`, nivel: 'warning' });
+  if (pagosPend.length > 0) alertas.push({ id: `dash_pg_${pagosPend.length}`, icon: 'PG', msg: `${pagosPend.length} pago${pagosPend.length > 1 ? 's' : ''} pendiente${pagosPend.length > 1 ? 's' : ''} de cobro`, nivel: 'danger' });
+  if (contratosPend.length > 0) alertas.push({ id: `dash_ct_contratos_${contratosPend.length}`, icon: 'CT', msg: `${contratosPend.length} contrato${contratosPend.length > 1 ? 's' : ''} pendiente${contratosPend.length > 1 ? 's' : ''} de firma`, nivel: 'warning' });
+  const urgCount = mantosCriticos.filter(x => x.tipo === 'urgente').length;
+  if (urgCount > 0) alertas.push({
+    id: `dash_ur_${urgCount}`, icon: 'UR', msg: `${urgCount} vehiculo${urgCount > 1 ? 's' : ''} requiere${urgCount === 1 ? '' : 'n'} mantenimiento URGENTE`, nivel: 'danger',
   });
 
   // Datos para gráfico mensual

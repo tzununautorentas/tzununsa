@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { T, S, dbGet, fmtD, fmt } from '../config.js';
+import { markRead, markAllRead, cleanupReadIds } from '../services/readState.js';
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
 export function useNotificaciones() {
@@ -97,6 +98,7 @@ export function useNotificaciones() {
     // Ordenar: danger → warning → info
     const orden = { danger: 0, warning: 1, info: 2 };
     alertas.sort((a, b) => (orden[a.nivel] || 2) - (orden[b.nivel] || 2));
+    cleanupReadIds(alertas.map(a => a.id));
     setAlerts(alertas);
     setLoading(false);
   }, []);
@@ -119,13 +121,20 @@ const TIPO_LABEL  = { reserva: "Reservas", mantenimiento: "Mantenimiento", cobro
 
 // ─── Componente Bell (insertar en el header de App.jsx) ───────────────────────
 export function NotificacionesBell({ isMobile = false }) {
-  const { alerts, loading, reload, count, danger, warning } = useNotificaciones();
+  const { alerts, loading, reload } = useNotificaciones();
   const [open, setOpen] = useState(false);
   const [filtro, setFiltro] = useState("todos");
 
-  const badgeColor = danger > 0 ? NIVEL_COLOR.danger : warning > 0 ? NIVEL_COLOR.warning : T.acc;
-
-  const filtered = filtro === "todos" ? alerts : alerts.filter(a => a.tipo === filtro);
+  const readVer = useSyncExternalStore(
+    cb => { window.addEventListener('readstatechange', cb); return () => window.removeEventListener('readstatechange', cb); },
+    () => localStorage.getItem('tzunun_read'),
+  );
+  const readMap = readVer ? JSON.parse(readVer) : {};
+  const noLeidas = alerts.filter(a => !(a.id in readMap));
+  const unreadDanger = noLeidas.filter(a => a.nivel === 'danger').length;
+  const unreadWarning = noLeidas.filter(a => a.nivel === 'warning').length;
+  const badgeColor = unreadDanger > 0 ? NIVEL_COLOR.danger : unreadWarning > 0 ? NIVEL_COLOR.warning : T.acc;
+  const filtered = (filtro === "todos" ? noLeidas : noLeidas.filter(a => a.tipo === filtro));
 
   // Auto-refresh cada 5 minutos
   useEffect(() => {
@@ -140,13 +149,13 @@ export function NotificacionesBell({ isMobile = false }) {
         style={{ position: "relative", background: open ? T.accDim : "transparent", border: `1px solid ${open ? T.acc : T.bord}`, borderRadius: 10, padding: "7px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all .15s" }}>
         {/* SVG campana */}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-          stroke={count > 0 ? badgeColor : T.sub} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          stroke={noLeidas.length > 0 ? badgeColor : T.sub} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
-        {count > 0 && (
+        {noLeidas.length > 0 && (
           <div style={{ position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, background: badgeColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, color: "white", padding: "0 3px" }}>
-            {count > 9 ? "9+" : count}
+            {noLeidas.length > 9 ? "9+" : noLeidas.length}
           </div>
         )}
       </button>
@@ -175,18 +184,25 @@ export function NotificacionesBell({ isMobile = false }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.txt }}>Notificaciones</div>
-                  <div style={{ fontSize: 11, color: T.sub }}>{count} alerta{count !== 1 ? "s" : ""} activa{count !== 1 ? "s" : ""}</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{noLeidas.length} no leida{noLeidas.length !== 1 ? "s" : ""} · {alerts.length} totales</div>
                 </div>
-                <button onClick={() => reload()} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 8px" }}>
-                  {loading ? "..." : "Actualizar"}
-                </button>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {noLeidas.length > 0 && (
+                    <button onClick={() => markAllRead(noLeidas.map(a => a.id))} style={{ ...S.btn("ghost"), fontSize: 10, padding: "4px 6px" }}>
+                      Leer todas
+                    </button>
+                  )}
+                  <button onClick={() => reload()} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 8px" }}>
+                    {loading ? "..." : "Actualizar"}
+                  </button>
+                </div>
               </div>
 
               {/* Resumen rápido */}
-              {count > 0 && (
+              {noLeidas.length > 0 && (
                 <div style={{ display: "flex", gap: 6 }}>
                   {[["danger", "Urgentes"], ["warning", "Avisos"], ["info", "Info"]].map(([niv, lbl]) => {
-                    const n = alerts.filter(a => a.nivel === niv).length;
+                    const n = noLeidas.filter(a => a.nivel === niv).length;
                     if (!n) return null;
                     const c = NIVEL_COLOR[niv];
                     return (
@@ -201,7 +217,7 @@ export function NotificacionesBell({ isMobile = false }) {
             </div>
 
             {/* Filtros */}
-            {count > 0 && (
+            {noLeidas.length > 0 && (
               <div style={{ display: "flex", gap: 6, padding: "8px 12px", borderBottom: `1px solid ${T.bord}`, flexShrink: 0 }}>
                 {["todos", "reserva", "mantenimiento", "cobro"].map(f => (
                   <button key={f} onClick={() => setFiltro(f)}
@@ -226,7 +242,9 @@ export function NotificacionesBell({ isMobile = false }) {
                 const c  = NIVEL_COLOR[a.nivel] || T.acc;
                 const bg = NIVEL_BG[a.nivel]    || T.accDim;
                 return (
-                  <div key={a.id} style={{ padding: "11px 14px", borderBottom: `1px solid ${T.bord}18`, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div key={a.id} onClick={() => markRead(a.id)} style={{ padding: "11px 14px", borderBottom: `1px solid ${T.bord}18`, display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", transition: "background .15s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = T.surf}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                     <div style={{ width: 34, height: 34, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1px solid ${c}33` }}>
                       <span style={{ fontSize: 12, fontWeight: 900, color: c }}>{TIPO_LETRA[a.tipo] || "!"}</span>
                     </div>

@@ -1,5 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { T, S, fmt, fmtD, fmtK, today } from '../config.js';
+import { markRead } from '../services/readState.js';
 
 import { loadDashboardData } from '../services/dashboardService.js';
 import { Spinner } from '../components/shared.jsx';
@@ -151,7 +152,15 @@ function AlertaItem({ alerta }) {
         {alerta.icon}
       </div>
       <span style={{ color: '#CBD5E1', flex: 1 }}>{alerta.msg}</span>
-      <div style={{ width: 8, height: 8, borderRadius: '50%', background: nivelColor, flexShrink: 0 }} />
+      <button onClick={() => markRead(alerta.id)} title="Descartar" style={{
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        color: nivelColor, padding: 2, display: 'flex', alignItems: 'center',
+        opacity: 0.5, fontSize: 14, lineHeight: 1,
+      }}
+        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+        onMouseLeave={e => e.currentTarget.style.opacity = 0.5}>
+        ✕
+      </button>
     </div>
   );
 }
@@ -195,13 +204,19 @@ function DisponibilidadSemanal({ data }) {
 
 // ─── Seccion de alertas rápidas ────────────────────────────────────
 function AlertasRapidas({ alertas }) {
-  if (!alertas || alertas.length === 0) return null;
+  const readVer = useSyncExternalStore(
+    cb => { window.addEventListener('readstatechange', cb); return () => window.removeEventListener('readstatechange', cb); },
+    () => localStorage.getItem('tzunun_read'),
+  );
+  const readMap = readVer ? JSON.parse(readVer) : {};
+  const pendientes = (alertas || []).filter(a => !(a.id in readMap));
+  if (pendientes.length === 0) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: T.mut, letterSpacing: 1, marginBottom: 2 }}>
         ALERTAS OPERATIVAS
       </div>
-      {alertas.map((a, i) => <AlertaItem key={i} alerta={a} />)}
+      {pendientes.map((a, i) => <AlertaItem key={a.id || i} alerta={a} />)}
     </div>
   );
 }
