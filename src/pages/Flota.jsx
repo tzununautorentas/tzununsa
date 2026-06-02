@@ -16,7 +16,7 @@ export default function PageFlota({ showToast, empId }) {
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const TIPOS = ["Sedan", "SUV", "Pickup", "Van", "Microbus", "Bus"];
 
-   const load = async () => {
+  const load = async () => {
     setLoading(true);
     const d = await dbGet("vehiculos", "");
     const arr = Array.isArray(d) ? d : [];
@@ -29,6 +29,18 @@ export default function PageFlota({ showToast, empId }) {
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const SFX = { propio: "P", socio: "A", alquilado: "R" };
+
+  const genCodigoVehiculo = (propietario) => {
+    const sfx = SFX[propietario] || "F";
+    let max = 0;
+    rows.filter(r => (r.codigo || "").endsWith(sfx)).forEach(r => {
+      const m = (r.codigo || "").match(/^(\d+)/);
+      if (m) { const n = parseInt(m[1]); if (n > max) max = n; }
+    });
+    return String(max + 1).padStart(3, "0") + sfx;
+  };
 
   const abrirEditar = v => {
     setF({
@@ -44,7 +56,7 @@ export default function PageFlota({ showToast, empId }) {
   };
 
   const abrirNuevo = () => {
-    setF({ codigo: '', propietario: 'propio', placa: '', marca: '', modelo: '',
+    setF({ codigo: genCodigoVehiculo('propio'), propietario: 'propio', placa: '', marca: '', modelo: '',
       anio: new Date().getFullYear(), tipo: 'SUV', estado: 'disponible', km_actual: 0,
       color: '', vin: '', poliza_seguro: '', vencimiento_seguro: '', notas: '' });
     setEditItem(null); setVista("form");
@@ -54,8 +66,10 @@ export default function PageFlota({ showToast, empId }) {
     if (!f.placa.trim()) { showToast("Placa requerida", "err"); return; }
     setSaving(true);
     const p = { ...f, empresa_id: empId, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0 };
-    if (editItem?.id) await dbUpd("vehiculos", editItem.id, p);
-    else await dbIns("vehiculos", p);
+    let res;
+    if (editItem?.id) res = await dbUpd("vehiculos", editItem.id, p);
+    else res = await dbIns("vehiculos", p);
+    if (res?.error) { showToast(res.error, "err"); setSaving(false); return; }
     showToast("Guardado"); setSaving(false); setVista("lista"); setEditItem(null); load();
   };
 
@@ -93,13 +107,14 @@ export default function PageFlota({ showToast, empId }) {
           <Fld label="CODIGO VEHICULO">
             <input style={{ ...S.inp, fontFamily: "monospace", fontWeight: 700 }}
               value={f.codigo} onChange={e => sf("codigo", e.target.value.toUpperCase())}
-              placeholder="001-P" />
+              placeholder="001F" />
           </Fld>
           <Fld label="PROPIETARIO">
-            <select style={S.sel} value={f.propietario} onChange={e => sf("propietario", e.target.value)}>
+            <select style={S.sel} value={f.propietario}
+              onChange={e => { const p = e.target.value; sf("propietario", p); if (!editItem) sf("codigo", genCodigoVehiculo(p)); }}>
               <option value="propio">Propio (P)</option>
               <option value="socio">Socio (A)</option>
-              <option value="alquilado">Alquilado</option>
+              <option value="alquilado">Alquilado (R)</option>
             </select>
           </Fld>
           <Fld label="PLACA *">
