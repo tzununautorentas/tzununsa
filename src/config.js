@@ -83,25 +83,13 @@ export async function sbLogout(token) {
   } catch {}
 }
 
-// --- THEME ---
-// Nota: cada color tiene dos alias: "D" y "Dim" apuntan al mismo valor
-export const T = {
-  bg:      "#0A0F1E",
-  surf:    "#111827",
-  card:    "#162032",
-  bord:    "#1E3A5F",
-
-  acc:     "#00D4AA", accD:    "#00D4AA22", accDim:    "#00D4AA22",
-  sec:     "#F59E0B", secD:    "#F59E0B22", secDim:    "#F59E0B22",
-  red:     "#EF4444", redD:    "#EF444422", redDim:    "#EF444422",
-  blue:    "#3B82F6", blueD:   "#3B82F622", blueDim:   "#3B82F622",
-  purple:  "#A855F7", purpleD: "#A855F722", purpleDim: "#A855F722",
-  green:   "#22C55E", greenD:  "#22C55E22", greenDim:  "#22C55E22",
-
-  txt: "#F1F5F9",
-  mut: "#64748B",
-  sub: "#94A3B8",
-};
+// --- THEME (reactivo via CSS Variables) ---
+// Cualquier propiedad accedida en T se resuelve como var(--theme-<prop>)
+// Las CSS variables se actualizan desde ThemeProvider en theme.jsx
+export const T = new Proxy({}, {
+  get: (_, prop) => `var(--theme-${prop})`,
+  has: () => true,
+});
 
 // --- SHARED STYLES ---
 export const S = {

@@ -72,13 +72,10 @@ export function ThemeProvider({ children }) {
   const isDark = theme.name === 'dark';
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--theme-bg', theme.bg);
-    document.documentElement.style.setProperty('--theme-surf', theme.surf);
-    document.documentElement.style.setProperty('--theme-card', theme.card);
-    document.documentElement.style.setProperty('--theme-bord', theme.bord);
-    document.documentElement.style.setProperty('--theme-txt', theme.txt);
-    document.documentElement.style.setProperty('--theme-mut', theme.mut);
-    document.documentElement.style.setProperty('--theme-acc', theme.acc);
+    const root = document.documentElement;
+    Object.entries(theme).forEach(([k, v]) => {
+      if (k !== 'name') root.style.setProperty(`--theme-${k}`, v);
+    });
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = isDark ? '#0A0F1E' : '#F1F5F9';
   }, [theme, isDark]);
