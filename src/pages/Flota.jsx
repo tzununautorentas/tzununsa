@@ -65,10 +65,10 @@ export default function PageFlota({ showToast, empId }) {
   const guardar = async () => {
     if (!f.placa.trim()) { showToast("Placa requerida", "err"); return; }
     setSaving(true);
-    const p = { ...f, empresa_id: empId, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0 };
+    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, notas: f.notas };
     let res;
-    if (editItem?.id) res = await dbUpd("vehiculos", editItem.id, p);
-    else res = await dbIns("vehiculos", p);
+    if (editItem?.id) res = await dbUpd("vehiculos", editItem.id, payload);
+    else res = await dbIns("vehiculos", payload);
     if (res?.error) { showToast(res.error, "err"); setSaving(false); return; }
     showToast("Guardado"); setSaving(false); setVista("lista"); setEditItem(null); load();
   };
