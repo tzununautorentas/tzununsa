@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { T, S, fmt, dbIns, today, CATALOGO, RUTAS } from '../config.js';
+import { T, S, fmt, dbIns, dbGet, today, CATALOGO, RUTAS } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
 
 const calcDias = (fi, ff) => {
@@ -67,8 +67,10 @@ export default function PageCalculadora({ showToast, empId }) {
     const cn = tab === "renta" ? cli : tf.cliente;
     if (!cn.trim()) { showToast("Ingresa el nombre del cliente", "err"); return; }
     setSaving(true);
+    const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
+    if (!eId) { showToast("Error: no se encontro empresa", "err"); setSaving(false); return; }
     const p = {
-      empresa_id: empId, tipo: tab, cliente_nombre: cn,
+      empresa_id: eId, tipo: tab, cliente_nombre: cn,
       numero: "COT-" + Date.now().toString().slice(-6),
       dias: tab === "renta" ? diasCalc : d2,
       fecha_inicio: tab === "renta" ? fechaInicio : null,
@@ -83,18 +85,19 @@ export default function PageCalculadora({ showToast, empId }) {
       total_usd: (tab === "renta" ? tot : ttot) / (tab === "renta" ? exch : parseFloat(tf.exch) || 7.70),
       vehiculo_nombre: selVeh?.nombre || "",
       estado,
-      km_ida: kmi, km_regreso: kmr,
-      costo_vehiculo: parseFloat(tf.veh) || 0,
-      costo_piloto: parseFloat(tf.pil) || 0,
-      costo_hospedaje: parseFloat(tf.hos) || 0,
-      costo_alimentacion: parseFloat(tf.ali) || 0,
+      km_total: tkm,
+      costo_vehiculo: tab === "renta" ? rate : vT,
+      costo_piloto: pT,
+      costo_hospedaje: hT,
+      costo_alimentacion: aT,
       precio_galon: parseFloat(tf.galon) || 0,
       km_por_galon: parseFloat(tf.kpg) || 0,
-      gastos_varios: misc,
+      extras: misc,
+      peajes: 0,
     };
     const r = await dbIns("cotizaciones", p);
     if (r && !r.error) showToast(estado === "enviada" ? "Cotizacion guardada" : "Borrador guardado");
-    else showToast("Error al guardar", "err");
+    else showToast("Error: " + (r?.error || "Error al guardar"), "err");
     setSaving(false);
   };
 
