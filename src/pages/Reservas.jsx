@@ -93,7 +93,7 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       {fromCotizacion && (
         <div style={{ background: T.accDim, border: `1px solid ${T.acc}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 12, color: T.acc, fontWeight: 600 }}>
-            Vinculada a Cotización #{f.cotizacion_numero || f.cotizacion_id}
+            Vinculada a Cotización #{f.cotizacion_id?.toString().slice(-6) || ""}
           </div>
           <div style={{ fontSize: 10, color: T.sub }}>Los costos fueron heredados de la cotización</div>
         </div>
@@ -368,7 +368,7 @@ export default function PageReservas({ showToast, empId }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["No.", "Cliente", "Vehiculo", "Conductor", "Inicio", "Fin", "Total", "Cotizacion", "Estado", "Acciones"].map(h => (
+                {["No.", "Cliente", "Vehiculo", "Conductor", "Inicio", "Fin", "Total", "Estado", "Acciones"].map(h => (
                   <th key={h} style={S.th}>{h}</th>
                 ))}
               </tr>
@@ -390,9 +390,6 @@ export default function PageReservas({ showToast, empId }) {
                     <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: "nowrap" }}>{fmtD(r.fecha_inicio)}</td>
                     <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: "nowrap" }}>{fmtD(r.fecha_fin) || "—"}</td>
                     <td style={{ ...S.td, fontWeight: 700, color: T.acc }}>Q {fmt(r.total_gtq)}</td>
-                    <td style={{ ...S.td, fontSize: 10, color: T.sub }}>
-                      {r.cotizacion_numero || (r.cotizacion_id ? "#" + r.cotizacion_id.toString().slice(-6) : "—")}
-                    </td>
                     <td style={S.td}>
                       <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: est.c, background: est.bg }}>
                         {est.l}
