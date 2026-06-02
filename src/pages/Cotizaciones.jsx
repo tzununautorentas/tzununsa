@@ -491,8 +491,8 @@ export default function PageCotizaciones({ showToast, empId }) {
       notas: "Generada desde cotizacion " + cot.numero,
       vehiculo_nombre: cot.vehiculo_nombre || "",
       conductor_nombre: "",
-      fecha_inicio: cot.fecha_inicio || "",
-      fecha_fin: cot.fecha_fin || "",
+      fecha_inicio: cot.fecha_inicio || null,
+      fecha_fin: cot.fecha_fin || null,
       // Finanzas heredadas de la cotizacion
       dias: parseInt(cot.dias) || 0,
       tarifa: parseFloat(cot.precio_personalizado) || parseFloat(cot.costo_vehiculo) || 0,
