@@ -6,7 +6,6 @@ import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente } from '../c
 // ─── Google Calendar (fecha corregida) ───────────────────────────
 const toGCal = (dateStr, hora = "080000") => {
   if (!dateStr) return "";
-  // Asegura formato YYYYMMDD y agrega hora
   const solo = String(dateStr).replace(/[-T:]/g, "").slice(0, 8);
   if (solo.length < 8) return "";
   return solo + "T" + hora;
@@ -49,12 +48,15 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
-  const dias = calcDias(f.fecha_inicio, f.fecha_fin);
+  const fromCotizacion = f.cotizacion_id && parseFloat(f.subtotal) > 0;
+
+  // Si la reserva viene de una cotizacion, usar valores heredados (no recalcular)
+  const dias = fromCotizacion ? f.dias : calcDias(f.fecha_inicio, f.fecha_fin);
   const veh  = CATALOGO.find(v => v.nombre === f.vehiculo_nombre);
-  const tarifa = veh ? (dias >= 30 ? veh.mes : dias >= 8 ? veh.sem : veh.dia) : 0;
-  const sub  = dias * tarifa;
-  const iva  = Math.round(sub * (f.tasa_iva / 100) * 100) / 100;
-  const tot  = sub + iva;
+  const tarifa = fromCotizacion ? (f.dias > 0 ? f.subtotal / f.dias : 0) : (veh ? (dias >= 30 ? veh.mes : dias >= 8 ? veh.sem : veh.dia) : 0);
+  const sub  = fromCotizacion ? f.subtotal : dias * tarifa;
+  const iva  = fromCotizacion ? f.total_iva : Math.round(sub * (f.tasa_iva / 100) * 100) / 100;
+  const tot  = fromCotizacion ? f.total_gtq : sub + iva;
 
   const guardar = async () => {
     if (!f.cliente_nombre.trim() || !f.fecha_inicio) {
@@ -69,8 +71,10 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       tasa_iva: f.tasa_iva, tasa_cambio: f.tasa_cambio,
       metodo_pago: f.metodo_pago,
     };
-    if (initial?.id) await dbUpd("reservas", initial.id, payload);
-    else await dbIns("reservas", payload);
+    const result = initial?.id
+      ? await dbUpd("reservas", initial.id, payload)
+      : await dbIns("reservas", payload);
+    if (result?.error) { alert("Error: " + result.error); setSaving(false); return; }
     setSaving(false); onSave();
   };
 
@@ -84,6 +88,16 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
         </div>
         <button onClick={onCancel} style={S.btn("ghost")}>Volver</button>
       </div>
+
+      {/* Banner si viene de cotizacion */}
+      {fromCotizacion && (
+        <div style={{ background: T.accDim, border: `1px solid ${T.acc}44`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 12, color: T.acc, fontWeight: 600 }}>
+            Vinculada a Cotización #{f.cotizacion_numero || f.cotizacion_id}
+          </div>
+          <div style={{ fontSize: 10, color: T.sub }}>Los costos fueron heredados de la cotización</div>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* Columna izquierda */}
@@ -169,7 +183,7 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
             <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>FINANZAS</div>
             <div style={{ display: "grid", gap: 11 }}>
               <Fld label="IVA">
-                <select style={S.sel} value={f.tasa_iva} onChange={e => sf("tasa_iva", parseInt(e.target.value))}>
+                <select style={S.sel} value={f.tasa_iva} onChange={e => sf("tasa_iva", parseInt(e.target.value))} disabled={fromCotizacion}>
                   <option value={12}>12% Regimen General</option>
                   <option value={5}>5% Pequeno Contribuyente</option>
                   <option value={0}>Sin IVA</option>
@@ -186,7 +200,7 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
                 </div>
               </Fld>
               <Fld label="TASA CAMBIO (Q por $1)">
-                <input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e => sf("tasa_cambio", parseFloat(e.target.value) || 7.70)} />
+                <input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e => sf("tasa_cambio", parseFloat(e.target.value) || 7.70)} disabled={fromCotizacion} />
               </Fld>
               <Fld label="ANTICIPO RECIBIDO (Q)">
                 <input style={S.inp} type="number" step="0.01" value={f.anticipo} onChange={e => sf("anticipo", e.target.value)} placeholder="0.00" />
@@ -195,9 +209,11 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
           </div>
 
           {/* Resumen de costos */}
-          {tarifa > 0 && (
-            <div style={{ ...S.card, background: T.accDim, border: `1px solid ${T.acc}44` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 12, letterSpacing: 1 }}>RESUMEN DE COSTOS</div>
+          {tot > 0 && (
+            <div style={{ ...S.card, background: fromCotizacion ? T.accDim : T.surf, border: `1px solid ${T.acc}44` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 12, letterSpacing: 1 }}>
+                {fromCotizacion ? "COSTOS HEREDADOS DE COTIZACION" : "RESUMEN DE COSTOS"}
+              </div>
               {[
                 { l: "Tarifa diaria", v: `Q ${fmt(tarifa)}` },
                 { l: `Dias (x${dias})`, v: `Q ${fmt(sub)}` },
@@ -352,7 +368,7 @@ export default function PageReservas({ showToast, empId }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["No.", "Cliente", "Vehiculo", "Conductor", "Inicio", "Fin", "Total", "Estado", "Acciones"].map(h => (
+                {["No.", "Cliente", "Vehiculo", "Conductor", "Inicio", "Fin", "Total", "Cotizacion", "Estado", "Acciones"].map(h => (
                   <th key={h} style={S.th}>{h}</th>
                 ))}
               </tr>
@@ -374,6 +390,9 @@ export default function PageReservas({ showToast, empId }) {
                     <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: "nowrap" }}>{fmtD(r.fecha_inicio)}</td>
                     <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: "nowrap" }}>{fmtD(r.fecha_fin) || "—"}</td>
                     <td style={{ ...S.td, fontWeight: 700, color: T.acc }}>Q {fmt(r.total_gtq)}</td>
+                    <td style={{ ...S.td, fontSize: 10, color: T.sub }}>
+                      {r.cotizacion_numero || (r.cotizacion_id ? "#" + r.cotizacion_id.toString().slice(-6) : "—")}
+                    </td>
                     <td style={S.td}>
                       <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: est.c, background: est.bg }}>
                         {est.l}
