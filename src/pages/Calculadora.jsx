@@ -2,11 +2,20 @@ import React, { useState } from 'react';
 import { T, S, fmt, dbIns, today, CATALOGO, RUTAS } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
 
+const calcDias = (fi, ff) => {
+  if (!fi || !ff) return 1;
+  const d1 = new Date(fi + "T12:00:00");
+  const d2 = new Date(ff + "T12:00:00");
+  return Math.max(1, Math.ceil((d2 - d1) / 86400000));
+};
+
 export default function PageCalculadora({ showToast, empId }) {
   const [tab, setTab]       = useState("renta");
   const [cli, setCli]       = useState("");
   const [selVeh, setSelVeh] = useState(null);
   const [dias, setDias]     = useState(1);
+  const [fechaInicio, setFechaInicio] = useState(today());
+  const [fechaFin, setFechaFin]       = useState("");
   const [iva, setIva]       = useState(5);
   const [pago, setPago]     = useState("efectivo");
   const [conTC, setConTC]   = useState(false);
@@ -21,14 +30,15 @@ export default function PageCalculadora({ showToast, empId }) {
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
 
   // ─ Renta ─────────────────────────────────────────────────────
+  const diasCalc = fechaInicio && fechaFin ? calcDias(fechaInicio, fechaFin) : dias;
   const tarifaFn = (v, d) => {
     if (!v || d === 0) return 0;
     if (d >= 30) return v.mes;
     if (d >= 8)  return v.sem;
     return v.dia;
   };
-  const rate    = selVeh ? tarifaFn(selVeh, dias) : 0;
-  const sub     = dias * rate;
+  const rate    = selVeh ? tarifaFn(selVeh, diasCalc) : 0;
+  const sub     = diasCalc * rate;
   const ivaAmt  = Math.round(sub * iva / 100 * 100) / 100;
   const base    = sub + ivaAmt;
   const recTC   = conTC ? Math.round(base * 0.05 * 100) / 100 : 0;
@@ -60,7 +70,9 @@ export default function PageCalculadora({ showToast, empId }) {
     const p = {
       empresa_id: empId, tipo: tab, cliente_nombre: cn,
       numero: "COT-" + Date.now().toString().slice(-6),
-      dias: tab === "renta" ? dias : d2,
+      dias: tab === "renta" ? diasCalc : d2,
+      fecha_inicio: tab === "renta" ? fechaInicio : null,
+      fecha_fin: tab === "renta" ? fechaFin : null,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
       metodo_pago: tab === "renta" ? pago : tf.pago,
       tasa_cambio: tab === "renta" ? exch : parseFloat(tf.exch) || 7.70,
@@ -117,9 +129,18 @@ export default function PageCalculadora({ showToast, empId }) {
               <Fld label="CLIENTE">
                 <BuscadorCliente value={cli} onChange={setCli} empId={empId} />
               </Fld>
+              <Fld label="FECHA INICIO">
+                <input style={S.inp} type="date" value={fechaInicio}
+                  onChange={e => setFechaInicio(e.target.value)} />
+              </Fld>
+              <Fld label="FECHA FIN">
+                <input style={S.inp} type="date" value={fechaFin}
+                  onChange={e => setFechaFin(e.target.value)} />
+              </Fld>
               <Fld label="DIAS">
-                <input style={S.inp} type="number" min="1" value={dias}
-                  onChange={e => setDias(Math.max(1, parseInt(e.target.value) || 1))} />
+                <div style={{ ...S.inp, background: T.card, display: "flex", alignItems: "center", fontWeight: 700, color: T.acc }}>
+                  {diasCalc} dia{diasCalc !== 1 ? "s" : ""}
+                </div>
               </Fld>
               <Fld label="VEHICULO">
                 <select style={S.sel} value={selVeh?.id || ""} onChange={e => setSelVeh(CATALOGO.find(v => v.id === e.target.value) || null)}>
@@ -214,7 +235,7 @@ export default function PageCalculadora({ showToast, empId }) {
             <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Resumen del presupuesto</div>
             {tab === "renta" ? (
               <>
-                {selVeh && <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{selVeh.nombre} · {dias} dia{dias !== 1 ? "s" : ""}</div>}
+                {selVeh && <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{selVeh.nombre} · {diasCalc} dia{diasCalc !== 1 ? "s" : ""}</div>}
                 <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10 }}>
                   <Row l="Tarifa" v={"Q " + fmt(rate) + "/dia"} />
                   <Row l="Subtotal" v={"Q " + fmt(sub)} />
