@@ -481,54 +481,30 @@ export default function PageCotizaciones({ showToast, empId }) {
     const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
     const numero = "RES-" + Date.now().toString().slice(-6);
 
-    // Heredar todos los campos financieros de la cotizacion
     const r = await dbIns("reservas", {
-      // Identidad
       empresa_id: eId,
       cliente_nombre: cot.cliente_nombre,
       tipo: cot.tipo || "renta",
       numero,
       estado: "confirmada",
-
-      // Vinculacion
       cotizacion_id: cot.id,
-      cotizacion_numero: cot.numero,
       notas: "Generada desde cotizacion " + cot.numero,
-
-      // Datos basicos
       vehiculo_nombre: cot.vehiculo_nombre || "",
-      conductor_nombre: cot.conductor_nombre || "",
-
-      // Fechas (si la cotizacion las tiene)
+      conductor_nombre: "",
       fecha_inicio: cot.fecha_inicio || "",
       fecha_fin: cot.fecha_fin || "",
-
       // Finanzas heredadas de la cotizacion
       dias: parseInt(cot.dias) || 0,
+      tarifa: parseFloat(cot.precio_personalizado) || parseFloat(cot.costo_vehiculo) || 0,
       subtotal: parseFloat(cot.subtotal) || 0,
       total_iva: parseFloat(cot.total_iva) || 0,
       total_gtq: parseFloat(cot.total_gtq) || 0,
-      total_usd: parseFloat(cot.total_usd) || 0,
       tasa_iva: parseFloat(cot.tasa_iva) || 5,
       metodo_pago: cot.metodo_pago || "efectivo",
       tasa_cambio: parseFloat(cot.tasa_cambio) || 7.70,
-      recargo_tarjeta: parseFloat(cot.recargo_tarjeta) || 0,
+      monto: parseFloat(cot.total_gtq) || 0,
       anticipo: 0,
       saldo: parseFloat(cot.total_gtq) || 0,
-
-      // Costos operativos (traslado)
-      costo_vehiculo: parseFloat(cot.costo_vehiculo) || 0,
-      costo_piloto: parseFloat(cot.costo_piloto) || 0,
-      costo_hospedaje: parseFloat(cot.costo_hospedaje) || 0,
-      costo_alimentacion: parseFloat(cot.costo_alimentacion) || 0,
-      km_total: parseFloat(cot.km_total) || 0,
-      km_ida: parseFloat(cot.km_ida) || 0,
-      km_regreso: parseFloat(cot.km_regreso) || 0,
-      km_por_galon: parseFloat(cot.km_por_galon) || 0,
-      precio_galon: parseFloat(cot.precio_galon) || 0,
-      peajes: parseFloat(cot.peajes) || 0,
-      extras: parseFloat(cot.extras) || 0,
-      gastos_varios: parseFloat(cot.gastos_varios) || 0,
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });
