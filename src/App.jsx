@@ -1,5 +1,7 @@
 import React, { useState, useEffect, Component } from "react";
 import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
+import { ThemeProvider, useTheme, buildStyles } from "./config/theme.js";
+import { NotificacionesBell } from "./components/Notificaciones.jsx";
 
 import PageDashboard     from "./pages/Dashboard.jsx";
 import PageCalculadora   from "./pages/Calculadora.jsx";
@@ -123,6 +125,40 @@ const MENU_SECTIONS = [
 ];
 
 const QUICK_ACCESS = ["cotizaciones","reservas","contratos","gastos","empleados","facturacion"];
+
+// ─── Theme Toggle Icon ─────────────────────────────────────────────
+function ThemeToggle() {
+  const { isDark, toggleTheme } = useTheme();
+  return (
+    <button onClick={toggleTheme}
+      title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      style={{
+        background: "transparent", border: "none",
+        cursor: "pointer", padding: "4px 6px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: T.sub,
+      }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {isDark ? (
+          <>
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </>
+        ) : (
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        )}
+      </svg>
+    </button>
+  );
+}
 
 // ─── Icono de modulo ──────────────────────────────────────────────
 function ModIcon({ mod, size = 52 }) {
@@ -348,6 +384,8 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
             {onHome ? "Inicio" : TITULOS[pag] || ""}
           </div>
         </div>
+        <NotificacionesBell isMobile={true} />
+        <ThemeToggle />
         <button onClick={handleLogout}
           style={{
             width: 36, height: 36, borderRadius: 10,
@@ -582,9 +620,15 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
         {/* Footer sidebar */}
         <div style={{ borderTop: `1px solid ${T.bord}`, padding: collapsed ? "10px 4px" : "10px 12px" }}>
           {!collapsed && (
-            <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {userName}
-            </div>
+            <>
+              <div style={{ fontSize: 10, color: T.sub, marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {userName}
+              </div>
+              <div style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                <ThemeToggle />
+                <span style={{ fontSize: 10, color: T.mut }}>Tema</span>
+              </div>
+            </>
           )}
           <button onClick={handleLogout}
             style={{ ...S.btn("ghost"), width: "100%", fontSize: 11, padding: "6px 8px" }}>
@@ -611,10 +655,14 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
           <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
             {TITULOS[pag] || ""}
           </div>
-          <div style={{ marginLeft: "auto", fontSize: 11, color: T.sub }}>
-            {new Date().toLocaleDateString("es-GT", {
-              weekday: "short", day: "2-digit", month: "short", year: "numeric",
-            })}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            <NotificacionesBell isMobile={false} />
+            <ThemeToggle />
+            <div style={{ fontSize: 11, color: T.sub }}>
+              {new Date().toLocaleDateString("es-GT", {
+                weekday: "short", day: "2-digit", month: "short", year: "numeric",
+              })}
+            </div>
           </div>
         </div>
 
@@ -632,7 +680,7 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
 }
 
 // ─── App principal ────────────────────────────────────────────────
-export default function App() {
+function AppContent() {
   const [session, setSession] = useState(() => {
     try { return JSON.parse(localStorage.getItem("tzunun_session")); }
     catch { return null; }
@@ -685,4 +733,13 @@ export default function App() {
   return isMobile
     ? <LayoutMovil   {...props} />
     : <LayoutDesktop {...props} />;
+}
+
+// ─── Wrapper con ThemeProvider ────────────────────────────────────
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
 }
