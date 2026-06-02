@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Component } from "react";
 import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
-import { ThemeProvider, useTheme, buildStyles } from "./config/theme.js";
+import { ThemeProvider, useTheme, buildStyles } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
 
 import PageDashboard     from "./pages/Dashboard.jsx";

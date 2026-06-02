@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, fmtK, today } from '../config.js';
-import { useTheme, buildStyles } from '../config/theme.js';
+import { useTheme, buildStyles } from '../config/theme.jsx';
 import { loadDashboardData } from '../services/dashboardService.js';
 import { Spinner } from '../components/shared.jsx';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
