@@ -81,10 +81,11 @@ export default function PageClientes({ showToast, empId }) {
   function ImportadorClientes({ onClose }) {
     const [archivo, setArchivo] = useState(null);
     const [preview, setPreview] = useState([]);
+    const [parsedRows, setParsedRows] = useState([]);
     const [procesando, setProcesando] = useState(false);
     const [resultado, setResultado] = useState(null);
     const refFile = useRef(null);
-    const [cols, setCols] = useState({ nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "" });
+    const iCols = useRef({ nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "" });
 
     const detectarColumnas = (headers) => {
       const h = headers.map(hh => hh.toLowerCase().trim());
@@ -98,7 +99,18 @@ export default function PageClientes({ showToast, empId }) {
         else if (/contacto|atenci/.test(hh)) c.contacto = i;
         else if (/notas|obs|coment/.test(hh)) c.notas = i;
       });
-      setCols(c);
+      iCols.current = c;
+    };
+
+    const csvRowToArray = (linea) => {
+      const vals = []; let cur = "", inQ = false;
+      for (const ch of linea) {
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
+        cur += ch;
+      }
+      vals.push(cur.trim());
+      return vals;
     };
 
     const leerCSV = (texto) => {
@@ -106,18 +118,7 @@ export default function PageClientes({ showToast, empId }) {
       if (lineas.length < 2) return [];
       const headers = lineas[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
       detectarColumnas(headers);
-      return lineas.slice(1, 12).map(l => {
-        const vals = []; let cur = "", inQ = false;
-        for (const ch of l) {
-          if (ch === '"') { inQ = !inQ; continue; }
-          if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
-          cur += ch;
-        }
-        vals.push(cur.trim());
-        const row = {};
-        headers.forEach((h, i) => row[h] = vals[i] || "");
-        return row;
-      });
+      return lineas.slice(1).map(l => csvRowToArray(l));
     };
 
     const leerXLSX = async (data) => {
@@ -127,10 +128,10 @@ export default function PageClientes({ showToast, empId }) {
       if (json.length < 2) return [];
       const headers = json[0].map(h => String(h).trim());
       detectarColumnas(headers);
-      return json.slice(1, 12).map(row => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = row[i] !== undefined ? String(row[i]).trim() : "");
-        return obj;
+      return json.slice(1).map(row => {
+        const arr = [];
+        headers.forEach((_, i) => arr.push(row[i] !== undefined ? String(row[i]).trim() : ""));
+        return arr;
       });
     };
 
@@ -138,51 +139,42 @@ export default function PageClientes({ showToast, empId }) {
       setArchivo(file);
       setResultado(null);
       setPreview([]);
+      setParsedRows([]);
       if (!file) return;
       setProcesando(true);
       try {
         const ext = file.name.split(".").pop().toLowerCase();
         const buf = await file.arrayBuffer();
         const dec = new TextDecoder("utf-8");
-        let rows;
+        let allRows;
         if (ext === "csv") {
-          rows = leerCSV(dec.decode(buf));
+          allRows = leerCSV(dec.decode(buf));
         } else if (ext === "xlsx") {
           await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
-          rows = await leerXLSX(buf);
+          allRows = await leerXLSX(buf);
         } else {
           showToast("Formato no soportado. Usa .csv o .xlsx", "err");
           setProcesando(false); return;
         }
-        setPreview(rows);
+        setParsedRows(allRows);
+        setPreview(allRows.slice(0, 11));
       } catch (e) { showToast("Error al leer archivo: " + e.message, "err"); }
       setProcesando(false);
     };
 
     const importar = async () => {
-      if (!archivo || preview.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
+      if (!archivo || parsedRows.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
       setProcesando(true);
-      const headers = Object.keys(preview[0] || {});
-      const iN = cols.nombre, iNi = cols.nit, iT = cols.telefono, iE = cols.email, iD = cols.direccion, iC = cols.contacto, iNo = cols.notas;
+      const c = iCols.current;
       let ok = 0, err = 0;
-      const archivoTexto = await archivo.text().catch(() => "");
-      const lineas = archivoTexto.split(/\r?\n/).filter(l => l.trim());
-      const datos = lineas.slice(1);
-      for (const linea of datos) {
-        const vals = []; let cur = "", inQ = false;
-        for (const ch of linea) {
-          if (ch === '"') { inQ = !inQ; continue; }
-          if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
-          cur += ch;
-        }
-        vals.push(cur.trim());
-        const nombre = vals[iN] || "";
+      for (const vals of parsedRows) {
+        const nombre = vals[c.nombre] || "";
         if (!nombre) { err++; continue; }
         const r = await dbIns("clientes", {
           codigo: genCodigo(), nombre, empresa_id: empId,
-          nit: vals[iNi] || "", telefono: vals[iT] || "",
-          email: vals[iE] || "", direccion: vals[iD] || "",
-          contacto: vals[iC] || "", notas: vals[iNo] || "", tipo: "empresa",
+          nit: vals[c.nit] || "", telefono: vals[c.telefono] || "",
+          email: vals[c.email] || "", direccion: vals[c.direccion] || "",
+          contacto: vals[c.contacto] || "", notas: vals[c.notas] || "", tipo: "empresa",
         });
         if (r?.error) { err++; continue; }
         ok++;
@@ -225,8 +217,8 @@ export default function PageClientes({ showToast, empId }) {
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={importar} disabled={procesando || preview.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
-              {procesando ? "Importando..." : `Importar ${preview.length} registros`}
+            <button onClick={importar} disabled={procesando || parsedRows.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
+              {procesando ? "Importando..." : `Importar ${parsedRows.length} registros`}
             </button>
             <button onClick={onClose} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
           </div>
