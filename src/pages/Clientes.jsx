@@ -181,6 +181,14 @@ export default function PageClientes({ showToast, empId }) {
       });
     };
 
+    const decode = (buf) => {
+      let text = new TextDecoder("utf-8").decode(buf);
+      if (text.includes("\uFFFD")) {
+        try { text = new TextDecoder("windows-1252").decode(buf); } catch {}
+      }
+      return text;
+    };
+
     const handleFile = async (file) => {
       setArchivo(file);
       setResultado(null);
@@ -192,10 +200,9 @@ export default function PageClientes({ showToast, empId }) {
       try {
         const ext = file.name.split(".").pop().toLowerCase();
         const buf = await file.arrayBuffer();
-        const dec = new TextDecoder("utf-8");
         let allRows;
         if (ext === "csv") {
-          allRows = leerCSV(dec.decode(buf));
+          allRows = leerCSV(decode(buf));
         } else if (ext === "xlsx") {
           await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
           allRows = await leerXLSX(buf);
