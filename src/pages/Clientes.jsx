@@ -11,6 +11,7 @@ export default function PageClientes({ showToast, empId }) {
   const [allCodes, setAllCodes] = useState([]);
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [f, setF] = useState({
     codigo: "", nombre: "", tipo: "empresa", nit: "",
     direccion: "", telefono: "", email: "", contacto: "", notas: ""
@@ -70,6 +71,27 @@ export default function PageClientes({ showToast, empId }) {
     if (!confirm("Eliminar cliente?")) return;
     await dbDel("clientes", id); showToast("Eliminado"); reload();
   };
+
+  const delSelected = async () => {
+    const n = selectedIds.size;
+    if (n === 0) return;
+    if (!confirm(`Eliminar ${n} cliente${n > 1 ? "s" : ""} seleccionado${n > 1 ? "s" : ""}?`)) return;
+    let ok = 0, errs = 0;
+    for (const id of selectedIds) {
+      const r = await dbDel("clientes", id);
+      if (r?.error) { errs++; continue; }
+      ok++;
+    }
+    showToast(`${ok} eliminado${ok !== 1 ? "s" : ""}, ${errs} error${errs !== 1 ? "es" : ""}`);
+    setSelectedIds(new Set());
+    reload();
+  };
+
+  const toggleSel = id => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const cargarScript = (url) => new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${url}"]`)) { resolve(); return; }
@@ -168,19 +190,28 @@ export default function PageClientes({ showToast, empId }) {
       if (!archivo || parsedRows.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
       setProcesando(true);
       const c = iCols.current;
-      let ok = 0, err = 0;
+      let maxCode = 0;
+      allCodes.forEach(r => {
+        const m = (r.codigo || "").match(/^(\d+)/);
+        if (m) { const n = parseInt(m[1]); if (n > maxCode) maxCode = n; }
+      });
+      let ok = 0, err = 0, imported = [];
       for (const vals of parsedRows) {
         const nombre = vals[c.nombre] || "";
         if (!nombre) { err++; continue; }
+        maxCode++;
+        const codigo = String(maxCode).padStart(3, "0") + "C";
         const r = await dbIns("clientes", {
-          codigo: genCodigo(), nombre, empresa_id: empId,
+          codigo, nombre, empresa_id: empId,
           nit: vals[c.nit] || "", telefono: vals[c.telefono] || "",
           email: vals[c.email] || "", direccion: vals[c.direccion] || "",
           contacto: vals[c.contacto] || "", notas: vals[c.notas] || "", tipo: "empresa",
         });
         if (r?.error) { err++; continue; }
         ok++;
+        imported.push({ codigo });
       }
+      setAllCodes(prev => [...prev, ...imported]);
       setResultado({ ok, err });
       showToast(`Importacion completada: ${ok} exitosos, ${err} omitidos`);
       setProcesando(false);
@@ -346,6 +377,14 @@ export default function PageClientes({ showToast, empId }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
+                  <th style={{ ...S.th, width: 32, textAlign: "center" }}>
+                    <input type="checkbox" style={{ cursor: "pointer" }}
+                      checked={rows.length > 0 && rows.every(r => selectedIds.has(r.id))}
+                      onChange={() => {
+                        if (rows.every(r => selectedIds.has(r.id))) setSelectedIds(new Set());
+                        else setSelectedIds(new Set(rows.map(r => r.id)));
+                      }} />
+                  </th>
                   {["Codigo", "Cliente", "Tipo", "NIT", "Telefono", "Email", ""].map(h => (
                     <th key={h} style={S.th}>{h}</th>
                   ))}
@@ -359,10 +398,16 @@ export default function PageClientes({ showToast, empId }) {
                   return a.codigo.localeCompare(b.codigo);
                 }).map(c => {
                   const tc = TC[c.tipo] || TC.empresa;
+                  const sel = selectedIds.has(c.id);
                   return (
                     <tr key={c.id}
-                      onMouseEnter={e => e.currentTarget.style.background = T.surf}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      style={{ background: sel ? T.accDim : "transparent" }}
+                      onMouseEnter={e => { if (!sel) e.currentTarget.style.background = T.surf; }}
+                      onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
+                      <td style={{ ...S.td, textAlign: "center" }}>
+                        <input type="checkbox" checked={sel}
+                          onChange={() => toggleSel(c.id)} style={{ cursor: "pointer" }} />
+                      </td>
                       <td style={{ ...S.td, fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 12 }}>
                         {c.codigo || "—"}
                       </td>
@@ -394,6 +439,13 @@ export default function PageClientes({ showToast, empId }) {
               </tbody>
             </table>
           </div>
+          {selectedIds.size > 0 && (
+            <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: T.sub }}>{selectedIds.size} seleccionado{selectedIds.size > 1 ? "s" : ""}</span>
+              <button onClick={delSelected} style={{ ...S.btn("danger"), fontSize: 12 }}>Eliminar seleccionados</button>
+              <button onClick={() => setSelectedIds(new Set())} style={{ ...S.btn("ghost"), fontSize: 12 }}>Limpiar</button>
+            </div>
+          )}
           <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta}
             pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
         </>
