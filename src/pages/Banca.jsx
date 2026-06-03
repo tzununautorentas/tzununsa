@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 export default function PageBanca({ showToast, empId }) {
   const [cuentas,    setCuentas]    = useState([]);
-  const [movs,       setMovs]       = useState([]);
   const [cuentaAct,  setCuentaAct]  = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [showForm,   setShowForm]   = useState(false);
@@ -34,14 +34,16 @@ export default function PageBanca({ showToast, empId }) {
     setLoading(false);
   };
 
-  const loadMovs = async (cid) => {
-    if (!cid) return;
-    const m = await dbGet("movimientos_bancarios", `&cuenta_id=eq.${cid}&order=fecha.desc`);
-    setMovs(Array.isArray(m) ? m : []);
-  };
+  const queryMovs = cuentaAct ? 'cuenta_id=eq.'+cuentaAct.id : '';
+  const { data: movs, loading: loadingMovs, total: totalMovs, page: pageMovs, totalPages: totalPagesMovs, pageSize: pageSizeMovs, setPage: setPageMovs, setPageSize: setPageSizeMovs, reload: reloadMovs, desde: desdeMovs, hasta: hastaMovs } = usePaginacion({
+    table: 'movimientos_bancarios',
+    query: queryMovs,
+    search: busqueda,
+    columns: ['concepto', 'referencia', 'descripcion'],
+    order: 'fecha.desc',
+  });
 
   useEffect(() => { loadCuentas(); }, []);
-  useEffect(() => { if (cuentaAct) loadMovs(cuentaAct.id); }, [cuentaAct?.id]);
 
   const guardarCuenta = async () => {
     if (!fc.banco.trim()) { showToast("Nombre del banco requerido", "err"); return; }
@@ -71,12 +73,12 @@ export default function PageBanca({ showToast, empId }) {
     setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
     setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
     showToast("Guardado"); setSaving(false); setShowForm(false);
-    setF({ ...EFM }); loadMovs(cuentaAct.id);
+    setF({ ...EFM }); reloadMovs();
   };
 
   const conciliar = async (id, val) => {
     await dbUpd("movimientos_bancarios", id, { conciliado: val });
-    loadMovs(cuentaAct.id);
+    reloadMovs();
   };
 
   const delMov = async id => {
@@ -89,14 +91,13 @@ export default function PageBanca({ showToast, empId }) {
       setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
     }
     await dbDel("movimientos_bancarios", id);
-    showToast("Eliminado"); loadMovs(cuentaAct.id);
+    showToast("Eliminado"); reloadMovs();
   };
 
   const movsFil = movs.filter(m => {
     if (filtroT !== "todos" && m.tipo !== filtroT) return false;
     if (filtroC === "conciliado" && !m.conciliado) return false;
     if (filtroC === "pendiente"  &&  m.conciliado) return false;
-    if (busqueda && !m.descripcion?.toLowerCase().includes(busqueda.toLowerCase()) && !m.referencia?.toLowerCase().includes(busqueda.toLowerCase())) return false;
     return true;
   });
 
@@ -261,8 +262,7 @@ export default function PageBanca({ showToast, empId }) {
                     {t === "todos" ? "Todos" : t === "conciliado" ? "Conciliados" : "Pendientes"}
                   </button>
                 ))}
-                <input style={{ ...S.inp, width: 180, fontSize: 11, padding: "5px 10px" }}
-                  placeholder="Buscar..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+                <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar en movimientos..." />
               </div>
 
               {movsFil.length === 0 ? (
@@ -328,6 +328,11 @@ export default function PageBanca({ showToast, empId }) {
                     </tfoot>
                   </table>
                 </div>
+              )}
+              {movsFil.length > 0 && (
+                <Paginador page={pageMovs} totalPages={totalPagesMovs} total={totalMovs}
+                  desde={desdeMovs} hasta={hastaMovs} pageSize={pageSizeMovs}
+                  onPage={setPageMovs} onPageSize={setPageSizeMovs} />
               )}
             </>
           ) : (

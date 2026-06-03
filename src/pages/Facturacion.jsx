@@ -5,7 +5,8 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar, BuscadorCliente } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
 // ─── API directa con manejo de errores explícito ──────────────────
@@ -122,8 +123,6 @@ const imprimirFactura = (r) => {
 // COMPONENTE PRINCIPAL
 // ════════════════════════════════════════════════════════════════════
 export default function PageFacturacion({ showToast, empId }) {
-  const [rows,     setRows]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
   const [vista,    setVista]    = useState('lista');
   const [editItem, setEditItem] = useState(null);
   const [saving,   setSaving]   = useState(false);
@@ -133,22 +132,14 @@ export default function PageFacturacion({ showToast, empId }) {
   const [showSAT,  setShowSAT]  = useState(false);
   const [f,        setF]        = useState({ ...EF });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
-
-  // ─── Carga de datos ────────────────────────────────────────────
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const d = await apiFetch('/facturas?order=fecha.desc,created_at.desc&select=*');
-      setRows(Array.isArray(d) ? d : []);
-    } catch (e) {
-      showToast('Error cargando facturas: ' + e.message, 'err');
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const queryFact = filtro !== 'todos' ? 'estado=eq.'+filtro : '';
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload, desde, hasta } = usePaginacion({
+    table: 'facturas',
+    query: queryFact,
+    search: busqueda,
+    columns: ['numero', 'nombre_receptor', 'nit_receptor'],
+    order: 'created_at.desc',
+  });
 
   // ─── Calcular IVA y total ──────────────────────────────────────
   const calcular = (sub, tasaIva) => {
@@ -243,7 +234,7 @@ export default function PageFacturacion({ showToast, empId }) {
 
       setVista('lista');
       setEditItem(null);
-      load();
+      reload();
     } catch (e) {
       showToast('Error al guardar: ' + e.message, 'err');
     } finally {
@@ -257,7 +248,7 @@ export default function PageFacturacion({ showToast, empId }) {
     try {
       await apiFetch(`/facturas?id=eq.${id}`, { method: 'DELETE' });
       showToast('Factura eliminada');
-      load();
+      reload();
     } catch (e) {
       showToast('Error al eliminar: ' + e.message, 'err');
     }
@@ -271,19 +262,11 @@ export default function PageFacturacion({ showToast, empId }) {
         body: JSON.stringify({ estado }),
       });
       showToast('Estado actualizado');
-      load();
+      reload();
     } catch (e) {
       showToast('Error: ' + e.message, 'err');
     }
   };
-
-  // ─── Filtrado ─────────────────────────────────────────────────
-  const filtrados = rows.filter(r => {
-    if (filtro !== 'todos' && r.estado !== filtro) return false;
-    if (busqueda && !r.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !r.numero_factura?.toLowerCase().includes(busqueda.toLowerCase())) return false;
-    return true;
-  });
 
   const totales = {
     facturado:  rows.filter(r => r.estado !== 'anulada').reduce((s, r) => s + (parseFloat(r.total) || 0), 0),
@@ -465,7 +448,7 @@ export default function PageFacturacion({ showToast, empId }) {
     <div>
       {/* Modal exportar */}
       {exportar && (
-        <ModalExportar titulo="Facturas FEL" datos={filtrados}
+        <ModalExportar titulo="Facturas FEL" datos={rows}
           campos={[
             { label: 'No. Factura',  key: 'numero_factura' },
             { label: 'Serie',        key: 'serie'          },
@@ -484,7 +467,7 @@ export default function PageFacturacion({ showToast, empId }) {
       {/* Modal importador SAT */}
       {showSAT && (
         <ImportadorSAT tipo="ventas" empId={empId} showToast={showToast}
-          onClose={() => setShowSAT(false)} onImportado={load} />
+          onClose={() => setShowSAT(false)} onImportado={reload} />
       )}
 
       {/* KPIs */}
@@ -493,7 +476,7 @@ export default function PageFacturacion({ showToast, empId }) {
           { l: 'Total facturado',  v: `Q ${fmt(totales.facturado)}`,  c: T.acc,   bg: T.accDim  },
           { l: 'Total cobrado',    v: `Q ${fmt(totales.cobrado)}`,    c: T.green, bg: T.greenDim },
           { l: 'Por cobrar',       v: `Q ${fmt(totales.pendiente)}`,  c: T.sec,   bg: T.secDim  },
-          { l: 'Facturas totales', v: rows.length,                    c: T.blue,  bg: T.blueDim },
+          { l: 'Facturas totales', v: total,                    c: T.blue,  bg: T.blueDim },
         ].map((s, i) => (
           <div key={i} style={{ background: s.bg, border: `1px solid ${s.c}44`, borderRadius: 12, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, color: T.mut }}>{s.l}</div>
@@ -514,9 +497,7 @@ export default function PageFacturacion({ showToast, empId }) {
 
       {/* Barra de acciones */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input style={{ ...S.inp, flex: 1, minWidth: 200 }}
-          placeholder="Buscar por cliente o numero de factura..."
-          value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por cliente o numero de factura..." />
         <button onClick={() => setShowSAT(true)}
           style={{ ...S.btn('blue'), fontSize: 11, whiteSpace: 'nowrap' }}>
           Importar SAT
@@ -532,8 +513,8 @@ export default function PageFacturacion({ showToast, empId }) {
       </div>
 
       {/* Tabla */}
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
-        <Empty icon="F" msg={rows.length === 0 ? 'Sin facturas registradas' : 'Sin resultados'}
+      {loading ? <Spinner /> : rows.length === 0 ? (
+        <Empty icon="F" msg={total === 0 ? 'Sin facturas registradas' : 'Sin resultados'}
           action="+ Nueva factura" onAction={abrirNuevo} />
       ) : (
         <div style={S.card}>
@@ -546,7 +527,7 @@ export default function PageFacturacion({ showToast, empId }) {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(r => {
+              {rows.map(r => {
                 const est = ESTADOS[r.estado] || ESTADOS.borrador;
                 return (
                   <tr key={r.id}
@@ -621,10 +602,10 @@ export default function PageFacturacion({ showToast, empId }) {
             <tfoot>
               <tr style={{ background: T.surf }}>
                 <td colSpan={4} style={{ padding: '9px 10px', fontSize: 11, fontWeight: 700, color: T.mut }}>
-                  {filtrados.length} facturas
+                  {rows.length} facturas
                 </td>
                 <td style={{ padding: '9px 10px', fontWeight: 800, color: T.acc, fontSize: 14 }}>
-                  Q {fmt(filtrados.reduce((s, r) => s + (parseFloat(r.total) || 0), 0))}
+                  Q {fmt(rows.reduce((s, r) => s + (parseFloat(r.total) || 0), 0))}
                 </td>
                 <td colSpan={3} />
               </tr>
@@ -632,6 +613,8 @@ export default function PageFacturacion({ showToast, empId }) {
           </table>
         </div>
       )}
+      <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta}
+        pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
     </div>
   );
 }

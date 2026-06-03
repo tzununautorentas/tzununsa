@@ -1,7 +1,8 @@
 // src/pages/Cotizaciones.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO } from '../config.js';
-import { Spinner, Empty, Fld, Badge, ModalExportar } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── Autocomplete local ───────────────────────────────────────────────────────
 function ClienteAC({ value, onChange, onSelect, clientes }) {
@@ -82,7 +83,7 @@ td{padding:4px 7px;border-bottom:1px solid #F1F5F9;font-size:9.5px}.amt{text-ali
 .tc{display:flex;justify-content:space-between;font-size:10px;color:#F59E0B;font-weight:600;margin-top:3px}
 .bk{font-size:9.5px}.bn{font-weight:700;color:#00D4AA;display:block;margin-bottom:1px;margin-top:8px}
 .tl li{font-size:9px;color:#475569;padding:2px 0 2px 12px;position:relative}
-.tl li::before{content:"•";position:absolute;left:0;color:#00D4AA}
+.tl li::before{content:"\2022";position:absolute;left:0;color:#00D4AA}
 .ft{margin-top:14px;border-top:2px solid #E2E8F0;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end}
 .fb{background:#1B2D5C;color:#94A3B8;font-size:7.5px;text-align:center;padding:7px;margin-top:12px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
@@ -122,7 +123,7 @@ td{padding:4px 7px;border-bottom:1px solid #F1F5F9;font-size:9.5px}.amt{text-ali
         <li>Higienizacion del vehiculo incluida.</li>
         <li>Se requiere copia de DPI del responsable.</li>
         <li>Anticipo del 75% para confirmar el servicio.</li>
-        <li>${d.incl_piloto ? "Combustible incluido segun recorrido." : "Vehiculo con tanque lleno — devolver lleno."}</li>
+        <li>${d.incl_piloto ? "Combustible incluido segun recorrido." : "Vehiculo con tanque lleno \u2014 devolver lleno."}</li>
         <li>Vehiculo debe devolverse limpio (recargo Q 75.00).</li>
         <li>Saldo se cancela al finalizar el servicio.</li>
       </ul>
@@ -133,7 +134,7 @@ td{padding:4px 7px;border-bottom:1px solid #F1F5F9;font-size:9.5px}.amt{text-ali
     <div style="font-size:10px;font-style:italic;color:#1B2D5C;font-weight:600;text-align:right">Muchas gracias por su preferencia.<br/>Quedamos a la espera de su aprobacion.</div>
   </div>
 </div>
-<div class="fb">TZ'UNUN AUTORENTAS — 502-31221538 | tzununautorentas@gmail.com | Guatemala</div>
+<div class="fb">TZ'UNUN AUTORENTAS \u2014 502-31221538 | tzununautorentas@gmail.com | Guatemala</div>
 <script>window.onload=()=>window.print();</script></body></html>`;
   const w = window.open("", "_blank");
   if (!w) { alert("Permite ventanas emergentes para generar el PDF."); return; }
@@ -445,24 +446,25 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function PageCotizaciones({ showToast, empId }) {
-  const [rows, setRows] = useState([]);
   const [clientes, setClientes] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [vista, setVista] = useState("lista");
   const [editItem, setEditItem] = useState(null);
   const [filtro, setFiltro] = useState("todas");
+  const [busqueda, setBusqueda] = useState('');
   const [exportar, setExportar] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    const d = await dbGet("cotizaciones");
-    setRows(Array.isArray(d) ? d : []);
-    setLoading(false);
-  };
+  const query = filtro === 'todas' ? '' : (filtro === 'orden_venta' ? 'orden_venta=eq.true' : 'estado=eq.'+filtro);
+
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+    table: 'cotizaciones',
+    query,
+    search: busqueda,
+    columns: ['numero', 'cliente_nombre'],
+    order: 'created_at.desc',
+  });
 
   useEffect(() => {
     dbGet("clientes", "&order=codigo.asc,nombre.asc").then(d => setClientes(Array.isArray(d) ? d : []));
-    load();
   }, []);
 
   const del = async id => {
@@ -493,7 +495,6 @@ export default function PageCotizaciones({ showToast, empId }) {
       conductor_nombre: "",
       fecha_inicio: cot.fecha_inicio || null,
       fecha_fin: cot.fecha_fin || null,
-      // Finanzas heredadas de la cotizacion
       dias: parseInt(cot.dias) || 0,
       tarifa: parseFloat(cot.precio_personalizado) || parseFloat(cot.costo_vehiculo) || 0,
       subtotal: parseFloat(cot.subtotal) || 0,
@@ -520,8 +521,6 @@ export default function PageCotizaciones({ showToast, empId }) {
     orden_venta: { c: T.purple, bg: T.purpleDim, l: "Orden de Venta" },
   };
 
-  const filtered = filtro === "todas" ? rows : rows.filter(r => r.estado === filtro || (filtro === "orden_venta" && r.orden_venta));
-
   if (vista === "form") return (
     <FormCotizacion initial={editItem} empId={empId} clientes={clientes} showToast={showToast}
       onSave={() => { showToast("Guardada"); setEditItem(null); setVista("lista"); load(); }}
@@ -537,7 +536,7 @@ export default function PageCotizaciones({ showToast, empId }) {
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 }}>
-        {[{ l: "Total", v: rows.length, c: T.acc }, { l: "Enviadas", v: rows.filter(r => r.estado === "enviada").length, c: T.blue }, { l: "Aprobadas", v: rows.filter(r => r.estado === "aprobada").length, c: T.acc }, { l: "Ordenes", v: rows.filter(r => r.orden_venta).length, c: T.purple }].map((s, i) => (
+        {[{ l: "Total", v: total, c: T.acc }, { l: "Enviadas", v: rows.filter(r => r.estado === "enviada").length, c: T.blue }, { l: "Aprobadas", v: rows.filter(r => r.estado === "aprobada").length, c: T.acc }, { l: "Ordenes", v: rows.filter(r => r.orden_venta).length, c: T.purple }].map((s, i) => (
           <div key={i} style={{ background: T.surf, borderRadius: 10, padding: 14, textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.c }}>{s.v}</div>
             <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{s.l}</div>
@@ -551,14 +550,15 @@ export default function PageCotizaciones({ showToast, empId }) {
             {fi === "orden_venta" ? "Ordenes" : fi.charAt(0).toUpperCase() + fi.slice(1)}
           </button>
         ))}
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar cotización..." />
         <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 11, marginLeft: "auto" }}>Actualizar</button>
         <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>Exportar</button>
         <button onClick={() => { setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize: 12 }}>+ Nueva</button>
       </div>
 
-      {loading ? <Spinner /> : filtered.length === 0 ? <Empty icon="Q" msg="Sin cotizaciones" /> : (
+      {loading ? <Spinner /> : rows.length === 0 ? <Empty icon="Q" msg="Sin cotizaciones" /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.map(r => {
+          {rows.map(r => {
             const e = r.orden_venta ? EC.orden_venta : (EC[r.estado] || EC.borrador);
             const total = parseFloat(r.total_gtq) || 0;
             return (
@@ -591,6 +591,9 @@ export default function PageCotizaciones({ showToast, empId }) {
             );
           })}
         </div>
+      )}
+      {rows.length > 0 && (
+        <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       )}
     </div>
   );

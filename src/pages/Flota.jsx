@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, EST_VEH } from '../config.js';
-import { Spinner, Empty, Fld } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 export default function PageFlota({ showToast, empId }) {
-  const [rows, setRows]       = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState("");
   const [vista, setVista]     = useState("lista");
   const [editItem, setEditItem] = useState(null);
   const [saving, setSaving]   = useState(false);
@@ -16,23 +16,13 @@ export default function PageFlota({ showToast, empId }) {
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const TIPOS = ["Sedan", "SUV", "Pickup", "Van", "Microbus", "Bus"];
 
-  const load = async () => {
-    setLoading(true);
-    const d = await dbGet("vehiculos", "");
-    const arr = Array.isArray(d) ? d : [];
-    const PRIO = { propio: 0, socio: 1, alquilado: 2 };
-    arr.sort((a, b) => {
-      const pa = PRIO[a.propietario] ?? 9;
-      const pb = PRIO[b.propietario] ?? 9;
-      if (pa !== pb) return pa - pb;
-      const ca = (a.codigo || "").match(/\d+/)?.[0] || "999999";
-      const cb = (b.codigo || "").match(/\d+/)?.[0] || "999999";
-      return parseInt(ca) - parseInt(cb);
-    });
-    setRows(arr);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+    table: "vehiculos",
+    query: "",
+    search: busqueda,
+    columns: ['marca', 'modelo', 'placa'],
+    order: 'codigo.asc',
+  });
 
   const SFX = { propio: "P", socio: "A", alquilado: "R" };
 
@@ -200,8 +190,9 @@ export default function PageFlota({ showToast, empId }) {
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.txt }}>Flota ({rows.length} vehiculos)</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: T.txt }}>Flota ({total} vehiculos)</div>
         <div style={{ display: "flex", gap: 8 }}>
+          <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por marca, modelo, placa..." />
           <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 12 }}>Actualizar</button>
           <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize: 12 }}>+ Registrar vehiculo</button>
         </div>
@@ -274,6 +265,8 @@ export default function PageFlota({ showToast, empId }) {
           </table>
         </div>
       )}
+
+      <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
     </div>
   );
 }

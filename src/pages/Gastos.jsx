@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CAT_GASTO } from '../config.js';
-import { Spinner, Empty, Fld, CatBadge } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, CatBadge, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
 // ─── Estados del gasto ────────────────────────────────────────────
@@ -659,8 +660,6 @@ const exportarExcel = (rows) => {
 // MODULO PRINCIPAL DE GASTOS
 // ═══════════════════════════════════════════════════════════════════
 function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedores }) {
-  const [rows,      setRows]      = useState([]);
-  const [loading,   setLoading]   = useState(true);
   const [vista,     setVista]     = useState('lista');
   const [editItem,  setEditItem]  = useState(null);
   const [panelItem, setPanelItem] = useState(null);
@@ -668,16 +667,22 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
   const [filtroEmp, setFiltroEmp] = useState('');
   const [filtroCat, setFiltroCat] = useState('todas');
   const [filtroPer, setFiltroPer] = useState('');
+  const [busqueda,  setBusqueda]  = useState('');
   const [showSAT,   setShowSAT]   = useState(false);
   const [userName] = useState(() => { try { return JSON.parse(localStorage.getItem('tzunun_session'))?.user?.email?.split('@')[0] || 'Usuario'; } catch { return 'Usuario'; } });
 
-  const load = async () => {
-    setLoading(true);
-    const d = await dbGet('gastos');
-    setRows(Array.isArray(d) ? d : []);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const queryParts = [];
+  if (filtroEst !== 'todos') queryParts.push('estado=eq.'+filtroEst);
+  if (filtroCat !== 'todas') queryParts.push('categoria=eq.'+filtroCat);
+  const query = queryParts.join('&');
+
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+    table: 'gastos',
+    query,
+    search: busqueda,
+    columns: ['concepto', 'descripcion', 'proveedor_nombre', 'numero_dte'],
+    order: 'fecha.desc',
+  });
 
   // ── Flujo de aprobaciones ──
   const cambiarEstado = async (gasto, nuevoEstado) => {
@@ -755,9 +760,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
 
   // ── Filtros ──
   const filtered = rows.filter(r => {
-    if (filtroEst !== 'todos' && r.estado !== filtroEst) return false;
     if (filtroEmp && r.empleado_nombre !== filtroEmp) return false;
-    if (filtroCat !== 'todas' && r.categoria !== filtroCat) return false;
     if (filtroPer && !(r.fecha || '').startsWith(filtroPer)) return false;
     return true;
   });
@@ -807,6 +810,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar gasto..." />
         <select style={{ ...S.sel, width: 'auto', fontSize: 11, padding: '5px 10px' }} value={filtroCat} onChange={e => setFiltroCat(e.target.value)}>
           <option value="todas">Todas las categorias</option>
           {CAT_GASTO.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
@@ -885,6 +889,9 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
             </tfoot>
           </table>
         </div>
+      )}
+      {rows.length > 0 && (
+        <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       )}
 
       {panelItem && (

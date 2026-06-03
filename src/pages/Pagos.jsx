@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 const METODOS = ["efectivo","transferencia","deposito","tarjeta","cheque"];
 const MC = { efectivo:T.acc, transferencia:T.blue, deposito:T.green, tarjeta:T.purple, cheque:T.sec };
@@ -12,37 +13,43 @@ const EF = {
 };
 
 export default function PagePagos({ showToast, empId }) {
-  const [rows,     setRows]     = useState([]);
   const [reservas, setReservas] = useState([]);
   const [facturas, setFacturas] = useState([]);
   const [cots,     setCots]     = useState([]);
   const [cuentas,  setCuentas]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId,   setEditId]   = useState(null);
   const [saving,   setSaving]   = useState(false);
   const [exportar, setExportar] = useState(false);
   const [filtroM,  setFiltroM]  = useState("todos");
+  const [busqueda, setBusqueda] = useState('');
   const [f, setF] = useState({...EF});
   const sf = (k,v) => setF(p=>({...p,[k]:v}));
 
-  const load = async () => {
-    setLoading(true);
-    const [p,r,fa,co,cu] = await Promise.all([
-      dbGet("pagos_recibidos"),
-      dbGet("reservas","&estado=in.(confirmada,en_curso,completada)&select=id,numero,cliente_nombre,monto"),
-      dbGet("facturas","&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente"),
-      dbGet("cotizaciones","&estado=in.(aprobada,orden_venta)&select=id,numero,cliente_nombre,total_gtq"),
-      dbGet("cuentas_bancarias"),
-    ]);
-    setRows(Array.isArray(p)?p:[]);
-    setReservas(Array.isArray(r)?r:[]);
-    setFacturas(Array.isArray(fa)?fa:[]);
-    setCots(Array.isArray(co)?co:[]);
-    setCuentas(Array.isArray(cu)?cu:[]);
-    setLoading(false);
-  };
-  useEffect(()=>{load();},[]);
+  const query = filtroM && filtroM !== 'todos' ? 'metodo=eq.'+filtroM : '';
+
+  const pag = usePaginacion({
+    table: 'pagos_recibidos',
+    query,
+    search: busqueda,
+    columns: ['numero', 'cliente_nombre', 'concepto', 'referencia'],
+    order: 'fecha.desc',
+  });
+
+  useEffect(() => {
+    (async () => {
+      const [r,fa,co,cu] = await Promise.all([
+        dbGet("reservas","&estado=in.(confirmada,en_curso,completada)&select=id,numero,cliente_nombre,monto"),
+        dbGet("facturas","&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente"),
+        dbGet("cotizaciones","&estado=in.(aprobada,orden_venta)&select=id,numero,cliente_nombre,total_gtq"),
+        dbGet("cuentas_bancarias"),
+      ]);
+      setReservas(Array.isArray(r)?r:[]);
+      setFacturas(Array.isArray(fa)?fa:[]);
+      setCots(Array.isArray(co)?co:[]);
+      setCuentas(Array.isArray(cu)?cu:[]);
+    })();
+  }, []);
 
   // Auto-seleccionar Banrural cuando el método es tarjeta
   const onMetodo = (v) => {
@@ -117,7 +124,7 @@ export default function PagePagos({ showToast, empId }) {
       }
     }
     showToast(editId?"Pago actualizado":"Pago registrado — movimiento creado en Banca");
-    setSaving(false); setShowForm(false); setEditId(null); setF({...EF}); load();
+    setSaving(false); setShowForm(false); setEditId(null); setF({...EF}); pag.reload();
   };
 
   const abrirEditar = r => {
@@ -127,17 +134,16 @@ export default function PagePagos({ showToast, empId }) {
   };
   const del = async id => {
     if(!confirm("Eliminar este pago?"))return;
-    await dbDel("pagos_recibidos",id); showToast("Eliminado"); load();
+    await dbDel("pagos_recibidos",id); showToast("Eliminado"); pag.reload();
   };
 
-  const filtered = filtroM==="todos" ? rows : rows.filter(r=>r.metodo===filtroM);
-  const totalGral = rows.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
-  const totalMes  = rows.filter(r=>(r.fecha||"").slice(0,7)===today().slice(0,7)).reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
-  const porM = METODOS.map(m=>({m,t:rows.filter(r=>r.metodo===m).reduce((s,r)=>s+(parseFloat(r.monto)||0),0)})).filter(x=>x.t>0);
+  const totalGral = pag.data.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+  const totalMes  = pag.data.filter(r=>(r.fecha||"").slice(0,7)===today().slice(0,7)).reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
+  const porM = METODOS.map(m=>({m,t:pag.data.filter(r=>r.metodo===m).reduce((s,r)=>s+(parseFloat(r.monto)||0),0)})).filter(x=>x.t>0);
 
   return (
     <div>
-      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={rows}
+      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={pag.data}
         campos={[{label:"Fecha",key:"fecha"},{label:"Cliente",key:"cliente_nombre"},{label:"Concepto",key:"concepto"},{label:"Monto",key:"monto"},{label:"Metodo",key:"metodo"},{label:"Referencia",key:"referencia"}]}
         onClose={()=>setExportar(false)}/>}
 
@@ -146,7 +152,7 @@ export default function PagePagos({ showToast, empId }) {
         {[
           {l:"Total recibido",v:`Q ${fmt(totalGral)}`,c:T.acc,bg:T.accDim},
           {l:"Este mes",      v:`Q ${fmt(totalMes)}`, c:T.blue,bg:T.blueDim},
-          {l:"Registros",    v:rows.length,           c:T.purple,bg:T.purpleDim},
+          {l:"Registros",    v:pag.total,           c:T.purple,bg:T.purpleDim},
         ].map((s,i)=>(
           <div key={i} style={{background:s.bg,border:`1px solid ${s.c}44`,borderRadius:12,padding:"14px 18px"}}>
             <div style={{fontSize:11,color:T.mut}}>{s.l}</div>
@@ -164,7 +170,8 @@ export default function PagePagos({ showToast, empId }) {
                 {m==="todos"?"Todos":m.charAt(0).toUpperCase()+m.slice(1)}
               </button>
             ))}
-            <button onClick={load} style={{...S.btn("ghost"),fontSize:11}}>Actualizar</button>
+            <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar pago..." />
+            <button onClick={pag.reload} style={{...S.btn("ghost"),fontSize:11}}>Actualizar</button>
             <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>Exportar</button>
             <button onClick={()=>{if(showForm&&!editId){setShowForm(false);}else{setEditId(null);setF({...EF});setShowForm(true);}}}
               style={{...S.btn(showForm&&!editId?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>
@@ -265,14 +272,14 @@ export default function PagePagos({ showToast, empId }) {
           )}
 
           {/* Lista */}
-          {loading?<Spinner/>:filtered.length===0?(
+          {pag.loading?<Spinner/>:pag.data.length===0?(
             <Empty icon="P" msg="Sin pagos registrados" action="+ Registrar primer pago" onAction={()=>{setEditId(null);setF({...EF});setShowForm(true);}}/>
           ):(
             <div style={S.card}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr>{["Fecha","Cliente","Concepto","Metodo","Cuenta","Monto",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {filtered.map(r=>{
+                  {pag.data.map(r=>{
                     const cuenta = cuentas.find(c=>c.id===r.cuenta_bancaria_id);
                     const c = MC[r.metodo]||T.mut;
                     return (
@@ -305,12 +312,15 @@ export default function PagePagos({ showToast, empId }) {
                 <tfoot>
                   <tr style={{background:T.surf}}>
                     <td colSpan={5} style={{padding:"9px 10px",fontSize:12,fontWeight:700,color:T.sub}}>TOTAL</td>
-                    <td style={{padding:"9px 10px",fontWeight:800,color:T.acc,fontSize:14}}>Q {fmt(filtered.reduce((s,r)=>s+(parseFloat(r.monto)||0),0))}</td>
+                    <td style={{padding:"9px 10px",fontWeight:800,color:T.acc,fontSize:14}}>Q {fmt(pag.data.reduce((s,r)=>s+(parseFloat(r.monto)||0),0))}</td>
                     <td/>
                   </tr>
                 </tfoot>
               </table>
             </div>
+          )}
+          {pag.data.length > 0 && (
+            <Paginador page={pag.page} totalPages={pag.totalPages} total={pag.total} desde={pag.desde} hasta={pag.hasta} pageSize={pag.pageSize} onPage={pag.setPage} onPageSize={pag.setPageSize} />
           )}
         </div>
 
@@ -349,7 +359,7 @@ export default function PagePagos({ showToast, empId }) {
           <div style={S.card}>
             <div style={{fontSize:11,fontWeight:700,color:T.mut,marginBottom:8}}>ESTE MES</div>
             <div style={{fontSize:22,fontWeight:800,color:T.acc}}>Q {fmt(totalMes)}</div>
-            <div style={{fontSize:11,color:T.sub,marginTop:4}}>{rows.filter(r=>(r.fecha||"").slice(0,7)===today().slice(0,7)).length} pagos</div>
+            <div style={{fontSize:11,color:T.sub,marginTop:4}}>{pag.data.filter(r=>(r.fecha||"").slice(0,7)===today().slice(0,7)).length} pagos</div>
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 // src/pages/Reservas.jsx
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, GT, EST_RES, FLUJO_RES } from '../config.js';
-import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── Google Calendar (fecha corregida) ───────────────────────────
 const toGCal = (dateStr, hora = "080000") => {
@@ -263,21 +264,21 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
 
 // ─── Pagina principal ─────────────────────────────────────────────
 export default function PageReservas({ showToast, empId }) {
-  const [rows, setRows]         = useState([]);
-  const [loading, setLoading]   = useState(true);
   const [vista, setVista]       = useState("lista");
   const [editItem, setEditItem] = useState(null);
   const [filtro, setFiltro]     = useState("todos");
   const [busqueda, setBusqueda] = useState("");
   const [exportar, setExportar] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    const d = await dbGet("reservas", "&order=fecha_inicio.desc");
-    setRows(Array.isArray(d) ? d : []);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const query = filtro !== 'todos' ? 'estado=eq.'+filtro : '';
+
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+    table: 'reservas',
+    query,
+    search: busqueda,
+    columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino'],
+    order: 'fecha_inicio.desc',
+  });
 
   const cambiarEstado = async (id, nuevoEstado) => {
     await dbUpd("reservas", id, { estado: nuevoEstado });
@@ -288,13 +289,6 @@ export default function PageReservas({ showToast, empId }) {
     if (!confirm("Eliminar esta reserva?")) return;
     await dbDel("reservas", id); showToast("Eliminada"); load();
   };
-
-  const filtrados = rows.filter(r => {
-    if (filtro !== "todos" && r.estado !== filtro) return false;
-    if (busqueda && !r.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !r.numero?.toLowerCase().includes(busqueda.toLowerCase())) return false;
-    return true;
-  });
 
   const CAMPOS_EXP = [
     { label: "Numero",   key: "numero"           },
@@ -319,13 +313,13 @@ export default function PageReservas({ showToast, empId }) {
   return (
     <div>
       {exportar && (
-        <ModalExportar titulo="Reservas" datos={filtrados} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />
+        <ModalExportar titulo="Reservas" datos={rows} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />
       )}
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 18 }}>
         {[
-          { l: "Total",       v: rows.length,                                    c: T.txt   },
+          { l: "Total",       v: total,                                    c: T.txt   },
           { l: "Pendientes",  v: rows.filter(r => r.estado === "pendiente").length,  c: T.mut   },
           { l: "Confirmadas", v: rows.filter(r => r.estado === "confirmada").length, c: T.acc   },
           { l: "En curso",    v: rows.filter(r => r.estado === "en_curso").length,   c: T.blue  },
@@ -349,6 +343,7 @@ export default function PageReservas({ showToast, empId }) {
             </button>
           );
         })}
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar reserva..." />
         <div style={{ flex: 1 }} />
         <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>Exportar</button>
         <button onClick={() => { setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize: 12 }}>
@@ -356,12 +351,7 @@ export default function PageReservas({ showToast, empId }) {
         </button>
       </div>
 
-      <div style={{ marginBottom: 14 }}>
-        <input style={S.inp} placeholder="Buscar por cliente o numero de reserva..."
-          value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-      </div>
-
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
+      {loading ? <Spinner /> : rows.length === 0 ? (
         <Empty icon="R" msg="Sin reservas" action="+ Nueva reserva" onAction={() => setVista("form")} />
       ) : (
         <div style={S.card}>
@@ -374,7 +364,7 @@ export default function PageReservas({ showToast, empId }) {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(r => {
+              {rows.map(r => {
                 const est = EST_RES[r.estado] || EST_RES.pendiente;
                 return (
                   <tr key={r.id}
@@ -423,6 +413,9 @@ export default function PageReservas({ showToast, empId }) {
             </tbody>
           </table>
         </div>
+      )}
+      {rows.length > 0 && (
+        <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       )}
     </div>
   );

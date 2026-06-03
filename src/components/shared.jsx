@@ -245,6 +245,58 @@ export function CatBadge({ cat }) {
   );
 }
 
+// --- Paginador ---
+export function Paginador({ page, totalPages, total, desde, hasta, pageSize, onPage, onPageSize }) {
+  if (total <= 1) return null;
+  const Btn = ({ n, l, disabled, active }) => (
+    <button disabled={disabled} onClick={() => onPage(n)}
+      style={{
+        padding: '5px 10px', borderRadius: 6, border: active ? 'none' : `1px solid ${T.bord}`,
+        background: active ? T.acc : 'transparent', color: active ? '#fff' : T.sub,
+        cursor: disabled ? 'default' : 'pointer', fontSize: 11, fontWeight: 600,
+        opacity: disabled ? 0.3 : 1, fontFamily: 'inherit',
+      }}>{l || n}</button>
+  );
+  const pages = [];
+  const maxVisible = 5;
+  let s = Math.max(1, page - Math.floor(maxVisible / 2));
+  let e = Math.min(totalPages, s + maxVisible - 1);
+  if (e - s + 1 < maxVisible) s = Math.max(1, e - maxVisible + 1);
+  for (let i = s; i <= e; i++) pages.push(i);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+      <div style={{ fontSize: 11, color: T.mut }}>
+        Mostrando <b style={{ color: T.txt }}>{desde}</b>–<b style={{ color: T.txt }}>{hasta}</b> de <b style={{ color: T.txt }}>{total}</b> registros
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Btn n={1} l="«" disabled={page === 1} />
+        <Btn n={page - 1} l="‹" disabled={page === 1} />
+        {s > 1 && <span style={{ color: T.mut, fontSize: 11 }}>…</span>}
+        {pages.map(i => <Btn key={i} n={i} active={i === page} />)}
+        {e < totalPages && <span style={{ color: T.mut, fontSize: 11 }}>…</span>}
+        <Btn n={page + 1} l="›" disabled={page === totalPages} />
+        <Btn n={totalPages} l="»" disabled={page === totalPages} />
+      </div>
+      <select value={pageSize} onChange={e => onPageSize(parseInt(e.target.value))}
+        style={{ ...S.sel, width: 'auto', padding: '4px 8px', fontSize: 11 }}>
+        <option value={25}>25 / pag</option>
+        <option value={50}>50 / pag</option>
+        <option value={100}>100 / pag</option>
+      </select>
+    </div>
+  );
+}
+
+// --- Buscador estandar ---
+export function Buscador({ value, onChange, placeholder = 'Buscar...' }) {
+  return (
+    <input type="search" value={value} onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{ ...S.inp, maxWidth: 320, padding: '8px 12px', fontSize: 12 }}
+    />
+  );
+}
+
 // --- Botones Compartir ---
 export function BotonesCompartir({ numero, total, tipo }) {
   const msg = `Tz'unun AutoRentas - ${tipo} ${numero} por Q ${fmt(total)}. Mas informacion: 502-31221538`;

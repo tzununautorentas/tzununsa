@@ -6,7 +6,8 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── API ──────────────────────────────────────────────────────────
 async function api(path, opts = {}) {
@@ -986,46 +987,30 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
 // PÁGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════
 export default function PageContratos({ showToast, empId }) {
-  const [rows,     setRows]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
   const [vista,    setVista]    = useState('lista');
   const [editItem, setEditItem] = useState(null);
   const [filtro,   setFiltro]   = useState('todos');
   const [busqueda, setBusqueda] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const d = await api('/contratos?order=created_at.desc&select=*');
-      setRows(Array.isArray(d) ? d : []);
-    } catch (e) {
-      showToast('Error: ' + e.message, 'err');
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const query = filtro !== 'todos' ? 'estado=eq.'+filtro : '';
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload, desde, hasta } = usePaginacion({
+    table: 'contratos',
+    query,
+    search: busqueda,
+    columns: ['numero', 'cliente_nombre', 'vehiculo_nombre'],
+    order: 'created_at.desc',
+  });
 
   const del = async (id) => {
     if (!confirm('Eliminar este contrato?')) return;
     try {
       await api(`/contratos?id=eq.${id}`, { method: 'DELETE' });
-      showToast('Contrato eliminado'); load();
+      showToast('Contrato eliminado'); reload();
     } catch (e) { showToast('Error: ' + e.message, 'err'); }
   };
 
-  const filtrados = rows.filter(r => {
-    if (filtro !== 'todos' && r.estado !== filtro) return false;
-    if (busqueda && !r.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()) &&
-        !r.numero?.toLowerCase().includes(busqueda.toLowerCase())) return false;
-    return true;
-  });
-
   if (vista === 'form') return (
     <FormContrato initial={editItem} empId={empId} showToast={showToast}
-      onSave={() => { setVista('lista'); setEditItem(null); load(); }}
+      onSave={() => { setVista('lista'); setEditItem(null); reload(); }}
       onCancel={() => { setVista('lista'); setEditItem(null); }} />
   );
 
@@ -1034,7 +1019,7 @@ export default function PageContratos({ showToast, empId }) {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { l: 'Total',         v: rows.length,                                                 c: T.txt   },
+          { l: 'Total',         v: total,                                                 c: T.txt   },
           { l: 'Activos',       v: rows.filter(r => r.estado === 'activo').length,               c: T.acc   },
           { l: 'Pend. firma',   v: rows.filter(r => r.estado === 'pendiente_firma').length,      c: T.sec   },
           { l: 'Completados',   v: rows.filter(r => r.estado === 'completado').length,           c: T.green },
@@ -1062,11 +1047,10 @@ export default function PageContratos({ showToast, empId }) {
       </div>
 
       <div style={{ marginBottom: 14 }}>
-        <input style={S.inp} placeholder="Buscar por cliente o numero de contrato..."
-          value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por cliente o numero de contrato..." />
       </div>
 
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
+      {loading ? <Spinner /> : rows.length === 0 ? (
         <Empty icon="C" msg="Sin contratos registrados" action="+ Nuevo contrato"
           onAction={() => { setEditItem(null); setVista('form'); }} />
       ) : (
@@ -1080,7 +1064,7 @@ export default function PageContratos({ showToast, empId }) {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(r => {
+              {rows.map(r => {
                 const est = ESTADOS[r.estado] || ESTADOS.borrador;
                 const tipo = TIPOS.find(t => t.v === r.tipo);
                 return (
@@ -1131,6 +1115,8 @@ export default function PageContratos({ showToast, empId }) {
           </table>
         </div>
       )}
+      <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta}
+        pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
     </div>
   );
 }

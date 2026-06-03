@@ -1,11 +1,8 @@
-// src/pages/Proveedores.jsx
-// ══════════════════════════════════════════════════════════════════
-// MÓDULO PROVEEDORES — Tz'ununSA
-// ══════════════════════════════════════════════════════════════════
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { T, S, SB, H, dbIns, dbUpd, dbDel } from "../config.js";
+import { Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
-// ─── Helper fetch con headers correctos ──────────────────────────
 async function apiFetch(path, opts = {}) {
   const res = await fetch(`${SB}/rest/v1${path}`, {
     headers: { ...H, ...(opts.extraHeaders || {}) },
@@ -19,7 +16,6 @@ async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
-// ─── Constantes ───────────────────────────────────────────────────
 const TIPOS = [
   { value:"combustible", label:"⛽ Combustible",        color:"#F59E0B" },
   { value:"repuestos",   label:"🔩 Repuestos",           color:"#6366F1" },
@@ -41,10 +37,7 @@ const EMPTY = {
 const fmtQ   = (n) => "Q " + (Number(n)||0).toLocaleString("es-GT",{minimumFractionDigits:2});
 const fmtDate = (d) => d ? new Date(d+"T12:00:00").toLocaleDateString("es-GT",{day:"2-digit",month:"short",year:"numeric"}) : "—";
 
-// ════════════════════════════════════════════════════════════════════
 export default function PageProveedores({ showToast, empId }) {
-  const [proveedores, setProveedores]   = useState([]);
-  const [loading, setLoading]           = useState(true);
   const [vista, setVista]               = useState("lista");
   const [sel, setSel]                   = useState(null);
   const [form, setForm]                 = useState(EMPTY);
@@ -56,21 +49,17 @@ export default function PageProveedores({ showToast, empId }) {
   const [loadingHist, setLoadingHist]   = useState(false);
   const [guardando, setGuardando]       = useState(false);
 
-  // ─── Carga principal ─────────────────────────────────────────
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await apiFetch(`/proveedores?order=nombre.asc&select=*`);
-      setProveedores(data || []);
-    } catch (e) {
-      showToast("Error cargando proveedores: " + e.message, "err");
-    } finally { setLoading(false); }
-  }, []);
+  const { data: proveedores, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: cargar, desde, hasta } = usePaginacion({
+    table: "proveedores",
+    query: filtroTipo !== "todos" ? "tipo=eq."+filtroTipo : "",
+    search: busqueda,
+    columns: ['nombre', 'nit', 'telefono'],
+    order: 'nombre.asc',
+  });
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { setPage(1); }, [filtroTipo]);
 
-  // ─── Historial ───────────────────────────────────────────────
-  const cargarHistorial = useCallback(async (provId) => {
+  const cargarHistorial = async (provId) => {
     setLoadingHist(true);
     try {
       const [g, m] = await Promise.all([
@@ -80,9 +69,8 @@ export default function PageProveedores({ showToast, empId }) {
       setHistorial({ gastos: g||[], compras:[], mantenimientos: m||[] });
     } catch { setHistorial({ gastos:[], compras:[], mantenimientos:[] }); }
     finally { setLoadingHist(false); }
-  }, []);
+  };
 
-  // ─── Guardar ──────────────────────────────────────────────────
   const guardar = async () => {
     if (!form.nombre.trim()) { showToast("El nombre es requerido","err"); return; }
     setGuardando(true);
@@ -102,7 +90,6 @@ export default function PageProveedores({ showToast, empId }) {
     finally { setGuardando(false); }
   };
 
-  // ─── Eliminar ────────────────────────────────────────────────
   const eliminar = async (id) => {
     if (!confirm("¿Eliminar este proveedor?")) return;
     await dbDel("proveedores", id);
@@ -111,18 +98,8 @@ export default function PageProveedores({ showToast, empId }) {
     cargar();
   };
 
-  // ─── Filtros ─────────────────────────────────────────────────
-  const filtrados = proveedores.filter(p => {
-    const ok1 = filtroTipo === "todos" || p.tipo === filtroTipo;
-    const ok2 = !busqueda || [p.nombre,p.nit,p.email,p.telefono].some(v=>v?.toLowerCase().includes(busqueda.toLowerCase()));
-    return ok1 && ok2;
-  });
-
   const stats = TIPOS.map(t => ({ ...t, count: proveedores.filter(p=>p.tipo===t.value).length })).filter(t=>t.count>0);
 
-  // ════════════════════════════════════════════════════════════════
-  // VISTA: FORMULARIO
-  // ════════════════════════════════════════════════════════════════
   if (vista === "form") {
     const inp = (field, label, type="text", ph="") => (
       <div>
@@ -140,7 +117,6 @@ export default function PageProveedores({ showToast, empId }) {
           </h2>
         </div>
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          {/* Tipo */}
           <div style={S.card}>
             <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>TIPO DE PROVEEDOR</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
@@ -152,7 +128,6 @@ export default function PageProveedores({ showToast, empId }) {
               ))}
             </div>
           </div>
-          {/* Datos fiscales */}
           <div style={S.card}>
             <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>DATOS FISCALES</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
@@ -163,7 +138,6 @@ export default function PageProveedores({ showToast, empId }) {
               <div style={{ gridColumn:"1/-1" }}>{inp("direccion","DIRECCIÓN","text","Dirección completa")}</div>
             </div>
           </div>
-          {/* Contacto */}
           <div style={S.card}>
             <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:12, letterSpacing:1 }}>PERSONA DE CONTACTO</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
@@ -171,14 +145,12 @@ export default function PageProveedores({ showToast, empId }) {
               {inp("contacto_tel","TELÉFONO DIRECTO")}
             </div>
           </div>
-          {/* Notas */}
           <div style={S.card}>
             <div style={{ fontSize:11, fontWeight:700, color:T.mut, marginBottom:8, letterSpacing:1 }}>NOTAS INTERNAS</div>
             <textarea style={{ ...S.inp, minHeight:80, resize:"vertical" }}
               placeholder="Condiciones de crédito, observaciones..."
               value={form.notas||""} onChange={e=>setForm(f=>({...f,notas:e.target.value}))}/>
           </div>
-          {/* Activo toggle */}
           <div style={{ ...S.card, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <span style={{ fontSize:13, color:T.txt }}>Proveedor activo</span>
             <button onClick={()=>setForm(f=>({...f,activo:!f.activo}))}
@@ -186,7 +158,6 @@ export default function PageProveedores({ showToast, empId }) {
               <div style={{ width:18, height:18, borderRadius:"50%", background:"white", position:"absolute", top:3, left:form.activo?22:3, transition:"left .2s" }}/>
             </button>
           </div>
-          {/* Botones */}
           <div style={{ display:"flex", gap:12 }}>
             <button onClick={()=>setVista("lista")} style={{ ...S.btn("ghost"), flex:1 }}>Cancelar</button>
             <button onClick={guardar} disabled={guardando} style={{ ...S.btn("primary"), flex:2 }}>
@@ -198,9 +169,6 @@ export default function PageProveedores({ showToast, empId }) {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════
-  // VISTA: DETALLE
-  // ════════════════════════════════════════════════════════════════
   if (vista === "detalle" && sel) {
     const ti = tipoInfo(sel.tipo);
     const totalG = historial.gastos.reduce((s,g)=>s+Number(g.total||0),0);
@@ -219,7 +187,6 @@ export default function PageProveedores({ showToast, empId }) {
           <button onClick={()=>eliminar(sel.id)} style={{ ...S.btn("ghost"), color:T.red, borderColor:T.red+"44" }}>🗑️</button>
         </div>
 
-        {/* Card proveedor */}
         <div style={{ ...S.card, marginBottom:16 }}>
           <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
             <div style={{ width:52, height:52, borderRadius:14, background:ti.color+"22", border:`2px solid ${ti.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>
@@ -236,7 +203,6 @@ export default function PageProveedores({ showToast, empId }) {
           </div>
         </div>
 
-        {/* Resumen */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:16 }}>
           {[
             { l:"Total Gastos",    v:fmtQ(totalG), c:T.red  },
@@ -250,7 +216,6 @@ export default function PageProveedores({ showToast, empId }) {
           ))}
         </div>
 
-        {/* Tabs */}
         <div style={{ display:"flex", gap:6, marginBottom:16 }}>
           {tabs.map(t=>(
             <button key={t.id} onClick={()=>setDetTab(t.id)}
@@ -260,7 +225,6 @@ export default function PageProveedores({ showToast, empId }) {
           ))}
         </div>
 
-        {/* Tab datos */}
         {detTab==="datos" && (
           <div style={S.card}>
             {[["Nombre",sel.nombre],["NIT",sel.nit||"—"],["Tipo",ti.label],["Teléfono",sel.telefono||"—"],["Email",sel.email||"—"],["Dirección",sel.direccion||"—"],["Contacto",sel.contacto_nombre||"—"],["Tel. Contacto",sel.contacto_tel||"—"],["Notas",sel.notas||"—"],["Registrado",fmtDate(sel.created_at)]].map(([k,v])=>(
@@ -272,7 +236,6 @@ export default function PageProveedores({ showToast, empId }) {
           </div>
         )}
 
-        {/* Tab gastos */}
         {detTab==="gastos" && (
           <div style={S.card}>
             {loadingHist ? <div style={{ color:T.sub, textAlign:"center", padding:24 }}>Cargando...</div>
@@ -289,7 +252,6 @@ export default function PageProveedores({ showToast, empId }) {
           </div>
         )}
 
-        {/* Tab mantenimientos */}
         {detTab==="mantenimientos" && (
           <div style={S.card}>
             {loadingHist ? <div style={{ color:T.sub, textAlign:"center", padding:24 }}>Cargando...</div>
@@ -309,25 +271,22 @@ export default function PageProveedores({ showToast, empId }) {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════
-  // VISTA: LISTA
-  // ════════════════════════════════════════════════════════════════
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
         <div style={{ flex:1 }}>
           <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:T.txt }}>Proveedores</h2>
-          <div style={{ fontSize:12, color:T.sub }}>{proveedores.length} registrados</div>
+          <div style={{ fontSize:12, color:T.sub }}>{total} registrados</div>
         </div>
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, NIT, telefono..." />
         <button onClick={()=>{ setForm(EMPTY); setEditId(null); setVista("form"); }} style={S.btn("primary")}>+ Nuevo</button>
       </div>
 
-      {/* Filtros por tipo */}
       {stats.length>0 && (
         <div style={{ display:"flex", gap:8, overflowX:"auto", marginBottom:16, paddingBottom:4 }}>
           <button onClick={()=>setFiltroTipo("todos")}
             style={{ border:`2px solid ${filtroTipo==="todos"?T.acc:T.bord}`, background:filtroTipo==="todos"?T.accD:"transparent", borderRadius:10, padding:"6px 14px", cursor:"pointer", color:filtroTipo==="todos"?T.acc:T.sub, fontSize:12, fontWeight:700, whiteSpace:"nowrap", flexShrink:0 }}>
-            Todos ({proveedores.length})
+            Todos ({total})
           </button>
           {stats.map(s=>(
             <button key={s.value} onClick={()=>setFiltroTipo(s.value)}
@@ -338,22 +297,15 @@ export default function PageProveedores({ showToast, empId }) {
         </div>
       )}
 
-      {/* Búsqueda */}
-      <div style={{ marginBottom:16 }}>
-        <input style={S.inp} placeholder="🔍  Buscar por nombre, NIT, email..."
-          value={busqueda} onChange={e=>setBusqueda(e.target.value)}/>
-      </div>
-
-      {/* Lista */}
       {loading ? (
         <div style={{ textAlign:"center", padding:48, color:T.sub }}>Cargando proveedores...</div>
-      ) : filtrados.length===0 ? (
+      ) : proveedores.length===0 ? (
         <div style={{ ...S.card, textAlign:"center", padding:48 }}>
           <div style={{ fontSize:40, marginBottom:12 }}>📦</div>
           <div style={{ color:T.sub, fontSize:14 }}>
-            {proveedores.length===0 ? "Aún no hay proveedores" : "Sin resultados"}
+            {total===0 ? "Aún no hay proveedores" : "Sin resultados"}
           </div>
-          {proveedores.length===0 && (
+          {total===0 && (
             <button onClick={()=>{ setForm(EMPTY); setEditId(null); setVista("form"); }} style={{ ...S.btn("primary"), marginTop:16 }}>
               Agregar primer proveedor
             </button>
@@ -361,7 +313,7 @@ export default function PageProveedores({ showToast, empId }) {
         </div>
       ) : (
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {filtrados.map(p => {
+          {proveedores.map(p => {
             const ti = tipoInfo(p.tipo);
             return (
               <div key={p.id} onClick={()=>{ setSel(p); setDetTab("datos"); setVista("detalle"); cargarHistorial(p.id); }}
@@ -374,7 +326,7 @@ export default function PageProveedores({ showToast, empId }) {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:T.txt, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.nombre}</div>
                   <div style={{ fontSize:11, color:T.sub }}>
-                    {p.nit?`NIT: ${p.nit}`:"Sin NIT"} · {p.telefono||"Sin teléfono"}
+                    {p.nit?`NIT: ${p.nit}`:"Sin NIT"} · {p.telefono||"Sin telefono"}
                   </div>
                 </div>
                 <div style={{ fontSize:10, fontWeight:700, color:ti.color, background:ti.color+"22", padding:"2px 8px", borderRadius:20, flexShrink:0 }}>
@@ -386,6 +338,8 @@ export default function PageProveedores({ showToast, empId }) {
           })}
         </div>
       )}
+
+      <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
     </div>
   );
 }

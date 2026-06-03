@@ -1,28 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 const TIPOS = ["Traslado","Renta diaria","Renta semanal","Renta mensual","Tour","Servicio especial","Aeropuerto","Otro"];
 const EF = { codigo:"", nombre:"", tipo:"Traslado", descripcion:"", precio_base:0, precio_dia:0, precio_sem:0, precio_mes:0, activo:true, notas:"" };
 
 export default function PageCatalogo({ showToast, empId }) {
-  const [rows,     setRows]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
   const [vista,    setVista]    = useState("lista");
   const [editItem, setEditItem] = useState(null);
   const [saving,   setSaving]   = useState(false);
   const [filtro,   setFiltro]   = useState("todos");
   const [exportar, setExportar] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
   const [f, setF] = useState({ ...EF });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
-  const load = async () => {
-    setLoading(true);
-    const d = await dbGet("servicios", "&order=codigo.asc,nombre.asc");
-    setRows(Array.isArray(d) ? d : []);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const query = filtro && filtro !== 'todos'
+    ? (filtro === 'activo' ? 'activo=is.true' : 'activo=is.false')
+    : '';
+
+  const pag = usePaginacion({
+    table: 'servicios',
+    query,
+    search: busqueda,
+    columns: ['nombre', 'codigo'],
+    order: 'codigo.asc,nombre.asc',
+  });
 
   const abrirEditar = s => {
     setF({ codigo:s.codigo||"", nombre:s.nombre||"", tipo:s.tipo||"Traslado",
@@ -40,20 +44,18 @@ export default function PageCatalogo({ showToast, empId }) {
       precio_sem:parseFloat(f.precio_sem)||0,   precio_mes:parseFloat(f.precio_mes)||0 };
     if (editItem?.id) await dbUpd("servicios", editItem.id, p);
     else await dbIns("servicios", p);
-    showToast("Servicio guardado"); setSaving(false); setVista("lista"); load();
+    showToast("Servicio guardado"); setSaving(false); setVista("lista"); pag.reload();
   };
 
   const del = async id => {
     if (!confirm("Eliminar este servicio?")) return;
-    await dbDel("servicios", id); showToast("Eliminado"); load();
+    await dbDel("servicios", id); showToast("Eliminado"); pag.reload();
   };
 
   const toggleActivo = async (id, activo) => {
     await dbUpd("servicios", id, { activo: !activo });
-    showToast(!activo ? "Servicio activado" : "Servicio pausado"); load();
+    showToast(!activo ? "Servicio activado" : "Servicio pausado"); pag.reload();
   };
-
-  const filtrados = rows.filter(r => filtro === "todos" ? true : filtro === "activo" ? r.activo !== false : r.activo === false);
 
   if (vista === "form") return (
     <div style={{ maxWidth:620 }}>
@@ -114,33 +116,35 @@ export default function PageCatalogo({ showToast, empId }) {
 
   return (
     <div>
-      {exportar && <ModalExportar titulo="Catalogo de Servicios" datos={filtrados} campos={[
+      {exportar && <ModalExportar titulo="Catalogo de Servicios" datos={pag.data} campos={[
         {label:"Codigo",key:"codigo"},{label:"Nombre",key:"nombre"},{label:"Tipo",key:"tipo"},
         {label:"Precio Base",key:"precio_base"},{label:"Precio Dia",key:"precio_dia"},
         {label:"Precio Sem.",key:"precio_sem"},{label:"Precio Mes.",key:"precio_mes"}
       ]} onClose={() => setExportar(false)} />}
 
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-        <div style={{ fontSize:15, fontWeight:700, color:T.txt }}>Catalogo de Servicios ({rows.length})</div>
+        <div style={{ fontSize:15, fontWeight:700, color:T.txt }}>Catalogo de Servicios ({pag.total})</div>
         <div style={{ display:"flex", gap:8 }}>
           <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize:11 }}>Exportar</button>
           <button onClick={() => { setF({...EF}); setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize:12 }}>+ Nuevo servicio</button>
         </div>
       </div>
 
-      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+      <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
         {["todos","activo","inactivo"].map(f2 => (
           <button key={f2} onClick={() => setFiltro(f2)} style={{ ...S.btn(filtro===f2?"primary":"ghost"), fontSize:11, padding:"5px 10px" }}>
             {f2==="todos"?"Todos":f2==="activo"?"Activos":"Inactivos"}
           </button>
         ))}
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar servicio..." />
       </div>
 
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
+      {pag.loading ? <Spinner /> : pag.data.length === 0 ? (
         <Empty icon="S" msg="Sin servicios registrados" action="+ Nuevo servicio" onAction={() => { setF({...EF}); setVista("form"); }} />
       ) : (
+        <>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:14 }}>
-          {filtrados.map(s => (
+          {pag.data.map(s => (
             <div key={s.id} style={{ ...S.card, borderTop:`3px solid ${s.activo!==false?T.acc:T.bord}`, opacity:s.activo!==false?1:0.6 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                 <div>
@@ -173,6 +177,8 @@ export default function PageCatalogo({ showToast, empId }) {
             </div>
           ))}
         </div>
+        <Paginador page={pag.page} totalPages={pag.totalPages} total={pag.total} desde={pag.desde} hasta={pag.hasta} pageSize={pag.pageSize} onPage={pag.setPage} onPageSize={pag.setPageSize} />
+        </>
       )}
     </div>
   );

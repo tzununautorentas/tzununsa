@@ -1,37 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 export default function PageClientes({ showToast, empId }) {
-  const [rows, setRows]       = useState([]);
-  const [loading, setLoading] = useState(true);
   const [vista, setVista]     = useState("lista");
   const [editItem, setEditItem] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [saving, setSaving]   = useState(false);
+  const [allCodes, setAllCodes] = useState([]);
   const [f, setF] = useState({
     codigo: "", nombre: "", tipo: "empresa", nit: "",
     direccion: "", telefono: "", email: "", contacto: "", notas: ""
   });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
-   const load = async () => {
-    setLoading(true);
-    const d = await dbGet("clientes", "");
-    const arr = Array.isArray(d) ? d : [];
-    arr.sort((a, b) => {
-      const ca = (a.codigo || "").match(/\d+/)?.[0] || "999999";
-      const cb = (b.codigo || "").match(/\d+/)?.[0] || "999999";
-      return parseInt(ca) - parseInt(cb);
-    });
-    setRows(arr);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const { data: rows, loading, total, page, totalPages, pageSize, desde, hasta, setPage, setPageSize, reload } = usePaginacion({
+    table: 'clientes', query: '', search: busqueda,
+    columns: ['nombre', 'codigo', 'nit', 'telefono'],
+    order: 'codigo.asc',
+  });
+
+  useEffect(() => {
+    dbGet("clientes", "&select=codigo").then(d => setAllCodes(Array.isArray(d) ? d : []));
+  }, []);
 
   const genCodigo = () => {
     let max = 0;
-    rows.forEach(r => {
+    allCodes.forEach(r => {
       const m = (r.codigo || "").match(/^(\d+)/);
       if (m) { const n = parseInt(m[1]); if (n > max) max = n; }
     });
@@ -60,12 +56,13 @@ export default function PageClientes({ showToast, empId }) {
     if (editItem?.id) res = await dbUpd("clientes", editItem.id, p);
     else res = await dbIns("clientes", p);
     if (res?.error) { showToast(res.error, "err"); setSaving(false); return; }
-    showToast("Cliente guardado"); setSaving(false); setVista("lista"); setEditItem(null); load();
+    showToast("Cliente guardado"); setSaving(false); setVista("lista"); setEditItem(null);
+    reload();
   };
 
   const del = async id => {
     if (!confirm("Eliminar cliente?")) return;
-    await dbDel("clientes", id); showToast("Eliminado"); load();
+    await dbDel("clientes", id); showToast("Eliminado"); reload();
   };
 
   const TC = {
@@ -73,11 +70,6 @@ export default function PageClientes({ showToast, empId }) {
     gobierno: { c: T.blue, bg: T.blueDim, l: "Gobierno / ONG" },
     persona:  { c: T.acc,  bg: T.accDim,  l: "Persona"        },
   };
-
-  const filtrados = rows.filter(r =>
-    !busqueda || [r.nombre, r.codigo, r.nit, r.telefono, r.email]
-      .some(v => v?.toLowerCase().includes(busqueda.toLowerCase()))
-  );
 
   if (vista === "form") return (
     <div style={{ maxWidth: 620 }}>
@@ -142,70 +134,73 @@ export default function PageClientes({ showToast, empId }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
-          Directorio de Clientes ({rows.length})
+          Directorio de Clientes ({total})
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 12 }}>Actualizar</button>
+          <button onClick={reload} style={{ ...S.btn("ghost"), fontSize: 12 }}>Actualizar</button>
           <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize: 12 }}>+ Nuevo cliente</button>
         </div>
       </div>
 
       <div style={{ marginBottom: 14 }}>
-        <input style={S.inp} placeholder="Buscar por nombre, codigo, NIT, telefono..."
-          value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, codigo, NIT..." />
       </div>
 
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
-        <Empty icon="C" msg={rows.length === 0 ? "Sin clientes registrados" : "Sin resultados"}
+      {loading ? <Spinner /> : rows.length === 0 ? (
+        <Empty icon="C" msg={total === 0 ? "Sin clientes registrados" : "Sin resultados"}
           action="+ Agregar cliente" onAction={abrirNuevo} />
       ) : (
-        <div style={S.card}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Codigo", "Cliente", "Tipo", "NIT", "Telefono", "Email", ""].map(h => (
-                  <th key={h} style={S.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map(c => {
-                const tc = TC[c.tipo] || TC.empresa;
-                return (
-                  <tr key={c.id}
-                    onMouseEnter={e => e.currentTarget.style.background = T.surf}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <td style={{ ...S.td, fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 12 }}>
-                      {c.codigo || "—"}
-                    </td>
-                    <td style={{ ...S.td, fontWeight: 600 }}>
-                      {c.nombre}
-                      {c.contacto && <div style={{ fontSize: 10, color: T.mut }}>Contacto: {c.contacto}</div>}
-                    </td>
-                    <td style={S.td}>
-                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: tc.c, background: tc.bg }}>
-                        {tc.l}
-                      </span>
-                    </td>
-                    <td style={{ ...S.td, fontFamily: "monospace", fontSize: 11, color: T.mut }}>{c.nit || "—"}</td>
-                    <td style={{ ...S.td, color: T.sub, fontSize: 12 }}>{c.telefono || "—"}</td>
-                    <td style={{ ...S.td, color: T.sub, fontSize: 11 }}>{c.email || "—"}</td>
-                    <td style={S.td}>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        <button onClick={() => abrirEditar(c)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
-                          Editar
-                        </button>
-                        <button onClick={() => del(c.id)} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div style={S.card}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  {["Codigo", "Cliente", "Tipo", "NIT", "Telefono", "Email", ""].map(h => (
+                    <th key={h} style={S.th}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(c => {
+                  const tc = TC[c.tipo] || TC.empresa;
+                  return (
+                    <tr key={c.id}
+                      onMouseEnter={e => e.currentTarget.style.background = T.surf}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <td style={{ ...S.td, fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 12 }}>
+                        {c.codigo || "—"}
+                      </td>
+                      <td style={{ ...S.td, fontWeight: 600 }}>
+                        {c.nombre}
+                        {c.contacto && <div style={{ fontSize: 10, color: T.mut }}>Contacto: {c.contacto}</div>}
+                      </td>
+                      <td style={S.td}>
+                        <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: tc.c, background: tc.bg }}>
+                          {tc.l}
+                        </span>
+                      </td>
+                      <td style={{ ...S.td, fontFamily: "monospace", fontSize: 11, color: T.mut }}>{c.nit || "—"}</td>
+                      <td style={{ ...S.td, color: T.sub, fontSize: 12 }}>{c.telefono || "—"}</td>
+                      <td style={{ ...S.td, color: T.sub, fontSize: 11 }}>{c.email || "—"}</td>
+                      <td style={S.td}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => abrirEditar(c)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
+                            Editar
+                          </button>
+                          <button onClick={() => del(c.id)} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta}
+            pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+        </>
       )}
     </div>
   );

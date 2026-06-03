@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 
 const TIPOS_MANT = ["Preventivo","Correctivo","Cambio de aceite","Frenos","Llantas","Electricidad","Carroceria","Revision general","Otro"];
 const ESTADOS_MANT = {
@@ -19,34 +20,40 @@ const EF = {
 };
 
 export default function PageMantenimiento({ showToast, empId }) {
-  const [rows,      setRows]      = useState([]);
   const [vehiculos, setVehiculos] = useState([]);
-  const [loading,   setLoading]   = useState(true);
   const [vista,     setVista]     = useState("lista");
   const [editItem,  setEditItem]  = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [filtroEst, setFiltroEst] = useState("todos");
   const [filtroVeh, setFiltroVeh] = useState("todos");
   const [exportar,  setExportar]  = useState(false);
+  const [busqueda,  setBusqueda]  = useState('');
   const [f, setF] = useState({ ...EF });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    (async () => {
+      const v = await dbGet("vehiculos", "&order=marca.asc");
+      setVehiculos(Array.isArray(v) ? v : []);
+    })();
+  }, []);
 
   const calcTotal = (rep, mo) => {
     const t = (parseFloat(rep) || 0) + (parseFloat(mo) || 0);
     sf("costo_total", t);
   };
 
-  const load = async () => {
-    setLoading(true);
-    const [m, v] = await Promise.all([
-      dbGet("mantenimientos", "&order=fecha.desc"),
-      dbGet("vehiculos", "&order=marca.asc"),
-    ]);
-    setRows(Array.isArray(m) ? m : []);
-    setVehiculos(Array.isArray(v) ? v : []);
-    setLoading(false);
-  };
-  useEffect(() => { load(); }, []);
+  const qEst = filtroEst && filtroEst !== 'todos' ? 'estado=eq.'+filtroEst : '';
+  const qVeh = filtroVeh && filtroVeh !== 'todos' ? 'vehiculo_id=eq.'+filtroVeh : '';
+  const query = [qEst, qVeh].filter(Boolean).join('&');
+
+  const pag = usePaginacion({
+    table: 'mantenimientos',
+    query,
+    search: busqueda,
+    columns: ['vehiculo_nombre', 'placa', 'tipo', 'descripcion'],
+    order: 'fecha.desc',
+  });
 
   const abrirEditar = r => {
     setF({ ...EF, ...r, costo_repuestos: r.costo_repuestos||0, costo_mano_obra: r.costo_mano_obra||0, costo_total: r.costo_total||0 });
@@ -65,21 +72,15 @@ export default function PageMantenimiento({ showToast, empId }) {
     };
     if (editItem?.id) await dbUpd("mantenimientos", editItem.id, p);
     else await dbIns("mantenimientos", p);
-    showToast("Guardado"); setSaving(false); setVista("lista"); load();
+    showToast("Guardado"); setSaving(false); setVista("lista"); pag.reload();
   };
 
   const del = async id => {
     if (!confirm("Eliminar este mantenimiento?")) return;
-    await dbDel("mantenimientos", id); showToast("Eliminado"); load();
+    await dbDel("mantenimientos", id); showToast("Eliminado"); pag.reload();
   };
 
-  const filtrados = rows.filter(r => {
-    if (filtroEst !== "todos" && r.estado !== filtroEst) return false;
-    if (filtroVeh !== "todos" && r.vehiculo_id !== filtroVeh) return false;
-    return true;
-  });
-
-  const totCosto = filtrados.reduce((s,r) => s+(parseFloat(r.costo_total)||0), 0);
+  const totCosto = pag.data.reduce((s,r) => s+(parseFloat(r.costo_total)||0), 0);
 
   if (vista === "form") return (
     <div style={{ maxWidth: 680 }}>
@@ -219,7 +220,7 @@ export default function PageMantenimiento({ showToast, empId }) {
 
   return (
     <div>
-      {exportar && <ModalExportar titulo="Mantenimientos" datos={filtrados} campos={[
+      {exportar && <ModalExportar titulo="Mantenimientos" datos={pag.data} campos={[
         {label:"Fecha",key:"fecha"},{label:"Vehiculo",key:"vehiculo_nombre"},{label:"Placa",key:"vehiculo_placa"},
         {label:"Tipo",key:"tipo_mantenimiento"},{label:"Taller",key:"taller"},{label:"KM Actual",key:"km_actual"},
         {label:"KM Prox. Mant.",key:"km_proximo_mantenimiento"},{label:"Costo Total",key:"costo_total"},{label:"Estado",key:"estado"}
@@ -227,10 +228,10 @@ export default function PageMantenimiento({ showToast, empId }) {
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:18 }}>
         {[
-          { l:"Total registros", v:rows.length,                                              c:T.txt   },
-          { l:"Programados",    v:rows.filter(r=>r.estado==="programado").length,            c:T.blue  },
-          { l:"En proceso",     v:rows.filter(r=>r.estado==="en_proceso").length,            c:T.sec   },
-          { l:"Costo total",    v:`Q ${fmt(rows.reduce((s,r)=>s+(parseFloat(r.costo_total)||0),0))}`, c:T.red },
+          { l:"Total registros", v:pag.total,                                              c:T.txt   },
+          { l:"Programados",    v:pag.data.filter(r=>r.estado==="programado").length,       c:T.blue  },
+          { l:"En proceso",     v:pag.data.filter(r=>r.estado==="en_proceso").length,       c:T.sec   },
+          { l:"Costo total",    v:`Q ${fmt(pag.data.reduce((s,r)=>s+(parseFloat(r.costo_total)||0),0))}`, c:T.red },
         ].map((s,i) => (
           <div key={i} style={{ background:T.surf, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
             <div style={{ fontSize:i===3?14:22, fontWeight:800, color:s.c }}>{s.v}</div>
@@ -251,20 +252,21 @@ export default function PageMantenimiento({ showToast, empId }) {
           <option value="todos">Todos los vehiculos</option>
           {vehiculos.map(v => <option key={v.id} value={v.id}>{v.marca} {v.modelo} — {v.placa}</option>)}
         </select>
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar mantenimiento..." />
         <div style={{ flex:1 }} />
         <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize:11 }}>Exportar</button>
         <button onClick={() => { setF({...EF}); setEditItem(null); setVista("form"); }}
           style={{ ...S.btn("primary"), fontSize:12 }}>+ Nuevo mantenimiento</button>
       </div>
 
-      {filtrados.length > 0 && (
+      {pag.data.length > 0 && (
         <div style={{ background:T.redDim, border:`1px solid ${T.red}44`, borderRadius:8, padding:"8px 14px", marginBottom:12, display:"flex", justifyContent:"space-between", fontSize:13 }}>
-          <span style={{ color:T.sub }}>{filtrados.length} registros</span>
+          <span style={{ color:T.sub }}>{pag.data.length} registros</span>
           <span style={{ fontWeight:800, color:T.red }}>Costo total: Q {fmt(totCosto)}</span>
         </div>
       )}
 
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
+      {pag.loading ? <Spinner /> : pag.data.length === 0 ? (
         <Empty icon="M" msg="Sin mantenimientos registrados" action="+ Nuevo mantenimiento"
           onAction={() => { setF({...EF}); setEditItem(null); setVista("form"); }} />
       ) : (
@@ -276,7 +278,7 @@ export default function PageMantenimiento({ showToast, empId }) {
               ))}
             </tr></thead>
             <tbody>
-              {filtrados.map(r => {
+              {pag.data.map(r => {
                 const est = ESTADOS_MANT[r.estado] || ESTADOS_MANT.programado;
                 const kmFaltan = r.km_proximo_mantenimiento && r.km_actual
                   ? Math.max(0, r.km_proximo_mantenimiento - r.km_actual) : null;
@@ -316,6 +318,9 @@ export default function PageMantenimiento({ showToast, empId }) {
             </tbody>
           </table>
         </div>
+      )}
+      {pag.data.length > 0 && (
+        <Paginador page={pag.page} totalPages={pag.totalPages} total={pag.total} desde={pag.desde} hasta={pag.hasta} pageSize={pag.pageSize} onPage={pag.setPage} onPageSize={pag.setPageSize} />
       )}
     </div>
   );

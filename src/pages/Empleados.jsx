@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { usePaginacion } from '../hooks/usePaginacion.js';
 import {
   IconEdit, IconDelete, IconSave, IconBack, IconPlus, IconSearch,
   IconRefresh, IconPDF, IconExcel, IconUser, IconEmployee,
@@ -76,8 +77,6 @@ const exportarExcel = (rows) => {
 
 // ════════════════════════════════════════════════════════════════════
 export default function PageEmpleados({ showToast, empId }) {
-  const [rows,     setRows]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
   const [vista,    setVista]    = useState("lista");   // lista | form | detalle
   const [editItem, setEditItem] = useState(null);
   const [selItem,  setSelItem]  = useState(null);
@@ -90,14 +89,20 @@ export default function PageEmpleados({ showToast, empId }) {
   const [loadHist,   setLoadHist]     = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const d = await dbGet("empleados", "&order=codigo.asc,nombre.asc");
-    setRows(Array.isArray(d) ? d : []);
-    setLoading(false);
-  }, []);
+  const query = [
+    filtroTipo !== "todos" ? `tipo=eq.${filtroTipo}` : "",
+    filtroEst !== "todos" ? `estado=eq.${filtroEst}` : "",
+  ].filter(Boolean).join("&");
 
-  useEffect(() => { load(); }, [load]);
+  const { data, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+    table: "empleados",
+    query,
+    search: busqueda,
+    columns: ['nombre', 'codigo', 'telefono', 'puesto'],
+    order: 'nombre.asc',
+  });
+
+  useEffect(() => { setPage(1); }, [filtroTipo, filtroEst]);
 
   // ─── Historial del empleado ────────────────────────────────────
   const cargarHistorial = async (nombre) => {
@@ -147,21 +152,13 @@ export default function PageEmpleados({ showToast, empId }) {
     await dbDel("empleados", id); showToast("Eliminado"); load();
   };
 
-  // ─── Filtros ──────────────────────────────────────────────────
-  const filtrados = rows.filter(r => {
-    if (filtroTipo !== "todos" && r.tipo !== filtroTipo) return false;
-    if (filtroEst  !== "todos" && r.estado !== filtroEst) return false;
-    if (busqueda && !([r.nombre, r.codigo, r.dpi, r.telefono, r.puesto]
-      .some(v => v?.toLowerCase().includes(busqueda.toLowerCase())))) return false;
-    return true;
-  });
-
+  // ─── Stats ─────────────────────────────────────────────────────
   const stats = {
-    total:    rows.length,
-    activos:  rows.filter(r => r.estado === "activo").length,
-    fijos:    rows.filter(r => r.tipo === "fijo").length,
-    temporales: rows.filter(r => r.tipo !== "fijo").length,
-    nomina:   rows.filter(r => r.tipo === "fijo" && r.estado === "activo").reduce((s,r) => s + (parseFloat(r.salario)||0), 0),
+    total,
+    activos:  data.filter(r => r.estado === "activo").length,
+    fijos:    data.filter(r => r.tipo === "fijo").length,
+    temporales: data.filter(r => r.tipo !== "fijo").length,
+    nomina:   data.filter(r => r.tipo === "fijo" && r.estado === "activo").reduce((s,r) => s + (parseFloat(r.salario)||0), 0),
   };
 
   // ════════════════════════════════════════════════════════════════
@@ -406,16 +403,16 @@ export default function PageEmpleados({ showToast, empId }) {
       {/* Header + acciones */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
-          Empleados y Colaboradores ({filtrados.length})
+          Empleados y Colaboradores ({total})
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={load} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
             <IconRefresh size={13} /> Actualizar
           </button>
-          <button onClick={() => exportarPDF(filtrados)} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+          <button onClick={() => exportarPDF(data)} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
             <IconPDF size={13} /> PDF
           </button>
-          <button onClick={() => exportarExcel(filtrados)} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+          <button onClick={() => exportarExcel(data)} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
             <IconExcel size={13} /> Excel
           </button>
           <button onClick={abrirNuevo} style={{ ...S.btn("primary"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
@@ -441,21 +438,14 @@ export default function PageEmpleados({ showToast, empId }) {
       </div>
 
       {/* Busqueda */}
-      <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}>
-            <IconSearch size={14} color={T.mut} />
-          </div>
-          <input style={{ ...S.inp, paddingLeft: 32 }}
-            placeholder="Buscar por nombre, codigo, DPI, puesto..."
-            value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-        </div>
+      <div style={{ marginBottom: 14 }}>
+        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, codigo, telefono, puesto..." />
       </div>
 
       {/* Lista */}
-      {loading ? <Spinner /> : filtrados.length === 0 ? (
+      {loading ? <Spinner /> : data.length === 0 ? (
         <Empty icon={<IconEmployee size={36} color={T.mut} />}
-          msg={rows.length === 0 ? "Sin empleados registrados" : "Sin resultados para la busqueda"}
+          msg={total === 0 ? "Sin empleados registrados" : "Sin resultados para la busqueda"}
           action="Registrar empleado" onAction={abrirNuevo} />
       ) : (
         <div style={S.card}>
@@ -468,7 +458,7 @@ export default function PageEmpleados({ showToast, empId }) {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(emp => {
+              {data.map(emp => {
                 const ti = TIPOS[emp.tipo] || TIPOS.fijo;
                 const es = ESTADOS[emp.estado] || ESTADOS.activo;
                 return (
@@ -532,6 +522,8 @@ export default function PageEmpleados({ showToast, empId }) {
           </table>
         </div>
       )}
+
+      <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
     </div>
   );
 }
