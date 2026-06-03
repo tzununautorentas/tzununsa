@@ -68,8 +68,12 @@ export default function PageClientes({ showToast, empId }) {
   };
 
   const del = async id => {
-    if (!confirm("Eliminar cliente?")) return;
-    await dbDel("clientes", id); showToast("Eliminado"); reload();
+    try {
+      if (!confirm("Eliminar cliente?")) return;
+      const r = await dbDel("clientes", id);
+      if (r?.error) { showToast(r.error, "err"); return; }
+      showToast("Eliminado"); reload();
+    } catch (e) { showToast("Error: " + e.message, "err"); }
   };
 
   const delSelected = async () => {
