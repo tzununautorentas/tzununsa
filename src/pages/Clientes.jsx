@@ -107,24 +107,30 @@ export default function PageClientes({ showToast, empId }) {
     const [parsedRows, setParsedRows] = useState([]);
     const [procesando, setProcesando] = useState(false);
     const [resultado, setResultado] = useState(null);
+    const [encabezados, setEncabezados] = useState([]);
     const refFile = useRef(null);
-    const iCols = useRef({ nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "" });
+    const iCols = useRef({ nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "", tipo: "" });
+
+    const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9ñ]/g, " ").trim();
 
     const detectarColumnas = (headers) => {
       if (!Array.isArray(headers) || headers.length === 0) return;
-      const h = headers.map(hh => String(hh).toLowerCase().trim().replace(/[^a-z0-9áéíóúñ]/g, " "));
-      const c = { nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "" };
+      const h = headers.map(hh => norm(hh));
+      const orig = headers.map(hh => String(hh).trim());
+      const c = { nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "", tipo: "" };
       h.forEach((hh, i) => {
-        if (/nombre|razon social|cliente|full name|empresa|name/.test(hh)) c.nombre = i;
-        else if (/nit|ruc|cui|id fiscal|documento/.test(hh)) c.nit = i;
-        else if (/tel[eé]fono|movil|cel|phone|contacto/.test(hh)) c.telefono = i;
-        else if (/email|correo|e.mail/.test(hh)) c.email = i;
+        if (/nombre|razon social|cliente|full name|name|empresa/.test(hh)) c.nombre = i;
+        else if (/nit|ruc|cui|id fiscal|documento|identificacion/.test(hh)) c.nit = i;
+        else if (/telefono|movil|cel|phone/.test(hh)) c.telefono = i;
+        else if (/email|correo|e.mail|mail/.test(hh)) c.email = i;
         else if (/direccion|dir|domicilio|address/.test(hh)) c.direccion = i;
         else if (/contacto|atencion/.test(hh)) c.contacto = i;
         else if (/notas|obs|coment|note/.test(hh)) c.notas = i;
+        else if (/tipo|categoria|class/.test(hh)) c.tipo = i;
       });
       if (c.nombre === "" && headers.length > 0) c.nombre = 0;
       iCols.current = c;
+      return orig; // for debug display
     };
 
     const csvRowToArray = (linea) => {
@@ -142,7 +148,8 @@ export default function PageClientes({ showToast, empId }) {
       const lineas = texto.split(/\r?\n/).filter(l => l.trim());
       if (lineas.length < 2) return [];
       const headers = lineas[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
-      detectarColumnas(headers);
+      const orig = detectarColumnas(headers) || headers;
+      setEncabezados(orig);
       return lineas.slice(1).map(l => csvRowToArray(l));
     };
 
@@ -152,7 +159,8 @@ export default function PageClientes({ showToast, empId }) {
       const json = window.XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
       if (json.length < 2) return [];
       const headers = json[0].map(h => String(h).trim());
-      detectarColumnas(headers);
+      const orig = detectarColumnas(headers) || headers;
+      setEncabezados(orig);
       return json.slice(1).map(row => {
         const arr = [];
         headers.forEach((_, i) => arr.push(row[i] !== undefined ? String(row[i]).trim() : ""));
@@ -165,6 +173,7 @@ export default function PageClientes({ showToast, empId }) {
       setResultado(null);
       setPreview([]);
       setParsedRows([]);
+      setEncabezados([]);
       if (!file) return;
       setProcesando(true);
       try {
@@ -201,12 +210,18 @@ export default function PageClientes({ showToast, empId }) {
         const nombre = vals[c.nombre] || "";
         if (!nombre) { err++; continue; }
         maxCode++;
+        let tipo = "empresa";
+        if (c.tipo !== "") {
+          const raw = (vals[c.tipo] || "").toLowerCase();
+          if (/gobierno|ong|oficial|publico/.test(raw)) tipo = "gobierno";
+          else if (/persona|natural|individual/.test(raw)) tipo = "persona";
+        }
         const codigo = String(maxCode).padStart(3, "0") + "C";
         const r = await dbIns("clientes", {
           codigo, nombre, empresa_id: empId,
           nit: vals[c.nit] || "", telefono: vals[c.telefono] || "",
           email: vals[c.email] || "", direccion: vals[c.direccion] || "",
-          contacto: vals[c.contacto] || "", notas: vals[c.notas] || "", tipo: "empresa",
+          contacto: vals[c.contacto] || "", notas: vals[c.notas] || "", tipo,
         });
         if (r?.error) { err++; continue; }
         ok++;
@@ -239,8 +254,9 @@ export default function PageClientes({ showToast, empId }) {
           {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc }}>Procesando...</div>}
           {archivo && !procesando && (
             <div style={{ fontSize: 11, color: T.mut, marginBottom: 10, padding: "6px 10px", background: T.surf, borderRadius: 6 }}>
-              Columnas detectadas: {
-                Object.entries(iCols.current).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna (se usara primera columna)"
+              Encabezados: <b>{encabezados.join(" | ") || "(sin encabezados)"}</b>
+              <br />Mapeo: {
+                Object.entries(iCols.current).filter(([,v]) => v !== "").map(([k, v]) => `${k}→col.${v}`).join(", ") || "ninguno"
               } — {parsedRows.length} filas
             </div>
           )}
