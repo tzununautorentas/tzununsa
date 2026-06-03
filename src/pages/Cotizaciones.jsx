@@ -83,7 +83,7 @@ td{padding:4px 7px;border-bottom:1px solid #F1F5F9;font-size:9.5px}.amt{text-ali
 .tc{display:flex;justify-content:space-between;font-size:10px;color:#F59E0B;font-weight:600;margin-top:3px}
 .bk{font-size:9.5px}.bn{font-weight:700;color:#00D4AA;display:block;margin-bottom:1px;margin-top:8px}
 .tl li{font-size:9px;color:#475569;padding:2px 0 2px 12px;position:relative}
-.tl li::before{content:"\2022";position:absolute;left:0;color:#00D4AA}
+.tl li::before{content:"\\2022";position:absolute;left:0;color:#00D4AA}
 .ft{margin-top:14px;border-top:2px solid #E2E8F0;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end}
 .fb{background:#1B2D5C;color:#94A3B8;font-size:7.5px;text-align:center;padding:7px;margin-top:12px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
