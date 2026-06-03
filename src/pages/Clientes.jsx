@@ -20,7 +20,7 @@ export default function PageClientes({ showToast, empId }) {
   const { data: rows, loading, total, page, totalPages, pageSize, desde, hasta, setPage, setPageSize, reload } = usePaginacion({
     table: 'clientes', query: '', search: busqueda,
     columns: ['nombre', 'codigo', 'nit', 'telefono'],
-    order: 'codigo.asc.nullslast',
+    order: 'codigo.asc',
   });
 
   useEffect(() => {
@@ -351,7 +351,12 @@ export default function PageClientes({ showToast, empId }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(c => {
+                {[...rows].sort((a, b) => {
+                  if (!a.codigo && !b.codigo) return 0;
+                  if (!a.codigo) return 1;
+                  if (!b.codigo) return -1;
+                  return a.codigo.localeCompare(b.codigo);
+                }).map(c => {
                   const tc = TC[c.tipo] || TC.empresa;
                   return (
                     <tr key={c.id}
