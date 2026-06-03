@@ -133,24 +133,36 @@ export default function PageClientes({ showToast, empId }) {
       return orig; // for debug display
     };
 
-    const csvRowToArray = (linea) => {
+    const csvRowToArray = (linea, delim) => {
       const vals = []; let cur = "", inQ = false;
       for (const ch of linea) {
         if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
+        if (ch === delim && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
         cur += ch;
       }
       vals.push(cur.trim());
       return vals;
     };
 
+    const detectarDelim = (linea) => {
+      const c = (linea.match(/,/g) || []).length;
+      const s = (linea.match(/;/g) || []).length;
+      const t = (linea.match(/\t/g) || []).length;
+      if (c >= s && c >= t) return ",";
+      if (s >= c && s >= t) return ";";
+      return "\t";
+    };
+
     const leerCSV = (texto) => {
-      const lineas = texto.split(/\r?\n/).filter(l => l.trim());
+      let text = texto;
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const lineas = text.split(/\r?\n/).filter(l => l.trim() || l === "");
       if (lineas.length < 2) return [];
-      const headers = lineas[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
+      const delim = detectarDelim(lineas[0]);
+      const headers = csvRowToArray(lineas[0], delim).map(h => h.replace(/^"|"$/g, "").trim());
       const orig = detectarColumnas(headers) || headers;
       setEncabezados(orig);
-      return lineas.slice(1).map(l => csvRowToArray(l));
+      return lineas.slice(1).map(l => csvRowToArray(l, delim));
     };
 
     const leerXLSX = async (data) => {
@@ -197,42 +209,48 @@ export default function PageClientes({ showToast, empId }) {
     };
 
     const importar = async () => {
-      if (!archivo || parsedRows.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
-      setProcesando(true);
-      const c = iCols.current;
-      let maxCode = 0;
-      allCodes.forEach(r => {
-        const m = (r.codigo || "").match(/^(\d+)/);
-        if (m) { const n = parseInt(m[1]); if (n > maxCode) maxCode = n; }
-      });
-      let ok = 0, err = 0, imported = [];
-      for (const vals of parsedRows) {
-        const nombre = vals[c.nombre] || "";
-        if (!nombre) { err++; continue; }
-        maxCode++;
-        let tipo = "empresa";
-        if (c.tipo !== "") {
-          const raw = (vals[c.tipo] || "").toLowerCase();
-          if (/gobierno|ong|oficial|publico/.test(raw)) tipo = "gobierno";
-          else if (/persona|natural|individual/.test(raw)) tipo = "persona";
-        }
-        const codigo = String(maxCode).padStart(3, "0") + "C";
-        const r = await dbIns("clientes", {
-          codigo, nombre, empresa_id: empId,
-          nit: vals[c.nit] || "", telefono: vals[c.telefono] || "",
-          email: vals[c.email] || "", direccion: vals[c.direccion] || "",
-          contacto: vals[c.contacto] || "", notas: vals[c.notas] || "", tipo,
+      try {
+        if (!archivo || parsedRows.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
+        setProcesando(true);
+        const c = iCols.current;
+        let maxCode = 0;
+        allCodes.forEach(r => {
+          const m = (r.codigo || "").match(/^(\d+)/);
+          if (m) { const n = parseInt(m[1]); if (n > maxCode) maxCode = n; }
         });
-        if (r?.error) { err++; continue; }
-        ok++;
-        imported.push({ codigo });
-      }
-      setAllCodes(prev => [...prev, ...imported]);
-      setResultado({ ok, err });
-      showToast(`Importacion completada: ${ok} exitosos, ${err} omitidos`);
-      setProcesando(false);
-      onClose();
-      reload();
+        let ok = 0, err = 0, imported = [];
+        for (const vals of parsedRows) {
+          const nombre = vals[c.nombre] != null ? String(vals[c.nombre]).trim() : "";
+          if (!nombre) { err++; continue; }
+          maxCode++;
+          let tipo = "empresa";
+          if (c.tipo !== "") {
+            const raw = (vals[c.tipo] || "").toLowerCase();
+            if (/gobierno|ong|oficial|publico/.test(raw)) tipo = "gobierno";
+            else if (/persona|natural|individual/.test(raw)) tipo = "persona";
+          }
+          const codigo = String(maxCode).padStart(3, "0") + "C";
+          const r = await dbIns("clientes", {
+            codigo, nombre, empresa_id: empId,
+            nit: vals[c.nit] != null ? String(vals[c.nit]).trim() : "",
+            telefono: vals[c.telefono] != null ? String(vals[c.telefono]).trim() : "",
+            email: vals[c.email] != null ? String(vals[c.email]).trim() : "",
+            direccion: vals[c.direccion] != null ? String(vals[c.direccion]).trim() : "",
+            contacto: vals[c.contacto] != null ? String(vals[c.contacto]).trim() : "",
+            notas: vals[c.notas] != null ? String(vals[c.notas]).trim() : "",
+            tipo,
+          });
+          if (r?.error) { err++; continue; }
+          ok++;
+          imported.push({ codigo });
+        }
+        setAllCodes(prev => [...prev, ...imported]);
+        setResultado({ ok, err });
+        showToast(`Importacion completada: ${ok} exitosos, ${err} omitidos`);
+        setProcesando(false);
+        onClose();
+        reload();
+      } catch (e) { showToast("Error en importacion: " + (e.message || e), "err"); setProcesando(false); }
     };
 
     return (
@@ -263,9 +281,18 @@ export default function PageClientes({ showToast, empId }) {
           {preview.length > 0 && (
             <div style={{ overflowX: "auto", marginBottom: 14, border: `1px solid ${T.bord}`, borderRadius: 8 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                <thead><tr>{Object.keys(preview[0]).map(h => <th key={h} style={{ ...S.th, whiteSpace: "nowrap" }}>{h}</th>)}</tr></thead>
-                <tbody>{preview.map((row, i) => <tr key={i}>{Object.values(row).map((v, j) => <td key={j} style={{ ...S.td, whiteSpace: "nowrap", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{v}</td>)}</tr>)}</tbody>
+                <thead><tr>
+                  {Array.from({length: preview[0].length}, (_, i) => (
+                    <th key={i} style={{ ...S.th, whiteSpace: "nowrap", background: T.surf, fontSize: 10 }}>
+                      Col {i}{iCols.current.nombre === i ? " (nombre)" : ""}
+                    </th>
+                  ))}
+                </tr></thead>
+                <tbody>{preview.map((row, i) => <tr key={i}>{(row).map((v, j) => <td key={j} style={{ ...S.td, whiteSpace: "nowrap", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{v}</td>)}</tr>)}</tbody>
               </table>
+              <div style={{ fontSize: 10, color: T.mut, padding: "3px 8px", textAlign: "right" }}>
+                Mostrando {preview.length} de {parsedRows.length} filas
+              </div>
             </div>
           )}
           {resultado && (
