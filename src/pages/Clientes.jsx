@@ -88,17 +88,19 @@ export default function PageClientes({ showToast, empId }) {
     const iCols = useRef({ nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "" });
 
     const detectarColumnas = (headers) => {
-      const h = headers.map(hh => hh.toLowerCase().trim());
+      if (!Array.isArray(headers) || headers.length === 0) return;
+      const h = headers.map(hh => String(hh).toLowerCase().trim().replace(/[^a-z0-9áéíóúñ]/g, " "));
       const c = { nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "" };
       h.forEach((hh, i) => {
-        if (/nombre|razon|cliente|empresa/.test(hh)) c.nombre = i;
-        else if (/nit|ruc|cui/.test(hh)) c.nit = i;
-        else if (/tel[eé]fono|movil|cel/.test(hh)) c.telefono = i;
-        else if (/email|correo|e-mail/.test(hh)) c.email = i;
-        else if (/direccion|dir|domicilio/.test(hh)) c.direccion = i;
-        else if (/contacto|atenci/.test(hh)) c.contacto = i;
-        else if (/notas|obs|coment/.test(hh)) c.notas = i;
+        if (/nombre|razon social|cliente|full name|empresa|name/.test(hh)) c.nombre = i;
+        else if (/nit|ruc|cui|id fiscal|documento/.test(hh)) c.nit = i;
+        else if (/tel[eé]fono|movil|cel|phone|contacto/.test(hh)) c.telefono = i;
+        else if (/email|correo|e.mail/.test(hh)) c.email = i;
+        else if (/direccion|dir|domicilio|address/.test(hh)) c.direccion = i;
+        else if (/contacto|atencion/.test(hh)) c.contacto = i;
+        else if (/notas|obs|coment|note/.test(hh)) c.notas = i;
       });
+      if (c.nombre === "" && headers.length > 0) c.nombre = 0;
       iCols.current = c;
     };
 
@@ -203,6 +205,13 @@ export default function PageClientes({ showToast, empId }) {
             </div>
           </div>
           {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc }}>Procesando...</div>}
+          {archivo && !procesando && (
+            <div style={{ fontSize: 11, color: T.mut, marginBottom: 10, padding: "6px 10px", background: T.surf, borderRadius: 6 }}>
+              Columnas detectadas: {
+                Object.entries(iCols.current).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna (se usara primera columna)"
+              } — {parsedRows.length} filas
+            </div>
+          )}
           {preview.length > 0 && (
             <div style={{ overflowX: "auto", marginBottom: 14, border: `1px solid ${T.bord}`, borderRadius: 8 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
