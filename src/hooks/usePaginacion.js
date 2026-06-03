@@ -8,18 +8,23 @@ export function usePaginacion({ table, query = '', search = '', columns = [], pa
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(ps);
   const prevSearch = useRef(search);
+  const paramsRef = useRef({ table, query, search, columns, page, pageSize, order });
+  paramsRef.current = { table, query, search, columns, page, pageSize, order };
+
+  const loadKey = [table, query, search, page, pageSize, order, JSON.stringify(columns)].join('|');
 
   const load = useCallback(async () => {
+    const p = paramsRef.current;
     setLoading(true);
     try {
-      let q = query ? `&${query}` : '';
-      if (search && columns.length > 0) {
-        const clauses = columns.map(c => `${c}.ilike.*${encodeURIComponent(search)}*`);
+      let q = p.query ? `&${p.query}` : '';
+      if (p.search && p.columns.length > 0) {
+        const clauses = p.columns.map(c => `${c}.ilike.*${encodeURIComponent(p.search)}*`);
         q += `&or=(${clauses.join(',')})`;
       }
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize - 1;
-      const url = `${SB}/rest/v1/${table}?select=*&order=${order}${q}`;
+      const start = (p.page - 1) * p.pageSize;
+      const end = start + p.pageSize - 1;
+      const url = `${SB}/rest/v1/${p.table}?select=*&order=${p.order}${q}`;
       const r = await fetch(url, {
         headers: { ...H, Range: `${start}-${end}`, Prefer: 'count=exact' },
       });
@@ -33,7 +38,7 @@ export function usePaginacion({ table, query = '', search = '', columns = [], pa
       setTotal(0);
     }
     setLoading(false);
-  }, [table, query, search, columns, page, pageSize, order]);
+  }, [loadKey]);
 
   useEffect(() => { load(); }, [load]);
 
