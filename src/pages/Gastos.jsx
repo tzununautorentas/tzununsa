@@ -676,11 +676,11 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
   if (filtroCat !== 'todas') queryParts.push('categoria=eq.'+filtroCat);
   const query = queryParts.join('&');
 
-  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+  const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload, desde, hasta } = usePaginacion({
     table: 'gastos',
     query,
     search: busqueda,
-    columns: ['concepto', 'descripcion', 'proveedor_nombre', 'numero_dte'],
+    columns: ['descripcion', 'proveedor', 'empleado_nombre', 'numero_factura'],
     order: 'fecha.desc',
   });
 
@@ -691,12 +691,12 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
     await dbUpd('gastos', gasto.id, upd);
     setPanelItem(null);
     showToast(nuevoEstado === 'aprobado' ? 'Gasto aprobado' : 'Estado actualizado');
-    load();
+    reload();
   };
 
   const rechazar = async (gasto, motivo) => {
     await dbUpd('gastos', gasto.id, { estado: 'rechazado', rechazado_por: userName, motivo_rechazo: motivo });
-    setPanelItem(null); showToast('Gasto rechazado'); load();
+    setPanelItem(null); showToast('Gasto rechazado'); reload();
   };
 
   // ── Contabilizar: crea asiento real en libro diario ──
@@ -745,7 +745,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
       await dbUpd('gastos', gasto.id, { contabilizado: true, estado: 'contabilizado' });
       setPanelItem(null);
       showToast('Asiento contable publicado en libro diario');
-      load();
+      reload();
     } catch (e) {
       showToast('Error al contabilizar: ' + e.message, 'err');
     }
@@ -755,7 +755,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
     if (!confirm('Eliminar este gasto?')) return;
     const r = await dbDel('gastos', id);
     if (r?.error) { showToast('Error al eliminar: ' + r.error, 'err'); return; }
-    showToast('Eliminado'); load();
+    showToast('Eliminado'); reload();
   };
 
   // ── Filtros ──
@@ -773,7 +773,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
   if (vista === 'form') return (
     <FormGasto initial={editItem} empId={empId} showToast={showToast}
       proveedores={proveedores} vehiculos={vehiculos} reservas={reservas} empleados={empleados}
-      onSave={() => { setVista('lista'); setEditItem(null); load(); }}
+      onSave={() => { setVista('lista'); setEditItem(null); reload(); }}
       onCancel={() => { setVista('lista'); setEditItem(null); }} />
   );
 
@@ -781,7 +781,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
     <div>
       {showSAT && (
         <ImportadorSAT tipo="compras" empId={empId} showToast={showToast}
-          onClose={() => setShowSAT(false)} onImportado={load} />
+          onClose={() => setShowSAT(false)} onImportado={reload} />
       )}
 
       {/* KPIs */}
@@ -823,7 +823,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
         )}
         <input type="month" style={{ ...S.inp, width: 150, fontSize: 11, padding: '5px 10px' }} value={filtroPer} onChange={e => setFiltroPer(e.target.value)} />
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          <button onClick={load} style={{ ...S.btn('ghost'), fontSize: 11 }}>Actualizar</button>
+          <button onClick={reload} style={{ ...S.btn('ghost'), fontSize: 11 }}>Actualizar</button>
           <button onClick={() => setShowSAT(true)} style={{ ...S.btn('blue'), fontSize: 11 }}>Importar SAT</button>
           <button onClick={() => exportarPDF(filtered, `Estado: ${filtroEst}`)} style={{ ...S.btn('blue'), fontSize: 11 }}>PDF</button>
           <button onClick={() => exportarExcel(filtered)} style={{ ...S.btn('green'), fontSize: 11 }}>Excel</button>

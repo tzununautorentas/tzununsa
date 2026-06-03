@@ -49,7 +49,7 @@ export default function PageProveedores({ showToast, empId }) {
   const [loadingHist, setLoadingHist]   = useState(false);
   const [guardando, setGuardando]       = useState(false);
 
-  const { data: proveedores, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: cargar, desde, hasta } = usePaginacion({
+  const { data: proveedores, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload, desde, hasta } = usePaginacion({
     table: "proveedores",
     query: filtroTipo !== "todos" ? "tipo=eq."+filtroTipo : "",
     search: busqueda,
@@ -85,7 +85,7 @@ export default function PageProveedores({ showToast, empId }) {
       if (res?.error) { showToast("Error: " + res.error,"err"); return; }
       showToast(editId ? "Proveedor actualizado" : "Proveedor creado");
       setVista("lista");
-      cargar();
+      reload();
     } catch (e) { showToast("Error: " + e.message,"err"); }
     finally { setGuardando(false); }
   };
@@ -95,7 +95,7 @@ export default function PageProveedores({ showToast, empId }) {
     await dbDel("proveedores", id);
     showToast("Proveedor eliminado");
     setVista("lista");
-    cargar();
+    reload();
   };
 
   const stats = TIPOS.map(t => ({ ...t, count: proveedores.filter(p=>p.tipo===t.value).length })).filter(t=>t.count>0);

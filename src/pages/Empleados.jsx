@@ -94,7 +94,7 @@ export default function PageEmpleados({ showToast, empId }) {
     filtroEst !== "todos" ? `estado=eq.${filtroEst}` : "",
   ].filter(Boolean).join("&");
 
-  const { data, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
+  const { data, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload, desde, hasta } = usePaginacion({
     table: "empleados",
     query,
     search: busqueda,
@@ -144,12 +144,12 @@ export default function PageEmpleados({ showToast, empId }) {
     if (editItem?.id) await dbUpd("empleados", editItem.id, payload);
     else await dbIns("empleados", payload);
     showToast(editItem ? "Empleado actualizado" : "Empleado registrado");
-    setSaving(false); setVista("lista"); setEditItem(null); load();
+    setSaving(false); setVista("lista"); setEditItem(null); reload();
   };
 
   const del = async (id) => {
     if (!confirm("Eliminar empleado? Esta accion no se puede deshacer.")) return;
-    await dbDel("empleados", id); showToast("Eliminado"); load();
+    await dbDel("empleados", id); showToast("Eliminado"); reload();
   };
 
   // ─── Stats ─────────────────────────────────────────────────────
@@ -406,7 +406,7 @@ export default function PageEmpleados({ showToast, empId }) {
           Empleados y Colaboradores ({total})
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={load} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+          <button onClick={reload} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
             <IconRefresh size={13} /> Actualizar
           </button>
           <button onClick={() => exportarPDF(data)} style={{ ...S.btn("ghost"), display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
