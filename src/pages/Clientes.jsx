@@ -276,6 +276,9 @@ export default function PageClientes({ showToast, empId }) {
               <br />Mapeo: {
                 Object.entries(iCols.current).filter(([,v]) => v !== "").map(([k, v]) => `${k}→col.${v}`).join(", ") || "ninguno"
               } — {parsedRows.length} filas
+              {parsedRows.length > 0 && (
+                <><br />Fila 1: <b>{JSON.stringify(parsedRows[0])}</b> — valor nombre (col.{iCols.current.nombre}): <b>"{parsedRows[0][iCols.current.nombre]}"</b></>
+              )}
             </div>
           )}
           {preview.length > 0 && (
