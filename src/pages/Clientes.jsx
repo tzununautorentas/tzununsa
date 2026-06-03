@@ -119,15 +119,15 @@ export default function PageClientes({ showToast, empId }) {
       const orig = headers.map(hh => String(hh).trim());
       const c = { nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "", tipo: "", codigo: "" };
       h.forEach((hh, i) => {
-        if (/nombre|razon social|cliente|full name|name|empresa/.test(hh)) c.nombre = i;
-        else if (/codigo|no\b|num|id/.test(hh) && !/nombre|nit|telefono|email/.test(hh)) c.codigo = i;
+        if (/^codigo|no\.|num|^id$/.test(hh) && !/nombre|nit|telefono|email/.test(hh)) c.codigo = i;
+        else if (/^tipo|categoria|class/.test(hh)) c.tipo = i;
         else if (/nit|ruc|cui|id fiscal|documento|identificacion/.test(hh)) c.nit = i;
         else if (/telefono|movil|cel|phone/.test(hh)) c.telefono = i;
         else if (/email|correo|e.mail|mail/.test(hh)) c.email = i;
         else if (/direccion|dir|domicilio|address/.test(hh)) c.direccion = i;
         else if (/contacto|atencion/.test(hh)) c.contacto = i;
         else if (/notas|obs|coment|note/.test(hh)) c.notas = i;
-        else if (/tipo|categoria|class/.test(hh)) c.tipo = i;
+        else if (/nombre|razon social|cliente|full name|name|empresa/.test(hh)) c.nombre = i;
       });
       if (c.nombre === "" && headers.length > 0) c.nombre = 0;
       iCols.current = c;
