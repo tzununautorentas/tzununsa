@@ -117,9 +117,10 @@ export default function PageClientes({ showToast, empId }) {
       if (!Array.isArray(headers) || headers.length === 0) return;
       const h = headers.map(hh => norm(hh));
       const orig = headers.map(hh => String(hh).trim());
-      const c = { nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "", tipo: "" };
+      const c = { nombre: "", nit: "", telefono: "", email: "", direccion: "", contacto: "", notas: "", tipo: "", codigo: "" };
       h.forEach((hh, i) => {
         if (/nombre|razon social|cliente|full name|name|empresa/.test(hh)) c.nombre = i;
+        else if (/codigo|no\b|num|id/.test(hh) && !/nombre|nit|telefono|email/.test(hh)) c.codigo = i;
         else if (/nit|ruc|cui|id fiscal|documento|identificacion/.test(hh)) c.nit = i;
         else if (/telefono|movil|cel|phone/.test(hh)) c.telefono = i;
         else if (/email|correo|e.mail|mail/.test(hh)) c.email = i;
@@ -218,18 +219,29 @@ export default function PageClientes({ showToast, empId }) {
           const m = (r.codigo || "").match(/^(\d+)/);
           if (m) { const n = parseInt(m[1]); if (n > maxCode) maxCode = n; }
         });
+        parsedRows.forEach(vals => {
+          if (c.codigo !== "" && vals[c.codigo] != null) {
+            const m = String(vals[c.codigo]).match(/^(\d+)/);
+            if (m) { const n = parseInt(m[1]); if (n > maxCode) maxCode = n; }
+          }
+        });
         let ok = 0, err = 0, imported = [];
         for (const vals of parsedRows) {
           const nombre = vals[c.nombre] != null ? String(vals[c.nombre]).trim() : "";
           if (!nombre) { err++; continue; }
-          maxCode++;
           let tipo = "empresa";
           if (c.tipo !== "") {
             const raw = (vals[c.tipo] || "").toLowerCase();
-            if (/gobierno|ong|oficial|publico/.test(raw)) tipo = "gobierno";
+            if (/ong|asociacion|fundacion|organizacion no/.test(raw)) tipo = "ong";
+            else if (/gobierno|oficial|publico|municipal/.test(raw)) tipo = "gobierno";
             else if (/persona|natural|individual/.test(raw)) tipo = "persona";
           }
-          const codigo = String(maxCode).padStart(3, "0") + "C";
+          let codigo;
+          if (c.codigo !== "" && vals[c.codigo] != null && String(vals[c.codigo]).trim()) {
+            codigo = String(vals[c.codigo]).trim();
+          } else {
+            codigo = String(++maxCode).padStart(3, "0") + "C";
+          }
           const r = await dbIns("clientes", {
             codigo, nombre, empresa_id: empId,
             nit: vals[c.nit] != null ? String(vals[c.nit]).trim() : "",
@@ -315,9 +327,10 @@ export default function PageClientes({ showToast, empId }) {
   }
 
   const TC = {
-    empresa:  { c: T.sec,  bg: T.secDim,  l: "Empresa"       },
-    gobierno: { c: T.blue, bg: T.blueDim, l: "Gobierno / ONG" },
-    persona:  { c: T.acc,  bg: T.accDim,  l: "Persona"        },
+    empresa:  { c: T.sec,   bg: T.secDim,   l: "Empresa"        },
+    gobierno: { c: T.blue,  bg: T.blueDim,  l: "Gobierno"       },
+    ong:      { c: T.purple,bg: T.purpleDim,l: "ONG"            },
+    persona:  { c: T.acc,   bg: T.accDim,   l: "Persona natural"},
   };
 
   if (vista === "form") return (
@@ -340,7 +353,8 @@ export default function PageClientes({ showToast, empId }) {
         <Fld label="TIPO DE CLIENTE">
           <select style={S.sel} value={f.tipo} onChange={e => sf("tipo", e.target.value)}>
             <option value="empresa">Empresa</option>
-            <option value="gobierno">Gobierno / ONG</option>
+            <option value="gobierno">Gobierno</option>
+            <option value="ong">ONG</option>
             <option value="persona">Persona natural</option>
           </select>
         </Fld>
