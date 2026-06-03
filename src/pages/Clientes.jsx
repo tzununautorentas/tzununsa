@@ -12,6 +12,7 @@ export default function PageClientes({ showToast, empId }) {
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [confirmDel, setConfirmDel] = useState(null); // { id?, label }
   const [f, setF] = useState({
     codigo: "", nombre: "", tipo: "empresa", nit: "",
     direccion: "", telefono: "", email: "", contacto: "", notas: ""
@@ -68,18 +69,14 @@ export default function PageClientes({ showToast, empId }) {
   };
 
   const del = async id => {
-    try {
-      if (!confirm("Eliminar cliente?")) return;
-      const r = await dbDel("clientes", id);
-      if (r?.error) { showToast(r.error, "err"); return; }
-      showToast("Eliminado"); reload();
-    } catch (e) { showToast("Error: " + e.message, "err"); }
+    const r = await dbDel("clientes", id);
+    if (r?.error) { showToast(r.error, "err"); return; }
+    showToast("Eliminado"); reload();
   };
 
   const delSelected = async () => {
     const n = selectedIds.size;
     if (n === 0) return;
-    if (!confirm(`Eliminar ${n} cliente${n > 1 ? "s" : ""} seleccionado${n > 1 ? "s" : ""}?`)) return;
     let ok = 0, errs = 0;
     for (const id of selectedIds) {
       const r = await dbDel("clientes", id);
@@ -356,6 +353,42 @@ export default function PageClientes({ showToast, empId }) {
         <ImportadorClientes onClose={() => setShowImport(false)} />
       )}
 
+      {confirmDel && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ ...S.card, maxWidth: 400, width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+              {confirmDel.ids ? `Eliminar ${confirmDel.n} clientes?` : "Eliminar cliente?"}
+            </div>
+            <div style={{ fontSize: 13, color: T.sub, marginBottom: 18 }}>
+              {confirmDel.ids
+                ? `Se eliminaran ${confirmDel.n} clientes seleccionados permanentemente.`
+                : `Se eliminara "${confirmDel.label}" permanentemente.`}
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <button onClick={async () => {
+                if (confirmDel.ids) {
+                  let ok = 0, errs = 0;
+                  for (const id of confirmDel.ids) {
+                    const r = await dbDel("clientes", id);
+                    if (r?.error) { errs++; continue; }
+                    ok++;
+                  }
+                  showToast(`${ok} eliminado${ok !== 1 ? "s" : ""}, ${errs} error${errs !== 1 ? "es" : ""}`);
+                  setSelectedIds(new Set());
+                } else {
+                  const r = await dbDel("clientes", confirmDel.id);
+                  if (r?.error) { showToast(r.error, "err"); setConfirmDel(null); return; }
+                  showToast("Eliminado");
+                }
+                setConfirmDel(null);
+                reload();
+              }} style={{ ...S.btn("danger"), flex: 1 }}>Eliminar</button>
+              <button onClick={() => setConfirmDel(null)} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
           Directorio de Clientes ({total})
@@ -432,7 +465,7 @@ export default function PageClientes({ showToast, empId }) {
                           <button onClick={() => abrirEditar(c)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
                             Editar
                           </button>
-                          <button onClick={() => del(c.id)} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
+                          <button onClick={() => setConfirmDel({ id: c.id, label: c.nombre })} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
                             Eliminar
                           </button>
                         </div>
@@ -446,7 +479,7 @@ export default function PageClientes({ showToast, empId }) {
           {selectedIds.size > 0 && (
             <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 12, color: T.sub }}>{selectedIds.size} seleccionado{selectedIds.size > 1 ? "s" : ""}</span>
-              <button onClick={delSelected} style={{ ...S.btn("danger"), fontSize: 12 }}>Eliminar seleccionados</button>
+              <button onClick={() => setConfirmDel({ ids: [...selectedIds], n: selectedIds.size })} style={{ ...S.btn("danger"), fontSize: 12 }}>Eliminar seleccionados</button>
               <button onClick={() => setSelectedIds(new Set())} style={{ ...S.btn("ghost"), fontSize: 12 }}>Limpiar</button>
             </div>
           )}
