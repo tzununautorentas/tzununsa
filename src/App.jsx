@@ -698,6 +698,27 @@ function AppContent() {
     return () => window.removeEventListener("resize", fn);
   }, []);
 
+  // Inyectar CSS responsive global
+  useEffect(() => {
+    const id = "tzunun-responsive-css";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `
+      @media (max-width: 767px) {
+        .page-grid { grid-template-columns: 1fr 1fr !important; }
+        .page-grid-4 { grid-template-columns: 1fr 1fr !important; }
+        .page-grid-3 { grid-template-columns: 1fr !important; }
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-wrap table { min-width: 580px; }
+        input, select, textarea { font-size: 16px !important; }
+        button { min-height: 36px; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { const s = document.getElementById(id); if (s) s.remove(); };
+  }, []);
+
   useEffect(() => {
     if (session) {
       dbGet("empresas", "&select=id&limit=1").then(d => {

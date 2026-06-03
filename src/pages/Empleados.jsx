@@ -448,7 +448,7 @@ export default function PageEmpleados({ showToast, empId }) {
           msg={total === 0 ? "Sin empleados registrados" : "Sin resultados para la busqueda"}
           action="Registrar empleado" onAction={abrirNuevo} />
       ) : (
-        <div style={S.card}>
+        <div style={{ ...S.card, overflowX: 'auto' }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>

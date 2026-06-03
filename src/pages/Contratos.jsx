@@ -1054,7 +1054,7 @@ export default function PageContratos({ showToast, empId }) {
         <Empty icon="C" msg="Sin contratos registrados" action="+ Nuevo contrato"
           onAction={() => { setEditItem(null); setVista('form'); }} />
       ) : (
-        <div style={S.card}>
+        <div style={{ ...S.card, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>

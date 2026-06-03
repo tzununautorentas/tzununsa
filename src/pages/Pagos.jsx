@@ -275,7 +275,7 @@ export default function PagePagos({ showToast, empId }) {
           {pag.loading?<Spinner/>:pag.data.length===0?(
             <Empty icon="P" msg="Sin pagos registrados" action="+ Registrar primer pago" onAction={()=>{setEditId(null);setF({...EF});setShowForm(true);}}/>
           ):(
-            <div style={S.card}>
+            <div style={{ ...S.card, overflowX: 'auto' }}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr>{["Fecha","Cliente","Concepto","Metodo","Cuenta","Monto",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
                 <tbody>

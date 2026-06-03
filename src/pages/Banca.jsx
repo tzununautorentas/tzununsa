@@ -1,7 +1,232 @@
-import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
 import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
+
+const CATS = ["ventas", "combustible", "mantenimiento", "salarios", "seguros", "servicios", "oficina", "otros"];
+const CC = { ventas: T.acc, combustible: T.sec, mantenimiento: T.blue, salarios: T.green, seguros: T.purple, servicios: T.acc, oficina: T.mut, otros: T.sub };
+
+const EFM = { fecha: today(), tipo: "ingreso", descripcion: "", monto: "", referencia: "", categoria: "ventas", conciliado: false, notas: "" };
+const EFC = { banco: "", numero_cuenta: "", tipo_cuenta: "monetaria", moneda: "GTQ", saldo_inicial: "", saldo_actual: "", notas: "" };
+
+function DetalleMovimiento({ mov, onClose }) {
+  if (!mov) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400 }} onClick={onClose}>
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 380, background: T.card, borderLeft: `1px solid ${T.bord}`, overflowY: "auto" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.bord}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Detalle del movimiento</div>
+          <button onClick={onClose} style={{ ...S.btn("ghost"), padding: "4px 10px" }}>X</button>
+        </div>
+        <div style={{ padding: "16px 18px" }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: mov.tipo === "ingreso" ? T.green : T.red, marginBottom: 16 }}>
+            {mov.tipo === "ingreso" ? "+ " : "- "}Q {fmt(mov.monto)}
+          </div>
+          {[
+            ["Fecha", fmtD(mov.fecha)],
+            ["Tipo", mov.tipo === "ingreso" ? "Ingreso" : "Egreso"],
+            ["Descripcion", mov.descripcion || "—"],
+            ["Categoria", mov.categoria],
+            ["Referencia", mov.referencia || "—"],
+            ["Conciliado", mov.conciliado ? "Si" : "No"],
+            ["Cliente asociado", mov.cliente_nombre || "—"],
+            ["Reserva asociada", mov.reserva_numero || "—"],
+            ["Factura asociada", mov.factura_numero || "—"],
+            ["Observaciones", mov.notas || "—"],
+            ["Creado", fmtD(mov.created_at)],
+          ].map(([l, v]) => (
+            <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${T.bord}18`, fontSize: 12 }}>
+              <span style={{ color: T.sub }}>{l}</span>
+              <span style={{ fontWeight: 500, color: T.txt, textAlign: "right", maxWidth: "55%" }}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }) {
+  const [archivo, setArchivo] = useState(null);
+  const [preview, setPreview] = useState([]);
+  const [procesando, setProcesando] = useState(false);
+  const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "" });
+  const [resultado, setResultado] = useState(null);
+  const refFile = useRef(null);
+
+  const detectarColumnas = (headers) => {
+    const h = headers.map(hh => hh.toLowerCase().trim());
+    const c = { fecha: "", descripcion: "", monto: "", tipo: "", referencia: "" };
+    h.forEach((hh, i) => {
+      if (/fecha|date|dia/.test(hh)) c.fecha = i;
+      else if (/descripc|concepto|detalle|glosa/.test(hh)) c.descripcion = i;
+      else if (/monto|importe|valor|total|cantidad/.test(hh)) c.monto = i;
+      else if (/tipo|ingreso|egreso|tipo/i.test(hh)) c.tipo = i;
+      else if (/refe|doc|numero|comprob/.test(hh)) c.referencia = i;
+    });
+    setCols(c);
+  };
+
+  const leerCSV = (texto) => {
+    const lineas = texto.split(/\r?\n/).filter(l => l.trim());
+    if (lineas.length < 2) return [];
+    const headers = lineas[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
+    detectarColumnas(headers);
+    return lineas.slice(1, 12).map(l => {
+      const vals = [];
+      let cur = "", inQ = false;
+      for (const ch of l) {
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
+        cur += ch;
+      }
+      vals.push(cur.trim());
+      const row = {};
+      headers.forEach((h, i) => row[h] = vals[i] || "");
+      return row;
+    });
+  };
+
+  const leerXLSX = async (data) => {
+    const wb = new window.XLSX.utils.book_new();
+    try {
+      const wb2 = window.XLSX.read(data, { type: "array", codepage: 65001 });
+      const ws = wb2.Sheets[wb2.SheetNames[0]];
+      const json = window.XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
+      if (json.length < 2) return [];
+      const headers = json[0].map(h => String(h).trim());
+      detectarColumnas(headers);
+      return json.slice(1, 12).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] !== undefined ? String(row[i]).trim() : "");
+        return obj;
+      });
+    } catch { return []; }
+  };
+
+  const handleFile = async (file) => {
+    setArchivo(file);
+    setResultado(null);
+    setPreview([]);
+    if (!file) return;
+    setProcesando(true);
+    try {
+      const ext = file.name.split(".").pop().toLowerCase();
+      const buf = await file.arrayBuffer();
+      const dec = new TextDecoder("utf-8");
+      let rows;
+      if (ext === "csv") {
+        const texto = dec.decode(buf);
+        rows = leerCSV(texto);
+      } else if (ext === "xlsx") {
+        await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+        rows = await leerXLSX(buf);
+      } else {
+        showToast("Formato no soportado. Usa .csv o .xlsx", "err");
+        setProcesando(false); return;
+      }
+      setPreview(rows);
+    } catch (e) { showToast("Error al leer archivo: " + e.message, "err"); }
+    setProcesando(false);
+  };
+
+  const importar = async () => {
+    if (!archivo || preview.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
+    setProcesando(true);
+    const headers = Object.keys(preview[0] || {});
+    const iF = cols.fecha, iD = cols.descripcion, iM = cols.monto, iT = cols.tipo, iR = cols.referencia;
+    let ok = 0, err = 0;
+    const archivoTexto = await archivo.text().catch(() => "");
+    const lineas = archivoTexto.split(/\r?\n/).filter(l => l.trim());
+    const datos = lineas.slice(1);
+    for (const linea of datos) {
+      const vals = [];
+      let cur = "", inQ = false;
+      for (const ch of linea) {
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
+        cur += ch;
+      }
+      vals.push(cur.trim());
+      const fecha = vals[iF] || "";
+      const descripcion = vals[iD] || "";
+      const montoRaw = vals[iM] || "0";
+      const monto = parseFloat(montoRaw.replace(/[^0-9.\-]/g, "")) || 0;
+      const tipo = vals[iT] ? (vals[iT].toLowerCase().includes("egr") || vals[iT].toLowerCase().includes("sal") ? "egreso" : "ingreso") : (monto >= 0 ? "ingreso" : "egreso");
+      const referencia = vals[iR] || "";
+      if (!descripcion || monto === 0) { err++; continue; }
+      const r = await dbIns("movimientos_bancarios", {
+        empresa_id: empId, cuenta_id: cuentaAct.id,
+        fecha, tipo, descripcion, monto: Math.abs(monto),
+        referencia, categoria: "otros", conciliado: false,
+      });
+      if (r?.error) { err++; continue; }
+      ok++;
+      const delta = tipo === "ingreso" ? Math.abs(monto) : -Math.abs(monto);
+      const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
+      await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
+    }
+    setResultado({ ok, err });
+    showToast(`Importacion completada: ${ok} exitosos, ${err} errores`);
+    setProcesando(false);
+    onImported();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ ...S.card, width: "100%", maxWidth: 580, maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Importar movimientos bancarios</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 22 }}>X</button>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ border: `2px dashed ${archivo ? T.acc : T.bord}`, borderRadius: 12, padding: "24px 14px", textAlign: "center", cursor: "pointer", background: archivo ? T.accDim : "transparent" }}
+            onClick={() => refFile.current?.click()}>
+            <div style={{ fontSize: 28, marginBottom: 6, color: archivo ? T.acc : T.sub }}>XLS</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>{archivo ? archivo.name : "Selecciona archivo .xlsx o .csv"}</div>
+            <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>Columnas: fecha, descripcion, monto, tipo, referencia</div>
+            <input ref={refFile} type="file" accept=".csv,.xlsx" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
+          </div>
+        </div>
+        {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc }}>Procesando...</div>}
+        {Object.keys(cols).length > 0 && (
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Columnas detectadas: {Object.entries(cols).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna"}</div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+          {["fecha", "descripcion", "monto", "tipo", "referencia"].map(campo => (
+            <div key={campo}>
+              <label style={{ ...S.lbl, fontSize: 10 }}>{campo}</label>
+              <select style={{ ...S.sel, fontSize: 11, padding: "4px 8px" }} value={cols[campo]} onChange={e => setCols(p => ({ ...p, [campo]: e.target.value }))}>
+                <option value="">Sin mapeo</option>
+                {preview.length > 0 && Object.keys(preview[0]).map((h, i) => <option key={i} value={i}>{h}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+        {preview.length > 0 && (
+          <div style={{ overflowX: "auto", marginBottom: 14, border: `1px solid ${T.bord}`, borderRadius: 8 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+              <thead><tr>{Object.keys(preview[0]).map(h => <th key={h} style={{ ...S.th, whiteSpace: "nowrap" }}>{h}</th>)}</tr></thead>
+              <tbody>{preview.map((row, i) => <tr key={i}>{Object.values(row).map((v, j) => <td key={j} style={{ ...S.td, whiteSpace: "nowrap", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{v}</td>)}</tr>)}</tbody>
+            </table>
+          </div>
+        )}
+        {resultado && (
+          <div style={{ padding: "10px 14px", background: resultado.err > 0 ? (resultado.ok > 0 ? T.secDim : T.redDim) : T.greenDim, borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
+            {resultado.ok} importados, {resultado.err} omitidos
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={importar} disabled={procesando || preview.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
+            {procesando ? "Importando..." : `Importar ${preview.length} registros`}
+          </button>
+          <button onClick={onClose} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PageBanca({ showToast, empId }) {
   const [cuentas,    setCuentas]    = useState([]);
@@ -9,21 +234,19 @@ export default function PageBanca({ showToast, empId }) {
   const [loading,    setLoading]    = useState(true);
   const [showForm,   setShowForm]   = useState(false);
   const [showCuenta, setShowCuenta] = useState(false);
+  const [editMovId,  setEditMovId]  = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [filtroT,    setFiltroT]    = useState("todos");
   const [filtroC,    setFiltroC]    = useState("todos");
   const [exportar,   setExportar]   = useState(false);
+  const [importar,   setImportar]   = useState(false);
+  const [detalleMov, setDetalleMov] = useState(null);
   const [busqueda,   setBusqueda]   = useState("");
 
-  const EFM = { fecha: today(), tipo: "ingreso", descripcion: "", monto: "", referencia: "", categoria: "ventas", conciliado: false, notas: "" };
-  const EFC = { banco: "", numero_cuenta: "", tipo_cuenta: "monetaria", moneda: "GTQ", saldo_inicial: "", saldo_actual: "", notas: "" };
   const [f,  setF]  = useState({ ...EFM });
-  const [fc, setFc] = useState({ ...EFC });
+  const [fc, setFc]  = useState({ ...EFC });
   const sf  = (k, v) => setF(p => ({ ...p, [k]: v }));
   const sfc = (k, v) => setFc(p => ({ ...p, [k]: v }));
-
-  const CATS = ["ventas", "combustible", "mantenimiento", "salarios", "seguros", "servicios", "oficina", "otros"];
-  const CC = { ventas: T.acc, combustible: T.sec, mantenimiento: T.blue, salarios: T.green, seguros: T.purple, servicios: T.acc, oficina: T.mut, otros: T.sub };
 
   const loadCuentas = async () => {
     setLoading(true);
@@ -55,24 +278,57 @@ export default function PageBanca({ showToast, empId }) {
     showToast("Cuenta registrada"); setSaving(false); setShowCuenta(false); setFc({ ...EFC }); loadCuentas();
   };
 
+  const abrirEditarMov = (mov) => {
+    setEditMovId(mov.id);
+    setF({
+      fecha: mov.fecha || today(),
+      tipo: mov.tipo || "ingreso",
+      descripcion: mov.descripcion || "",
+      monto: mov.monto || "",
+      referencia: mov.referencia || "",
+      categoria: mov.categoria || "ventas",
+      conciliado: mov.conciliado || false,
+      notas: mov.notas || "",
+    });
+    setShowForm(true);
+  };
+
   const guardarMov = async () => {
     if (!f.descripcion.trim() || !(parseFloat(f.monto) > 0)) {
       showToast("Descripcion y monto requeridos", "err"); return;
     }
     setSaving(true);
-    const mov = await dbIns("movimientos_bancarios", {
+    const payload = {
       empresa_id: empId, cuenta_id: cuentaAct.id,
       fecha: f.fecha, tipo: f.tipo, descripcion: f.descripcion,
       monto: parseFloat(f.monto), referencia: f.referencia,
       categoria: f.categoria, conciliado: f.conciliado, notas: f.notas,
-    });
-    if (mov?.error) { showToast("Error: " + mov.error, "err"); setSaving(false); return; }
-    const delta = f.tipo === "ingreso" ? parseFloat(f.monto) : -parseFloat(f.monto);
-    const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
-    await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
-    setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
-    setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
-    showToast("Guardado"); setSaving(false); setShowForm(false);
+    };
+    if (editMovId) {
+      const old = movs.find(m => m.id === editMovId);
+      const r = await dbUpd("movimientos_bancarios", editMovId, payload);
+      if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
+      if (old) {
+        const deltaOld = old.tipo === "ingreso" ? parseFloat(old.monto) : -parseFloat(old.monto);
+        const deltaNew = f.tipo === "ingreso" ? parseFloat(f.monto) : -parseFloat(f.monto);
+        const ajuste = deltaNew - deltaOld;
+        const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + ajuste;
+        await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
+        setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
+        setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
+      }
+      showToast("Movimiento actualizado");
+    } else {
+      const mov = await dbIns("movimientos_bancarios", payload);
+      if (mov?.error) { showToast("Error: " + mov.error, "err"); setSaving(false); return; }
+      const delta = f.tipo === "ingreso" ? parseFloat(f.monto) : -parseFloat(f.monto);
+      const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
+      await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
+      setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
+      setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
+      showToast("Guardado");
+    }
+    setSaving(false); setShowForm(false); setEditMovId(null);
     setF({ ...EFM }); reloadMovs();
   };
 
@@ -93,6 +349,8 @@ export default function PageBanca({ showToast, empId }) {
     await dbDel("movimientos_bancarios", id);
     showToast("Eliminado"); reloadMovs();
   };
+
+  const cerrarForm = () => { setShowForm(false); setEditMovId(null); setF({ ...EFM }); };
 
   const movsFil = movs.filter(m => {
     if (filtroT !== "todos" && m.tipo !== filtroT) return false;
@@ -117,6 +375,14 @@ export default function PageBanca({ showToast, empId }) {
             { label: "Conciliado", key: "conciliado" },
           ]} onClose={() => setExportar(false)} />
       )}
+
+      {importar && (
+        <ImportadorBancario showToast={showToast} empId={empId} cuentaAct={cuentaAct}
+          onImported={() => { setImportar(false); reloadMovs(); }}
+          onClose={() => setImportar(false)} />
+      )}
+
+      <DetalleMovimiento mov={detalleMov} onClose={() => setDetalleMov(null)} />
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
@@ -197,7 +463,8 @@ export default function PageBanca({ showToast, empId }) {
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>Exportar</button>
-                  <button onClick={() => setShowForm(!showForm)}
+                  <button onClick={() => setImportar(true)} style={{ ...S.btn("blue"), fontSize: 11 }}>Importar</button>
+                  <button onClick={() => { cerrarForm(); setShowForm(!showForm); }}
                     style={{ ...S.btn(showForm ? "warn" : "primary"), fontSize: 12 }}>
                     {showForm ? "Cancelar" : "+ Movimiento"}
                   </button>
@@ -206,6 +473,9 @@ export default function PageBanca({ showToast, empId }) {
 
               {showForm && (
                 <div style={{ ...S.card, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>
+                    {editMovId ? "Editar movimiento" : "Nuevo movimiento"}
+                  </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
                     <Fld label="FECHA">
                       <input style={S.inp} type="date" value={f.fecha} onChange={e => sf("fecha", e.target.value)} />
@@ -238,11 +508,17 @@ export default function PageBanca({ showToast, empId }) {
                       <input type="checkbox" checked={f.conciliado} onChange={e => sf("conciliado", e.target.checked)} style={{ width: 16, height: 16 }} />
                       <label style={{ ...S.lbl, marginBottom: 0 }}>CONCILIADO</label>
                     </div>
+                    <div style={{ gridColumn: "span 2" }}>
+                      <Fld label="NOTAS">
+                        <textarea style={{ ...S.inp, minHeight: 50, resize: "vertical" }} value={f.notas}
+                          onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." />
+                      </Fld>
+                    </div>
                     <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
                       <button onClick={guardarMov} disabled={saving} style={{ ...S.btn("primary"), flex: 2 }}>
-                        {saving ? "Guardando..." : "Guardar movimiento"}
+                        {saving ? "Guardando..." : editMovId ? "Actualizar movimiento" : "Guardar movimiento"}
                       </button>
-                      <button onClick={() => setShowForm(false)} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+                      <button onClick={cerrarForm} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
                     </div>
                   </div>
                 </div>
@@ -266,13 +542,13 @@ export default function PageBanca({ showToast, empId }) {
               </div>
 
               {movsFil.length === 0 ? (
-                <Empty icon="B" msg="Sin movimientos" action="+ Registrar" onAction={() => setShowForm(true)} />
+                <Empty icon="B" msg="Sin movimientos" action="+ Registrar" onAction={() => { cerrarForm(); setShowForm(true); }} />
               ) : (
-                <div style={S.card}>
+                <div style={{ ...S.card, overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
-                        {["Fecha", "Descripcion", "Categoria", "Monto", "Conciliado", ""].map(h => (
+                        {["Fecha", "Descripcion", "Categoria", "Monto", "Conciliado", "Acciones"].map(h => (
                           <th key={h} style={S.th}>{h}</th>
                         ))}
                       </tr>
@@ -306,10 +582,20 @@ export default function PageBanca({ showToast, empId }) {
                             </button>
                           </td>
                           <td style={S.td}>
-                            <button onClick={() => delMov(m.id)}
-                              style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 11 }}>
-                              Eliminar
-                            </button>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => setDetalleMov(m)}
+                                style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 11 }} title="Ver detalle">
+                                Ver
+                              </button>
+                              <button onClick={() => abrirEditarMov(m)}
+                                style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 11 }} title="Editar">
+                                Editar
+                              </button>
+                              <button onClick={() => delMov(m.id)}
+                                style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 11 }} title="Eliminar">
+                                Eliminar
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

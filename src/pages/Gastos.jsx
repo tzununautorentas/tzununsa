@@ -843,7 +843,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
       {loading ? <Spinner /> : filtered.length === 0 ? (
         <Empty icon="G" msg="Sin gastos registrados" action="+ Registrar gasto" onAction={() => setVista('form')} />
       ) : (
-        <div style={S.card}>
+        <div style={{ ...S.card, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>{['Fecha', 'Descripcion', 'Categoria', 'Empleado', 'Vehiculo', 'Proveedor', 'Total', 'Estado', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr>

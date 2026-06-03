@@ -201,7 +201,7 @@ export default function PageFlota({ showToast, empId }) {
       {loading ? <Spinner /> : rows.length === 0 ? (
         <Empty icon="V" msg="Sin vehiculos registrados" action="+ Registrar" onAction={abrirNuevo} />
       ) : (
-        <div style={S.card}>
+        <div style={{ ...S.card, overflowX: 'auto' }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>

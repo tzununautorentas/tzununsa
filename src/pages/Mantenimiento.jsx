@@ -270,7 +270,7 @@ export default function PageMantenimiento({ showToast, empId }) {
         <Empty icon="M" msg="Sin mantenimientos registrados" action="+ Nuevo mantenimiento"
           onAction={() => { setF({...EF}); setEditItem(null); setVista("form"); }} />
       ) : (
-        <div style={S.card}>
+        <div style={{ ...S.card, overflowX: 'auto' }}>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><tr>
               {["Fecha","Vehiculo","Tipo","Taller","KM Actual","KM Prox. Mant.","Costo","Estado",""].map(h => (

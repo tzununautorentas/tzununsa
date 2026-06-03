@@ -517,7 +517,7 @@ export default function PageFacturacion({ showToast, empId }) {
         <Empty icon="F" msg={total === 0 ? 'Sin facturas registradas' : 'Sin resultados'}
           action="+ Nueva factura" onAction={abrirNuevo} />
       ) : (
-        <div style={S.card}>
+        <div style={{ ...S.card, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>

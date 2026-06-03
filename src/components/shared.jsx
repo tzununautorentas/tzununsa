@@ -297,6 +297,27 @@ export function Buscador({ value, onChange, placeholder = 'Buscar...' }) {
   );
 }
 
+// --- Tabla responsiva (overflow-x auto + iOS smooth scroll) ---
+export function TablaResponsiva({ children, style }) {
+  return (
+    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', ...style }}>
+      {children}
+    </div>
+  );
+}
+
+// --- Boton de accion compacto y consistente ---
+export function BtnAccion({ label, color = 'primary', size = 'sm', onClick, disabled, title, icon }) {
+  const sizes = { xs: { padding: '2px 7px', fontSize: 10 }, sm: { padding: '4px 10px', fontSize: 11 }, md: { padding: '7px 14px', fontSize: 12 } };
+  const s = sizes[size] || sizes.sm;
+  return (
+    <button onClick={onClick} disabled={disabled} title={title}
+      style={{ ...S.btn(color), ...s, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      {icon && <span>{icon}</span>}{label}
+    </button>
+  );
+}
+
 // --- Botones Compartir ---
 export function BotonesCompartir({ numero, total, tipo }) {
   const msg = `Tz'unun AutoRentas - ${tipo} ${numero} por Q ${fmt(total)}. Mas informacion: 502-31221538`;

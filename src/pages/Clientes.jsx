@@ -151,7 +151,7 @@ export default function PageClientes({ showToast, empId }) {
           action="+ Agregar cliente" onAction={abrirNuevo} />
       ) : (
         <>
-          <div style={S.card}>
+          <div style={{ ...S.card, overflowX: 'auto' }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
