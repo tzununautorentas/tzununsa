@@ -83,8 +83,9 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     return { headers, rows };
   };
 
+  const normalizar = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const detectarColumnas = (headers) => {
-    const h = headers.map(hh => hh.toLowerCase().trim());
+    const h = headers.map(hh => normalizar(hh.toLowerCase().trim()));
     const c = { fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "" };
     h.forEach((hh, i) => {
       if (/fecha|date/.test(hh)) c.fecha = i;
@@ -142,13 +143,13 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
         texto = dec.decode(buf);
       }
       let rows;
-      if (ext === "csv") {
+      if (ext === "csv" || ext === "txt") {
         rows = leerCSVcompleto(texto);
       } else if (ext === "xlsx") {
         await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
         rows = await leerXLSXcompleto(buf);
       } else {
-        showToast("Formato no soportado. Usa .csv o .xlsx", "err");
+        showToast("Formato no soportado. Usa .csv, .txt o .xlsx", "err");
         setProcesando(false); return;
       }
       setTodasFilas(rows);
@@ -222,7 +223,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
             <div style={{ fontSize: 28, marginBottom: 6, color: archivo ? T.acc : T.sub }}>XLS</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>{archivo ? archivo.name : "Selecciona archivo .xlsx o .csv"}</div>
             <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>Columnas: fecha, descripcion, monto/tipo o debito/credito</div>
-            <input ref={refFile} type="file" accept=".csv,.xlsx" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
+            <input ref={refFile} type="file" accept=".csv,.xlsx,.txt" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
           </div>
         </div>
         {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc }}>Procesando...</div>}
