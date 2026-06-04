@@ -52,15 +52,22 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
   const [preview, setPreview] = useState([]);
   const [todasFilas, setTodasFilas] = useState([]);
   const [procesando, setProcesando] = useState(false);
-  const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "" });
+  const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "" });
   const [resultado, setResultado] = useState(null);
   const refFile = useRef(null);
 
-  const parsearCSV = (texto, separador) => {
-    const lineas = texto.split(/\r?\n/).filter(l => l.trim());
-    if (lineas.length < 2) return { headers: [], rows: [] };
-    const headers = lineas[0].split(separador).map(h => h.replace(/^"|"$/g, "").trim());
-    const rows = lineas.slice(1).map(l => {
+  const parsearCSV = (lineas, separador) => {
+    let headerIdx = -1;
+    for (let i = 0; i < lineas.length; i++) {
+      const l = lineas[i].toLowerCase();
+      if (/fecha|date/.test(l) && /descripc|concepto|detalle/.test(l)) {
+        headerIdx = i;
+        break;
+      }
+    }
+    if (headerIdx === -1) return { headers: [], rows: [] };
+    const headers = lineas[headerIdx].split(separador).map(h => h.replace(/^"|"$/g, "").trim());
+    const rows = lineas.slice(headerIdx + 1).map(l => {
       const vals = [];
       let cur = "", inQ = false;
       for (const ch of l) {
@@ -76,9 +83,27 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     return { headers, rows };
   };
 
+  const detectarColumnas = (headers) => {
+    const h = headers.map(hh => hh.toLowerCase().trim());
+    const c = { fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "" };
+    h.forEach((hh, i) => {
+      if (/fecha|date/.test(hh)) c.fecha = i;
+      else if (/descripc|concepto|detalle|glosa/.test(hh)) c.descripcion = i;
+      else if (/monto|importe|valor|total|cantidad/.test(hh)) c.monto = i;
+      else if (/tipo/.test(hh)) c.tipo = i;
+      else if (/refe|doc|numero|comprob/.test(hh)) c.referencia = i;
+      else if (/debito|debe|cargo/.test(hh)) c.debito = i;
+      else if (/credito|haber/.test(hh)) c.credito = i;
+    });
+    if (c.monto !== "" && c.debito !== "" && c.credito !== "") c.monto = "";
+    setCols(c);
+  };
+
   const leerCSVcompleto = (texto) => {
+    const lineas = texto.split(/\r?\n/).filter(l => l.trim());
+    if (lineas.length < 2) return [];
     const sep = texto.includes(";") ? ";" : texto.includes("\t") ? "\t" : ",";
-    const { headers, rows } = parsearCSV(texto, sep);
+    const { headers, rows } = parsearCSV(lineas, sep);
     if (headers.length === 0) return [];
     detectarColumnas(headers);
     return rows;
@@ -141,22 +166,38 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     const iM = cols.monto !== "" ? headers[parseInt(cols.monto)] : "";
     const iT = cols.tipo !== "" ? headers[parseInt(cols.tipo)] : "";
     const iR = cols.referencia !== "" ? headers[parseInt(cols.referencia)] : "";
+    const iDeb = cols.debito !== "" ? headers[parseInt(cols.debito)] : "";
+    const iCred = cols.credito !== "" ? headers[parseInt(cols.credito)] : "";
     let ok = 0, err = 0;
     for (const row of todasFilas) {
       const fecha = iF ? (row[iF] || "") : "";
       const descripcion = iD ? (row[iD] || "") : "";
-      let montoRaw = iM ? (row[iM] || "0").replace(/["']/g, "").trim() : "0";
-      montoRaw = montoRaw.replace(",", ".");
-      const monto = parseFloat(montoRaw.replace(/[^0-9.\-]/g, "")) || 0;
-      const tipoVal = iT ? (row[iT] || "").toLowerCase() : "";
-      const tipo = tipoVal.includes("egr") || tipoVal.includes("sal") || tipoVal.includes("-") ? "egreso"
-        : tipoVal.includes("ing") || tipoVal.includes("dep") ? "ingreso"
-        : monto >= 0 ? "ingreso" : "egreso";
+      let monto = 0, tipo = "ingreso";
+      if (iM) {
+        let raw = (row[iM] || "0").replace(/["']/g, "").trim();
+        raw = raw.replace(",", ".");
+        monto = parseFloat(raw.replace(/[^0-9.\-]/g, "")) || 0;
+        if (iT) {
+          const tv = (row[iT] || "").toLowerCase();
+          tipo = tv.includes("egr") || tv.includes("sal") ? "egreso" : "ingreso";
+        } else {
+          tipo = monto >= 0 ? "ingreso" : "egreso";
+        }
+      } else if (iDeb || iCred) {
+        let d = iDeb ? (row[iDeb] || "0").replace(/["']/g, "").trim() : "0";
+        let c = iCred ? (row[iCred] || "0").replace(/["']/g, "").trim() : "0";
+        d = d.replace(",", "."); c = c.replace(",", ".");
+        const deb = parseFloat(d.replace(/[^0-9.\-]/g, "")) || 0;
+        const cred = parseFloat(c.replace(/[^0-9.\-]/g, "")) || 0;
+        if (deb > 0) { monto = deb; tipo = "egreso"; }
+        else if (cred > 0) { monto = cred; tipo = "ingreso"; }
+        else { err++; continue; }
+      }
       const referencia = iR ? (row[iR] || "") : "";
       if (!descripcion || monto === 0) { err++; continue; }
       const r = await dbIns("movimientos_bancarios", {
         empresa_id: empId, cuenta_id: cuentaAct.id,
-        fecha, tipo, descripcion, monto: Math.abs(monto),
+        fecha, tipo, descripcion, monto,
         referencia, categoria: "otros", conciliado: false,
       });
       if (r?.error) { err++; continue; }
@@ -180,7 +221,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
             onClick={() => refFile.current?.click()}>
             <div style={{ fontSize: 28, marginBottom: 6, color: archivo ? T.acc : T.sub }}>XLS</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>{archivo ? archivo.name : "Selecciona archivo .xlsx o .csv"}</div>
-            <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>Columnas: fecha, descripcion, monto, tipo, referencia</div>
+            <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>Columnas: fecha, descripcion, monto/tipo o debito/credito</div>
             <input ref={refFile} type="file" accept=".csv,.xlsx" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
           </div>
         </div>
@@ -189,7 +230,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
           <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Columnas detectadas: {Object.entries(cols).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna"}</div>
         )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-          {["fecha", "descripcion", "monto", "tipo", "referencia"].map(campo => (
+          {["fecha", "descripcion", "monto", "tipo", "referencia", "debito", "credito"].map(campo => (
             <div key={campo}>
               <label style={{ ...S.lbl, fontSize: 10 }}>{campo}</label>
               <select style={{ ...S.sel, fontSize: 11, padding: "4px 8px" }} value={cols[campo]} onChange={e => setCols(p => ({ ...p, [campo]: e.target.value }))}>
