@@ -237,36 +237,39 @@ function Toast({ toast }) {
   );
 }
 
-// ─── Menu movil (action sheet vertical) ───────────────────────────
-function MenuMobile({ pag, onSelect, onClose, tabId }) {
-  const tab = BOTTOM_TABS.find(t => t.id === tabId);
-  const sections = tab && tabId !== "__menu__"
-    ? MENU_SECTIONS.filter(s => s.ids.some(id => tab.mods.includes(id)))
-    : MENU_SECTIONS;
-  const title = tab && tabId !== "__menu__"
-    ? tab.label
-    : "Todos los modulos";
+// ─── Drawer lateral izquierdo (mobile) ────────────────────────────
+function LeftDrawer({ open, pag, onSelect, onClose, userName, onLogout }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500 }}
-      onClick={onClose}>
+    <>
+      {open && <div style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        zIndex: 500, transition: "opacity .2s",
+      }} onClick={onClose} />}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0,
-        background: T.surf, borderRadius: "20px 20px 0 0",
-        maxHeight: "80vh", overflowY: "auto",
-      }} onClick={e => e.stopPropagation()}>
-        <div style={{ width: 40, height: 4, background: T.bord, borderRadius: 2, margin: "12px auto 0" }} />
-        <div style={{ padding: "14px 18px 100px" }}>
-          <div style={{
-            fontSize: 15, fontWeight: 700, color: T.txt,
-            marginBottom: 16, display: "flex", alignItems: "center", gap: 8,
-          }}>
-            {title}
+        position: "fixed", top: 0, left: 0, bottom: 0, width: 280,
+        background: T.surf, zIndex: 501,
+        transform: open ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform .25s ease",
+        display: "flex", flexDirection: "column",
+        boxShadow: open ? "4px 0 24px rgba(0,0,0,0.3)" : "none",
+      }}>
+        <div style={{
+          padding: "18px 16px 12px", borderBottom: `1px solid ${T.bord}`,
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <img src="/icons/Logo_Tzunun_Transp.png" alt="Tz'unun"
+            style={{ width: 32, height: 32, objectFit: "contain" }} />
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>Tz'unun</div>
+            <div style={{ fontSize: 10, color: T.sub }}>{userName}</div>
           </div>
-          {sections.map(sec => (
-            <div key={sec.label} style={{ marginBottom: 16 }}>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+          {MENU_SECTIONS.map(sec => (
+            <div key={sec.label}>
               <div style={{
                 fontSize: 9, fontWeight: 700, color: T.mut,
-                letterSpacing: 1.2, marginBottom: 6, paddingLeft: 4,
+                letterSpacing: 1.2, padding: "14px 16px 6px",
               }}>
                 {sec.label}
               </div>
@@ -275,33 +278,41 @@ function MenuMobile({ pag, onSelect, onClose, tabId }) {
                 if (!m) return null;
                 const active = pag === id;
                 return (
-                  <button key={id} onClick={() => onSelect(id)}
+                  <div key={id} onClick={() => onSelect(id)}
                     style={{
-                      width: "100%", display: "flex", alignItems: "center",
-                      gap: 12, padding: "12px 14px", marginBottom: 2,
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "10px 16px", cursor: "pointer",
                       background: active ? m.c1 + "15" : "transparent",
-                      border: "none", borderRadius: 12,
-                      cursor: "pointer", textAlign: "left",
+                      borderLeft: `3px solid ${active ? m.c1 : "transparent"}`,
                     }}>
-                    <ModIcon mod={m} size={38} />
+                    {React.createElement(m.icon, { size: 18, color: active ? m.c1 : T.sub })}
                     <span style={{
                       fontSize: 13, fontWeight: active ? 600 : 400,
                       color: active ? m.c1 : T.txt, flex: 1,
                     }}>
                       {m.label}
                     </span>
-                    {active && <div style={{
-                      width: 8, height: 8, borderRadius: "50%",
-                      background: m.c1, flexShrink: 0,
-                    }} />}
-                  </button>
+                  </div>
                 );
               })}
             </div>
           ))}
         </div>
+        <div style={{
+          padding: "12px 16px", borderTop: `1px solid ${T.bord}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <ThemeToggle />
+          <button onClick={onLogout} style={{
+            background: "transparent", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6, padding: "4px 8px",
+          }}>
+            <IconLogout size={16} color={T.sub} />
+            <span style={{ fontSize: 12, color: T.sub }}>Salir</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -350,32 +361,41 @@ function HomeMovil({ setPag, userName }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>ACCESOS RAPIDOS</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
-        {QUICK_ACCESS.map(id => {
-          const m = MODS.find(x => x.id === id);
-          if (!m) return null;
+      <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>MODULOS</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+        {MENU_SECTIONS.map(sec => {
+          const Icon = sec.ids.length > 0 ? (MODS.find(m => m.id === sec.ids[0])?.icon || IconDashboard) : IconDashboard;
           return (
-            <button key={id} onClick={() => setPag(id)}
-              style={{
-                background: T.card, border: `1px solid ${T.bord}`,
-                borderRadius: 18, padding: "18px 8px 14px",
-                cursor: "pointer", display: "flex",
-                flexDirection: "column", alignItems: "center", gap: 10,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = m.c1 + "18";
-                e.currentTarget.style.borderColor = m.c1 + "66";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = T.card;
-                e.currentTarget.style.borderColor = T.bord;
-              }}>
-              <ModIcon mod={m} size={52} />
-              <span style={{ fontSize: 11, color: T.txt, fontWeight: 600, textAlign: "center" }}>
-                {m.label}
-              </span>
-            </button>
+            <div key={sec.label} style={{
+              background: T.card, border: `1px solid ${T.bord}`,
+              borderRadius: 16, padding: "14px 16px", cursor: "pointer",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                {React.createElement(Icon, { size: 18, color: T.acc })}
+                <span style={{ fontSize: 12, fontWeight: 700, color: T.txt, letterSpacing: 0.5 }}>
+                  {sec.label}
+                </span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {sec.ids.map(id => {
+                  const m = MODS.find(x => x.id === id);
+                  if (!m) return null;
+                  return (
+                    <span key={id} onClick={() => setPag(id)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        padding: "6px 12px", borderRadius: 8, fontSize: 12,
+                        background: pag === id ? m.c1 + "18" : T.surf,
+                        color: pag === id ? m.c1 : T.sub, cursor: "pointer",
+                        border: `1px solid ${pag === id ? m.c1 + "44" : T.bord}`,
+                      }}>
+                      {React.createElement(m.icon, { size: 14, color: pag === id ? m.c1 : T.sub })}
+                      {m.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>
@@ -385,11 +405,10 @@ function HomeMovil({ setPag, userName }) {
 
 // ─── Layout Movil ─────────────────────────────────────────────────
 function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail }) {
-  const [showMenu, setShowMenu] = useState(false);
-  const [onHome,   setOnHome]   = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [onHome,     setOnHome]     = useState(true);
   const userName  = userEmail.split("@")[0];
-  const navegar   = (id) => { setPag(id); setOnHome(false); setShowMenu(false); };
-  const activeTab = BOTTOM_TABS.find(t => t.mods.includes(pag))?.id || (onHome ? "dashboard" : "__menu__");
+  const navegar   = (id) => { setPag(id); setOnHome(false); setDrawerOpen(false); };
 
   return (
     <div style={{
@@ -399,96 +418,48 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
     }}>
       {/* Header */}
       <div style={{
-        background: T.surf, padding: "14px 16px 12px",
-        display: "flex", alignItems: "center", gap: 12,
+        background: T.surf, padding: "12px 14px",
+        display: "flex", alignItems: "center", gap: 10,
         flexShrink: 0, borderBottom: `1px solid ${T.bord}`,
       }}>
+        <button onClick={() => setDrawerOpen(true)}
+          style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "transparent", border: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}>
+          <IconMenu size={20} color={T.txt} />
+        </button>
         <button onClick={() => setOnHome(true)}
           style={{
-            width: 40, height: 40, borderRadius: 12,
+            width: 36, height: 36, borderRadius: 10,
             background: T.accDim, border: `1.5px solid ${T.acc}`,
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer", overflow: "hidden",
           }}>
           <img src="/icons/Logo_Tzunun_Transp.png" alt="Tz'unun"
-            style={{ width: 26, height: 26, objectFit: "contain" }} />
+            style={{ width: 22, height: 22, objectFit: "contain" }} />
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: T.txt }}>Tz'unun AutoRentas</div>
-          <div style={{ fontSize: 10, color: T.sub }}>
-            {onHome ? "Inicio" : TITULOS[pag] || ""}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {onHome ? "Tz'unun AutoRentas" : TITULOS[pag] || ""}
           </div>
         </div>
         <NotificacionesBell isMobile={true} />
-        <ThemeToggle />
-        <button onClick={handleLogout}
-          style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: T.card, border: `1px solid ${T.bord}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
-          }}>
-          <IconLogout size={16} color={T.sub} />
-        </button>
       </div>
 
       {/* Contenido */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", paddingBottom: 90 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px" }}>
         {onHome
           ? <HomeMovil setPag={navegar} userName={userName} />
           : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} /></ErrBoundary>
         }
       </div>
 
-      {/* Bottom Nav */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        background: T.surf, borderTop: `1px solid ${T.bord}`,
-        display: "flex", zIndex: 300,
-      }}>
-        {BOTTOM_TABS.map(tab => {
-          const isActive = tab.id === "__menu__" ? false
-            : tab.id === "dashboard" ? onHome
-            : activeTab === tab.id && !onHome;
-          const m     = MODS.find(x => x.id === tab.id);
-          const color = m?.c1 || T.acc;
-          return (
-            <button key={tab.id}
-              onClick={() => {
-                if (tab.id === "__menu__") setShowMenu(true);
-                else if (tab.id === "dashboard") setOnHome(true);
-                else navegar(tab.mods[0]);
-              }}
-              style={{
-                flex: 1, background: "transparent", border: "none",
-                cursor: "pointer", display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center",
-                padding: "10px 0 8px", gap: 4, position: "relative",
-              }}>
-              {isActive && (
-                <div style={{
-                  position: "absolute", top: 0, left: "50%",
-                  transform: "translateX(-50%)",
-                  width: 32, height: 3, background: color,
-                  borderRadius: "0 0 3px 3px",
-                }} />
-              )}
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: isActive ? color + "22" : "transparent",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                  <tab.icon size={22} color={isActive ? color : T.mut} />
-              </div>
-              <div style={{ fontSize: 9, color: isActive ? color : T.mut, fontWeight: isActive ? 700 : 400 }}>
-                {tab.label}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {showMenu && <MenuMobile pag={pag} onSelect={navegar} onClose={() => setShowMenu(false)} tabId={activeTab} />}
+      <LeftDrawer open={drawerOpen} pag={pag} onSelect={navegar}
+        onClose={() => setDrawerOpen(false)} userName={userName}
+        onLogout={handleLogout} />
       <Toast toast={toast} />
     </div>
   );
