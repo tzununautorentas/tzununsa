@@ -511,6 +511,62 @@ export default function PageBanca({ showToast, empId }) {
         </div>
       )}
 
+      {/* Cuentas bancarias: horizontal */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6 }}>
+          {loading ? <Spinner /> : cuentas.length === 0 ? (
+            <Empty icon="B" msg="Sin cuentas registradas" />
+          ) : cuentas.map(c => (
+            <div key={c.id} onClick={() => setCuentaAct(c)}
+              style={{ ...S.card, cursor: "pointer", minWidth: 170, flex: "0 0 auto",
+                border: `1px solid ${cuentaAct?.id === c.id ? T.acc : T.bord}`,
+                background: cuentaAct?.id === c.id ? T.accDim : T.card }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.txt }}>{c.banco}</div>
+              <div style={{ fontSize: 10, color: T.sub }}>{c.numero_cuenta} · {c.moneda}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T.acc, marginTop: 6 }}>
+                Q {fmt(c.saldo_actual)}
+              </div>
+            </div>
+          ))}
+          <button onClick={() => setShowCuenta(true)}
+            style={{ ...S.btn("primary"), flex: "0 0 auto", alignSelf: "center", padding: "10px 14px", minWidth: 80, height: "fit-content" }}>
+            + Cuenta
+          </button>
+        </div>
+      </div>
+
+      {showCuenta && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ ...S.card, width: "100%", maxWidth: 420 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.acc }}>Nueva cuenta bancaria</div>
+              <button onClick={() => setShowCuenta(false)} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 20 }}>X</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Fld label="BANCO"><input style={S.inp} value={fc.banco} onChange={e => sfc("banco", e.target.value)} placeholder="Nombre del banco" /></Fld>
+              <Fld label="NO. CUENTA"><input style={S.inp} value={fc.numero_cuenta} onChange={e => sfc("numero_cuenta", e.target.value)} placeholder="000-000000-00" /></Fld>
+              <Fld label="TIPO">
+                <select style={S.sel} value={fc.tipo_cuenta} onChange={e => sfc("tipo_cuenta", e.target.value)}>
+                  <option value="monetaria">Monetaria</option>
+                  <option value="ahorro">Ahorro</option>
+                  <option value="credito">Credito</option>
+                </select>
+              </Fld>
+              <Fld label="MONEDA">
+                <select style={S.sel} value={fc.moneda} onChange={e => sfc("moneda", e.target.value)}>
+                  <option value="GTQ">GTQ - Quetzal</option>
+                  <option value="USD">USD - Dolar</option>
+                </select>
+              </Fld>
+              <Fld label="SALDO INICIAL"><input style={S.inp} type="number" step="0.01" value={fc.saldo_inicial} onChange={e => sfc("saldo_inicial", e.target.value)} placeholder="0.00" /></Fld>
+              <button onClick={async () => { await guardarCuenta(); setShowCuenta(false); }} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
+                {saving ? "Guardando..." : "Registrar cuenta"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 20 }}>
         {[
@@ -526,62 +582,9 @@ export default function PageBanca({ showToast, empId }) {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 240px) 1fr", gap: 18 }}>
-        {/* Panel cuentas */}
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut }}>MIS CUENTAS</div>
-            <button onClick={() => setShowCuenta(!showCuenta)} style={{ ...S.btn("ghost"), fontSize: 10, padding: "3px 8px" }}>
-              {showCuenta ? "Cancelar" : "+ Cuenta"}
-            </button>
-          </div>
-
-          {showCuenta && (
-            <div style={{ ...S.card, marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Nueva cuenta bancaria</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <Fld label="BANCO"><input style={S.inp} value={fc.banco} onChange={e => sfc("banco", e.target.value)} placeholder="Nombre del banco" /></Fld>
-                <Fld label="NO. CUENTA"><input style={S.inp} value={fc.numero_cuenta} onChange={e => sfc("numero_cuenta", e.target.value)} placeholder="000-000000-00" /></Fld>
-                <Fld label="TIPO">
-                  <select style={S.sel} value={fc.tipo_cuenta} onChange={e => sfc("tipo_cuenta", e.target.value)}>
-                    <option value="monetaria">Monetaria</option>
-                    <option value="ahorro">Ahorro</option>
-                    <option value="credito">Credito</option>
-                  </select>
-                </Fld>
-                <Fld label="MONEDA">
-                  <select style={S.sel} value={fc.moneda} onChange={e => sfc("moneda", e.target.value)}>
-                    <option value="GTQ">GTQ - Quetzal</option>
-                    <option value="USD">USD - Dolar</option>
-                  </select>
-                </Fld>
-                <Fld label="SALDO INICIAL"><input style={S.inp} type="number" step="0.01" value={fc.saldo_inicial} onChange={e => sfc("saldo_inicial", e.target.value)} placeholder="0.00" /></Fld>
-                <button onClick={guardarCuenta} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
-                  {saving ? "Guardando..." : "Registrar cuenta"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {loading ? <Spinner /> : cuentas.length === 0 ? (
-            <Empty icon="B" msg="Sin cuentas registradas" />
-          ) : cuentas.map(c => (
-            <div key={c.id} onClick={() => setCuentaAct(c)}
-              style={{ ...S.card, cursor: "pointer", marginBottom: 10,
-                border: `1px solid ${cuentaAct?.id === c.id ? T.acc : T.bord}`,
-                background: cuentaAct?.id === c.id ? T.accDim : T.card }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.txt }}>{c.banco}</div>
-              <div style={{ fontSize: 11, color: T.sub }}>{c.numero_cuenta} · {c.moneda}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: T.acc, marginTop: 8 }}>
-                Q {fmt(c.saldo_actual)}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Panel movimientos */}
-        <div>
-          {cuentaAct ? (
+      {/* Panel movimientos */}
+      <div>
+        {cuentaAct ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div>
@@ -746,7 +749,6 @@ export default function PageBanca({ showToast, empId }) {
               Selecciona una cuenta bancaria para ver sus movimientos
             </div>
           )}
-        </div>
       </div>
     </div>
   );
