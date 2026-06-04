@@ -158,6 +158,15 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     setProcesando(false);
   };
 
+  const convertirFecha = (str) => {
+    if (!str) return "";
+    const s = str.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    return s;
+  };
+
   const importar = async () => {
     if (todasFilas.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
     setProcesando(true);
@@ -171,7 +180,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     const iCred = cols.credito !== "" ? headers[parseInt(cols.credito)] : "";
     let ok = 0, err = 0;
     for (const row of todasFilas) {
-      const fecha = iF ? (row[iF] || "") : "";
+      const fecha = convertirFecha(iF ? (row[iF] || "") : "");
       const descripcion = iD ? (row[iD] || "") : "";
       let monto = 0, tipo = "ingreso";
       if (iM) {
@@ -205,7 +214,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       ok++;
     }
     setResultado({ ok, err });
-    showToast(`Importacion completada: ${ok} exitosos, ${err} errores`);
+    showToast(`${ok > 0 ? "Importacion completada" : "Error en importacion"}: ${ok} exitosos, ${err} errores${err > 0 && ok === 0 ? " — Revisa formato de fecha (DD/MM/YYYY)" : ""}`);
     setProcesando(false);
     onImported();
   };
