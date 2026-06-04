@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CAT_GASTO } from '../config.js';
-import { Spinner, Empty, Fld, CatBadge, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, CatBadge, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
@@ -785,7 +785,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
       )}
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12, marginBottom: 18 }}>
         {[
           { l: 'Total gastos',   v: `Q ${fmt(rows.reduce((s, r) => s + (parseFloat(r.total) || 0), 0))}`, c: T.red   },
           { l: 'Pendientes',     v: rows.filter(r => r.estado === 'pendiente').length,                    c: T.mut   },
@@ -839,55 +839,49 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
         </div>
       )}
 
-      {/* Tabla */}
+      {/* Cards */}
       {loading ? <Spinner /> : filtered.length === 0 ? (
         <Empty icon="G" msg="Sin gastos registrados" action="+ Registrar gasto" onAction={() => setVista('form')} />
       ) : (
-        <div style={{ ...S.card, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>{['Fecha', 'Descripcion', 'Categoria', 'Empleado', 'Vehiculo', 'Proveedor', 'Total', 'Estado', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {filtered.map(r => {
-                const e = ESTADOS[r.estado] || ESTADOS.pendiente;
-                const c = CC[r.categoria] || T.mut;
-                return (
-                  <tr key={r.id} onClick={() => setPanelItem(r)} style={{ cursor: 'pointer' }}
-                    onMouseEnter={el => el.currentTarget.style.background = T.surf}
-                    onMouseLeave={el => el.currentTarget.style.background = 'transparent'}>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: 'nowrap' }}>{fmtD(r.fecha)}</td>
-                    <td style={{ ...S.td, maxWidth: 160 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 155, fontWeight: 500 }}>{r.descripcion}</div>
-                      {r.numero_factura && <div style={{ fontSize: 9, color: T.mut, fontFamily: 'monospace' }}>FAC: {r.numero_factura}</div>}
-                    </td>
-                    <td style={S.td}><span style={{ padding: '2px 7px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: c + '22', color: c }}>{r.categoria}</span></td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>{r.empleado_nombre || '—'}</td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>{r.vehiculo_nombre ? r.vehiculo_nombre.split('(')[0].trim() : '—'}</td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>{r.proveedor || '—'}</td>
-                    <td style={{ ...S.td, fontWeight: 700, color: T.red, whiteSpace: 'nowrap' }}>Q {fmt(r.total)}</td>
-                    <td style={S.td}>
-                      <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, background: e.bg, color: e.c }}>{e.l}</span>
-                      {r.archivo_url && <div style={{ fontSize: 9, color: T.blue, marginTop: 2 }}>Doc adjunto</div>}
-                    </td>
-                    <td style={S.td} onClick={ev => ev.stopPropagation()}>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => { setEditItem(r); setVista('form'); }} style={{ ...S.btn('ghost'), padding: '3px 8px', fontSize: 10 }}>Editar</button>
-                        <button onClick={() => del(r.id)} style={{ ...S.btn('danger'), padding: '3px 8px', fontSize: 10 }}>Eliminar</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: T.surf }}>
-                <td colSpan={6} style={{ padding: '9px 10px', fontSize: 12, fontWeight: 700, color: T.sub }}>TOTAL FILTRADO</td>
-                <td style={{ padding: '9px 10px', fontWeight: 800, color: T.red, fontSize: 14 }}>Q {fmt(totalFil)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          </table>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {filtered.map(r => {
+            const e = ESTADOS[r.estado] || ESTADOS.pendiente;
+            const c = CC[r.categoria] || T.mut;
+            return (
+              <div key={r.id} style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setPanelItem(r)}>
+                    <div style={{ fontWeight: 600, color: T.txt, fontSize: 14 }}>
+                      {r.descripcion}
+                      {r.numero_factura && <span style={{ fontSize: 10, color: T.mut, fontFamily: "monospace", marginLeft: 8 }}>FAC: {r.numero_factura}</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", fontSize: 11, color: T.sub }}>
+                      <span style={{ padding: "1px 7px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: c + "22", color: c }}>{r.categoria}</span>
+                      {r.proveedor && <span>Proveedor: {r.proveedor}</span>}
+                      {r.empleado_nombre && <span>{r.empleado_nombre}</span>}
+                      {r.vehiculo_nombre && <span>{r.vehiculo_nombre.split('(')[0].trim()}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: T.red }}>Q {fmt(r.total)}</div>
+                    <Badge c={e.c} bg={e.bg} l={e.l} small />
+                    {r.archivo_url && <span style={{ fontSize: 9, color: T.blue }}>Doc adjunto</span>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ fontSize: 11, color: T.mut }}>{fmtD(r.fecha)}</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => { setEditItem(r); setVista('form'); }} style={{ ...S.btn("ghost"), padding: "3px 8px", fontSize: 10 }}>Editar</button>
+                    <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), padding: "3px 8px", fontSize: 10 }}>Eliminar</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px" }}>
+            <span style={{ fontSize: 12, color: T.sub }}>{filtered.length} gasto{filtered.length !== 1 ? 's' : ''}</span>
+            <span style={{ fontWeight: 800, color: T.red, fontSize: 16 }}>Total: Q {fmt(totalFil)}</span>
+          </div>
         </div>
       )}
       {rows.length > 0 && (

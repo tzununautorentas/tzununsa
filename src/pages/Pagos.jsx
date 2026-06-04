@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 const METODOS = ["efectivo","transferencia","deposito","tarjeta","cheque"];
@@ -148,7 +148,7 @@ export default function PagePagos({ showToast, empId }) {
         onClose={()=>setExportar(false)}/>}
 
       {/* KPIs */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:18}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:12,marginBottom:18}}>
         {[
           {l:"Total recibido",v:`Q ${fmt(totalGral)}`,c:T.acc,bg:T.accDim},
           {l:"Este mes",      v:`Q ${fmt(totalMes)}`, c:T.blue,bg:T.blueDim},
@@ -271,52 +271,47 @@ export default function PagePagos({ showToast, empId }) {
             </div>
           )}
 
-          {/* Lista */}
+          {/* Cards */}
           {pag.loading?<Spinner/>:pag.data.length===0?(
             <Empty icon="P" msg="Sin pagos registrados" action="+ Registrar primer pago" onAction={()=>{setEditId(null);setF({...EF});setShowForm(true);}}/>
           ):(
-            <div style={{ ...S.card, overflowX: 'auto' }}>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>{["Fecha","Cliente","Concepto","Metodo","Cuenta","Monto",""].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {pag.data.map(r=>{
-                    const cuenta = cuentas.find(c=>c.id===r.cuenta_bancaria_id);
-                    const c = MC[r.metodo]||T.mut;
-                    return (
-                      <tr key={r.id}>
-                        <td style={{...S.td,color:T.sub,fontSize:11,whiteSpace:"nowrap"}}>{fmtD(r.fecha)}</td>
-                        <td style={{...S.td,fontWeight:600}}>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {pag.data.map(r=>{
+                const cuenta = cuentas.find(c=>c.id===r.cuenta_bancaria_id);
+                const c = MC[r.metodo]||T.mut;
+                const vinculo = r.reserva_id?{l:"Reserva",c:T.blue}:r.factura_id?{l:"Factura",c:T.acc}:r.cotizacion_id?{l:"Cotizacion",c:T.purple}:null;
+                return (
+                  <div key={r.id} style={S.card}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                      <div>
+                        <div style={{fontWeight:600,color:T.txt,fontSize:14}}>
                           {r.cliente_nombre}
-                          {r.reserva_id&&<div style={{fontSize:9,color:T.blue}}>Reserva</div>}
-                          {r.factura_id&&<div style={{fontSize:9,color:T.acc}}>Factura</div>}
-                          {r.cotizacion_id&&<div style={{fontSize:9,color:T.purple}}>Cotizacion</div>}
-                        </td>
-                        <td style={{...S.td,maxWidth:160}}>
-                          <div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12,color:T.sub,maxWidth:155}}>{r.concepto||"—"}</div>
-                        </td>
-                        <td style={S.td}>
-                          <span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:c+"22",color:c}}>{r.metodo||"—"}</span>
-                        </td>
-                        <td style={{...S.td,fontSize:11,color:T.sub}}>{cuenta?cuenta.banco:"—"}</td>
-                        <td style={{...S.td,fontWeight:700,color:T.acc,whiteSpace:"nowrap"}}>Q {fmt(r.monto)}</td>
-                        <td style={S.td}>
-                          <div style={{display:"flex",gap:4}}>
-                            <button onClick={()=>abrirEditar(r)} style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10}}>Editar</button>
-                            <button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:10}}>Eliminar</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{background:T.surf}}>
-                    <td colSpan={5} style={{padding:"9px 10px",fontSize:12,fontWeight:700,color:T.sub}}>TOTAL</td>
-                    <td style={{padding:"9px 10px",fontWeight:800,color:T.acc,fontSize:14}}>Q {fmt(pag.data.reduce((s,r)=>s+(parseFloat(r.monto)||0),0))}</td>
-                    <td/>
-                  </tr>
-                </tfoot>
-              </table>
+                          {vinculo&&<span style={{fontSize:9,color:vinculo.c,marginLeft:8,fontWeight:600}}>• {vinculo.l}</span>}
+                        </div>
+                        <div style={{fontSize:11,color:T.sub,marginTop:2}}>{r.concepto||"—"}</div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                        <div style={{fontSize:18,fontWeight:800,color:T.acc}}>Q {fmt(r.monto)}</div>
+                        <span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:c+"22",color:c}}>{r.metodo||"—"}</span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:T.mut}}>
+                        <span>{fmtD(r.fecha)}</span>
+                        {cuenta&&<span>{cuenta.banco}</span>}
+                      </div>
+                      <div style={{display:"flex",gap:4}}>
+                        <button onClick={()=>abrirEditar(r)} style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10}}>Editar</button>
+                        <button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:10}}>Eliminar</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{...S.card,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px"}}>
+                <span style={{fontSize:12,color:T.sub}}>{pag.data.length} pagos</span>
+                <span style={{fontWeight:800,color:T.acc,fontSize:16}}>Q {fmt(pag.data.reduce((s,r)=>s+(parseFloat(r.monto)||0),0))}</span>
+              </div>
             </div>
           )}
           {pag.data.length > 0 && (

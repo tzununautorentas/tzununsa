@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
@@ -471,7 +471,7 @@ export default function PageFacturacion({ showToast, empId }) {
       )}
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
           { l: 'Total facturado',  v: `Q ${fmt(totales.facturado)}`,  c: T.acc,   bg: T.accDim  },
           { l: 'Total cobrado',    v: `Q ${fmt(totales.cobrado)}`,    c: T.green, bg: T.greenDim },
@@ -512,105 +512,88 @@ export default function PageFacturacion({ showToast, empId }) {
         </button>
       </div>
 
-      {/* Tabla */}
+      {/* Cards */}
       {loading ? <Spinner /> : rows.length === 0 ? (
         <Empty icon="F" msg={total === 0 ? 'Sin facturas registradas' : 'Sin resultados'}
           action="+ Nueva factura" onAction={abrirNuevo} />
       ) : (
-        <div style={{ ...S.card, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['No. Factura', 'Fecha', 'Cliente', 'NIT', 'Total', 'Metodo', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} style={S.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => {
-                const est = ESTADOS[r.estado] || ESTADOS.borrador;
-                return (
-                  <tr key={r.id}
-                    onMouseEnter={e => e.currentTarget.style.background = T.surf}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 11, color: T.acc }}>
-                      {r.numero_factura || '—'}
-                      {r.serie && <div style={{ fontSize: 9, color: T.mut }}>Serie: {r.serie}</div>}
-                    </td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: 'nowrap' }}>
-                      {fmtD(r.fecha)}
-                    </td>
-                    <td style={{ ...S.td, fontWeight: 600, maxWidth: 160 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 155 }}>
-                        {r.cliente_nombre}
-                      </div>
-                    </td>
-                    <td style={{ ...S.td, fontSize: 11, fontFamily: 'monospace', color: T.mut }}>
-                      {r.cliente_nit || 'CF'}
-                    </td>
-                    <td style={{ ...S.td, fontWeight: 700, color: T.acc, whiteSpace: 'nowrap' }}>
-                      Q {fmt(r.total)}
-                    </td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>
-                      {r.metodo_pago || '—'}
-                    </td>
-                    <td style={S.td}>
-                      <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, color: est.c, background: est.bg }}>
-                        {est.l}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {rows.map(r => {
+            const est = ESTADOS[r.estado] || ESTADOS.borrador;
+            return (
+              <div key={r.id} style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 13 }}>
+                        {r.numero_factura || '—'}
                       </span>
-                    </td>
-                    <td style={S.td}>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button onClick={() => imprimirFactura(r)}
-                          style={{ ...S.btn('ghost'), padding: '3px 7px', fontSize: 10 }}>
-                          Imprimir
-                        </button>
-                        {r.estado === 'borrador' && (
-                          <button onClick={() => cambiarEstado(r.id, 'emitida')}
-                            style={{ ...S.btn('primary'), padding: '3px 7px', fontSize: 10 }}>
-                            Emitir
-                          </button>
-                        )}
-                        {r.estado === 'emitida' && (
-                          <button onClick={() => cambiarEstado(r.id, 'pagada')}
-                            style={{ ...S.btn('green'), padding: '3px 7px', fontSize: 10 }}>
-                            Cobrada
-                          </button>
-                        )}
-                        {['emitida','certificada','parcial'].includes(r.estado) && (
-                          <button onClick={() => cambiarEstado(r.id, 'anulada')}
-                            style={{ ...S.btn('danger'), padding: '3px 7px', fontSize: 10 }}>
-                            Anular
-                          </button>
-                        )}
-                        <button onClick={() => abrirEditar(r)}
-                          style={{ ...S.btn('ghost'), padding: '3px 7px', fontSize: 10 }}>
-                          Editar
-                        </button>
-                        {r.estado === 'borrador' && (
-                          <button onClick={() => del(r.id)}
-                            style={{ ...S.btn('danger'), padding: '3px 7px', fontSize: 10 }}>
-                            Eliminar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: T.surf }}>
-                <td colSpan={4} style={{ padding: '9px 10px', fontSize: 11, fontWeight: 700, color: T.mut }}>
-                  {rows.length} facturas
-                </td>
-                <td style={{ padding: '9px 10px', fontWeight: 800, color: T.acc, fontSize: 14 }}>
-                  Q {fmt(rows.reduce((s, r) => s + (parseFloat(r.total) || 0), 0))}
-                </td>
-                <td colSpan={3} />
-              </tr>
-            </tfoot>
-          </table>
+                      {r.serie && <span style={{ fontSize: 10, color: T.mut }}>Serie: {r.serie}</span>}
+                    </div>
+                    <div style={{ fontWeight: 600, color: T.txt, fontSize: 14, marginTop: 2 }}>
+                      {r.cliente_nombre}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", fontSize: 11, color: T.mut }}>
+                      <span>NIT: {r.cliente_nit || 'CF'}</span>
+                      <span>{fmtD(r.fecha)}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: T.acc }}>
+                      Q {fmt(r.total)}
+                    </div>
+                    <Badge c={est.c} bg={est.bg} l={est.l} small />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: T.sub }}>{r.metodo_pago || '—'}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    <button onClick={() => imprimirFactura(r)}
+                      style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
+                      Imprimir
+                    </button>
+                    {r.estado === 'borrador' && (
+                      <button onClick={() => cambiarEstado(r.id, 'emitida')}
+                        style={{ ...S.btn("primary"), padding: "3px 7px", fontSize: 10 }}>
+                        Emitir
+                      </button>
+                    )}
+                    {r.estado === 'emitida' && (
+                      <button onClick={() => cambiarEstado(r.id, 'pagada')}
+                        style={{ ...S.btn("green"), padding: "3px 7px", fontSize: 10 }}>
+                        Cobrada
+                      </button>
+                    )}
+                    {['emitida','certificada','parcial'].includes(r.estado) && (
+                      <button onClick={() => cambiarEstado(r.id, 'anulada')}
+                        style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10 }}>
+                        Anular
+                      </button>
+                    )}
+                    <button onClick={() => abrirEditar(r)}
+                      style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
+                      Editar
+                    </button>
+                    {r.estado === 'borrador' && (
+                      <button onClick={() => del(r.id)}
+                        style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10 }}>
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px" }}>
+            <span style={{ fontSize: 12, color: T.sub }}>{rows.length} facturas</span>
+            <span style={{ fontWeight: 800, color: T.acc, fontSize: 16 }}>
+              Q {fmt(rows.reduce((s, r) => s + (parseFloat(r.total) || 0), 0))}
+            </span>
+          </div>
         </div>
       )}
       <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta}
