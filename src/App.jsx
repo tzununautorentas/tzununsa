@@ -317,7 +317,7 @@ function LeftDrawer({ open, pag, onSelect, onClose, userName, onLogout }) {
 }
 
 // ─── Home movil ───────────────────────────────────────────────────
-function HomeMovil({ setPag, userName }) {
+function HomeMovil({ setPag, userName, pag }) {
   const [stats, setStats] = useState({ veh: 0, res: 0, cots: 0 });
   useEffect(() => {
     Promise.all([
@@ -452,7 +452,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
       {/* Contenido */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px" }}>
         {onHome
-          ? <HomeMovil setPag={navegar} userName={userName} />
+          ? <HomeMovil setPag={navegar} userName={userName} pag={pag} />
           : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} /></ErrBoundary>
         }
       </div>
