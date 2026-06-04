@@ -13,17 +13,21 @@ export async function dbGet(table, query = "") {
   } catch { return []; }
 }
 
-export async function dbIns(table, data) {
+export async function dbIns(table, data, timeoutMs) {
   try {
+    const ctrl = timeoutMs ? new AbortController() : null;
+    const timer = timeoutMs ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
     const r = await fetch(`${SB}/rest/v1/${table}`, {
       method: "POST",
       headers: { ...H, Prefer: "return=representation" },
       body: JSON.stringify(data),
+      signal: ctrl?.signal,
     });
+    if (timer) clearTimeout(timer);
     const j = await r.json();
     if (!r.ok) return { error: j.message || j.hint || "Error al guardar" };
     return Array.isArray(j) ? j[0] : j;
-  } catch (e) { return { error: e.message }; }
+  } catch (e) { return { error: e.message || "Timeout" }; }
 }
 
 export async function dbUpd(table, id, data) {

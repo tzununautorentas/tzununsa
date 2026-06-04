@@ -61,6 +61,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
   const [preview, setPreview] = useState([]);
   const [todasFilas, setTodasFilas] = useState([]);
   const [procesando, setProcesando] = useState(false);
+  const [progreso, setProgreso] = useState(null);
   const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "", oficina: "", secuencial: "", cheque: "", saldo_contable: "", saldo_disponible: "" });
   const [resultado, setResultado] = useState(null);
   const refFile = useRef(null);
@@ -185,54 +186,62 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
 
   const importar = async () => {
     if (todasFilas.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
+    setProgreso(null);
     setProcesando(true);
-    const headers = Object.keys(todasFilas[0] || {});
-    const iF = iH(cols.fecha), iD = iH(cols.descripcion), iM = iH(cols.monto), iT = iH(cols.tipo), iR = iH(cols.referencia);
-    const iDeb = iH(cols.debito), iCred = iH(cols.credito);
-    const iOf = iH(cols.oficina), iSec = iH(cols.secuencial), iCheq = iH(cols.cheque), iSalC = iH(cols.saldo_contable), iSalD = iH(cols.saldo_disponible);
-    let ok = 0, err = 0;
-    for (const row of todasFilas) {
-      const fecha = convertirFecha(iF ? (row[iF] || "") : "");
-      const descripcion = iD ? (row[iD] || "") : "";
-      const oficina = iOf ? (row[iOf] || "") : "";
-      const secuencial = iSec ? (row[iSec] || "") : "";
-      const cheque = iCheq ? (row[iCheq] || "") : "";
-      const saldoC = iSalC ? (row[iSalC] || "") : "";
-      const saldoD = iSalD ? (row[iSalD] || "") : "";
-      let monto = 0, tipo = "ingreso";
-      if (iM) {
-        let raw = (row[iM] || "0").replace(/["']/g, "").trim();
-        raw = raw.replace(",", ".");
-        monto = parseFloat(raw.replace(/[^0-9.\-]/g, "")) || 0;
-        if (iT) {
-          const tv = (row[iT] || "").toLowerCase();
-          tipo = tv.includes("egr") || tv.includes("sal") ? "egreso" : "ingreso";
-        } else {
-          tipo = monto >= 0 ? "ingreso" : "egreso";
+    try {
+      const headers = Object.keys(todasFilas[0] || {});
+      const iF = iH(cols.fecha), iD = iH(cols.descripcion), iM = iH(cols.monto), iT = iH(cols.tipo), iR = iH(cols.referencia);
+      const iDeb = iH(cols.debito), iCred = iH(cols.credito);
+      const iOf = iH(cols.oficina), iSec = iH(cols.secuencial), iCheq = iH(cols.cheque), iSalC = iH(cols.saldo_contable), iSalD = iH(cols.saldo_disponible);
+      const total = todasFilas.length;
+      let ok = 0, err = 0;
+      for (let idx = 0; idx < total; idx++) {
+        const row = todasFilas[idx];
+        setProgreso(`${idx + 1}/${total}`);
+        const fecha = convertirFecha(iF ? (row[iF] || "") : "");
+        const descripcion = iD ? (row[iD] || "") : "";
+        const oficina = iOf ? (row[iOf] || "") : "";
+        const secuencial = iSec ? (row[iSec] || "") : "";
+        const cheque = iCheq ? (row[iCheq] || "") : "";
+        const saldoC = iSalC ? (row[iSalC] || "") : "";
+        const saldoD = iSalD ? (row[iSalD] || "") : "";
+        let monto = 0, tipo = "ingreso";
+        if (iM) {
+          let raw = (row[iM] || "0").replace(/["']/g, "").trim();
+          raw = raw.replace(",", ".");
+          monto = parseFloat(raw.replace(/[^0-9.\-]/g, "")) || 0;
+          if (iT) {
+            const tv = (row[iT] || "").toLowerCase();
+            tipo = tv.includes("egr") || tv.includes("sal") ? "egreso" : "ingreso";
+          } else {
+            tipo = monto >= 0 ? "ingreso" : "egreso";
+          }
+        } else if (iDeb || iCred) {
+          let d = iDeb ? (row[iDeb] || "0").replace(/["']/g, "").trim() : "0";
+          let c = iCred ? (row[iCred] || "0").replace(/["']/g, "").trim() : "0";
+          d = d.replace(",", "."); c = c.replace(",", ".");
+          const deb = parseFloat(d.replace(/[^0-9.\-]/g, "")) || 0;
+          const cred = parseFloat(c.replace(/[^0-9.\-]/g, "")) || 0;
+          if (deb > 0) { monto = deb; tipo = "egreso"; }
+          else if (cred > 0) { monto = cred; tipo = "ingreso"; }
+          else { err++; continue; }
         }
-      } else if (iDeb || iCred) {
-        let d = iDeb ? (row[iDeb] || "0").replace(/["']/g, "").trim() : "0";
-        let c = iCred ? (row[iCred] || "0").replace(/["']/g, "").trim() : "0";
-        d = d.replace(",", "."); c = c.replace(",", ".");
-        const deb = parseFloat(d.replace(/[^0-9.\-]/g, "")) || 0;
-        const cred = parseFloat(c.replace(/[^0-9.\-]/g, "")) || 0;
-        if (deb > 0) { monto = deb; tipo = "egreso"; }
-        else if (cred > 0) { monto = cred; tipo = "ingreso"; }
-        else { err++; continue; }
+        const referencia = iR ? (row[iR] || "") : "";
+        if (!descripcion || monto === 0) { err++; continue; }
+        const extra = { oficina, secuencial, cheque, saldo_contable: saldoC, saldo_disponible: saldoD };
+        const notas = JSON.stringify(extra);
+        const payload = { empresa_id: empId, cuenta_id: cuentaAct.id, fecha, tipo, descripcion, monto, referencia, categoria: "otros", conciliado: false, notas };
+        const r = await dbIns("movimientos_bancarios", payload, 30000);
+        if (r?.error) { err++; if (err === 1) showToast("Error Supabase: " + r.error, "err"); continue; }
+        ok++;
       }
-      const referencia = iR ? (row[iR] || "") : "";
-      if (!descripcion || monto === 0) { err++; continue; }
-      const extra = { oficina, secuencial, cheque, saldo_contable: saldoC, saldo_disponible: saldoD };
-      const notas = JSON.stringify(extra);
-      const payload = { empresa_id: empId, cuenta_id: cuentaAct.id, fecha, tipo, descripcion, monto, referencia, categoria: "otros", conciliado: false, notas };
-      const r = await dbIns("movimientos_bancarios", payload);
-      if (r?.error) { err++; if (err === 1) showToast("Error Supabase: " + r.error, "err"); continue; }
-      ok++;
+      setResultado({ ok, err });
+      showToast(`${ok > 0 ? "Importacion completada" : "Error en importacion"}: ${ok} exitosos, ${err} errores`);
+      onImported();
+    } finally {
+      setProgreso(null);
+      setProcesando(false);
     }
-    setResultado({ ok, err });
-    showToast(`${ok > 0 ? "Importacion completada" : "Error en importacion"}: ${ok} exitosos, ${err} errores`);
-    setProcesando(false);
-    onImported();
   };
 
   return (
@@ -251,7 +260,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
             <input ref={refFile} type="file" accept=".csv,.xlsx,.txt" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
           </div>
         </div>
-        {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc }}>Procesando...</div>}
+        {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc, fontSize: 13 }}>{progreso ? `Importando ${progreso} registros...` : "Procesando..."}</div>}
         {Object.keys(cols).length > 0 && (
           <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Columnas detectadas: {Object.entries(cols).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna"}</div>
         )}
