@@ -186,8 +186,12 @@ function CalendarioMensual({ reservas }) {
   const countMap = {};
   (reservas || []).forEach(r => {
     if (!r.fecha_inicio || ['cancelada','completada'].includes(r.estado)) return;
-    const f = r.fecha_inicio;
-    countMap[f] = (countMap[f] || 0) + 1;
+    const start = new Date(r.fecha_inicio);
+    const end = r.fecha_fin ? new Date(r.fecha_fin) : new Date(r.fecha_inicio);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = d.toISOString().slice(0, 10);
+      countMap[key] = (countMap[key] || 0) + 1;
+    }
   });
 
   const todayStr = hoy.toISOString().slice(0, 10);

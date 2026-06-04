@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 const CATS = ["ventas", "combustible", "mantenimiento", "salarios", "seguros", "servicios", "oficina", "otros"];
@@ -512,7 +512,7 @@ export default function PageBanca({ showToast, empId }) {
       )}
 
       {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 20 }}>
         {[
           { l: "Saldo total GTQ",  v: `Q ${fmt(saldoTotal)}`,  c: T.acc,  bg: T.accDim  },
           { l: "Ingresos periodo", v: `Q ${fmt(ingTotal)}`,    c: T.green, bg: T.greenDim },
@@ -526,7 +526,7 @@ export default function PageBanca({ showToast, empId }) {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(200px, 240px) 1fr", gap: 18 }}>
         {/* Panel cuentas */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -682,79 +682,57 @@ export default function PageBanca({ showToast, empId }) {
               {movsFil.length === 0 ? (
                 <Empty icon="B" msg="Sin movimientos" action="+ Registrar" onAction={() => { cerrarForm(); setShowForm(true); }} />
               ) : (
-                <div style={{ ...S.card, overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        {["Fecha", "Descripcion", "Referencia", "Debito (-)", "Credito (+)", "Saldo", "Acciones"].map(h => (
-                          <th key={h} style={S.th}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        let run = parseFloat(cuentaAct?.saldo_inicial || 0);
-                        const sMap = {};
-                        allMovs.forEach(m => {
-                          run += m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto);
-                          sMap[m.id] = run;
-                        });
-                        return movsFil.map(m => ({ ...m, __saldo: sMap[m.id] }));
-                      })().map(m => (
-                        <tr key={m.id}
-                          onMouseEnter={e => e.currentTarget.style.background = T.surf}
-                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                          <td style={{ ...S.td, color: T.sub, fontSize: 11, whiteSpace: "nowrap" }}>{fmtD(m.fecha)}</td>
-                          <td style={{ ...S.td, maxWidth: 160 }}>
-                            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 155, fontWeight: 500, color: T.txt }}>
-                              {m.descripcion}
-                            </div>
-                          </td>
-                          <td style={{ ...S.td, fontSize: 11, color: T.mut, whiteSpace: "nowrap", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {m.referencia || "—"}
-                          </td>
-                          <td style={{ ...S.td, fontWeight: 700, color: T.red, whiteSpace: "nowrap", textAlign: "right" }}>
-                            {m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "—"}
-                          </td>
-                          <td style={{ ...S.td, fontWeight: 700, color: T.green, whiteSpace: "nowrap", textAlign: "right" }}>
-                            {m.tipo === "ingreso" ? `Q ${fmt(m.monto)}` : "—"}
-                          </td>
-                          <td style={{ ...S.td, fontWeight: 600, color: T.acc, whiteSpace: "nowrap", textAlign: "right", fontSize: 12 }}>
-                            Q {fmt(m.__saldo)}
-                          </td>
-                          <td style={S.td}>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <button onClick={() => setDetalleMov(m)}
-                                style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 11 }} title="Ver detalle">
-                                Ver
-                              </button>
-                              <button onClick={() => setConfirmDel(m.id)}
-                                style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 11 }} title="Eliminar">
-                                Eliminar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ background: T.surf, fontWeight: 700 }}>
-                        <td style={{ padding: "8px 10px", fontSize: 11, color: T.mut }} colSpan={3}>
-                          {movsFil.length} movimientos · Saldo calculado
-                        </td>
-                        <td style={{ padding: "8px 10px", color: T.red, textAlign: "right" }}>
-                          Q {fmt(movsFil.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}
-                        </td>
-                        <td style={{ padding: "8px 10px", color: T.green, textAlign: "right" }}>
-                          Q {fmt(movsFil.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}
-                        </td>
-                        <td style={{ padding: "8px 10px", color: T.acc, textAlign: "right", fontSize: 13 }}>
-                          Q {fmt(movsFil.reduce((s, m) => s + (m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto)), 0))}
-                        </td>
-                        <td />
-                      </tr>
-                    </tfoot>
-                  </table>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(() => {
+                    let run = parseFloat(cuentaAct?.saldo_inicial || 0);
+                    const sMap = {};
+                    allMovs.forEach(m => {
+                      run += m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto);
+                      sMap[m.id] = run;
+                    });
+                    return movsFil.map(m => ({ ...m, __saldo: sMap[m.id] }));
+                  })().map(m => (
+                    <div key={m.id} style={S.card}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setDetalleMov(m)}>
+                          <div style={{ fontWeight: 600, color: T.txt, fontSize: 13 }}>
+                            {m.descripcion}
+                          </div>
+                          <div style={{ fontSize: 11, color: T.mut, marginTop: 2 }}>
+                            {m.referencia || "—"} · {m.categoria}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                          {m.tipo === "egreso"
+                            ? <span style={{ fontSize: 15, fontWeight: 800, color: T.red }}>- Q {fmt(m.monto)}</span>
+                            : <span style={{ fontSize: 15, fontWeight: 800, color: T.green }}>+ Q {fmt(m.monto)}</span>
+                          }
+                          <span style={{ fontSize: 11, fontWeight: 600, color: T.acc }}>Saldo: Q {fmt(m.__saldo)}</span>
+                          {m.conciliado
+                            ? <span style={{ fontSize: 9, color: T.green }}>Conciliado</span>
+                            : <span style={{ fontSize: 9, color: T.sec }}>Pendiente</span>
+                          }
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                        <span style={{ fontSize: 11, color: T.sub }}>{fmtD(m.fecha)}</span>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => setDetalleMov(m)}
+                            style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>Ver</button>
+                          <button onClick={() => setConfirmDel(m.id)}
+                            style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10 }}>Eliminar</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ ...S.card, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px" }}>
+                    <span style={{ fontSize: 12, color: T.sub }}>{movsFil.length} movimientos</span>
+                    <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
+                      <span>Egresos: <span style={{ color: T.red, fontWeight: 700 }}>Q {fmt(movsFil.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}</span></span>
+                      <span>Ingresos: <span style={{ color: T.green, fontWeight: 700 }}>Q {fmt(movsFil.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}</span></span>
+                      <span>Balance: <span style={{ color: T.acc, fontWeight: 800 }}>Q {fmt(movsFil.reduce((s, m) => s + (m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto)), 0))}</span></span>
+                    </div>
+                  </div>
                 </div>
               )}
               {movsFil.length > 0 && (

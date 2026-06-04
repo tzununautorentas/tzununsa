@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── API ──────────────────────────────────────────────────────────
@@ -1017,7 +1017,7 @@ export default function PageContratos({ showToast, empId }) {
   return (
     <div>
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
           { l: 'Total',         v: total,                                                 c: T.txt   },
           { l: 'Activos',       v: rows.filter(r => r.estado === 'activo').length,               c: T.acc   },
@@ -1054,65 +1054,54 @@ export default function PageContratos({ showToast, empId }) {
         <Empty icon="C" msg="Sin contratos registrados" action="+ Nuevo contrato"
           onAction={() => { setEditItem(null); setVista('form'); }} />
       ) : (
-        <div style={{ ...S.card, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['No. Contrato', 'Tipo', 'Cliente', 'Vehiculo', 'Salida', 'Retorno', 'Total', 'Estado', 'Acciones'].map(h => (
-                  <th key={h} style={S.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => {
-                const est = ESTADOS[r.estado] || ESTADOS.borrador;
-                const tipo = TIPOS.find(t => t.v === r.tipo);
-                return (
-                  <tr key={r.id}
-                    onMouseEnter={e => e.currentTarget.style.background = T.surf}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 11, color: T.acc, fontWeight: 700 }}>
-                      {r.numero}
-                    </td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>{tipo?.l || r.tipo}</td>
-                    <td style={{ ...S.td, fontWeight: 600, maxWidth: 150 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 145 }}>
-                        {r.cliente_nombre}
-                      </div>
-                    </td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub }}>
-                      {r.vehiculo_placa ? <span style={{ fontFamily: 'monospace', color: T.acc }}>{r.vehiculo_placa}</span> : '—'}
-                      {r.vehiculo_marca && <div style={{ fontSize: 9, color: T.mut }}>{r.vehiculo_marca} {r.vehiculo_modelo}</div>}
-                    </td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: 'nowrap' }}>{fmtD(r.fecha_salida)}</td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: 'nowrap' }}>{r.fecha_retorno ? fmtD(r.fecha_retorno) : '—'}</td>
-                    <td style={{ ...S.td, fontWeight: 700, color: T.acc }}>Q {fmt(r.total_gtq)}</td>
-                    <td style={S.td}>
-                      <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600, color: est.c, background: est.bg }}>
-                        {est.l}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {rows.map(r => {
+            const est = ESTADOS[r.estado] || ESTADOS.borrador;
+            const tipo = TIPOS.find(t => t.v === r.tipo);
+            return (
+              <div key={r.id} style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 13 }}>
+                        {r.numero}
                       </span>
-                    </td>
-                    <td style={S.td}>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => generarPDF(r)}
-                          style={{ ...S.btn('blue'), padding: '3px 7px', fontSize: 10 }}>
-                          PDF
-                        </button>
-                        <button onClick={() => { setEditItem(r); setVista('form'); }}
-                          style={{ ...S.btn('ghost'), padding: '3px 7px', fontSize: 10 }}>
-                          Editar
-                        </button>
-                        <button onClick={() => del(r.id)}
-                          style={{ ...S.btn('danger'), padding: '3px 7px', fontSize: 10 }}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <span style={{ fontSize: 11, color: T.sub }}>{tipo?.l || r.tipo}</span>
+                    </div>
+                    <div style={{ fontWeight: 600, color: T.txt, fontSize: 14, marginTop: 2 }}>
+                      {r.cliente_nombre}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", fontSize: 11, color: T.mut }}>
+                      {r.vehiculo_placa && <span style={{ fontFamily: "monospace", color: T.acc }}>{r.vehiculo_placa}</span>}
+                      {r.vehiculo_marca && <span>{r.vehiculo_marca} {r.vehiculo_modelo}</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 4, fontSize: 11, color: T.sub }}>
+                      <span>Salida: {fmtD(r.fecha_salida)}</span>
+                      {r.fecha_retorno && <span>Retorno: {fmtD(r.fecha_retorno)}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: T.acc }}>Q {fmt(r.total_gtq)}</div>
+                    <Badge c={est.c} bg={est.bg} l={est.l} small />
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                  <button onClick={() => generarPDF(r)}
+                    style={{ ...S.btn("blue"), padding: "3px 7px", fontSize: 10 }}>
+                    PDF
+                  </button>
+                  <button onClick={() => { setEditItem(r); setVista('form'); }}
+                    style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
+                    Editar
+                  </button>
+                  <button onClick={() => del(r.id)}
+                    style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10 }}>
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
       <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta}
