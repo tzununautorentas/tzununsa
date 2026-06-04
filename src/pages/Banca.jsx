@@ -182,17 +182,16 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     return s;
   };
 
-  const iH = (idx) => (idx !== "" && headers) ? headers[parseInt(idx)] : "";
-
   const importar = async () => {
     if (todasFilas.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
     setProgreso(null);
     setProcesando(true);
     try {
-      const headers = Object.keys(todasFilas[0] || {});
-      const iF = iH(cols.fecha), iD = iH(cols.descripcion), iM = iH(cols.monto), iT = iH(cols.tipo), iR = iH(cols.referencia);
-      const iDeb = iH(cols.debito), iCred = iH(cols.credito);
-      const iOf = iH(cols.oficina), iSec = iH(cols.secuencial), iCheq = iH(cols.cheque), iSalC = iH(cols.saldo_contable), iSalD = iH(cols.saldo_disponible);
+      const colsIdx = Object.keys(todasFilas[0] || {});
+      const col = (idx) => idx !== "" ? colsIdx[parseInt(idx)] : "";
+      const iF = col(cols.fecha), iD = col(cols.descripcion), iM = col(cols.monto), iT = col(cols.tipo), iR = col(cols.referencia);
+      const iDeb = col(cols.debito), iCred = col(cols.credito);
+      const iOf = col(cols.oficina), iSec = col(cols.secuencial), iCheq = col(cols.cheque), iSalC = col(cols.saldo_contable), iSalD = col(cols.saldo_disponible);
       const total = todasFilas.length;
       let ok = 0, err = 0;
       for (let idx = 0; idx < total; idx++) {
