@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, EST_VEH } from '../config.js';
-import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { T, S, dbIns, dbUpd, dbDel, EST_VEH } from '../config.js';
+import { Spinner, Empty, Fld, Badge, Paginador, Buscador, ModalExportar } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 export default function PageFlota({ showToast, empId }) {
   const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState("todos");
+  const [exportar, setExportar] = useState(false);
   const [vista, setVista]     = useState("lista");
   const [editItem, setEditItem] = useState(null);
   const [saving, setSaving]   = useState(false);
@@ -16,9 +18,11 @@ export default function PageFlota({ showToast, empId }) {
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const TIPOS = ["Sedan", "SUV", "Pickup", "Van", "Microbus", "Bus"];
 
+  const query = filtro !== 'todos' ? `estado=eq.${filtro}` : '';
+
   const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload: load, desde, hasta } = usePaginacion({
     table: "vehiculos",
-    query: "",
+    query,
     search: busqueda,
     columns: ['marca', 'modelo', 'placa'],
     order: 'codigo.asc',
@@ -81,6 +85,17 @@ export default function PageFlota({ showToast, empId }) {
   const disp = rows.filter(r => r.estado === "disponible").length;
   const rent = rows.filter(r => r.estado === "rentado").length;
   const mant = rows.filter(r => r.estado === "mantenimiento").length;
+
+  const FILTROS = [
+    { key: "todos", l: "Todos" },
+    { key: "disponible", l: "Disponibles" },
+    { key: "rentado", l: "Rentados" },
+    { key: "mantenimiento", l: "Mantenimiento" },
+  ];
+
+  const exportData = (ev) => {
+    setExportar(true);
+  };
 
   if (vista === "form") return (
     <div style={{ maxWidth: 640 }}>
@@ -176,7 +191,7 @@ export default function PageFlota({ showToast, empId }) {
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12, marginBottom: 18 }}>
         {[
           { l: "Disponibles",   v: disp, c: T.acc,  bg: T.accDim  },
           { l: "Rentados",      v: rent, c: T.blue,  bg: T.blueDim },
@@ -189,84 +204,116 @@ export default function PageFlota({ showToast, empId }) {
         ))}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.txt }}>Flota ({total} vehiculos)</div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por marca, modelo, placa..." />
-          <button onClick={load} style={{ ...S.btn("ghost"), fontSize: 12 }}>Actualizar</button>
-          <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize: 12 }}>+ Registrar vehiculo</button>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+        {FILTROS.map(fl => (
+          <button key={fl.key}
+            onClick={() => setFiltro(fl.key)}
+            style={{
+              padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+              border: `1px solid ${filtro === fl.key ? T.acc : T.brd}`,
+              background: filtro === fl.key ? T.accDim : 'transparent',
+              color: filtro === fl.key ? T.acc : T.sub, cursor: 'pointer', whiteSpace: 'nowrap'
+            }}>
+            {fl.l}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: T.sub }}>
+          {total > 0 ? `${desde}-${hasta} de ${total} vehiculos` : 'Sin vehiculos'}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar vehículo..." />
+          <button onClick={exportData} style={{ ...S.btn("ghost"), fontSize: 12 }}>Exportar</button>
+          <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize: 12 }}>
+            + Nuevo vehículo
+          </button>
         </div>
       </div>
 
       {loading ? <Spinner /> : rows.length === 0 ? (
-        <Empty icon="V" msg="Sin vehiculos registrados" action="+ Registrar" onAction={abrirNuevo} />
+        <Empty icon="V" msg="Sin vehículos registrados" action="+ Registrar" onAction={abrirNuevo} />
       ) : (
-        <div style={{ ...S.card, overflowX: 'auto' }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Codigo", "Vehiculo", "Placa", "Tipo", "Propietario", "Km", "Estado", "Cambiar estado", ""].map(h => (
-                  <th key={h} style={S.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(v => {
-                const e = EST_VEH[v.estado] || EST_VEH.disponible;
-                const segVenc = v.vencimiento_seguro && new Date(v.vencimiento_seguro) < new Date();
-                return (
-                  <tr key={v.id}>
-                    <td style={{ ...S.td, fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 12 }}>
-                      {v.codigo || "—"}
-                      {v.propietario && <div style={{ fontSize: 9, color: T.mut }}>{PROP[v.propietario] || v.propietario}</div>}
-                    </td>
-                    <td style={{ ...S.td, fontWeight: 600 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {rows.map(v => {
+            const e = EST_VEH[v.estado] || EST_VEH.disponible;
+            const segVenc = v.vencimiento_seguro && new Date(v.vencimiento_seguro) < new Date();
+            const pBadge = { propio: { c: T.acc, bg: T.accDim }, socio: { c: T.blue, bg: T.blueDim }, alquilado: { c: T.sec, bg: T.secDim } }[v.propietario] || { c: T.mut, bg: T.bg2 };
+            return (
+              <div key={v.id} style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 13 }}>
+                        {v.codigo || "—"}
+                      </span>
+                      <span style={{ fontFamily: "monospace", color: T.sub, fontSize: 11 }}>{v.placa}</span>
+                    </div>
+                    <div style={{ fontWeight: 600, color: T.txt, fontSize: 14, marginTop: 2 }}>
                       {v.marca} {v.modelo}
-                      {v.anio && <div style={{ fontSize: 10, color: T.mut }}>{v.anio} {v.color ? `· ${v.color}` : ''}</div>}
-                    </td>
-                    <td style={{ ...S.td, fontFamily: "monospace", color: T.sub, fontSize: 11 }}>{v.placa}</td>
-                    <td style={S.td}>{v.tipo}</td>
-                    <td style={{ ...S.td, fontSize: 11 }}>
-                      <span style={{ padding: "2px 7px", borderRadius: 8, fontSize: 10, fontWeight: 600,
-                        background: v.propietario === "propio" ? T.accDim : v.propietario === "socio" ? T.blueDim : T.secDim,
-                        color: v.propietario === "propio" ? T.acc : v.propietario === "socio" ? T.blue : T.sec }}>
-                        {PROP[v.propietario] || v.propietario || "—"}
+                      {v.anio ? ` · ${v.anio}` : ''}
+                      {v.color ? ` · ${v.color}` : ''}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, color: T.mut }}>
+                        {v.tipo} · {(v.km_actual || 0).toLocaleString()} km
                       </span>
-                    </td>
-                    <td style={S.td}>{(v.km_actual || 0).toLocaleString()} km</td>
-                    <td style={S.td}>
-                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: e.c, background: e.bg }}>
-                        {e.l}
-                      </span>
-                      {segVenc && <div style={{ fontSize: 9, color: T.red, marginTop: 2 }}>Seguro vencido</div>}
-                    </td>
-                    <td style={S.td}>
-                      <select style={{ ...S.sel, padding: "4px 8px", fontSize: 11, width: "auto" }}
-                        value={v.estado} onChange={ev => chEst(v.id, ev.target.value)}>
-                        <option value="disponible">Disponible</option>
-                        <option value="rentado">Rentado</option>
-                        <option value="mantenimiento">Mantenimiento</option>
-                      </select>
-                    </td>
-                    <td style={S.td}>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        <button onClick={() => abrirEditar(v)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
-                          Editar
-                        </button>
-                        <button onClick={() => del(v.id)} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <Badge c={e.c} bg={e.bg} l={e.l} small />
+                    {segVenc && <span style={{ fontSize: 9, color: T.red, fontWeight: 600 }}>Seguro vencido</span>}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ padding: "2px 7px", borderRadius: 8, fontSize: 10, fontWeight: 600, color: pBadge.c, background: pBadge.bg }}>
+                      {PROP[v.propietario] || v.propietario || "—"}
+                    </span>
+                    <select style={{ ...S.sel, padding: "3px 7px", fontSize: 11, width: "auto" }}
+                      value={v.estado} onChange={ev => chEst(v.id, ev.target.value)}>
+                      <option value="disponible">Disponible</option>
+                      <option value="rentado">Rentado</option>
+                      <option value="mantenimiento">Mantenimiento</option>
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => abrirEditar(v)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
+                      Editar
+                    </button>
+                    <button onClick={() => del(v.id)} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
       <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+
+      {exportar && (
+        <ModalExportar titulo="Vehículos" datos={rows} campos={[
+          { key: 'codigo', label: 'Código' },
+          { key: 'placa', label: 'Placa' },
+          { key: 'marca', label: 'Marca' },
+          { key: 'modelo', label: 'Modelo' },
+          { key: 'anio', label: 'Año' },
+          { key: 'tipo', label: 'Tipo' },
+          { key: 'propietario', label: 'Propietario' },
+          { key: 'color', label: 'Color' },
+          { key: 'estado', label: 'Estado' },
+          { key: 'km_actual', label: 'KM Actual' },
+          { key: 'vin', label: 'VIN' },
+          { key: 'poliza_seguro', label: 'Póliza' },
+          { key: 'vencimiento_seguro', label: 'Venc. Seguro' },
+          { key: 'notas', label: 'Notas' },
+        ]} onClose={() => setExportar(false)} />
+      )}
     </div>
   );
 }

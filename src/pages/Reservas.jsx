@@ -1,6 +1,6 @@
 // src/pages/Reservas.jsx
 import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, GT, EST_RES, FLUJO_RES } from '../config.js';
+import { T, S, fmt, fmtD, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -317,7 +317,7 @@ export default function PageReservas({ showToast, empId }) {
       )}
 
       {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12, marginBottom: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12, marginBottom: 18 }}>
         {[
           { l: "Total",       v: total,                                    c: T.txt   },
           { l: "Pendientes",  v: rows.filter(r => r.estado === "pendiente").length,  c: T.mut   },
@@ -354,64 +354,46 @@ export default function PageReservas({ showToast, empId }) {
       {loading ? <Spinner /> : rows.length === 0 ? (
         <Empty icon="R" msg="Sin reservas" action="+ Nueva reserva" onAction={() => setVista("form")} />
       ) : (
-        <div style={S.card}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["No.", "Cliente", "Vehiculo", "Conductor", "Inicio", "Fin", "Total", "Estado", "Acciones"].map(h => (
-                  <th key={h} style={S.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => {
-                const est = EST_RES[r.estado] || EST_RES.pendiente;
-                return (
-                  <tr key={r.id}
-                    onMouseEnter={e => e.currentTarget.style.background = T.surf}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <td style={{ ...S.td, fontFamily: "monospace", fontSize: 11, color: T.acc }}>{r.numero}</td>
-                    <td style={{ ...S.td, fontWeight: 600 }}>
-                      {r.cliente_nombre}
-                      {r.tipo && <div style={{ fontSize: 10, color: T.mut }}>{r.tipo}</div>}
-                    </td>
-                    <td style={{ ...S.td, fontSize: 12, color: T.sub }}>{r.vehiculo_nombre || "—"}</td>
-                    <td style={{ ...S.td, fontSize: 12, color: T.sub }}>{r.conductor_nombre || "—"}</td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: "nowrap" }}>{fmtD(r.fecha_inicio)}</td>
-                    <td style={{ ...S.td, fontSize: 11, color: T.sub, whiteSpace: "nowrap" }}>{fmtD(r.fecha_fin) || "—"}</td>
-                    <td style={{ ...S.td, fontWeight: 700, color: T.acc }}>Q {fmt(r.total_gtq)}</td>
-                    <td style={S.td}>
-                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: est.c, background: est.bg }}>
-                        {est.l}
-                      </span>
-                    </td>
-                    <td style={S.td}>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {(FLUJO_RES[r.estado] || []).map(accion => (
-                          <button key={accion.v} onClick={() => cambiarEstado(r.id, accion.v)}
-                            style={{ ...S.btn(accion.s), padding: "3px 7px", fontSize: 10 }}>
-                            {accion.l}
-                          </button>
-                        ))}
-                        <button onClick={() => abrirGoogleCalendar(r)}
-                          style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
-                          Calendario
-                        </button>
-                        <button onClick={() => { setEditItem(r); setVista("form"); }}
-                          style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
-                          Editar
-                        </button>
-                        <button onClick={() => del(r.id)}
-                          style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10 }}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {rows.map(r => {
+            const est = EST_RES[r.estado] || EST_RES.pendiente;
+            const total = parseFloat(r.total_gtq) || 0;
+            return (
+              <div key={r.id} style={S.card}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontFamily: "monospace", fontSize: 11, color: T.acc }}>{r.numero}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{r.cliente_nombre}</div>
+                    <div style={{ fontSize: 12, color: T.sub }}>
+                      {r.tipo === "renta" ? "Renta por dias" : "Traslado"}
+                      {r.vehiculo_nombre ? " · " + r.vehiculo_nombre : ""}
+                      {r.conductor_nombre ? " · " + r.conductor_nombre : ""}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.mut, marginTop: 4 }}>
+                      {fmtD(r.fecha_inicio)}{r.fecha_fin ? " → " + fmtD(r.fecha_fin) : ""}
+                    </div>
+                    {r.destino && <div style={{ fontSize: 11, color: T.mut }}>{r.origen || "Guatemala"} → {r.destino}</div>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <Badge c={est.c} bg={est.bg} l={est.l} small />
+                    <div style={{ fontSize: 15, fontWeight: 700, color: T.acc, marginTop: 4 }}>Q {fmt(total)}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 5, paddingTop: 10, borderTop: `1px solid ${T.bord}22`, flexWrap: "wrap" }}>
+                  {(FLUJO_RES[r.estado] || []).map(accion => (
+                    <button key={accion.v} onClick={() => cambiarEstado(r.id, accion.v)}
+                      style={{ ...S.btn(accion.s), fontSize: 11, padding: "4px 9px" }}>{accion.l}</button>
+                  ))}
+                  <button onClick={() => abrirGoogleCalendar(r)}
+                    style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Calendario</button>
+                  <button onClick={() => { setEditItem(r); setVista("form"); }}
+                    style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Editar</button>
+                  <button onClick={() => del(r.id)}
+                    style={{ ...S.btn("danger"), fontSize: 11, padding: "4px 9px", marginLeft: "auto" }}>Eliminar</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
       {rows.length > 0 && (

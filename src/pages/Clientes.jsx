@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { T, S, dbGet, dbIns, dbUpd, dbDel } from '../config.js';
 import { Spinner, Empty, Fld, Paginador, Buscador, ModalExportar } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -456,20 +456,18 @@ export default function PageClientes({ showToast, empId }) {
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
-          Directorio de Clientes ({total})
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: T.sub }}>
+          {total > 0 ? `${desde}-${hasta} de ${total} clientes` : 'Sin clientes'}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar cliente..." />
           <button onClick={() => setShowImport(true)} style={{ ...S.btn("blue"), fontSize: 12 }}>Importar</button>
           <button onClick={() => setShowExport(true)} style={{ ...S.btn("green"), fontSize: 12 }}>Exportar</button>
-          <button onClick={reload} style={{ ...S.btn("ghost"), fontSize: 12 }}>Actualizar</button>
-          <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize: 12 }}>+ Nuevo cliente</button>
+          <button onClick={abrirNuevo} style={{ ...S.btn("primary"), fontSize: 12 }}>
+            + Nuevo cliente
+          </button>
         </div>
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, codigo, NIT..." />
       </div>
 
       {loading ? <Spinner /> : rows.length === 0 ? (
@@ -477,74 +475,58 @@ export default function PageClientes({ showToast, empId }) {
           action="+ Agregar cliente" onAction={abrirNuevo} />
       ) : (
         <>
-          <div style={{ ...S.card, overflowX: 'auto' }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={{ ...S.th, width: 32, textAlign: "center" }}>
-                    <input type="checkbox" style={{ cursor: "pointer" }}
-                      checked={rows.length > 0 && rows.every(r => selectedIds.has(r.id))}
-                      onChange={() => {
-                        if (rows.every(r => selectedIds.has(r.id))) setSelectedIds(new Set());
-                        else setSelectedIds(new Set(rows.map(r => r.id)));
-                      }} />
-                  </th>
-                  {["Codigo", "Cliente", "Tipo", "NIT", "Telefono", "Email", ""].map(h => (
-                    <th key={h} style={S.th}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[...rows].sort((a, b) => {
-                  if (!a.codigo && !b.codigo) return 0;
-                  if (!a.codigo) return 1;
-                  if (!b.codigo) return -1;
-                  return a.codigo.localeCompare(b.codigo);
-                }).map(c => {
-                  const tc = TC[c.tipo] || TC.empresa;
-                  const sel = selectedIds.has(c.id);
-                  return (
-                    <tr key={c.id}
-                      style={{ background: sel ? T.accDim : "transparent" }}
-                      onMouseEnter={e => { if (!sel) e.currentTarget.style.background = T.surf; }}
-                      onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
-                      <td style={{ ...S.td, textAlign: "center" }}>
-                        <input type="checkbox" checked={sel}
-                          onChange={() => toggleSel(c.id)} style={{ cursor: "pointer" }} />
-                      </td>
-                      <td style={{ ...S.td, fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 12 }}>
-                        {c.codigo || "—"}
-                      </td>
-                      <td style={{ ...S.td, fontWeight: 600 }}>
-                        {c.nombre}
-                        {c.contacto && <div style={{ fontSize: 10, color: T.mut }}>Contacto: {c.contacto}</div>}
-                      </td>
-                      <td style={S.td}>
-                        <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: tc.c, background: tc.bg }}>
-                          {tc.l}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[...rows].sort((a, b) => {
+              if (!a.codigo && !b.codigo) return 0;
+              if (!a.codigo) return 1;
+              if (!b.codigo) return -1;
+              return a.codigo.localeCompare(b.codigo);
+            }).map(c => {
+              const tc = TC[c.tipo] || TC.empresa;
+              const sel = selectedIds.has(c.id);
+              return (
+                <div key={c.id} style={{ ...S.card, opacity: sel ? 0.85 : 1, borderLeft: sel ? `3px solid ${T.acc}` : 'none' }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                    <input type="checkbox" checked={sel}
+                      onChange={() => toggleSel(c.id)} style={{ cursor: "pointer", marginTop: 3 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: "monospace", fontWeight: 700, color: T.acc, fontSize: 13 }}>
+                          {c.codigo || "—"}
                         </span>
-                      </td>
-                      <td style={{ ...S.td, fontFamily: "monospace", fontSize: 11, color: T.mut }}>{c.nit || "—"}</td>
-                      <td style={{ ...S.td, color: T.sub, fontSize: 12 }}>{c.telefono || "—"}</td>
-                      <td style={{ ...S.td, color: T.sub, fontSize: 11 }}>{c.email || "—"}</td>
-                      <td style={S.td}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => abrirEditar(c)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
-                            Editar
-                          </button>
-                          <button onClick={() => setConfirmDel({ id: c.id, label: c.nombre })} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <span style={{ fontWeight: 600, color: T.txt, fontSize: 14 }}>{c.nombre}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                        {c.contacto && <span style={{ fontSize: 11, color: T.mut }}>Contacto: {c.contacto}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, color: tc.c, background: tc.bg }}>
+                        {tc.l}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: T.sub }}>
+                      {c.nit && <span><span style={{ color: T.mut }}>NIT:</span> {c.nit}</span>}
+                      {c.telefono && <span style={{ fontFamily: "monospace" }}>{c.telefono}</span>}
+                      {c.email && <span style={{ fontSize: 11 }}>{c.email}</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button onClick={() => abrirEditar(c)} style={{ ...S.btn("ghost"), padding: "3px 9px", fontSize: 11 }}>
+                        Editar
+                      </button>
+                      <button onClick={() => setConfirmDel({ id: c.id, label: c.nombre })} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           {selectedIds.size > 0 && (
-            <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 12, color: T.sub }}>{selectedIds.size} seleccionado{selectedIds.size > 1 ? "s" : ""}</span>
               <button onClick={() => setConfirmDel({ ids: [...selectedIds], n: selectedIds.size })} style={{ ...S.btn("danger"), fontSize: 12 }}>Eliminar seleccionados</button>
               <button onClick={() => setSelectedIds(new Set())} style={{ ...S.btn("ghost"), fontSize: 12 }}>Limpiar</button>
