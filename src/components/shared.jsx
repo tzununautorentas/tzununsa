@@ -37,7 +37,11 @@ export function Spinner() {
 export function Empty({ icon, msg, action, onAction }) {
   return (
     <div style={{ ...S.card, textAlign: "center", padding: 48, color: T.sub }}>
-      <div style={{ fontSize: 36, marginBottom: 12 }}>{icon}</div>
+      {React.isValidElement(icon) ? icon
+        : typeof icon === "function"
+          ? React.createElement(icon, { size: 40, color: T.mut })
+          : <div style={{ fontSize: 36, marginBottom: 12 }}>{icon || "📭"}</div>
+      }
       <div style={{ fontSize: 14, marginBottom: action ? 16 : 0 }}>{msg}</div>
       {action && <button onClick={onAction} style={{ ...S.btn("primary"), marginTop: 4 }}>{action}</button>}
     </div>
@@ -47,7 +51,7 @@ export function Empty({ icon, msg, action, onAction }) {
 // --- Fld (Field wrapper) ---
 export function Fld({ label, children, span2 }) {
   return (
-    <div style={span2 ? { gridColumn: "span 2" } : {}}>
+    <div style={span2 ? { gridColumn: "span 2" } : {}} className="fld-wrap">
       <label style={S.lbl}>{label}</label>
       {children}
     </div>
@@ -254,17 +258,18 @@ export function CatBadge({ cat }) {
 // --- Paginador ---
 export function Paginador({ page, totalPages, total, desde, hasta, pageSize, onPage, onPageSize }) {
   if (total <= 1) return null;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const Btn = ({ n, l, disabled, active }) => (
     <button disabled={disabled} onClick={() => onPage(n)}
       style={{
-        padding: '5px 10px', borderRadius: 6, border: active ? 'none' : `1px solid ${T.bord}`,
+        padding: isMobile ? '8px 12px' : '5px 10px', borderRadius: 6, border: active ? 'none' : `1px solid ${T.bord}`,
         background: active ? T.acc : 'transparent', color: active ? '#fff' : T.sub,
         cursor: disabled ? 'default' : 'pointer', fontSize: 11, fontWeight: 600,
-        opacity: disabled ? 0.3 : 1, fontFamily: 'inherit',
+        opacity: disabled ? 0.3 : 1, fontFamily: 'inherit', minHeight: 36,
       }}>{l || n}</button>
   );
   const pages = [];
-  const maxVisible = 5;
+  const maxVisible = isMobile ? 3 : 5;
   let s = Math.max(1, page - Math.floor(maxVisible / 2));
   let e = Math.min(totalPages, s + maxVisible - 1);
   if (e - s + 1 < maxVisible) s = Math.max(1, e - maxVisible + 1);
@@ -272,7 +277,7 @@ export function Paginador({ page, totalPages, total, desde, hasta, pageSize, onP
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
       <div style={{ fontSize: 11, color: T.mut }}>
-        Mostrando <b style={{ color: T.txt }}>{desde}</b>–<b style={{ color: T.txt }}>{hasta}</b> de <b style={{ color: T.txt }}>{total}</b> registros
+        <b style={{ color: T.txt }}>{desde}</b>–<b style={{ color: T.txt }}>{hasta}</b> de <b style={{ color: T.txt }}>{total}</b>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <Btn n={1} l="«" disabled={page === 1} />
@@ -284,7 +289,7 @@ export function Paginador({ page, totalPages, total, desde, hasta, pageSize, onP
         <Btn n={totalPages} l="»" disabled={page === totalPages} />
       </div>
       <select value={pageSize} onChange={e => onPageSize(parseInt(e.target.value))}
-        style={{ ...S.sel, width: 'auto', padding: '4px 8px', fontSize: 11 }}>
+        style={{ ...S.sel, width: 'auto', padding: '4px 8px', fontSize: 11, minHeight: 36 }}>
         <option value={25}>25 / pag</option>
         <option value={50}>50 / pag</option>
         <option value={100}>100 / pag</option>
@@ -298,28 +303,122 @@ export function Buscador({ value, onChange, placeholder = 'Buscar...' }) {
   return (
     <input type="search" value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      style={{ ...S.inp, maxWidth: 320, padding: '8px 12px', fontSize: 12 }}
+      style={{ ...S.inp, maxWidth: 320, width: '100%', padding: '10px 12px', fontSize: 14 }}
+      className="buscador-input"
     />
   );
 }
 
-// --- Tabla responsiva (overflow-x auto + iOS smooth scroll) ---
-export function TablaResponsiva({ children, style }) {
+// --- Tabla responsiva con card view en mobile ---
+export function TablaResponsiva({ children, style, cols, datos }) {
+  if (cols && datos) {
+    return <TablaDinamica cols={cols} datos={datos} style={style} />;
+  }
   return (
-    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', ...style }}>
+    <div className="table-wrap" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', ...style }}>
       {children}
     </div>
   );
 }
 
+// --- Tabla Dinamica: table en desktop, cards en mobile ---
+function TablaDinamica({ cols, datos, style }) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" && window.innerWidth < 768
+  );
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+
+  return (
+    <div className="table-wrap" style={{ ...style }}>
+      {/* Table view (desktop) */}
+      <table style={{
+        width: '100%', borderCollapse: 'collapse', fontSize: 12,
+        display: isMobile ? 'none' : 'table',
+      }}>
+        <thead>
+          <tr style={{ borderBottom: `2px solid ${T.bord}`, background: T.surf }}>
+            {cols.map((c, i) => (
+              <th key={i} style={{
+                textAlign: 'left', padding: '8px 10px', fontWeight: 700,
+                color: T.sub, fontSize: 10, textTransform: 'uppercase',
+                letterSpacing: 0.5, whiteSpace: 'nowrap',
+                ...(c.cls === 'der' ? { textAlign: 'right' } : {}),
+              }}>{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {datos.map((r, ri) => (
+            <tr key={ri} style={{
+              borderBottom: `1px solid ${T.bord}`, transition: 'background .1s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = T.surf}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              {cols.map((c, ci) => (
+                <td key={ci} style={{
+                  padding: '8px 10px', color: T.txt, whiteSpace: 'nowrap',
+                  ...(c.cls === 'der' ? { textAlign: 'right' } : {}),
+                }}>
+                  {c.render ? c.render(r) : (r[c.key] ?? '—')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Card view (mobile) */}
+      <div style={{ display: isMobile ? 'flex' : 'none', flexDirection: 'column', gap: 12 }}>
+        {datos.map((r, ri) => (
+          <div key={ri} style={{
+            background: T.card, border: `1px solid ${T.bord}`,
+            borderRadius: 14, padding: '14px', display: 'flex',
+            flexDirection: 'column', gap: 8,
+          }}>
+            {cols.map((c, ci) => (
+              <div key={ci} style={{
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: T.mut, textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 0 }}>
+                  {c.label}
+                </span>
+                <span style={{ fontSize: 13, color: T.txt, textAlign: 'right' }}>
+                  {c.render ? c.render(r) : (r[c.key] ?? '—')}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+        {datos.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 32, color: T.mut, fontSize: 13 }}>Sin registros</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Boton de accion compacto y consistente ---
-export function BtnAccion({ label, color = 'primary', size = 'sm', onClick, disabled, title, icon }) {
-  const sizes = { xs: { padding: '2px 7px', fontSize: 10 }, sm: { padding: '4px 10px', fontSize: 11 }, md: { padding: '7px 14px', fontSize: 12 } };
+export function BtnAccion({ label, color = 'primary', size = 'sm', onClick, disabled, title, icon: Icon }) {
+  const sizes = {
+    xs: { padding: '4px 8px', fontSize: 11 },
+    sm: { padding: '6px 12px', fontSize: 12 },
+    md: { padding: '10px 18px', fontSize: 13 },
+  };
   const s = sizes[size] || sizes.sm;
   return (
     <button onClick={onClick} disabled={disabled} title={title}
-      style={{ ...S.btn(color), ...s, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      {icon && <span>{icon}</span>}{label}
+      style={{
+        ...S.btn(color), ...s, whiteSpace: 'nowrap',
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        minHeight: 36, fontFamily: 'inherit',
+      }}>
+      {Icon && <Icon size={size === 'xs' ? 14 : 16} color="currentColor" />}
+      {label}
     </button>
   );
 }

@@ -2,6 +2,16 @@ import React, { useState, useEffect, Component } from "react";
 import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
 import { ThemeProvider, useTheme, buildStyles } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
+import {
+  IconDashboard, IconCalculadora, IconCotizaciones, IconReservas, IconFlota,
+  IconMantenimiento, IconClientes, IconCatalogo, IconFacturacion, IconBanca,
+  IconGastos, IconPagos, IconProveedores, IconEmpleados, IconContratos,
+  IconContabilidad, IconReportes,
+  IconHome, IconMenu, IconSearch, IconPlus, IconEdit, IconTrash, IconClose,
+  IconCheck, IconDownload, IconUpload, IconRefresh, IconSettings, IconUser,
+  IconLogout, IconNotification, IconCalendar, IconMoney, IconMap, IconStar,
+  IconPrinter, IconSend, IconImage, IconFilter,
+} from "./components/icons.jsx";
 
 import PageDashboard     from "./pages/Dashboard.jsx";
 import PageCalculadora   from "./pages/Calculadora.jsx";
@@ -43,23 +53,23 @@ class ErrBoundary extends Component {
 
 // ─── Modulos ──────────────────────────────────────────────────────
 const MODS = [
-  { id: "dashboard",     label: "Dashboard",      letters: "DB", c1: "#00D4AA", c2: "#009a7a" },
-  { id: "calculadora",   label: "Calculadora",    letters: "CA", c1: "#3B82F6", c2: "#1d4ed8" },
-  { id: "cotizaciones",  label: "Cotizaciones",   letters: "CO", c1: "#6366f1", c2: "#4338ca" },
-  { id: "reservas",      label: "Reservas",       letters: "RE", c1: "#A855F7", c2: "#7e22ce" },
-  { id: "flota",         label: "Flota",          letters: "FL", c1: "#10B981", c2: "#047857" },
-  { id: "mantenimiento", label: "Mantenim.",      letters: "MT", c1: "#F59E0B", c2: "#b45309" },
-  { id: "clientes",      label: "Clientes",       letters: "CL", c1: "#22C55E", c2: "#15803d" },
-  { id: "catalogo",      label: "Catalogo",       letters: "KT", c1: "#06B6D4", c2: "#0e7490" },
-  { id: "facturacion",   label: "Facturas FEL",   letters: "FA", c1: "#00D4AA", c2: "#00796b" },
-  { id: "banca",         label: "La Banca",       letters: "BA", c1: "#2563EB", c2: "#1e40af" },
-  { id: "gastos",        label: "Gastos",         letters: "GS", c1: "#EF4444", c2: "#b91c1c" },
-  { id: "pagos",         label: "Pagos",          letters: "PG", c1: "#22C55E", c2: "#166534" },
-  { id: "proveedores",   label: "Proveedores",    letters: "PV", c1: "#F97316", c2: "#c2410c" },
-  { id: "empleados",     label: "Empleados",      letters: "EM", c1: "#14B8A6", c2: "#0f766e" },
-  { id: "contratos",     label: "Contratos",      letters: "CT", c1: "#6366F1", c2: "#4338ca" },
-  { id: "contabilidad",  label: "Contabilidad",   letters: "AC", c1: "#8B5CF6", c2: "#6d28d9" },
-  { id: "reportes",      label: "Reportes",       letters: "RP", c1: "#EC4899", c2: "#be185d" },
+  { id: "dashboard",     label: "Dashboard",      icon: IconDashboard,     c1: "#00D4AA", c2: "#009a7a" },
+  { id: "calculadora",   label: "Calculadora",    icon: IconCalculadora,   c1: "#3B82F6", c2: "#1d4ed8" },
+  { id: "cotizaciones",  label: "Cotizaciones",   icon: IconCotizaciones,  c1: "#6366f1", c2: "#4338ca" },
+  { id: "reservas",      label: "Reservas",       icon: IconReservas,      c1: "#A855F7", c2: "#7e22ce" },
+  { id: "flota",         label: "Flota",          icon: IconFlota,         c1: "#10B981", c2: "#047857" },
+  { id: "mantenimiento", label: "Mantenim.",      icon: IconMantenimiento, c1: "#F59E0B", c2: "#b45309" },
+  { id: "clientes",      label: "Clientes",       icon: IconClientes,      c1: "#22C55E", c2: "#15803d" },
+  { id: "catalogo",      label: "Catalogo",       icon: IconCatalogo,      c1: "#06B6D4", c2: "#0e7490" },
+  { id: "facturacion",   label: "Facturas FEL",   icon: IconFacturacion,   c1: "#00D4AA", c2: "#00796b" },
+  { id: "banca",         label: "La Banca",       icon: IconBanca,         c1: "#2563EB", c2: "#1e40af" },
+  { id: "gastos",        label: "Gastos",         icon: IconGastos,        c1: "#EF4444", c2: "#b91c1c" },
+  { id: "pagos",         label: "Pagos",          icon: IconPagos,         c1: "#22C55E", c2: "#166534" },
+  { id: "proveedores",   label: "Proveedores",    icon: IconProveedores,   c1: "#F97316", c2: "#c2410c" },
+  { id: "empleados",     label: "Empleados",      icon: IconEmpleados,     c1: "#14B8A6", c2: "#0f766e" },
+  { id: "contratos",     label: "Contratos",      icon: IconContratos,     c1: "#6366F1", c2: "#4338ca" },
+  { id: "contabilidad",  label: "Contabilidad",   icon: IconContabilidad,  c1: "#8B5CF6", c2: "#6d28d9" },
+  { id: "reportes",      label: "Reportes",       icon: IconReportes,      c1: "#EC4899", c2: "#be185d" },
 ];
 
 const TITULOS = {
@@ -82,38 +92,47 @@ const TITULOS = {
   reportes:      "Reportes",
 };
 
+const NAV_ICONS = {
+  dashboard: IconDashboard, calculadora: IconCalculadora, cotizaciones: IconCotizaciones,
+  reservas: IconReservas, flota: IconFlota, mantenimiento: IconMantenimiento,
+  clientes: IconClientes, catalogo: IconCatalogo, facturacion: IconFacturacion,
+  banca: IconBanca, gastos: IconGastos, pagos: IconPagos,
+  proveedores: IconProveedores, empleados: IconEmpleados, contratos: IconContratos,
+  contabilidad: IconContabilidad, reportes: IconReportes,
+};
+
 const DESKTOP_NAV = [
   { sep: true,  label: "PRINCIPAL"    },
-  { id: "dashboard",     label: "Dashboard",        c: "#00D4AA" },
+  { id: "dashboard",     label: "Dashboard",        c: "#00D4AA", icon: NAV_ICONS.dashboard },
   { sep: true,  label: "PRESUPUESTOS" },
-  { id: "calculadora",   label: "Calculadora",      c: "#3B82F6" },
-  { id: "cotizaciones",  label: "Cotizaciones",     c: "#6366f1" },
-  { id: "reservas",      label: "Reservas",         c: "#A855F7" },
+  { id: "calculadora",   label: "Calculadora",      c: "#3B82F6", icon: NAV_ICONS.calculadora },
+  { id: "cotizaciones",  label: "Cotizaciones",     c: "#6366f1", icon: NAV_ICONS.cotizaciones },
+  { id: "reservas",      label: "Reservas",         c: "#A855F7", icon: NAV_ICONS.reservas },
   { sep: true,  label: "OPERACION"    },
-  { id: "flota",         label: "Flota",            c: "#10B981" },
-  { id: "mantenimiento", label: "Mantenimiento",    c: "#F59E0B" },
-  { id: "clientes",      label: "Clientes",         c: "#22C55E" },
-  { id: "catalogo",      label: "Catalogo",         c: "#06B6D4" },
+  { id: "flota",         label: "Flota",            c: "#10B981", icon: NAV_ICONS.flota },
+  { id: "mantenimiento", label: "Mantenimiento",    c: "#F59E0B", icon: NAV_ICONS.mantenimiento },
+  { id: "clientes",      label: "Clientes",         c: "#22C55E", icon: NAV_ICONS.clientes },
+  { id: "catalogo",      label: "Catalogo",         c: "#06B6D4", icon: NAV_ICONS.catalogo },
   { sep: true,  label: "FINANZAS"     },
-  { id: "facturacion",   label: "Facturacion FEL",  c: "#00D4AA" },
-  { id: "banca",         label: "La Banca",         c: "#2563EB" },
-  { id: "gastos",        label: "Gastos / Compras", c: "#EF4444" },
-  { id: "pagos",         label: "Pagos Recibidos",  c: "#22C55E" },
+  { id: "facturacion",   label: "Facturacion FEL",  c: "#00D4AA", icon: NAV_ICONS.facturacion },
+  { id: "banca",         label: "La Banca",         c: "#2563EB", icon: NAV_ICONS.banca },
+  { id: "gastos",        label: "Gastos / Compras", c: "#EF4444", icon: NAV_ICONS.gastos },
+  { id: "pagos",         label: "Pagos Recibidos",  c: "#22C55E", icon: NAV_ICONS.pagos },
   { sep: true,  label: "EQUIPO"       },
-  { id: "proveedores",   label: "Proveedores",      c: "#F97316" },
-  { id: "empleados",     label: "Empleados",        c: "#14B8A6" },
-  { id: "contratos",     label: "Contratos",        c: "#6366F1" },
+  { id: "proveedores",   label: "Proveedores",      c: "#F97316", icon: NAV_ICONS.proveedores },
+  { id: "empleados",     label: "Empleados",        c: "#14B8A6", icon: NAV_ICONS.empleados },
+  { id: "contratos",     label: "Contratos",        c: "#6366F1", icon: NAV_ICONS.contratos },
   { sep: true,  label: "ANALISIS"     },
-  { id: "contabilidad",  label: "Contabilidad",     c: "#8B5CF6" },
-  { id: "reportes",      label: "Reportes",         c: "#EC4899" },
+  { id: "contabilidad",  label: "Contabilidad",     c: "#8B5CF6", icon: NAV_ICONS.contabilidad },
+  { id: "reportes",      label: "Reportes",         c: "#EC4899", icon: NAV_ICONS.reportes },
 ];
 
 const BOTTOM_TABS = [
-  { id: "dashboard",    label: "Inicio",   mods: ["dashboard"] },
-  { id: "cotizaciones", label: "Negocio",  mods: ["calculadora","cotizaciones","reservas"] },
-  { id: "flota",        label: "Flota",    mods: ["flota","mantenimiento","clientes","catalogo"] },
-  { id: "banca",        label: "Finanzas", mods: ["facturacion","banca","gastos","pagos"] },
-  { id: "__menu__",     label: "Mas",      mods: [] },
+  { id: "dashboard",    label: "Inicio",   icon: IconHome,      mods: ["dashboard"] },
+  { id: "cotizaciones", label: "Negocio",  icon: IconCalculadora,mods: ["calculadora","cotizaciones","reservas"] },
+  { id: "flota",        label: "Flota",    icon: IconFlota,     mods: ["flota","mantenimiento","clientes","catalogo"] },
+  { id: "banca",        label: "Finanzas", icon: IconMoney,     mods: ["facturacion","banca","gastos","pagos"] },
+  { id: "__menu__",     label: "Mas",      icon: IconMenu,      mods: [] },
 ];
 
 const MENU_SECTIONS = [
@@ -141,6 +160,8 @@ function ThemeToggle() {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {isDark ? (
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        ) : (
           <>
             <circle cx="12" cy="12" r="5"/>
             <line x1="12" y1="1" x2="12" y2="3"/>
@@ -152,8 +173,6 @@ function ThemeToggle() {
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </>
-        ) : (
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         )}
       </svg>
     </button>
@@ -162,16 +181,16 @@ function ThemeToggle() {
 
 // ─── Icono de modulo ──────────────────────────────────────────────
 function ModIcon({ mod, size = 52 }) {
+  const Icon = mod.icon;
+  const s = Math.round(size * 0.52);
   return (
     <div style={{
       width: size, height: size,
       borderRadius: Math.round(size * 0.27),
       background: `linear-gradient(135deg, ${mod.c1}, ${mod.c2})`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: Math.round(size * 0.28), fontWeight: 900, color: "white",
-      letterSpacing: -0.5, flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     }}>
-      {mod.letters}
+      <Icon size={s} color="white" />
     </div>
   );
 }
@@ -374,9 +393,9 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
             width: 40, height: 40, borderRadius: 12,
             background: T.accDim, border: `1.5px solid ${T.acc}`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, fontWeight: 900, color: T.acc, cursor: "pointer",
+            cursor: "pointer",
           }}>
-          T
+          <IconDashboard size={22} color={T.acc} />
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: T.txt }}>Tz'unun AutoRentas</div>
@@ -391,9 +410,9 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
             width: 36, height: 36, borderRadius: 10,
             background: T.card, border: `1px solid ${T.bord}`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, color: T.sub, cursor: "pointer",
+            cursor: "pointer",
           }}>
-          X
+          <IconLogout size={16} color={T.sub} />
         </button>
       </div>
 
@@ -443,18 +462,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
                 background: isActive ? color + "22" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                {tab.id === "__menu__"
-                  ? <span style={{ fontSize: 20, color: T.mut, letterSpacing: 3 }}>...</span>
-                  : m ? (
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 6,
-                      background: `linear-gradient(135deg, ${m.c1}, ${m.c2})`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 9, fontWeight: 900, color: "white",
-                    }}>
-                      {m.letters.slice(0, 2)}
-                    </div>
-                  ) : null}
+                  <tab.icon size={22} color={isActive ? color : T.mut} />
               </div>
               <div style={{ fontSize: 9, color: isActive ? color : T.mut, fontWeight: isActive ? 700 : 400 }}>
                 {tab.label}
@@ -498,9 +506,10 @@ function LoginScreen({ onLogin }) {
             width: 72, height: 72, borderRadius: 20,
             background: "linear-gradient(135deg,#00D4AA,#009a7a)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 30, fontWeight: 900, color: "white",
             margin: "0 auto 16px", boxShadow: "0 8px 24px #00D4AA44",
-          }}>T</div>
+          }}>
+            <IconDashboard size={36} color="white" />
+          </div>
           <div style={{ fontSize: 26, fontWeight: 800, color: T.acc }}>Tz'unun SA</div>
           <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gestion</div>
         </div>
@@ -600,10 +609,10 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.card; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}>
-                <div style={{
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: active ? item.c : T.bord, flexShrink: 0,
-                }} />
+                {React.createElement(item.icon, {
+                  size: collapsed ? 20 : 18,
+                  color: active ? item.c : T.sub,
+                })}
                 {!collapsed && (
                   <span style={{
                     fontSize: 12, fontWeight: active ? 700 : 400,
@@ -631,8 +640,9 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
             </>
           )}
           <button onClick={handleLogout}
-            style={{ ...S.btn("ghost"), width: "100%", fontSize: 11, padding: "6px 8px" }}>
-            {collapsed ? "X" : "Cerrar sesion"}
+            style={{ ...S.btn("ghost"), width: "100%", fontSize: 11, padding: "6px 8px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <IconLogout size={14} color={T.sub} />
+            {collapsed ? "" : "Cerrar sesion"}
           </button>
         </div>
       </div>
@@ -705,6 +715,7 @@ function AppContent() {
     const style = document.createElement("style");
     style.id = id;
     style.textContent = `
+      *, *::before, *::after { box-sizing: border-box; }
       @media (max-width: 767px) {
         .page-grid { grid-template-columns: 1fr 1fr !important; }
         .page-grid-4 { grid-template-columns: 1fr 1fr !important; }
@@ -712,8 +723,18 @@ function AppContent() {
         .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .table-wrap table { min-width: 580px; }
         input, select, textarea { font-size: 16px !important; }
-        button { min-height: 36px; }
+        button, .btn-like, .fld-wrap button { min-height: 44px; }
+        .hide-mobile { display: none !important; }
+        .full-mobile { width: 100% !important; }
+        .flex-col-mobile { flex-direction: column !important; }
+        .stack-mobile > * + * { margin-top: 12px; }
+        .fld-wrap { grid-column: 1 / -1 !important; }
+        form { gap: 14px; }
+        .buscador-input { max-width: 100% !important; }
       }
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 4px; }
+      input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid #00D4AA; outline-offset: 2px; }
     `;
     document.head.appendChild(style);
     return () => { const s = document.getElementById(id); if (s) s.remove(); };
