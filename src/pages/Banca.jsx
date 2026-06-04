@@ -359,8 +359,13 @@ export default function PageBanca({ showToast, empId }) {
 
   const loadAllMovs = useCallback(async () => {
     if (!cuentaAct) { setAllMovs([]); return; }
-    const r = await dbGet("movimientos_bancarios", `&cuenta_id=eq.${cuentaAct.id}&order=fecha.asc`);
-    setAllMovs(Array.isArray(r) ? r : []);
+    try {
+      const url = `${SB}/rest/v1/movimientos_bancarios?select=*&order=fecha.asc&cuenta_id=eq.${cuentaAct.id}`;
+      const r = await fetch(url, { headers: H });
+      if (!r.ok) { setAllMovs([]); return; }
+      const d = await r.json();
+      setAllMovs(Array.isArray(d) ? d : []);
+    } catch { setAllMovs([]); }
   }, [cuentaAct]);
 
   useEffect(() => { loadAllMovs(); }, [loadAllMovs]);
@@ -455,11 +460,12 @@ export default function PageBanca({ showToast, empId }) {
         <ModalExportar titulo="Estado de Cuenta Bancario" onClose={() => setExportar(false)}
           extraEncabezado={`Cuenta: ${cuentaAct.nombre} (${cuentaAct.banco || "N/A"}) · ${allMovs.length} movimientos · Generado ${new Date().toLocaleDateString("es-GT", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`}
           datos={(() => {
-            const saldoBase = parseFloat(cuentaAct?.saldo_actual || 0);
-            const rev = [...allMovs].reverse();
-            let run = saldoBase;
+            let run = parseFloat(cuentaAct?.saldo_inicial || 0);
             const sMap = {};
-            rev.forEach(m => { sMap[m.id] = run; run += m.tipo === "ingreso" ? -parseFloat(m.monto) : parseFloat(m.monto); });
+            allMovs.forEach(m => {
+              run += m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto);
+              sMap[m.id] = run;
+            });
             return allMovs.map(m => ({
               ...m,
               _debito: m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "",
@@ -687,11 +693,12 @@ export default function PageBanca({ showToast, empId }) {
                     </thead>
                     <tbody>
                       {(() => {
-                        const saldoBase = parseFloat(cuentaAct?.saldo_actual || 0);
-                        const rev = [...allMovs].reverse();
-                        let run = saldoBase;
+                        let run = parseFloat(cuentaAct?.saldo_inicial || 0);
                         const sMap = {};
-                        rev.forEach(m => { sMap[m.id] = run; run += m.tipo === "ingreso" ? -parseFloat(m.monto) : parseFloat(m.monto); });
+                        allMovs.forEach(m => {
+                          run += m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto);
+                          sMap[m.id] = run;
+                        });
                         return movsFil.map(m => ({ ...m, __saldo: sMap[m.id] }));
                       })().map(m => (
                         <tr key={m.id}
