@@ -138,7 +138,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       const buf = await file.arrayBuffer();
       let dec = new TextDecoder("utf-8");
       let texto = dec.decode(buf);
-      if (/^\uFFFD/.test(texto)) {
+      if (/\uFFFD/.test(texto)) {
         dec = new TextDecoder("windows-1252");
         texto = dec.decode(buf);
       }
