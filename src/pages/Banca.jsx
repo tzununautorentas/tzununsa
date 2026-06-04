@@ -205,16 +205,14 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       }
       const referencia = iR ? (row[iR] || "") : "";
       if (!descripcion || monto === 0) { err++; continue; }
-      const r = await dbIns("movimientos_bancarios", {
-        empresa_id: empId, cuenta_id: cuentaAct.id,
-        fecha, tipo, descripcion, monto,
-        referencia, categoria: "otros", conciliado: false,
-      });
-      if (r?.error) { err++; continue; }
+      const payload = { empresa_id: empId, cuenta_id: cuentaAct.id, fecha, tipo, descripcion, monto, referencia, categoria: "otros", conciliado: false };
+      if (ok === 0 && err === 0) { console.log("Primer payload:", JSON.stringify(payload)); }
+      const r = await dbIns("movimientos_bancarios", payload);
+      if (r?.error) { err++; if (err === 1) showToast("Error Supabase: " + r.error, "err"); continue; }
       ok++;
     }
     setResultado({ ok, err });
-    showToast(`${ok > 0 ? "Importacion completada" : "Error en importacion"}: ${ok} exitosos, ${err} errores${err > 0 && ok === 0 ? " — Revisa formato de fecha (DD/MM/YYYY)" : ""}`);
+    showToast(`${ok > 0 ? "Importacion completada" : "Error en importacion"}: ${ok} exitosos, ${err} errores`);
     setProcesando(false);
     onImported();
   };
