@@ -9,15 +9,20 @@ const CC = { ventas: T.acc, combustible: T.sec, mantenimiento: T.blue, salarios:
 const EFM = { fecha: today(), tipo: "ingreso", descripcion: "", monto: "", referencia: "", categoria: "ventas", conciliado: false, notas: "" };
 const EFC = { banco: "", numero_cuenta: "", tipo_cuenta: "monetaria", moneda: "GTQ", saldo_inicial: "", saldo_actual: "", notas: "" };
 
-function DetalleMovimiento({ mov, onClose }) {
+function DetalleMovimiento({ mov, onClose, onEditar }) {
   if (!mov) return null;
+  let extra = {};
+  try { if (mov.notas && mov.notas.startsWith("{")) extra = JSON.parse(mov.notas); } catch {}
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400 }} onClick={onClose}>
       <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 380, background: T.card, borderLeft: `1px solid ${T.bord}`, overflowY: "auto" }}
         onClick={e => e.stopPropagation()}>
         <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.bord}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>Detalle del movimiento</div>
-          <button onClick={onClose} style={{ ...S.btn("ghost"), padding: "4px 10px" }}>X</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {onEditar && <button onClick={() => { onClose(); onEditar(mov); }} style={{ ...S.btn("ghost"), padding: "4px 10px", fontSize: 11 }}>Editar</button>}
+            <button onClick={onClose} style={{ ...S.btn("ghost"), padding: "4px 10px" }}>X</button>
+          </div>
         </div>
         <div style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: mov.tipo === "ingreso" ? T.green : T.red, marginBottom: 16 }}>
@@ -27,13 +32,17 @@ function DetalleMovimiento({ mov, onClose }) {
             ["Fecha", fmtD(mov.fecha)],
             ["Tipo", mov.tipo === "ingreso" ? "Ingreso" : "Egreso"],
             ["Descripcion", mov.descripcion || "—"],
-            ["Categoria", mov.categoria],
+            ...(extra.oficina ? [["Oficina", extra.oficina]] : []),
+            ...(extra.secuencial ? [["Secuencial", extra.secuencial]] : []),
+            ...(extra.cheque ? [["Cheque", extra.cheque]] : []),
             ["Referencia", mov.referencia || "—"],
+            ["Categoria", mov.categoria],
             ["Conciliado", mov.conciliado ? "Si" : "No"],
+            ...(extra.saldo_contable ? [["Saldo Contable", "Q " + fmt(extra.saldo_contable)]] : []),
+            ...(extra.saldo_disponible ? [["Saldo Disponible", "Q " + fmt(extra.saldo_disponible)]] : []),
             ["Cliente asociado", mov.cliente_nombre || "—"],
             ["Reserva asociada", mov.reserva_numero || "—"],
             ["Factura asociada", mov.factura_numero || "—"],
-            ["Observaciones", mov.notas || "—"],
             ["Creado", fmtD(mov.created_at)],
           ].map(([l, v]) => (
             <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${T.bord}18`, fontSize: 12 }}>
@@ -52,7 +61,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
   const [preview, setPreview] = useState([]);
   const [todasFilas, setTodasFilas] = useState([]);
   const [procesando, setProcesando] = useState(false);
-  const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "" });
+  const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "", oficina: "", secuencial: "", cheque: "", saldo_contable: "", saldo_disponible: "" });
   const [resultado, setResultado] = useState(null);
   const refFile = useRef(null);
 
@@ -86,7 +95,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
   const normalizar = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const detectarColumnas = (headers) => {
     const h = headers.map(hh => normalizar(hh.toLowerCase().trim()));
-    const c = { fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "" };
+    const c = { fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "", oficina: "", secuencial: "", cheque: "", saldo_contable: "", saldo_disponible: "" };
     h.forEach((hh, i) => {
       if (/fecha|date/.test(hh)) c.fecha = i;
       else if (/descripc|concepto|detalle|glosa/.test(hh)) c.descripcion = i;
@@ -95,6 +104,11 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       else if (/refe|doc|numero|comprob/.test(hh)) c.referencia = i;
       else if (/debito|debe|cargo/.test(hh)) c.debito = i;
       else if (/credito|haber/.test(hh)) c.credito = i;
+      else if (/oficina|agencia|sucursal/.test(hh)) c.oficina = i;
+      else if (/secuencial|secuencia|numero.*oper/.test(hh)) c.secuencial = i;
+      else if (/cheque|cheque propio|cheque.*local|efectivo/.test(hh)) c.cheque = i;
+      else if (/saldo.*contable|saldo.*cont/.test(hh)) c.saldo_contable = i;
+      else if (/saldo.*disponible|saldo.*disp/.test(hh)) c.saldo_disponible = i;
     });
     if (c.monto !== "" && c.debito !== "" && c.credito !== "") c.monto = "";
     setCols(c);
@@ -167,21 +181,24 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     return s;
   };
 
+  const iH = (idx) => (idx !== "" && headers) ? headers[parseInt(idx)] : "";
+
   const importar = async () => {
     if (todasFilas.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
     setProcesando(true);
     const headers = Object.keys(todasFilas[0] || {});
-    const iF = cols.fecha !== "" ? headers[parseInt(cols.fecha)] : "";
-    const iD = cols.descripcion !== "" ? headers[parseInt(cols.descripcion)] : "";
-    const iM = cols.monto !== "" ? headers[parseInt(cols.monto)] : "";
-    const iT = cols.tipo !== "" ? headers[parseInt(cols.tipo)] : "";
-    const iR = cols.referencia !== "" ? headers[parseInt(cols.referencia)] : "";
-    const iDeb = cols.debito !== "" ? headers[parseInt(cols.debito)] : "";
-    const iCred = cols.credito !== "" ? headers[parseInt(cols.credito)] : "";
+    const iF = iH(cols.fecha), iD = iH(cols.descripcion), iM = iH(cols.monto), iT = iH(cols.tipo), iR = iH(cols.referencia);
+    const iDeb = iH(cols.debito), iCred = iH(cols.credito);
+    const iOf = iH(cols.oficina), iSec = iH(cols.secuencial), iCheq = iH(cols.cheque), iSalC = iH(cols.saldo_contable), iSalD = iH(cols.saldo_disponible);
     let ok = 0, err = 0;
     for (const row of todasFilas) {
       const fecha = convertirFecha(iF ? (row[iF] || "") : "");
       const descripcion = iD ? (row[iD] || "") : "";
+      const oficina = iOf ? (row[iOf] || "") : "";
+      const secuencial = iSec ? (row[iSec] || "") : "";
+      const cheque = iCheq ? (row[iCheq] || "") : "";
+      const saldoC = iSalC ? (row[iSalC] || "") : "";
+      const saldoD = iSalD ? (row[iSalD] || "") : "";
       let monto = 0, tipo = "ingreso";
       if (iM) {
         let raw = (row[iM] || "0").replace(/["']/g, "").trim();
@@ -205,8 +222,9 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       }
       const referencia = iR ? (row[iR] || "") : "";
       if (!descripcion || monto === 0) { err++; continue; }
-      const payload = { empresa_id: empId, cuenta_id: cuentaAct.id, fecha, tipo, descripcion, monto, referencia, categoria: "otros", conciliado: false };
-      if (ok === 0 && err === 0) { console.log("Primer payload:", JSON.stringify(payload)); }
+      const extra = { oficina, secuencial, cheque, saldo_contable: saldoC, saldo_disponible: saldoD };
+      const notas = JSON.stringify(extra);
+      const payload = { empresa_id: empId, cuenta_id: cuentaAct.id, fecha, tipo, descripcion, monto, referencia, categoria: "otros", conciliado: false, notas };
       const r = await dbIns("movimientos_bancarios", payload);
       if (r?.error) { err++; if (err === 1) showToast("Error Supabase: " + r.error, "err"); continue; }
       ok++;
@@ -229,7 +247,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
             onClick={() => refFile.current?.click()}>
             <div style={{ fontSize: 28, marginBottom: 6, color: archivo ? T.acc : T.sub }}>XLS</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>{archivo ? archivo.name : "Selecciona archivo .xlsx o .csv"}</div>
-            <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>Columnas: fecha, descripcion, monto/tipo o debito/credito</div>
+            <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>Auto-detecta: fecha, oficina, descripcion, referencia, secuencial, cheque, debito, credito, saldo_contable</div>
             <input ref={refFile} type="file" accept=".csv,.xlsx,.txt" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
           </div>
         </div>
@@ -238,7 +256,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
           <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Columnas detectadas: {Object.entries(cols).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna"}</div>
         )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-          {["fecha", "descripcion", "monto", "tipo", "referencia", "debito", "credito"].map(campo => (
+          {["fecha", "oficina", "descripcion", "referencia", "secuencial", "cheque", "debito", "credito", "monto", "tipo", "saldo_contable", "saldo_disponible"].filter(c => c !== "monto" || !cols.debito).map(campo => (
             <div key={campo}>
               <label style={{ ...S.lbl, fontSize: 10 }}>{campo}</label>
               <select style={{ ...S.sel, fontSize: 11, padding: "4px 8px" }} value={cols[campo]} onChange={e => setCols(p => ({ ...p, [campo]: e.target.value }))}>
@@ -325,7 +343,7 @@ export default function PageBanca({ showToast, empId }) {
     query: queryMovs,
     search: busqueda,
     columns: ['concepto', 'referencia', 'descripcion'],
-    order: 'fecha.desc',
+    order: 'fecha.asc',
   });
 
   useEffect(() => { loadCuentas(); }, []);
@@ -446,7 +464,7 @@ export default function PageBanca({ showToast, empId }) {
         </div>
       )}
 
-      <DetalleMovimiento mov={detalleMov} onClose={() => setDetalleMov(null)} />
+      <DetalleMovimiento mov={detalleMov} onClose={() => setDetalleMov(null)} onEditar={abrirEditarMov} />
 
       {recalcMsg && (
         <div style={{ background: T.greenDim, border: `1px solid ${T.green}44`, borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 12, color: T.txt }}>
@@ -629,48 +647,46 @@ export default function PageBanca({ showToast, empId }) {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
-                        {["Fecha", "Descripcion", "Categoria", "Monto", "Conciliado", "Acciones"].map(h => (
+                        {["Fecha", "Descripcion", "Referencia", "Debito (-)", "Credito (+)", "Saldo", "Acciones"].map(h => (
                           <th key={h} style={S.th}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {movsFil.map(m => (
+                      {(() => {
+                        const saldoBase = parseFloat(cuentaAct?.saldo_actual || 0);
+                        const rev = [...movsFil].reverse();
+                        let run = saldoBase;
+                        const sMap = {};
+                        rev.forEach(m => { sMap[m.id] = run; run += m.tipo === "ingreso" ? -parseFloat(m.monto) : parseFloat(m.monto); });
+                        return movsFil.map(m => ({ ...m, __saldo: sMap[m.id] }));
+                      })().map(m => (
                         <tr key={m.id}
                           onMouseEnter={e => e.currentTarget.style.background = T.surf}
                           onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                           <td style={{ ...S.td, color: T.sub, fontSize: 11, whiteSpace: "nowrap" }}>{fmtD(m.fecha)}</td>
-                          <td style={{ ...S.td, maxWidth: 180 }}>
-                            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 175, fontWeight: 500, color: T.txt }}>
+                          <td style={{ ...S.td, maxWidth: 160 }}>
+                            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 155, fontWeight: 500, color: T.txt }}>
                               {m.descripcion}
                             </div>
-                            {m.referencia && <div style={{ fontSize: 9, color: T.mut }}>{m.referencia}</div>}
                           </td>
-                          <td style={S.td}>
-                            <span style={{ padding: "2px 6px", borderRadius: 8, fontSize: 10, fontWeight: 600,
-                              background: (CC[m.categoria] || T.mut) + "22", color: CC[m.categoria] || T.mut }}>
-                              {m.categoria}
-                            </span>
+                          <td style={{ ...S.td, fontSize: 11, color: T.mut, whiteSpace: "nowrap", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {m.referencia || "—"}
                           </td>
-                          <td style={{ ...S.td, fontWeight: 700, color: m.tipo === "ingreso" ? T.green : T.red, whiteSpace: "nowrap" }}>
-                            {m.tipo === "ingreso" ? "+ " : "- "}Q {fmt(m.monto)}
+                          <td style={{ ...S.td, fontWeight: 700, color: T.red, whiteSpace: "nowrap", textAlign: "right" }}>
+                            {m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "—"}
                           </td>
-                          <td style={{ ...S.td, textAlign: "center" }}>
-                            <button onClick={() => conciliar(m.id, !m.conciliado)}
-                              style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 14, padding: 0,
-                                color: m.conciliado ? T.green : T.mut, fontWeight: 700 }}>
-                              {m.conciliado ? "OK" : "---"}
-                            </button>
+                          <td style={{ ...S.td, fontWeight: 700, color: T.green, whiteSpace: "nowrap", textAlign: "right" }}>
+                            {m.tipo === "ingreso" ? `Q ${fmt(m.monto)}` : "—"}
+                          </td>
+                          <td style={{ ...S.td, fontWeight: 600, color: T.acc, whiteSpace: "nowrap", textAlign: "right", fontSize: 12 }}>
+                            Q {fmt(m.__saldo)}
                           </td>
                           <td style={S.td}>
                             <div style={{ display: "flex", gap: 4 }}>
                               <button onClick={() => setDetalleMov(m)}
                                 style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 11 }} title="Ver detalle">
                                 Ver
-                              </button>
-                              <button onClick={() => abrirEditarMov(m)}
-                                style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 11 }} title="Editar">
-                                Editar
                               </button>
                               <button onClick={() => setConfirmDel(m.id)}
                                 style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 11 }} title="Eliminar">
@@ -682,15 +698,20 @@ export default function PageBanca({ showToast, empId }) {
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr style={{ background: T.surf }}>
-                        <td colSpan={3} style={{ padding: "8px 10px", fontSize: 11, fontWeight: 700, color: T.mut }}>
-                          {movsFil.length} movimientos filtrados
+                      <tr style={{ background: T.surf, fontWeight: 700 }}>
+                        <td style={{ padding: "8px 10px", fontSize: 11, color: T.mut }} colSpan={3}>
+                          {movsFil.length} movimientos · Saldo calculado
                         </td>
-                        <td style={{ padding: "8px 10px", fontWeight: 800, color: T.acc, fontSize: 13 }}>
-                          Q {fmt(movsFil.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0) -
-                              movsFil.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}
+                        <td style={{ padding: "8px 10px", color: T.red, textAlign: "right" }}>
+                          Q {fmt(movsFil.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}
                         </td>
-                        <td colSpan={2} />
+                        <td style={{ padding: "8px 10px", color: T.green, textAlign: "right" }}>
+                          Q {fmt(movsFil.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}
+                        </td>
+                        <td style={{ padding: "8px 10px", color: T.acc, textAlign: "right", fontSize: 13 }}>
+                          Q {fmt(movsFil.reduce((s, m) => s + (m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto)), 0))}
+                        </td>
+                        <td />
                       </tr>
                     </tfoot>
                   </table>
