@@ -1,16 +1,13 @@
 import React, { useState, useEffect, Component } from "react";
 import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
-import { ThemeProvider, useTheme, buildStyles } from "./config/theme.jsx";
+import { ThemeProvider, useTheme } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
 import {
   IconDashboard, IconCalculadora, IconCotizaciones, IconReservas, IconFlota,
   IconMantenimiento, IconClientes, IconCatalogo, IconFacturacion, IconBanca,
   IconGastos, IconPagos, IconProveedores, IconEmpleados, IconContratos,
   IconContabilidad, IconReportes,
-  IconHome, IconMenu, IconSearch, IconPlus, IconEdit, IconTrash, IconClose,
-  IconCheck, IconDownload, IconUpload, IconRefresh, IconSettings, IconUser,
-  IconLogout, IconNotification, IconCalendar, IconMoney, IconMap, IconStar,
-  IconPrinter, IconSend, IconImage, IconFilter,
+  IconMenu, IconLogout,
 } from "./components/icons.jsx";
 
 import PageDashboard     from "./pages/Dashboard.jsx";
@@ -127,14 +124,6 @@ const DESKTOP_NAV = [
   { id: "reportes",      label: "Reportes",         c: "#EC4899", icon: NAV_ICONS.reportes },
 ];
 
-const BOTTOM_TABS = [
-  { id: "dashboard",    label: "Inicio",   icon: IconHome,      mods: ["dashboard"] },
-  { id: "cotizaciones", label: "Negocio",  icon: IconCalculadora,mods: ["calculadora","cotizaciones","reservas"] },
-  { id: "flota",        label: "Flota",    icon: IconFlota,     mods: ["flota","mantenimiento","clientes","catalogo"] },
-  { id: "banca",        label: "Finanzas", icon: IconMoney,     mods: ["facturacion","banca","gastos","pagos"] },
-  { id: "__menu__",     label: "Mas",      icon: IconMenu,      mods: [] },
-];
-
 const MENU_SECTIONS = [
   { label: "PRESUPUESTOS", ids: ["calculadora","cotizaciones","reservas"] },
   { label: "OPERACION",    ids: ["flota","mantenimiento","clientes","catalogo"] },
@@ -142,8 +131,6 @@ const MENU_SECTIONS = [
   { label: "EQUIPO",       ids: ["proveedores","empleados","contratos"] },
   { label: "ANALISIS",     ids: ["contabilidad","reportes"] },
 ];
-
-const QUICK_ACCESS = ["cotizaciones","reservas","contratos","gastos","empleados","facturacion"];
 
 // ─── Theme Toggle Icon ─────────────────────────────────────────────
 function ThemeToggle() {
@@ -316,93 +303,6 @@ function LeftDrawer({ open, pag, onSelect, onClose, userName, onLogout }) {
   );
 }
 
-// ─── Home movil ───────────────────────────────────────────────────
-function HomeMovil({ setPag, userName, pag }) {
-  const [stats, setStats] = useState({ veh: 0, res: 0, cots: 0 });
-  useEffect(() => {
-    Promise.all([
-      dbGet("vehiculos", ""),
-      dbGet("reservas", "&estado=in.(confirmada,en_curso)"),
-      dbGet("cotizaciones", "&estado=eq.enviada"),
-    ]).then(([v, r, c]) => setStats({
-      veh:  (Array.isArray(v) ? v : []).filter(x => x.estado === "disponible").length,
-      res:  (Array.isArray(r) ? r : []).length,
-      cots: (Array.isArray(c) ? c : []).length,
-    }));
-  }, []);
-
-  const hora = new Date().getHours();
-  const saludo = hora < 12 ? "Buenos dias" : hora < 18 ? "Buenas tardes" : "Buenas noches";
-
-  return (
-    <div>
-      <div style={{
-        background: `linear-gradient(135deg, ${T.card}, ${T.bord})`,
-        borderRadius: 20, padding: "20px 18px", marginBottom: 20,
-        border: `1px solid ${T.bord}`,
-      }}>
-        <div style={{ fontSize: 13, color: T.sub }}>{saludo},</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: T.txt, marginTop: 2 }}>{userName}</div>
-        <div style={{ fontSize: 11, color: T.acc, marginTop: 4 }}>Tz'unun AutoRentas</div>
-        <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-          {[
-            { l: "Vehiculos libres", v: stats.veh,  c: T.acc  },
-            { l: "Reservas activas", v: stats.res,  c: T.blue },
-            { l: "Cots. en espera",  v: stats.cots, c: T.sec  },
-          ].map((s, i) => (
-            <div key={i} style={{
-              flex: 1, background: "rgba(255,255,255,0.07)",
-              borderRadius: 12, padding: "10px 8px", textAlign: "center",
-            }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: s.c }}>{s.v}</div>
-              <div style={{ fontSize: 9, color: T.sub, marginTop: 2, lineHeight: 1.3 }}>{s.l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>MODULOS</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-        {MENU_SECTIONS.map(sec => {
-          const Icon = sec.ids.length > 0 ? (MODS.find(m => m.id === sec.ids[0])?.icon || IconDashboard) : IconDashboard;
-          return (
-            <div key={sec.label} style={{
-              background: T.card, border: `1px solid ${T.bord}`,
-              borderRadius: 16, padding: "14px 16px", cursor: "pointer",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                {React.createElement(Icon, { size: 18, color: T.acc })}
-                <span style={{ fontSize: 12, fontWeight: 700, color: T.txt, letterSpacing: 0.5 }}>
-                  {sec.label}
-                </span>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {sec.ids.map(id => {
-                  const m = MODS.find(x => x.id === id);
-                  if (!m) return null;
-                  return (
-                    <span key={id} onClick={() => setPag(id)}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 5,
-                        padding: "6px 12px", borderRadius: 8, fontSize: 12,
-                        background: pag === id ? m.c1 + "18" : T.surf,
-                        color: pag === id ? m.c1 : T.sub, cursor: "pointer",
-                        border: `1px solid ${pag === id ? m.c1 + "44" : T.bord}`,
-                      }}>
-                      {React.createElement(m.icon, { size: 14, color: pag === id ? m.c1 : T.sub })}
-                      {m.label}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Layout Movil ─────────────────────────────────────────────────
 function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -443,7 +343,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: T.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {onHome ? "Tz'unun AutoRentas" : TITULOS[pag] || ""}
+            {onHome ? "Centro de Control" : TITULOS[pag] || ""}
           </div>
         </div>
         <NotificacionesBell isMobile={true} />
@@ -452,7 +352,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
       {/* Contenido */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px" }}>
         {onHome
-          ? <HomeMovil setPag={navegar} userName={userName} pag={pag} />
+          ? <PageDashboard />
           : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} /></ErrBoundary>
         }
       </div>

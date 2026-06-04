@@ -165,39 +165,91 @@ function AlertaItem({ alerta }) {
   );
 }
 
-// ─── Barra de disponibilidad semanal ──────────────────────────────
-function DisponibilidadSemanal({ data }) {
-  const max = Math.max(...data.map(d => d.count), 1);
+// ─── Calendario mensual de reservas ───────────────────────────────
+function CalendarioMensual({ reservas }) {
+  const hoy = new Date();
+  const [mes, setMes] = useState(hoy.getMonth());
+  const [anio, setAnio] = useState(hoy.getFullYear());
+
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  const navigate = (dir) => {
+    const d = new Date(anio, mes + dir, 1);
+    setMes(d.getMonth());
+    setAnio(d.getFullYear());
+  };
+
+  const primerDia = new Date(anio, mes, 1).getDay();
+  const ultimoDia = new Date(anio, mes + 1, 0).getDate();
+
+  const countMap = {};
+  (reservas || []).forEach(r => {
+    if (!r.fecha_inicio || ['cancelada','completada'].includes(r.estado)) return;
+    const f = r.fecha_inicio;
+    countMap[f] = (countMap[f] || 0) + 1;
+  });
+
+  const todayStr = hoy.toISOString().slice(0, 10);
+
+  const cells = [];
+  for (let i = 0; i < primerDia; i++) cells.push(null);
+  for (let d = 1; d <= ultimoDia; d++) {
+    const dateStr = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const count = countMap[dateStr] || 0;
+    const isToday = dateStr === todayStr;
+    cells.push({ day: d, count, isToday });
+  }
+
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 100 }}>
-      {data.map((d, i) => {
-        const pct = (d.count / max) * 100;
-        const isToday = i === 0;
-        return (
-          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? T.acc : T.sub, marginBottom: 2 }}>
-              {d.count}
-            </div>
-            <div style={{
-              width: '100%', maxWidth: 32,
-              height: `${Math.max(pct, 4)}%`,
-              borderRadius: '4px 4px 0 0',
-              background: isToday
-                ? `linear-gradient(180deg, ${T.acc}, ${T.acc}66)`
-                : d.count > 0 ? T.blue + '66' : T.bord,
-              transition: 'height .3s',
-              minHeight: d.count > 0 ? 8 : 4,
-            }} />
-            <div style={{
-              fontSize: 8, color: T.mut, marginTop: 4,
-              fontWeight: isToday ? 700 : 400,
-              textTransform: 'capitalize',
-            }}>
-              {d.dia}
-            </div>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button onClick={() => navigate(-1)} style={{
+          background: 'transparent', border: 'none', color: T.sub, cursor: 'pointer',
+          fontSize: 16, fontWeight: 600, padding: '4px 8px',
+        }}>&larr;</button>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.txt }}>
+          {meses[mes]} {anio}
+        </div>
+        <button onClick={() => navigate(1)} style={{
+          background: 'transparent', border: 'none', color: T.sub, cursor: 'pointer',
+          fontSize: 16, fontWeight: 600, padding: '4px 8px',
+        }}>&rarr;</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+        {diasSemana.map(d => (
+          <div key={d} style={{
+            fontSize: 9, fontWeight: 700, color: T.mut, textAlign: 'center',
+            padding: '4px 0',
+          }}>{d}</div>
+        ))}
+        {cells.map((cell, i) => (
+          <div key={i} style={{
+            aspectRatio: '1', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            borderRadius: 8, fontSize: 11, fontWeight: 500,
+            background: cell?.isToday ? T.acc + '22' : 'transparent',
+            color: cell ? (cell.isToday ? T.acc : T.txt) : T.mut,
+            border: cell?.isToday ? `1px solid ${T.acc}44` : '1px solid transparent',
+            position: 'relative',
+          }}>
+            {cell && (
+              <>
+                <span style={{ fontWeight: cell.isToday ? 700 : 400 }}>{cell.day}</span>
+                {cell.count > 0 && (
+                  <span style={{
+                    position: 'absolute', bottom: 2, fontSize: 8, fontWeight: 700,
+                    color: '#fff', background: cell.count >= 3 ? T.red : T.acc,
+                    borderRadius: 6, padding: '0 4px', lineHeight: '14px', minWidth: 14,
+                    textAlign: 'center',
+                  }}>{cell.count}</span>
+                )}
+              </>
+            )}
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
@@ -616,16 +668,16 @@ export default function PageDashboard() {
         />
       </div>
 
-      {/* Disponibilidad semanal */}
+      {/* Calendario mensual */}
       <div style={{ fontSize: 10, fontWeight: 700, color: T.mut, letterSpacing: 1, marginBottom: 8 }}>
-        CALENDARIO DE RESERVAS — PROXIMOS 7 DIAS
+        CALENDARIO DE RESERVAS — {new Date().toLocaleDateString('es-GT', { month: 'long', year: 'numeric' }).toUpperCase()}
       </div>
       <div style={{ ...S.card, marginBottom: 20 }}>
-        <DisponibilidadSemanal data={data.proxSemana} />
+        <CalendarioMensual reservas={data.reservas} />
       </div>
 
-      {/* Panel central: 2 columnas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+      {/* Panel central: responsive 1-2 columnas */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <EstadoFlota data={data} />
           <MantenimientosCriticos data={data.mantosCriticos} />
