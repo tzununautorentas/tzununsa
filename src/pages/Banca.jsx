@@ -523,8 +523,9 @@ export default function PageBanca({ showToast, empId }) {
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>{cuentaAct.banco}</div>
                   <div style={{ fontSize: 12, color: T.sub }}>{cuentaAct.numero_cuenta}</div>
+                  <div style={{ fontSize: 12, color: T.mut }}>Saldo inicial: Q {fmt(cuentaAct.saldo_inicial)}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: saldoOK ? T.green : T.red, marginTop: 2 }}>
-                    Saldo: Q {fmt(saldoAlmacenado)}
+                    Saldo actual: Q {fmt(saldoAlmacenado)}
                     {!saldoOK && <span style={{ fontSize: 11, color: T.red, marginLeft: 8 }}>
                       (deberia ser Q {fmt(saldoCalculado)})
                     </span>}
@@ -532,7 +533,9 @@ export default function PageBanca({ showToast, empId }) {
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={async () => { const s = await recalcularSaldo(cuentaAct.id); setRecalcMsg(`Saldo recalculado: Q ${fmt(s)}`); setTimeout(() => setRecalcMsg(null), 4000); }}
-                    style={{ ...S.btn("warn"), fontSize: 11 }}>Recalcular saldo</button>
+                    style={{ ...S.btn("warn"), fontSize: 11 }}>Recalcular</button>
+                  <button onClick={async () => { await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: 0 }); setCuentaAct(p => ({ ...p, saldo_actual: 0 })); setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: 0 } : c)); setRecalcMsg("Saldo reseteado a Q 0.00"); setTimeout(() => setRecalcMsg(null), 4000); }}
+                    style={{ ...S.btn("danger"), fontSize: 11 }}>Resetear saldo</button>
                   <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>Exportar</button>
                   <button onClick={() => setImportar(true)} style={{ ...S.btn("blue"), fontSize: 11 }}>Importar</button>
                   <button onClick={() => { cerrarForm(); setShowForm(!showForm); }}
