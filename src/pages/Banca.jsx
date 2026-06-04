@@ -314,6 +314,7 @@ export default function PageBanca({ showToast, empId }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const [busqueda,   setBusqueda]   = useState("");
   const [recalcMsg,  setRecalcMsg]  = useState(null);
+  const [allMovs,    setAllMovs]    = useState([]);
 
   const [f,  setF]  = useState({ ...EFM });
   const [fc, setFc]  = useState({ ...EFC });
@@ -355,6 +356,14 @@ export default function PageBanca({ showToast, empId }) {
   });
 
   useEffect(() => { loadCuentas(); }, []);
+
+  const loadAllMovs = useCallback(async () => {
+    if (!cuentaAct) { setAllMovs([]); return; }
+    const r = await dbGet("movimientos_bancarios", `&cuenta_id=eq.${cuentaAct.id}&order=fecha.asc`);
+    setAllMovs(Array.isArray(r) ? r : []);
+  }, [cuentaAct]);
+
+  useEffect(() => { loadAllMovs(); }, [loadAllMovs]);
 
   const guardarCuenta = async () => {
     if (!fc.banco.trim()) { showToast("Nombre del banco requerido", "err"); return; }
@@ -402,12 +411,12 @@ export default function PageBanca({ showToast, empId }) {
       showToast("Guardado");
     }
     setSaving(false); setShowForm(false); setEditMovId(null);
-    setF({ ...EFM }); await recalcularSaldo(cuentaAct.id); reloadMovs();
+    setF({ ...EFM }); await recalcularSaldo(cuentaAct.id); reloadMovs(); loadAllMovs();
   };
 
   const conciliar = async (id, val) => {
     await dbUpd("movimientos_bancarios", id, { conciliado: val });
-    reloadMovs();
+    reloadMovs(); loadAllMovs();
   };
 
   const delMov = async id => {
@@ -416,7 +425,7 @@ export default function PageBanca({ showToast, empId }) {
     await dbDel("movimientos_bancarios", id);
     showToast("Eliminado");
     await recalcularSaldo(cuentaAct.id);
-    reloadMovs();
+    reloadMovs(); loadAllMovs();
   };
 
   const cerrarForm = () => { setShowForm(false); setEditMovId(null); setF({ ...EFM }); };
@@ -430,28 +439,28 @@ export default function PageBanca({ showToast, empId }) {
 
   const saldoCalculado = cuentaAct
     ? (parseFloat(cuentaAct.saldo_inicial) || 0)
-      + movs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
-      - movs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+      + allMovs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+      - allMovs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
     : 0;
   const saldoAlmacenado = parseFloat(cuentaAct?.saldo_actual || 0);
   const saldoOK = Math.abs(saldoCalculado - saldoAlmacenado) < 0.01;
   const saldoTotal  = cuentas.reduce((s, c) => s + (parseFloat(c.saldo_actual) || 0), 0);
-  const ingTotal    = movs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
-  const egTotal     = movs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
-  const sinConciliar = movs.filter(m => !m.conciliado).length;
+  const ingTotal    = allMovs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
+  const egTotal     = allMovs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
+  const sinConciliar = allMovs.filter(m => !m.conciliado).length;
 
   return (
     <div>
       {exportar && (
         <ModalExportar titulo="Estado de Cuenta Bancario" onClose={() => setExportar(false)}
-          extraEncabezado={`Cuenta: ${cuentaAct.nombre} (${cuentaAct.banco || "N/A"}) · ${movs.length} movimientos · Generado ${new Date().toLocaleDateString("es-GT", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`}
+          extraEncabezado={`Cuenta: ${cuentaAct.nombre} (${cuentaAct.banco || "N/A"}) · ${allMovs.length} movimientos · Generado ${new Date().toLocaleDateString("es-GT", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`}
           datos={(() => {
             const saldoBase = parseFloat(cuentaAct?.saldo_actual || 0);
-            const rev = [...movs].reverse();
+            const rev = [...allMovs].reverse();
             let run = saldoBase;
             const sMap = {};
             rev.forEach(m => { sMap[m.id] = run; run += m.tipo === "ingreso" ? -parseFloat(m.monto) : parseFloat(m.monto); });
-            return movs.map(m => ({
+            return allMovs.map(m => ({
               ...m,
               _debito: m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "",
               _credito: m.tipo === "ingreso" ? `Q ${fmt(m.monto)}` : "",
@@ -470,7 +479,7 @@ export default function PageBanca({ showToast, empId }) {
 
       {importar && (
         <ImportadorBancario showToast={showToast} empId={empId} cuentaAct={cuentaAct}
-          onImported={() => { setImportar(false); recalcularSaldo(cuentaAct.id); reloadMovs(); }}
+          onImported={() => { setImportar(false); recalcularSaldo(cuentaAct.id); reloadMovs(); loadAllMovs(); }}
           onClose={() => setImportar(false)} />
       )}
 
@@ -679,7 +688,7 @@ export default function PageBanca({ showToast, empId }) {
                     <tbody>
                       {(() => {
                         const saldoBase = parseFloat(cuentaAct?.saldo_actual || 0);
-                        const rev = [...movsFil].reverse();
+                        const rev = [...allMovs].reverse();
                         let run = saldoBase;
                         const sMap = {};
                         rev.forEach(m => { sMap[m.id] = run; run += m.tipo === "ingreso" ? -parseFloat(m.monto) : parseFloat(m.monto); });
