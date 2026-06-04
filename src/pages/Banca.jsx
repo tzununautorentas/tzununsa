@@ -435,13 +435,29 @@ export default function PageBanca({ showToast, empId }) {
   return (
     <div>
       {exportar && (
-        <ModalExportar titulo="Movimientos Bancarios" datos={movs}
+        <ModalExportar titulo="Estado de Cuenta Bancario" onClose={() => setExportar(false)}
+          extraEncabezado={`Cuenta: ${cuentaAct.nombre} (${cuentaAct.banco || "N/A"}) · ${movs.length} movimientos · Generado ${new Date().toLocaleDateString("es-GT", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`}
+          datos={(() => {
+            const saldoBase = parseFloat(cuentaAct?.saldo_actual || 0);
+            const rev = [...movs].reverse();
+            let run = saldoBase;
+            const sMap = {};
+            rev.forEach(m => { sMap[m.id] = run; run += m.tipo === "ingreso" ? -parseFloat(m.monto) : parseFloat(m.monto); });
+            return movs.map(m => ({
+              ...m,
+              _debito: m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "",
+              _credito: m.tipo === "ingreso" ? `Q ${fmt(m.monto)}` : "",
+              _saldo: `Q ${fmt(sMap[m.id])}`,
+            }));
+          })()}
           campos={[
-            { label: "Fecha", key: "fecha" }, { label: "Descripcion", key: "descripcion" },
-            { label: "Categoria", key: "categoria" }, { label: "Tipo", key: "tipo" },
-            { label: "Monto", key: "monto" }, { label: "Referencia", key: "referencia" },
-            { label: "Conciliado", key: "conciliado" },
-          ]} onClose={() => setExportar(false)} />
+            { label: "Fecha", key: "fecha" },
+            { label: "Descripcion", key: "descripcion" },
+            { label: "Referencia", key: "referencia" },
+            { label: "Debito (-)", render: r => r._debito, cls: "der" },
+            { label: "Credito (+)", render: r => r._credito, cls: "der" },
+            { label: "Saldo", render: r => r._saldo, cls: "der" },
+          ]} />
       )}
 
       {importar && (

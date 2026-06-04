@@ -64,7 +64,7 @@ export function Badge({ c, bg, l, small }) {
 }
 
 // --- Modal Exportar ---
-export function ModalExportar({ titulo, datos, campos, onClose }) {
+export function ModalExportar({ titulo, datos, campos, onClose, extraEncabezado }) {
   const [formato, setFormato] = useState("csv");
   const [fi, setFi] = useState("");
   const [ff, setFf] = useState("");
@@ -78,15 +78,18 @@ export function ModalExportar({ titulo, datos, campos, onClose }) {
 
   const exportar = () => {
     if (formato === "pdf") {
+      const tds = r => campos.map(c => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.render ? c.render(r) : (r[c.key] ?? "")}</td>`).join("");
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${titulo}</title>
       <style>body{font-family:Arial,sans-serif;padding:20px;font-size:11px}h2{color:#1B2D5C}
-      table{width:100%;border-collapse:collapse}th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left}
-      td{padding:5px 8px;border-bottom:1px solid #E2E8F0}@media print{button{display:none}}</style>
+      table{width:100%;border-collapse:collapse}th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left;white-space:nowrap}
+      td{padding:5px 8px;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+      .der{text-align:right}.mono{font-family:'Courier New',monospace}.ene{font-size:10px;color:#666;margin-bottom:16px}
+      @media print{button{display:none}}</style>
       </head><body>
-      <h2>Tz'unun AutoRentas - ${titulo}</h2>
-      <p>${filtered.length} registros - ${new Date().toLocaleDateString("es-GT")}</p>
-      <table><thead><tr>${campos.map(c => `<th>${c.label}</th>`).join("")}</tr></thead>
-      <tbody>${filtered.map(r => `<tr>${campos.map(c => `<td>${r[c.key] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody>
+      <h2 style="margin-bottom:2px">Tz'unun AutoRentas - ${titulo}</h2>
+      ${extraEncabezado ? `<div class="ene">${extraEncabezado}</div>` : `<p style="margin-top:0">${filtered.length} registros - ${new Date().toLocaleDateString("es-GT")}</p>`}
+      <table><thead><tr>${campos.map(c => `<th${c.cls ? ` class="${c.cls}"` : ""}>${c.label}</th>`).join("")}</tr></thead>
+      <tbody>${filtered.map(r => `<tr>${tds(r)}</tr>`).join("")}</tbody>
       </table><script>window.onload=()=>window.print();</script></body></html>`;
       const w = window.open("", "_blank"); w.document.write(html); w.document.close();
     } else {
@@ -94,7 +97,10 @@ export function ModalExportar({ titulo, datos, campos, onClose }) {
       const bom = "\uFEFF";
       const rows = [
         campos.map(c => c.label).join(sep),
-        ...filtered.map(r => campos.map(c => `"${String(r[c.key] ?? "").replace(/"/g, '""')}"`).join(sep))
+        ...filtered.map(r => campos.map(c => {
+          const v = c.key ? (r[c.key] ?? "") : (c.render ? c.render(r) : "");
+          return `"${String(v).replace(/"/g, '""')}"`;
+        }).join(sep))
       ].join("\n");
       const blob = new Blob([bom + rows], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
