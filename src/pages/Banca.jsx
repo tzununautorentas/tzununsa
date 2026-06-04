@@ -50,46 +50,41 @@ function DetalleMovimiento({ mov, onClose }) {
 function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }) {
   const [archivo, setArchivo] = useState(null);
   const [preview, setPreview] = useState([]);
+  const [todasFilas, setTodasFilas] = useState([]);
   const [procesando, setProcesando] = useState(false);
   const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "" });
   const [resultado, setResultado] = useState(null);
   const refFile = useRef(null);
 
-  const detectarColumnas = (headers) => {
-    const h = headers.map(hh => hh.toLowerCase().trim());
-    const c = { fecha: "", descripcion: "", monto: "", tipo: "", referencia: "" };
-    h.forEach((hh, i) => {
-      if (/fecha|date|dia/.test(hh)) c.fecha = i;
-      else if (/descripc|concepto|detalle|glosa/.test(hh)) c.descripcion = i;
-      else if (/monto|importe|valor|total|cantidad/.test(hh)) c.monto = i;
-      else if (/tipo|ingreso|egreso|tipo/i.test(hh)) c.tipo = i;
-      else if (/refe|doc|numero|comprob/.test(hh)) c.referencia = i;
-    });
-    setCols(c);
-  };
-
-  const leerCSV = (texto) => {
+  const parsearCSV = (texto, separador) => {
     const lineas = texto.split(/\r?\n/).filter(l => l.trim());
-    if (lineas.length < 2) return [];
-    const headers = lineas[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
-    detectarColumnas(headers);
-    return lineas.slice(1, 12).map(l => {
+    if (lineas.length < 2) return { headers: [], rows: [] };
+    const headers = lineas[0].split(separador).map(h => h.replace(/^"|"$/g, "").trim());
+    const rows = lineas.slice(1).map(l => {
       const vals = [];
       let cur = "", inQ = false;
       for (const ch of l) {
         if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
+        if (ch === separador && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
         cur += ch;
       }
       vals.push(cur.trim());
       const row = {};
-      headers.forEach((h, i) => row[h] = vals[i] || "");
+      headers.forEach((h, i) => row[h] = vals[i] !== undefined ? vals[i] : "");
       return row;
     });
+    return { headers, rows };
   };
 
-  const leerXLSX = async (data) => {
-    const wb = new window.XLSX.utils.book_new();
+  const leerCSVcompleto = (texto) => {
+    const sep = texto.includes(";") ? ";" : texto.includes("\t") ? "\t" : ",";
+    const { headers, rows } = parsearCSV(texto, sep);
+    if (headers.length === 0) return [];
+    detectarColumnas(headers);
+    return rows;
+  };
+
+  const leerXLSXcompleto = async (data) => {
     try {
       const wb2 = window.XLSX.read(data, { type: "array", codepage: 65001 });
       const ws = wb2.Sheets[wb2.SheetNames[0]];
@@ -97,7 +92,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       if (json.length < 2) return [];
       const headers = json[0].map(h => String(h).trim());
       detectarColumnas(headers);
-      return json.slice(1, 12).map(row => {
+      return json.slice(1).map(row => {
         const obj = {};
         headers.forEach((h, i) => obj[h] = row[i] !== undefined ? String(row[i]).trim() : "");
         return obj;
@@ -109,52 +104,55 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     setArchivo(file);
     setResultado(null);
     setPreview([]);
+    setTodasFilas([]);
     if (!file) return;
     setProcesando(true);
     try {
       const ext = file.name.split(".").pop().toLowerCase();
       const buf = await file.arrayBuffer();
-      const dec = new TextDecoder("utf-8");
+      let dec = new TextDecoder("utf-8");
+      let texto = dec.decode(buf);
+      if (/^\uFFFD/.test(texto)) {
+        dec = new TextDecoder("windows-1252");
+        texto = dec.decode(buf);
+      }
       let rows;
       if (ext === "csv") {
-        const texto = dec.decode(buf);
-        rows = leerCSV(texto);
+        rows = leerCSVcompleto(texto);
       } else if (ext === "xlsx") {
         await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
-        rows = await leerXLSX(buf);
+        rows = await leerXLSXcompleto(buf);
       } else {
         showToast("Formato no soportado. Usa .csv o .xlsx", "err");
         setProcesando(false); return;
       }
-      setPreview(rows);
+      setTodasFilas(rows);
+      setPreview(rows.slice(0, 10));
     } catch (e) { showToast("Error al leer archivo: " + e.message, "err"); }
     setProcesando(false);
   };
 
   const importar = async () => {
-    if (!archivo || preview.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
+    if (todasFilas.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
     setProcesando(true);
-    const headers = Object.keys(preview[0] || {});
-    const iF = cols.fecha, iD = cols.descripcion, iM = cols.monto, iT = cols.tipo, iR = cols.referencia;
+    const headers = Object.keys(todasFilas[0] || {});
+    const iF = cols.fecha !== "" ? headers[parseInt(cols.fecha)] : "";
+    const iD = cols.descripcion !== "" ? headers[parseInt(cols.descripcion)] : "";
+    const iM = cols.monto !== "" ? headers[parseInt(cols.monto)] : "";
+    const iT = cols.tipo !== "" ? headers[parseInt(cols.tipo)] : "";
+    const iR = cols.referencia !== "" ? headers[parseInt(cols.referencia)] : "";
     let ok = 0, err = 0;
-    const archivoTexto = await archivo.text().catch(() => "");
-    const lineas = archivoTexto.split(/\r?\n/).filter(l => l.trim());
-    const datos = lineas.slice(1);
-    for (const linea of datos) {
-      const vals = [];
-      let cur = "", inQ = false;
-      for (const ch of linea) {
-        if (ch === '"') { inQ = !inQ; continue; }
-        if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; continue; }
-        cur += ch;
-      }
-      vals.push(cur.trim());
-      const fecha = vals[iF] || "";
-      const descripcion = vals[iD] || "";
-      const montoRaw = vals[iM] || "0";
+    for (const row of todasFilas) {
+      const fecha = iF ? (row[iF] || "") : "";
+      const descripcion = iD ? (row[iD] || "") : "";
+      let montoRaw = iM ? (row[iM] || "0").replace(/["']/g, "").trim() : "0";
+      montoRaw = montoRaw.replace(",", ".");
       const monto = parseFloat(montoRaw.replace(/[^0-9.\-]/g, "")) || 0;
-      const tipo = vals[iT] ? (vals[iT].toLowerCase().includes("egr") || vals[iT].toLowerCase().includes("sal") ? "egreso" : "ingreso") : (monto >= 0 ? "ingreso" : "egreso");
-      const referencia = vals[iR] || "";
+      const tipoVal = iT ? (row[iT] || "").toLowerCase() : "";
+      const tipo = tipoVal.includes("egr") || tipoVal.includes("sal") || tipoVal.includes("-") ? "egreso"
+        : tipoVal.includes("ing") || tipoVal.includes("dep") ? "ingreso"
+        : monto >= 0 ? "ingreso" : "egreso";
+      const referencia = iR ? (row[iR] || "") : "";
       if (!descripcion || monto === 0) { err++; continue; }
       const r = await dbIns("movimientos_bancarios", {
         empresa_id: empId, cuenta_id: cuentaAct.id,
@@ -163,9 +161,6 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
       });
       if (r?.error) { err++; continue; }
       ok++;
-      const delta = tipo === "ingreso" ? Math.abs(monto) : -Math.abs(monto);
-      const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
-      await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
     }
     setResultado({ ok, err });
     showToast(`Importacion completada: ${ok} exitosos, ${err} errores`);
@@ -218,8 +213,8 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
           </div>
         )}
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={importar} disabled={procesando || preview.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
-            {procesando ? "Importando..." : `Importar ${preview.length} registros`}
+          <button onClick={importar} disabled={procesando || todasFilas.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
+            {procesando ? "Importando..." : `Importar ${todasFilas.length} registros`}
           </button>
           <button onClick={onClose} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
         </div>
@@ -241,12 +236,30 @@ export default function PageBanca({ showToast, empId }) {
   const [exportar,   setExportar]   = useState(false);
   const [importar,   setImportar]   = useState(false);
   const [detalleMov, setDetalleMov] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
   const [busqueda,   setBusqueda]   = useState("");
+  const [recalcMsg,  setRecalcMsg]  = useState(null);
 
   const [f,  setF]  = useState({ ...EFM });
   const [fc, setFc]  = useState({ ...EFC });
   const sf  = (k, v) => setF(p => ({ ...p, [k]: v }));
   const sfc = (k, v) => setFc(p => ({ ...p, [k]: v }));
+
+  const recalcularSaldo = async (cuentaId) => {
+    const todo = await dbGet(`movimientos_bancarios?cuenta_id=eq.${cuentaId}&select=monto,tipo`);
+    const movsArr = Array.isArray(todo) ? todo : [];
+    const cta = await dbGet(`cuentas_bancarias?id=eq.${cuentaId}`);
+    const ctaArr = Array.isArray(cta) ? cta : [cta];
+    if (!ctaArr || ctaArr.length === 0) return;
+    const saldoInicial = parseFloat(ctaArr[0].saldo_inicial) || 0;
+    const ingresos = movsArr.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
+    const egresos = movsArr.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
+    const nuevoSaldo = saldoInicial + ingresos - egresos;
+    await dbUpd("cuentas_bancarias", cuentaId, { saldo_actual: nuevoSaldo });
+    setCuentaAct(p => p?.id === cuentaId ? { ...p, saldo_actual: nuevoSaldo } : p);
+    setCuentas(p => p.map(c => c.id === cuentaId ? { ...c, saldo_actual: nuevoSaldo } : c));
+    return nuevoSaldo;
+  };
 
   const loadCuentas = async () => {
     setLoading(true);
@@ -305,31 +318,16 @@ export default function PageBanca({ showToast, empId }) {
       categoria: f.categoria, conciliado: f.conciliado, notas: f.notas,
     };
     if (editMovId) {
-      const old = movs.find(m => m.id === editMovId);
       const r = await dbUpd("movimientos_bancarios", editMovId, payload);
       if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
-      if (old) {
-        const deltaOld = old.tipo === "ingreso" ? parseFloat(old.monto) : -parseFloat(old.monto);
-        const deltaNew = f.tipo === "ingreso" ? parseFloat(f.monto) : -parseFloat(f.monto);
-        const ajuste = deltaNew - deltaOld;
-        const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + ajuste;
-        await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
-        setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
-        setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
-      }
       showToast("Movimiento actualizado");
     } else {
       const mov = await dbIns("movimientos_bancarios", payload);
       if (mov?.error) { showToast("Error: " + mov.error, "err"); setSaving(false); return; }
-      const delta = f.tipo === "ingreso" ? parseFloat(f.monto) : -parseFloat(f.monto);
-      const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
-      await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
-      setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
-      setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: nuevoSaldo } : c));
       showToast("Guardado");
     }
     setSaving(false); setShowForm(false); setEditMovId(null);
-    setF({ ...EFM }); reloadMovs();
+    setF({ ...EFM }); await recalcularSaldo(cuentaAct.id); reloadMovs();
   };
 
   const conciliar = async (id, val) => {
@@ -338,16 +336,12 @@ export default function PageBanca({ showToast, empId }) {
   };
 
   const delMov = async id => {
-    if (!confirm("Eliminar movimiento?")) return;
     const mov = movs.find(m => m.id === id);
-    if (mov) {
-      const delta = mov.tipo === "ingreso" ? -parseFloat(mov.monto) : parseFloat(mov.monto);
-      const nuevoSaldo = (parseFloat(cuentaAct.saldo_actual) || 0) + delta;
-      await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: nuevoSaldo });
-      setCuentaAct(p => ({ ...p, saldo_actual: nuevoSaldo }));
-    }
+    if (!mov) return;
     await dbDel("movimientos_bancarios", id);
-    showToast("Eliminado"); reloadMovs();
+    showToast("Eliminado");
+    await recalcularSaldo(cuentaAct.id);
+    reloadMovs();
   };
 
   const cerrarForm = () => { setShowForm(false); setEditMovId(null); setF({ ...EFM }); };
@@ -359,6 +353,13 @@ export default function PageBanca({ showToast, empId }) {
     return true;
   });
 
+  const saldoCalculado = cuentaAct
+    ? (parseFloat(cuentaAct.saldo_inicial) || 0)
+      + movs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+      - movs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+    : 0;
+  const saldoAlmacenado = parseFloat(cuentaAct?.saldo_actual || 0);
+  const saldoOK = Math.abs(saldoCalculado - saldoAlmacenado) < 0.01;
   const saldoTotal  = cuentas.reduce((s, c) => s + (parseFloat(c.saldo_actual) || 0), 0);
   const ingTotal    = movs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
   const egTotal     = movs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
@@ -378,11 +379,31 @@ export default function PageBanca({ showToast, empId }) {
 
       {importar && (
         <ImportadorBancario showToast={showToast} empId={empId} cuentaAct={cuentaAct}
-          onImported={() => { setImportar(false); reloadMovs(); }}
+          onImported={() => { setImportar(false); recalcularSaldo(cuentaAct.id); reloadMovs(); }}
           onClose={() => setImportar(false)} />
       )}
 
+      {confirmDel && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ ...S.card, maxWidth: 400, width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Eliminar movimiento?</div>
+            <div style={{ fontSize: 13, color: T.sub, marginBottom: 18 }}>Se eliminara permanentemente.</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <button onClick={async () => { await delMov(confirmDel); setConfirmDel(null); }}
+                style={{ ...S.btn("danger"), flex: 1 }}>Eliminar</button>
+              <button onClick={() => setConfirmDel(null)} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DetalleMovimiento mov={detalleMov} onClose={() => setDetalleMov(null)} />
+
+      {recalcMsg && (
+        <div style={{ background: T.greenDim, border: `1px solid ${T.green}44`, borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 12, color: T.txt }}>
+          {recalcMsg}
+        </div>
+      )}
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
@@ -459,9 +480,17 @@ export default function PageBanca({ showToast, empId }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>{cuentaAct.banco}</div>
-                  <div style={{ fontSize: 12, color: T.sub }}>{cuentaAct.numero_cuenta} · Saldo: Q {fmt(cuentaAct.saldo_actual)}</div>
+                  <div style={{ fontSize: 12, color: T.sub }}>{cuentaAct.numero_cuenta}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: saldoOK ? T.green : T.red, marginTop: 2 }}>
+                    Saldo: Q {fmt(saldoAlmacenado)}
+                    {!saldoOK && <span style={{ fontSize: 11, color: T.red, marginLeft: 8 }}>
+                      (deberia ser Q {fmt(saldoCalculado)})
+                    </span>}
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={async () => { const s = await recalcularSaldo(cuentaAct.id); setRecalcMsg(`Saldo recalculado: Q ${fmt(s)}`); setTimeout(() => setRecalcMsg(null), 4000); }}
+                    style={{ ...S.btn("warn"), fontSize: 11 }}>Recalcular saldo</button>
                   <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>Exportar</button>
                   <button onClick={() => setImportar(true)} style={{ ...S.btn("blue"), fontSize: 11 }}>Importar</button>
                   <button onClick={() => { cerrarForm(); setShowForm(!showForm); }}
@@ -591,7 +620,7 @@ export default function PageBanca({ showToast, empId }) {
                                 style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 11 }} title="Editar">
                                 Editar
                               </button>
-                              <button onClick={() => delMov(m.id)}
+                              <button onClick={() => setConfirmDel(m.id)}
                                 style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 11 }} title="Eliminar">
                                 Eliminar
                               </button>
