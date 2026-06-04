@@ -237,51 +237,66 @@ function Toast({ toast }) {
   );
 }
 
-// ─── Menu movil ───────────────────────────────────────────────────
-function MenuMobile({ pag, onSelect, onClose }) {
+// ─── Menu movil (action sheet vertical) ───────────────────────────
+function MenuMobile({ pag, onSelect, onClose, tabId }) {
+  const tab = BOTTOM_TABS.find(t => t.id === tabId);
+  const sections = tab && tabId !== "__menu__"
+    ? MENU_SECTIONS.filter(s => s.ids.some(id => tab.mods.includes(id)))
+    : MENU_SECTIONS;
+  const title = tab && tabId !== "__menu__"
+    ? tab.label
+    : "Todos los modulos";
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 500 }}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500 }}
       onClick={onClose}>
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
-        background: T.surf, borderRadius: "24px 24px 0 0",
-        maxHeight: "85vh", overflowY: "auto",
+        background: T.surf, borderRadius: "20px 20px 0 0",
+        maxHeight: "80vh", overflowY: "auto",
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ width: 48, height: 4, background: T.bord, borderRadius: 2, margin: "14px auto 0" }} />
-        <div style={{ padding: "16px 18px 100px" }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: T.txt, marginBottom: 20 }}>
-            Todos los modulos
+        <div style={{ width: 40, height: 4, background: T.bord, borderRadius: 2, margin: "12px auto 0" }} />
+        <div style={{ padding: "14px 18px 100px" }}>
+          <div style={{
+            fontSize: 15, fontWeight: 700, color: T.txt,
+            marginBottom: 16, display: "flex", alignItems: "center", gap: 8,
+          }}>
+            {title}
           </div>
-          {MENU_SECTIONS.map(sec => (
-            <div key={sec.label} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: T.mut, letterSpacing: 1.5, marginBottom: 12 }}>
+          {sections.map(sec => (
+            <div key={sec.label} style={{ marginBottom: 16 }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, color: T.mut,
+                letterSpacing: 1.2, marginBottom: 6, paddingLeft: 4,
+              }}>
                 {sec.label}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-                {sec.ids.map(id => {
-                  const m = MODS.find(x => x.id === id);
-                  if (!m) return null;
-                  return (
-                    <button key={id} onClick={() => onSelect(id)}
-                      style={{
-                        background: pag === id ? m.c1 + "22" : T.card,
-                        border: `1.5px solid ${pag === id ? m.c1 : T.bord}`,
-                        borderRadius: 16, padding: "12px 6px 10px",
-                        cursor: "pointer", display: "flex",
-                        flexDirection: "column", alignItems: "center", gap: 8,
-                      }}>
-                      <ModIcon mod={m} size={44} />
-                      <span style={{
-                        fontSize: 9, color: pag === id ? m.c1 : T.sub,
-                        fontWeight: pag === id ? 700 : 400,
-                        textAlign: "center", lineHeight: 1.3,
-                      }}>
-                        {m.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              {sec.ids.map(id => {
+                const m = MODS.find(x => x.id === id);
+                if (!m) return null;
+                const active = pag === id;
+                return (
+                  <button key={id} onClick={() => onSelect(id)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center",
+                      gap: 12, padding: "12px 14px", marginBottom: 2,
+                      background: active ? m.c1 + "15" : "transparent",
+                      border: "none", borderRadius: 12,
+                      cursor: "pointer", textAlign: "left",
+                    }}>
+                    <ModIcon mod={m} size={38} />
+                    <span style={{
+                      fontSize: 13, fontWeight: active ? 600 : 400,
+                      color: active ? m.c1 : T.txt, flex: 1,
+                    }}>
+                      {m.label}
+                    </span>
+                    {active && <div style={{
+                      width: 8, height: 8, borderRadius: "50%",
+                      background: m.c1, flexShrink: 0,
+                    }} />}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -393,9 +408,10 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
             width: 40, height: 40, borderRadius: 12,
             background: T.accDim, border: `1.5px solid ${T.acc}`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
+            cursor: "pointer", overflow: "hidden",
           }}>
-          <IconDashboard size={22} color={T.acc} />
+          <img src="/icons/Logo_Tzunun_Transp.png" alt="Tz'unun"
+            style={{ width: 26, height: 26, objectFit: "contain" }} />
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: T.txt }}>Tz'unun AutoRentas</div>
@@ -472,7 +488,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
         })}
       </div>
 
-      {showMenu && <MenuMobile pag={pag} onSelect={navegar} onClose={() => setShowMenu(false)} />}
+      {showMenu && <MenuMobile pag={pag} onSelect={navegar} onClose={() => setShowMenu(false)} tabId={activeTab} />}
       <Toast toast={toast} />
     </div>
   );
@@ -502,16 +518,9 @@ function LoginScreen({ onLogin }) {
     }}>
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: 20,
-            background: "linear-gradient(135deg,#00D4AA,#009a7a)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px", boxShadow: "0 8px 24px #00D4AA44",
-          }}>
-            <IconDashboard size={36} color="white" />
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: T.acc }}>Tz'unun SA</div>
-          <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Sistema de Gestion</div>
+          <img src="/icons/Logo-Tzunun-Autorentas_.png" alt="Tz'unun AutoRentas"
+            style={{ width: "100%", maxWidth: 280, height: "auto", margin: "0 auto 20px", display: "block" }} />
+          <div style={{ fontSize: 13, color: T.sub, marginTop: -8, marginBottom: 20, textAlign: "center" }}>Sistema de Gestion</div>
         </div>
         <form onSubmit={login} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
@@ -563,20 +572,21 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
       }}>
         {/* Logo */}
         <div style={{
-          padding: collapsed ? "16px 0" : "16px 14px",
+          padding: collapsed ? "16px 0" : "14px 14px",
           display: "flex", alignItems: "center", gap: 10,
           borderBottom: `1px solid ${T.bord}`,
           justifyContent: collapsed ? "center" : "flex-start",
+          minHeight: 56,
         }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 9,
-            background: "linear-gradient(135deg,#00D4AA,#009a7a)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14, fontWeight: 900, color: "white", flexShrink: 0,
-          }}>T</div>
+          <img src="/icons/Logo_Tzunun_Transp.png"
+            alt="Tz'unun"
+            style={{
+              width: collapsed ? 28 : 32, height: collapsed ? 28 : 32,
+              objectFit: "contain", flexShrink: 0, borderRadius: 6,
+            }} />
           {!collapsed && (
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: T.acc }}>Tz'unun</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>Tz'unun</div>
               <div style={{ fontSize: 9, color: T.sub }}>AutoRentas</div>
             </div>
           )}
@@ -600,14 +610,16 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
               <div key={item.id} onClick={() => setPag(item.id)}
                 style={{
                   display: "flex", alignItems: "center",
-                  gap: 9, padding: collapsed ? "9px 0" : "8px 12px",
+                  gap: 10, padding: collapsed ? "10px 0" : "9px 14px",
                   cursor: "pointer",
-                  background: active ? item.c + "18" : "transparent",
-                  borderRight: active ? `2px solid ${item.c}` : "2px solid transparent",
+                  background: active ? item.c + "15" : "transparent",
+                  borderLeft: `3px solid ${active ? item.c : "transparent"}`,
+                  margin: "1px 0",
                   justifyContent: collapsed ? "center" : "flex-start",
-                  transition: "background .12s",
+                  transition: "all .15s",
+                  position: "relative",
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.card; }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.card + "80"; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}>
                 {React.createElement(item.icon, {
                   size: collapsed ? 20 : 18,
@@ -615,11 +627,17 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
                 })}
                 {!collapsed && (
                   <span style={{
-                    fontSize: 12, fontWeight: active ? 700 : 400,
+                    fontSize: 13, fontWeight: active ? 600 : 400,
                     color: active ? item.c : T.txt, whiteSpace: "nowrap",
                   }}>
                     {item.label}
                   </span>
+                )}
+                {active && !collapsed && (
+                  <div style={{
+                    marginLeft: "auto", width: 6, height: 6, borderRadius: "50%",
+                    background: item.c, flexShrink: 0,
+                  }} />
                 )}
               </div>
             );
@@ -658,9 +676,10 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
           <button onClick={() => setCollapsed(!collapsed)}
             style={{
               background: "transparent", border: "none",
-              color: T.sub, cursor: "pointer", fontSize: 16, padding: "4px 6px",
+              color: T.sub, cursor: "pointer", padding: "4px 6px",
+              display: "flex", alignItems: "center",
             }}>
-            {collapsed ? ">>" : "<<"}
+            <IconMenu size={16} color={T.sub} />
           </button>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
             {TITULOS[pag] || ""}
