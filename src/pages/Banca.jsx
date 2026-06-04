@@ -288,11 +288,11 @@ export default function PageBanca({ showToast, empId }) {
   const sfc = (k, v) => setFc(p => ({ ...p, [k]: v }));
 
   const recalcularSaldo = async (cuentaId) => {
-    const todo = await dbGet(`movimientos_bancarios?cuenta_id=eq.${cuentaId}&select=monto,tipo`);
+    const todo = await dbGet("movimientos_bancarios", `&cuenta_id=eq.${cuentaId}&select=monto,tipo`);
     const movsArr = Array.isArray(todo) ? todo : [];
-    const cta = await dbGet(`cuentas_bancarias?id=eq.${cuentaId}`);
+    const cta = await dbGet("cuentas_bancarias", `&id=eq.${cuentaId}`);
     const ctaArr = Array.isArray(cta) ? cta : [cta];
-    if (!ctaArr || ctaArr.length === 0) return;
+    if (!ctaArr || ctaArr.length === 0) return parseFloat(cuentaAct?.saldo_inicial || 0);
     const saldoInicial = parseFloat(ctaArr[0].saldo_inicial) || 0;
     const ingresos = movsArr.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
     const egresos = movsArr.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
