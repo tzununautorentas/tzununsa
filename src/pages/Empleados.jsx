@@ -5,8 +5,8 @@ import { usePaginacion } from '../hooks/usePaginacion.js';
 import {
   IconEdit, IconDelete, IconSave, IconBack, IconPlus, IconSearch,
   IconRefresh, IconPDF, IconExcel, IconUser, IconEmployee,
-  IconCheck, IconMoney, IconDocument, IconClose, IconList
-} from '../components/Icons.jsx';
+  IconCheck, IconClose, IconList
+} from '../components/icons.jsx';
 
 // ─── API helper ───────────────────────────────────────────────────
 const SB = "https://fmijbpatkddkbxlkfoza.supabase.co";
