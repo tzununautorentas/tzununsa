@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { T, S, fmt } from '../config.js';
 import { DEPARTAMENTOS, MUNICIPIOS, munisByDepto, getMuni } from '../data/municipios.js';
-import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar, MI_UBICACION } from '../services/ruteoService.js';
+import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar } from '../services/ruteoService.js';
 
 const TIPOS_PUNTO = [
   { v: "municipio", l: "Municipio" },
@@ -13,9 +13,22 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
   const [buscando, setBuscando] = useState(false);
   const [sugs, setSugs] = useState(null);
   const [showSugs, setShowSugs] = useState(false);
+  const [gpsState, setGpsState] = useState("idle"); // idle | buscando | ok | error
   const refSugs = useRef(null);
 
   const cambiar = (campo, val) => onChange(idx, { ...punto, [campo]: val });
+
+  // Cerrar sugerencias al hacer clic fuera
+  useEffect(() => {
+    if (!showSugs) return;
+    const handler = (e) => {
+      if (refSugs.current && !refSugs.current.contains(e.target)) {
+        setShowSugs(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSugs]);
 
   const buscarDireccion = async (q) => {
     if (!q?.trim()) { setSugs(null); return; }
@@ -35,13 +48,35 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
     setShowSugs(false);
   };
 
+  const obtenerGps = () => {
+    if (!navigator.geolocation) {
+      setGpsState("error");
+      return;
+    }
+    setGpsState("buscando");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        cambiar("lat", lat);
+        cambiar("lng", lng);
+        cambiar("nombre", "Mi ubicación (GPS)");
+        cambiar("direccion", `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        setGpsState("ok");
+      },
+      (err) => {
+        setGpsState("error");
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
   let latLngLabel = "";
   if (punto.lat && punto.lng) latLngLabel = `${punto.lat.toFixed(4)}, ${punto.lng.toFixed(4)}`;
 
   const munisDisponibles = punto.depto ? munisByDepto(parseInt(punto.depto)) : [];
 
   return (
-    <div style={{ ...S.card, padding: 12, position: "relative" }}>
+    <div style={{ ...S.card, padding: 12, position: "relative", zIndex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
         <span style={{
           width: 24, height: 24, borderRadius: "50%",
@@ -116,6 +151,7 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
                 cambiar("lat", null);
                 cambiar("lng", null);
                 setSugs(null);
+                setShowSugs(false);
               }}
               placeholder="Hotel, oficina, dirección..." />
             <button onClick={() => buscarDireccion(punto.direccion)}
@@ -127,7 +163,7 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
           {/* Sugerencias Nominatim */}
           {showSugs && sugs && sugs.length > 0 && (
             <div style={{
-              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 300,
+              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
               background: T.surf, border: `1px solid ${T.acc}`, borderRadius: 8,
               maxHeight: 200, overflowY: "auto", marginTop: 4,
             }}>
@@ -174,19 +210,67 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
         </div>
       )}
 
-      {/* Mi ubicación */}
+      {/* Mi ubicación (GPS) */}
       {punto.tipo === "mi_ubicacion" && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-          <span style={{ fontSize: 13, color: T.txt, fontWeight: 600 }}>{MI_UBICACION.nombre}</span>
-          <span style={{ fontSize: 10, color: T.sub }}>{MI_UBICACION.direccion}</span>
-          <button onClick={() => {
-            cambiar("nombre", MI_UBICACION.nombre);
-            cambiar("direccion", MI_UBICACION.direccion);
-            cambiar("lat", MI_UBICACION.lat);
-            cambiar("lng", MI_UBICACION.lng);
-          }} style={{ ...S.btn("primary"), padding: "3px 8px", fontSize: 9 }}>
-            Usar
-          </button>
+        <div>
+          {gpsState === "idle" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 12, color: T.sub }}>
+                Obtén tu ubicación actual vía GPS
+              </span>
+              <button onClick={obtenerGps}
+                style={{ ...S.btn("primary"), padding: "4px 12px", fontSize: 10 }}>
+                Obtener ubicación
+              </button>
+            </div>
+          )}
+          {gpsState === "buscando" && (
+            <div style={{ fontSize: 12, color: T.acc }}>Obteniendo ubicación GPS...</div>
+          )}
+          {gpsState === "ok" && punto.lat && punto.lng && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.green }}>
+                Ubicación: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}
+              </span>
+              <button onClick={obtenerGps}
+                style={{ ...S.btn("ghost"), padding: "2px 8px", fontSize: 9 }}>
+                Actualizar
+              </button>
+            </div>
+          )}
+          {gpsState === "error" && (
+            <div>
+              <div style={{ fontSize: 11, color: T.red, marginBottom: 6 }}>
+                No se pudo obtener la ubicación. Verifica permisos o ingresa coordenadas manualmente.
+              </div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input style={{ ...S.inp, width: 100, fontSize: 10, padding: "4px 8px" }}
+                  type="number" step="any" value={punto._latManual || ""}
+                  onChange={e => cambiar("_latManual", e.target.value)}
+                  placeholder="Latitud" />
+                <input style={{ ...S.inp, width: 100, fontSize: 10, padding: "4px 8px" }}
+                  type="number" step="any" value={punto._lngManual || ""}
+                  onChange={e => cambiar("_lngManual", e.target.value)}
+                  placeholder="Longitud" />
+                <button onClick={() => {
+                  if (punto._latManual && punto._lngManual) {
+                    cambiar("lat", parseFloat(punto._latManual));
+                    cambiar("lng", parseFloat(punto._lngManual));
+                    cambiar("nombre", "Ubicación manual");
+                    cambiar("direccion", `${punto._latManual}, ${punto._lngManual}`);
+                    setGpsState("ok");
+                  }
+                }} disabled={!punto._latManual || !punto._lngManual}
+                  style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px" }}>
+                  Usar
+                </button>
+                <button onClick={() => { setGpsState("idle"); obtenerGps(); }}
+                  style={{ ...S.btn("ghost"), fontSize: 9, padding: "4px 8px" }}>
+                  Reintentar GPS
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -230,7 +314,6 @@ export default function PlanificadorRutas({ value, onChange }) {
 
   const obtenerCoords = (p) => {
     if (p.lat && p.lng) return [p.lat, p.lng];
-    if (p.tipo === "mi_ubicacion") return [MI_UBICACION.lat, MI_UBICACION.lng];
     const m = p.muni ? getMuni(parseInt(p.muni)) : null;
     if (m) return [m.lat, m.lng];
     return null;
@@ -240,7 +323,7 @@ export default function PlanificadorRutas({ value, onChange }) {
     const validos = puntos.filter(p => {
       if (p.tipo === "municipio") return p.depto && p.muni;
       if (p.tipo === "direccion") return p.lat && p.lng;
-      if (p.tipo === "mi_ubicacion") return true;
+      if (p.tipo === "mi_ubicacion") return p.lat && p.lng;
       return false;
     });
     if (validos.length < 2) return;
@@ -293,7 +376,7 @@ export default function PlanificadorRutas({ value, onChange }) {
   const validos = puntos.filter(p => {
     if (p.tipo === "municipio") return p.depto && p.muni;
     if (p.tipo === "direccion") return p.lat && p.lng;
-    if (p.tipo === "mi_ubicacion") return true;
+    if (p.tipo === "mi_ubicacion") return p.lat && p.lng;
     return false;
   });
 
