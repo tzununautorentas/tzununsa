@@ -996,7 +996,7 @@ export default function PageContratos({ showToast, empId }) {
     table: 'contratos',
     query,
     search: busqueda,
-    columns: ['numero', 'cliente_nombre', 'vehiculo_nombre'],
+    columns: ['numero', 'cliente_nombre', 'vehiculo_nombre', 'vehiculo_placa', 'cliente_nit', 'vehiculo_marca', 'vehiculo_modelo', 'concepto', 'observaciones', 'factura_nombre', 'factura_nit'],
     order: 'created_at.desc',
   });
 

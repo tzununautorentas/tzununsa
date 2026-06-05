@@ -24,7 +24,7 @@ export default function PageCatalogo({ showToast, empId }) {
     table: 'servicios',
     query,
     search: busqueda,
-    columns: ['nombre', 'codigo'],
+    columns: ['nombre', 'codigo', 'tipo', 'descripcion', 'notas'],
     order: 'codigo.asc,nombre.asc',
   });
 

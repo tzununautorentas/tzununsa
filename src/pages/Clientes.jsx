@@ -21,7 +21,7 @@ export default function PageClientes({ showToast, empId }) {
 
   const { data: rows, loading, total, page, totalPages, pageSize, desde, hasta, setPage, setPageSize, reload } = usePaginacion({
     table: 'clientes', query: '', search: busqueda,
-    columns: ['nombre', 'codigo', 'nit', 'telefono'],
+    columns: ['nombre', 'codigo', 'nit', 'telefono', 'email', 'direccion', 'contacto', 'notas'],
     order: 'codigo.asc',
   });
 

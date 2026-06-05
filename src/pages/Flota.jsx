@@ -24,7 +24,7 @@ export default function PageFlota({ showToast, empId }) {
     table: "vehiculos",
     query,
     search: busqueda,
-    columns: ['marca', 'modelo', 'placa'],
+    columns: ['marca', 'modelo', 'placa', 'codigo', 'color', 'tipo', 'vin', 'notas'],
     order: 'codigo.asc',
   });
 

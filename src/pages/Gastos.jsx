@@ -680,7 +680,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
     table: 'gastos',
     query,
     search: busqueda,
-    columns: ['descripcion', 'proveedor', 'empleado_nombre', 'numero_factura'],
+    columns: ['descripcion', 'proveedor', 'empleado_nombre', 'numero_factura', 'categoria', 'referencia', 'notas', 'vehiculo_nombre'],
     order: 'fecha.desc',
   });
 

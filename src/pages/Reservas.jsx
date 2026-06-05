@@ -276,7 +276,7 @@ export default function PageReservas({ showToast, empId }) {
     table: 'reservas',
     query,
     search: busqueda,
-    columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino'],
+    columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
     order: 'fecha_inicio.desc',
   });
 

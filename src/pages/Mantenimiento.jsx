@@ -51,7 +51,7 @@ export default function PageMantenimiento({ showToast, empId }) {
     table: 'mantenimientos',
     query,
     search: busqueda,
-    columns: ['vehiculo_nombre', 'placa', 'tipo', 'descripcion'],
+    columns: ['vehiculo_nombre', 'placa', 'tipo', 'descripcion', 'taller', 'mecanico', 'notas'],
     order: 'fecha.desc',
   });
 

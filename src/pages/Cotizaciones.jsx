@@ -459,7 +459,7 @@ export default function PageCotizaciones({ showToast, empId }) {
     table: 'cotizaciones',
     query,
     search: busqueda,
-    columns: ['numero', 'cliente_nombre'],
+    columns: ['numero', 'cliente_nombre', 'cliente_nit', 'cliente_dir', 'vehiculo_nombre', 'descripcion_servicio', 'notas'],
     order: 'created_at.desc',
   });
 
