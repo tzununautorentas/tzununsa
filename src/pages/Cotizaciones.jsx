@@ -309,7 +309,12 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               <div style={{ gridColumn: "span 2" }}>
                 <label style={S.lbl}>CLIENTE</label>
                 <ClienteAC value={f.cliente_nombre} onChange={v => sf("cliente_nombre", v)}
-                  onSelect={c => { sf("cliente_nombre", c.nombre); sf("cliente_nit", c.nit || ""); sf("cliente_dir", c.direccion || ""); sf("cliente_codigo", c.codigo || ""); sf("saludo", "Estimados señores de " + c.nombre); }}
+                  onSelect={c => {
+                    sf("cliente_nombre", c.nombre); sf("cliente_nit", c.nit || ""); sf("cliente_dir", c.direccion || ""); sf("cliente_codigo", c.codigo || "");
+                    const base = "en Transportes Tz'unun, nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas, el mercado de renta de vehículos, viajes de turismo y traslado de personas a diferentes lugares de Guatemala y Centroamérica.";
+                    const saludos = { persona: "Estimado(a) cliente", empresa: "Estimados clientes", gobierno: "Distinguidos señores", ong: "Estimados miembros" };
+                    sf("saludo", (saludos[c.tipo] || "Estimado(a) cliente") + ", " + base);
+                  }}
                   clientes={clientes} />
               </div>
               {f.cliente_codigo && (

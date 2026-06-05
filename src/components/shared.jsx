@@ -149,7 +149,7 @@ export function ModalExportar({ titulo, datos, campos, onClose, extraEncabezado 
 }
 
 // --- Buscador de Clientes ---
-export function BuscadorCliente({ value, onChange, empId }) {
+export function BuscadorCliente({ value, onChange, onSelect, empId }) {
   const [clientes, setClientes] = useState([]);
   const [open, setOpen] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -197,7 +197,7 @@ export function BuscadorCliente({ value, onChange, empId }) {
       {open && (
         <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: T.card, border: `1px solid ${T.bord}`, borderRadius: 8, zIndex: 100, maxHeight: 240, overflowY: "auto", marginTop: 2 }}>
           {filtered.map((c, i) => (
-            <div key={i} onClick={() => { onChange(c.nombre); setOpen(false); }}
+            <div key={i} onClick={() => { onChange(c.nombre); onSelect?.(c); setOpen(false); }}
               style={{ padding: "8px 12px", cursor: "pointer", fontSize: 13, borderBottom: `1px solid ${T.bord}22`, display: "flex", justifyContent: "space-between" }}
               onMouseEnter={e => e.currentTarget.style.background = T.surf}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
