@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { T, S, fmt } from '../config.js';
-import { DEPARTAMENTOS, MUNICIPIOS, munisByDepto, getMuni } from '../data/municipios.js';
+import { DEPARTAMENTOS, munisByDepto, getMuni } from '../data/municipios.js';
 import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar } from '../services/ruteoService.js';
 
 const TIPOS_PUNTO = [
@@ -9,16 +9,17 @@ const TIPOS_PUNTO = [
   { v: "mi_ubicacion", l: "Mi ubicación" },
 ];
 
-function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, esUnico }) {
+const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino }) {
   const [buscando, setBuscando] = useState(false);
   const [sugs, setSugs] = useState(null);
   const [showSugs, setShowSugs] = useState(false);
-  const [gpsState, setGpsState] = useState("idle"); // idle | buscando | ok | error
+  const [gpsState, setGpsState] = useState("idle");
   const refSugs = useRef(null);
 
-  const cambiar = (campo, val) => onChange(idx, { ...punto, [campo]: val });
+  const cambiar = useCallback((campo, val) => {
+    onChange(idx, { ...punto, [campo]: val });
+  }, [onChange, idx, punto]);
 
-  // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
     if (!showSugs) return;
     const handler = (e) => {
@@ -40,71 +41,55 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
   };
 
   const seleccionarSug = (s) => {
-    cambiar("tipo", "direccion");
-    cambiar("direccion", s.direccion);
-    cambiar("nombre", s.nombre);
-    cambiar("lat", s.lat);
-    cambiar("lng", s.lng);
+    onChange(idx, { ...punto, tipo: "direccion", direccion: s.direccion, nombre: s.nombre, lat: s.lat, lng: s.lng });
     setShowSugs(false);
   };
 
   const obtenerGps = () => {
-    if (!navigator.geolocation) {
-      setGpsState("error");
-      return;
-    }
+    if (!navigator.geolocation) { setGpsState("error"); return; }
     setGpsState("buscando");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        cambiar("lat", lat);
-        cambiar("lng", lng);
-        cambiar("nombre", "Mi ubicación (GPS)");
-        cambiar("direccion", `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        onChange(idx, { ...punto, lat, lng, nombre: "Mi ubicación (GPS)", direccion: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
         setGpsState("ok");
       },
-      (err) => {
-        setGpsState("error");
-      },
+      () => setGpsState("error"),
       { enableHighAccuracy: true, timeout: 15000 }
     );
   };
 
-  let latLngLabel = "";
-  if (punto.lat && punto.lng) latLngLabel = `${punto.lat.toFixed(4)}, ${punto.lng.toFixed(4)}`;
-
   const munisDisponibles = punto.depto ? munisByDepto(parseInt(punto.depto)) : [];
+  const latLngLabel = (punto.lat && punto.lng) ? `${punto.lat.toFixed(4)}, ${punto.lng.toFixed(4)}` : "";
+
+  const inpBase = { ...S.inp, pointerEvents: "auto" };
+  const selBase = { ...S.sel, pointerEvents: "auto" };
 
   return (
-    <div style={{ ...S.card, padding: 12, position: "relative", zIndex: 1 }}>
+    <div style={S.card}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{
-          width: 24, height: 24, borderRadius: "50%",
+        <span style={{ width: 24, height: 24, borderRadius: "50%",
           background: esOrigen ? T.green : esDestino ? T.red : T.sec,
           color: "#fff", fontSize: 11, fontWeight: 700,
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {esOrigen ? "O" : esDestino ? "D" : idx + 1}
         </span>
         <span style={{ fontSize: 12, fontWeight: 600, color: T.txt, flex: 1 }}>
           {esOrigen ? "Origen" : esDestino ? "Destino" : `Parada ${idx}`}
         </span>
         {punto.nombre && <span style={{ fontSize: 10, color: T.acc }}>{punto.nombre}</span>}
-        {latLngLabel && <span style={{ fontSize: 9, color: T.mut, fontFamily: 'monospace' }}>{latLngLabel}</span>}
+        {latLngLabel && <span style={{ fontSize: 9, color: T.mut, fontFamily: "monospace" }}>{latLngLabel}</span>}
         {!esOrigen && !esDestino && (
           <button onClick={() => onRemove(idx)}
-            style={{ ...S.btn("danger"), padding: "2px 6px", fontSize: 9 }}>X</button>
+            style={{ ...S.btn("danger"), padding: "2px 6px", fontSize: 9, pointerEvents: "auto" }}>X</button>
         )}
       </div>
 
-      {/* Tipo de punto */}
+      {/* Tipo */}
       <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
         {TIPOS_PUNTO.map(tp => (
-          <button key={tp.v} onClick={() => cambiar("tipo", tp.v)}
-            style={{
-              ...S.btn(punto.tipo === tp.v ? "primary" : "ghost"),
-              fontSize: 9, padding: "3px 8px",
-            }}>
+          <button key={tp.v} type="button" onClick={() => cambiar("tipo", tp.v)}
+            style={{ ...S.btn(punto.tipo === tp.v ? "primary" : "ghost"), fontSize: 9, padding: "3px 8px", pointerEvents: "auto" }}>
             {tp.l}
           </button>
         ))}
@@ -113,25 +98,18 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
       {/* Municipio */}
       {punto.tipo === "municipio" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <select style={S.sel} value={punto.depto} onChange={e => {
-            cambiar("depto", e.target.value);
-            cambiar("muni", "");
-            cambiar("nombre", "");
-            cambiar("lat", null);
-            cambiar("lng", null);
+          <select style={selBase} value={punto.depto} onChange={e => {
+            onChange(idx, { ...punto, depto: e.target.value, muni: "", nombre: "", lat: null, lng: null });
           }}>
             <option value="">Departamento...</option>
             {DEPARTAMENTOS.map(d => (
               <option key={d.id} value={d.id}>{d.nombre}</option>
             ))}
           </select>
-          <select style={S.sel} value={punto.muni} onChange={e => {
+          <select style={selBase} value={punto.muni} disabled={!punto.depto} onChange={e => {
             const m = getMuni(parseInt(e.target.value));
-            cambiar("muni", e.target.value);
-            cambiar("nombre", m?.nombre || "");
-            cambiar("lat", m?.lat || null);
-            cambiar("lng", m?.lng || null);
-          }} disabled={!punto.depto}>
+            onChange(idx, { ...punto, muni: e.target.value, nombre: m?.nombre || "", lat: m?.lat || null, lng: m?.lng || null });
+          }}>
             <option value="">Municipio...</option>
             {munisDisponibles.map(m => (
               <option key={m.id} value={m.id}>{m.nombre}</option>
@@ -140,39 +118,27 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
         </div>
       )}
 
-      {/* Dirección personalizada */}
+      {/* Dirección */}
       {punto.tipo === "direccion" && (
         <div ref={refSugs} style={{ position: "relative" }}>
           <div style={{ display: "flex", gap: 6 }}>
-            <input style={S.inp} value={punto.direccion || ""}
-              onChange={e => {
-                cambiar("direccion", e.target.value);
-                cambiar("nombre", e.target.value);
-                cambiar("lat", null);
-                cambiar("lng", null);
-                setSugs(null);
-                setShowSugs(false);
-              }}
+            <input style={inpBase} value={punto.direccion || ""}
+              onChange={e => { setSugs(null); onChange(idx, { ...punto, direccion: e.target.value, nombre: e.target.value, lat: null, lng: null }); }}
+              onFocus={() => { if (sugs && sugs.length > 0) setShowSugs(true); }}
               placeholder="Hotel, oficina, dirección..." />
-            <button onClick={() => buscarDireccion(punto.direccion)}
+            <button type="button" onClick={() => buscarDireccion(punto.direccion)}
               disabled={buscando || !punto.direccion?.trim()}
-              style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: 11, whiteSpace: "nowrap" }}>
+              style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: 11, whiteSpace: "nowrap", pointerEvents: "auto" }}>
               {buscando ? "..." : "Buscar"}
             </button>
           </div>
-          {/* Sugerencias Nominatim */}
           {showSugs && sugs && sugs.length > 0 && (
-            <div style={{
-              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
-              background: T.surf, border: `1px solid ${T.acc}`, borderRadius: 8,
-              maxHeight: 200, overflowY: "auto", marginTop: 4,
-            }}>
+            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+              background: T.surf, border: `1px solid ${T.acc}`, borderRadius: 8, maxHeight: 200, overflowY: "auto", marginTop: 4 }}>
               {sugs.map((s, i) => (
-                <div key={i} onClick={() => seleccionarSug(s)}
-                  style={{
-                    padding: "8px 12px", cursor: "pointer", fontSize: 12,
-                    borderBottom: i < sugs.length - 1 ? `1px solid ${T.bord}22` : "none",
-                  }}
+                <div key={i} onMouseDown={() => seleccionarSug(s)}
+                  style={{ padding: "8px 12px", cursor: "pointer", fontSize: 12,
+                    borderBottom: i < sugs.length - 1 ? `1px solid ${T.bord}22` : "none" }}
                   onMouseEnter={e => e.currentTarget.style.background = T.accDim}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                   <div style={{ fontWeight: 600, color: T.txt }}>{s.nombre}</div>
@@ -182,28 +148,19 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
             </div>
           )}
           {showSugs && sugs && sugs.length === 0 && punto.direccion?.trim() && (
-            <div style={{ padding: "8px 12px", fontSize: 11, color: T.mut }}>
-              Sin resultados. Usa coordenadas o cambia a modo manual.
-            </div>
+            <div style={{ padding: "8px 12px", fontSize: 11, color: T.mut }}>Sin resultados. Usa coordenadas o cambia a modo manual.</div>
           )}
-          {/* Coordenadas manuales */}
           {punto.direccion && !punto.lat && (
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <input style={{ ...S.inp, width: "50%", fontSize: 10, padding: "4px 8px" }}
+              <input style={{ ...inpBase, width: "50%", fontSize: 10, padding: "4px 8px" }}
                 type="number" step="any" value={punto._latManual || ""}
-                onChange={e => cambiar("_latManual", e.target.value)}
-                placeholder="Lat. manual (opcional)" />
-              <input style={{ ...S.inp, width: "50%", fontSize: 10, padding: "4px 8px" }}
+                onChange={e => cambiar("_latManual", e.target.value)} placeholder="Lat. manual" />
+              <input style={{ ...inpBase, width: "50%", fontSize: 10, padding: "4px 8px" }}
                 type="number" step="any" value={punto._lngManual || ""}
-                onChange={e => cambiar("_lngManual", e.target.value)}
-                placeholder="Lng. manual (opcional)" />
+                onChange={e => cambiar("_lngManual", e.target.value)} placeholder="Lng. manual" />
               {punto._latManual && punto._lngManual && (
-                <button onClick={() => {
-                  cambiar("lat", parseFloat(punto._latManual));
-                  cambiar("lng", parseFloat(punto._lngManual));
-                }} style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px" }}>
-                  Fijar
-                </button>
+                <button type="button" onClick={() => { cambiar("lat", parseFloat(punto._latManual)); cambiar("lng", parseFloat(punto._lngManual)); }}
+                  style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Fijar</button>
               )}
             </div>
           )}
@@ -215,59 +172,38 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
         <div>
           {gpsState === "idle" && (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 12, color: T.sub }}>
-                Obtén tu ubicación actual vía GPS
-              </span>
-              <button onClick={obtenerGps}
-                style={{ ...S.btn("primary"), padding: "4px 12px", fontSize: 10 }}>
-                Obtener ubicación
-              </button>
+              <span style={{ fontSize: 12, color: T.sub }}>Obtén tu ubicación actual vía GPS</span>
+              <button type="button" onClick={obtenerGps}
+                style={{ ...S.btn("primary"), padding: "4px 12px", fontSize: 10, pointerEvents: "auto" }}>Obtener ubicación</button>
             </div>
           )}
-          {gpsState === "buscando" && (
-            <div style={{ fontSize: 12, color: T.acc }}>Obteniendo ubicación GPS...</div>
-          )}
+          {gpsState === "buscando" && <div style={{ fontSize: 12, color: T.acc }}>Obteniendo ubicación GPS...</div>}
           {gpsState === "ok" && punto.lat && punto.lng && (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.green }}>
-                Ubicación: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}
-              </span>
-              <button onClick={obtenerGps}
-                style={{ ...S.btn("ghost"), padding: "2px 8px", fontSize: 9 }}>
-                Actualizar
-              </button>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.green }}>Ubicación: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}</span>
+              <button type="button" onClick={obtenerGps}
+                style={{ ...S.btn("ghost"), padding: "2px 8px", fontSize: 9, pointerEvents: "auto" }}>Actualizar</button>
             </div>
           )}
           {gpsState === "error" && (
             <div>
-              <div style={{ fontSize: 11, color: T.red, marginBottom: 6 }}>
-                No se pudo obtener la ubicación. Verifica permisos o ingresa coordenadas manualmente.
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input style={{ ...S.inp, width: 100, fontSize: 10, padding: "4px 8px" }}
+              <div style={{ fontSize: 11, color: T.red, marginBottom: 6 }}>No se pudo obtener la ubicación. Verifica permisos o ingresa coordenadas.</div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <input style={{ ...inpBase, width: 120, fontSize: 10, padding: "4px 8px" }}
                   type="number" step="any" value={punto._latManual || ""}
-                  onChange={e => cambiar("_latManual", e.target.value)}
-                  placeholder="Latitud" />
-                <input style={{ ...S.inp, width: 100, fontSize: 10, padding: "4px 8px" }}
+                  onChange={e => cambiar("_latManual", e.target.value)} placeholder="Latitud" />
+                <input style={{ ...inpBase, width: 120, fontSize: 10, padding: "4px 8px" }}
                   type="number" step="any" value={punto._lngManual || ""}
-                  onChange={e => cambiar("_lngManual", e.target.value)}
-                  placeholder="Longitud" />
-                <button onClick={() => {
+                  onChange={e => cambiar("_lngManual", e.target.value)} placeholder="Longitud" />
+                <button type="button" onClick={() => {
                   if (punto._latManual && punto._lngManual) {
-                    cambiar("lat", parseFloat(punto._latManual));
-                    cambiar("lng", parseFloat(punto._lngManual));
-                    cambiar("nombre", "Ubicación manual");
-                    cambiar("direccion", `${punto._latManual}, ${punto._lngManual}`);
+                    onChange(idx, { ...punto, lat: parseFloat(punto._latManual), lng: parseFloat(punto._lngManual), nombre: "Ubicación manual", direccion: `${punto._latManual}, ${punto._lngManual}` });
                     setGpsState("ok");
                   }
                 }} disabled={!punto._latManual || !punto._lngManual}
-                  style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px" }}>
-                  Usar
-                </button>
-                <button onClick={() => { setGpsState("idle"); obtenerGps(); }}
-                  style={{ ...S.btn("ghost"), fontSize: 9, padding: "4px 8px" }}>
-                  Reintentar GPS
-                </button>
+                  style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Usar</button>
+                <button type="button" onClick={() => { setGpsState("idle"); obtenerGps(); }}
+                  style={{ ...S.btn("ghost"), fontSize: 9, padding: "4px 8px", pointerEvents: "auto" }}>Reintentar GPS</button>
               </div>
             </div>
           )}
@@ -275,7 +211,7 @@ function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, es
       )}
     </div>
   );
-}
+});
 
 export default function PlanificadorRutas({ value, onChange }) {
   const initPuntos = value?.puntos?.length > 0
@@ -293,24 +229,24 @@ export default function PlanificadorRutas({ value, onChange }) {
   const [kpg, setKpg] = useState(value?.kpg || 27);
   const [pGalon, setPGalon] = useState(value?.pGalon || 48);
 
-  const actualizar = (idx, nuevoPunto) => {
-    const p = [...puntos];
-    p[idx] = nuevoPunto;
-    setPuntos(p);
+  const actualizar = useCallback((idx, nuevoPunto) => {
+    setPuntos(prev => {
+      const p = [...prev];
+      p[idx] = nuevoPunto;
+      return p;
+    });
     setResultado(null);
-  };
+  }, []);
 
-  const agregarParada = () => setPuntos(p => [...p, { tipo: "municipio", depto: "", muni: "", nombre: "", direccion: "", lat: null, lng: null }]);
-  const quitarParada = (idx) => {
-    if (puntos.length <= 2) return;
-    setPuntos(p => p.filter((_, i) => i !== idx));
+  const agregarParada = useCallback(() => setPuntos(p => [...p, { tipo: "municipio", depto: "", muni: "", nombre: "", direccion: "", lat: null, lng: null }]), []);
+  const quitarParada = useCallback((idx) => {
+    setPuntos(p => { if (p.length <= 2) return p; return p.filter((_, i) => i !== idx); });
     setResultado(null);
-  };
-
-  const invertirRuta = () => {
+  }, []);
+  const invertirRuta = useCallback(() => {
     setPuntos(p => [...p].reverse());
     setResultado(null);
-  };
+  }, []);
 
   const obtenerCoords = (p) => {
     if (p.lat && p.lng) return [p.lat, p.lng];
