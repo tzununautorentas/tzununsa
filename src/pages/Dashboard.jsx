@@ -183,14 +183,15 @@ function CalendarioMensual({ reservas }) {
   const primerDia = new Date(anio, mes, 1).getDay();
   const ultimoDia = new Date(anio, mes + 1, 0).getDate();
 
-  const countMap = {};
+  const dayMap = {};
   (reservas || []).forEach(r => {
     if (!r.fecha_inicio || ['cancelada','completada'].includes(r.estado)) return;
     const start = new Date(r.fecha_inicio);
     const end = r.fecha_fin ? new Date(r.fecha_fin) : new Date(r.fecha_inicio);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const key = d.toISOString().slice(0, 10);
-      countMap[key] = (countMap[key] || 0) + 1;
+      if (!dayMap[key]) dayMap[key] = [];
+      dayMap[key].push(r);
     }
   });
 
@@ -200,9 +201,9 @@ function CalendarioMensual({ reservas }) {
   for (let i = 0; i < primerDia; i++) cells.push(null);
   for (let d = 1; d <= ultimoDia; d++) {
     const dateStr = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const count = countMap[dateStr] || 0;
+    const dayRes = dayMap[dateStr] || [];
     const isToday = dateStr === todayStr;
-    cells.push({ day: d, count, isToday });
+    cells.push({ day: d, reservas: dayRes, isToday });
   }
 
   return (
@@ -230,24 +231,31 @@ function CalendarioMensual({ reservas }) {
         ))}
         {cells.map((cell, i) => (
           <div key={i} style={{
-            aspectRatio: '1', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
+            minHeight: 56, display: 'flex', flexDirection: 'column',
             borderRadius: 8, fontSize: 11, fontWeight: 500,
             background: cell?.isToday ? T.acc + '22' : 'transparent',
             color: cell ? (cell.isToday ? T.acc : T.txt) : T.mut,
             border: cell?.isToday ? `1px solid ${T.acc}44` : '1px solid transparent',
-            position: 'relative',
+            padding: '2px',
           }}>
             {cell && (
               <>
-                <span style={{ fontWeight: cell.isToday ? 700 : 400 }}>{cell.day}</span>
-                {cell.count > 0 && (
-                  <span style={{
-                    position: 'absolute', bottom: 2, fontSize: 8, fontWeight: 700,
-                    color: '#fff', background: cell.count >= 3 ? T.red : T.acc,
-                    borderRadius: 6, padding: '0 4px', lineHeight: '14px', minWidth: 14,
-                    textAlign: 'center',
-                  }}>{cell.count}</span>
+                <span style={{ fontWeight: cell.isToday ? 700 : 400, textAlign: 'center', fontSize: 10, marginBottom: 1 }}>{cell.day}</span>
+                {cell.reservas.slice(0, 3).map((r, j) => (
+                  <div key={j} style={{
+                    fontSize: 6.5, lineHeight: '11px', padding: '0 3px',
+                    borderRadius: 3, marginBottom: 1, overflow: 'hidden',
+                    whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'default',
+                    background: r.tipo === 'traslado' ? '#818CF8' : '#00D4AA',
+                    color: '#fff', fontWeight: 600,
+                  }} title={`${r.cliente_nombre} — ${r.tipo === 'traslado' ? 'Traslado' : 'Renta'} — ${r.vehiculo_nombre || ''}`}>
+                    {r.tipo === 'traslado' ? 'T' : 'R'} {r.vehiculo_nombre?.split(' ').slice(0,2).join(' ') || '—'}
+                  </div>
+                ))}
+                {cell.reservas.length > 3 && (
+                  <div style={{ fontSize: 7, color: T.mut, textAlign: 'center', lineHeight: '12px' }}>
+                    +{cell.reservas.length - 3}
+                  </div>
                 )}
               </>
             )}
