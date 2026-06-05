@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { T, S, fmt, dbIns, dbGet, today, CATALOGO, RUTAS } from '../config.js';
+import { T, S, fmt, dbIns, dbGet, today, CATALOGO } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
+import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
+import { getMuni, getDepto } from '../data/municipios.js';
 
 const calcDias = (fi, ff) => {
   if (!fi || !ff) return 1;
@@ -27,6 +29,7 @@ export default function PageCalculadora({ showToast, empId }) {
     galon: 48, kpg: 27, kmi: 0, kmr: 0, varios: 0,
     iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: ""
   });
+  const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
 
   // ─ Renta ─────────────────────────────────────────────────────
@@ -183,15 +186,20 @@ export default function PageCalculadora({ showToast, empId }) {
               <Fld label="CLIENTE" span2>
                 <BuscadorCliente value={tf.cliente} onChange={v => stf("cliente", v)} empId={empId} />
               </Fld>
-              <Fld label="DESTINO (tabla de rutas)" span2>
-                <select style={S.sel} value={tf.ruta} onChange={e => {
-                  const r = RUTAS.find(x => x.d === e.target.value);
-                  if (r) { stf("ruta", r.d); stf("kmi", r.km); stf("kmr", r.km); stf("dias", r.dias); }
-                  else stf("ruta", e.target.value);
-                }}>
-                  <option value="">Seleccionar destino...</option>
-                  {RUTAS.map(r => <option key={r.d} value={r.d}>{r.d} — {r.km} km · {r.dias}d</option>)}
-                </select>
+              <Fld label="RUTA" span2>
+                <PlanificadorRutas value={rutaCalc} onChange={data => {
+                  setRutaCalc(data);
+                  if (data?.resultado) {
+                    const oMuni = getMuni(parseInt(data.origen?.muni));
+                    const dMuni = getMuni(parseInt(data.destino?.muni));
+                    stf("dias", data.resultado.dias);
+                    stf("kmi", data.resultado.km);
+                    stf("kmr", data.resultado.km);
+                    stf("kpg", data.kpg || 27);
+                    stf("galon", data.pGalon || 48);
+                    stf("ruta", `${oMuni?.nombre || "?"} → ${dMuni?.nombre || "?"}`);
+                  }
+                }} />
               </Fld>
               <Fld label="DIAS"><input style={S.inp} type="number" value={tf.dias} onChange={e => stf("dias", e.target.value)} /></Fld>
               <Fld label="COSTO VEHICULO/DIA"><input style={S.inp} type="number" value={tf.veh} onChange={e => stf("veh", e.target.value)} placeholder="0.00" /></Fld>
