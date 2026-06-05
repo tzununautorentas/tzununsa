@@ -1,7 +1,43 @@
-// Motor de rutas — OSRM + cálculo manual
-// Usa OSRM público para rutas automáticas, permite override manual
+// Motor de rutas — OSRM + Nominatim + cálculo manual
+// Usa OSRM público para rutas automáticas y Nominatim para geocodificación
 
 const OSRM_BASE = "https://router.project-osrm.org/route/v1/driving";
+const NOMINATIM_BASE = "https://nominatim.openstreetmap.org/search";
+
+// Ubicación predefinida de la empresa
+export const MI_UBICACION = {
+  nombre: "Tz'unun AutoRentas",
+  direccion: "2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala",
+  lat: 14.6328,
+  lng: -90.5069,
+};
+
+// Geocodificación usando Nominatim (OpenStreetMap)
+// Busca direcciones, lugares, hoteles, etc. y devuelve coordenadas
+let ultimaGeo = 0;
+export async function geocodificar(query) {
+  if (!query?.trim()) return null;
+  // Rate limit: 1 req/s
+  const ahora = Date.now();
+  if (ahora - ultimaGeo < 1100) await new Promise(r => setTimeout(r, 1100 - (ahora - ultimaGeo)));
+  ultimaGeo = Date.now();
+  try {
+    const r = await fetch(`${NOMINATIM_BASE}?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=gt`, {
+      headers: { "User-Agent": "TzununAutoRentas/1.0" },
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!Array.isArray(j) || j.length === 0) return null;
+    return j.map(p => ({
+      nombre: p.display_name?.split(",")[0]?.trim() || query,
+      direccion: p.display_name || query,
+      lat: parseFloat(p.lat),
+      lng: parseFloat(p.lon),
+    }));
+  } catch {
+    return null;
+  }
+}
 
 // Haversine ≈ km entre dos coordenadas (para fallback)
 function haversineKm(lat1, lng1, lat2, lng2) {

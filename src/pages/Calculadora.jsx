@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { T, S, fmt, dbIns, dbGet, today, CATALOGO } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
 import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
-import { getMuni, getDepto } from '../data/municipios.js';
 
 const calcDias = (fi, ff) => {
   if (!fi || !ff) return 1;
@@ -190,14 +189,12 @@ export default function PageCalculadora({ showToast, empId }) {
                 <PlanificadorRutas value={rutaCalc} onChange={data => {
                   setRutaCalc(data);
                   if (data?.resultado) {
-                    const oMuni = getMuni(parseInt(data.origen?.muni));
-                    const dMuni = getMuni(parseInt(data.destino?.muni));
                     stf("dias", data.resultado.dias);
                     stf("kmi", data.resultado.km);
                     stf("kmr", data.resultado.km);
                     stf("kpg", data.kpg || 27);
                     stf("galon", data.pGalon || 48);
-                    stf("ruta", `${oMuni?.nombre || "?"} → ${dMuni?.nombre || "?"}`);
+                    stf("ruta", `${data.origenNombre || "?"} → ${data.destinoNombre || "?"}`);
                   }
                 }} />
               </Fld>
