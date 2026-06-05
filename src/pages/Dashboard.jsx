@@ -223,30 +223,30 @@ function CalendarioMensual({ reservas }) {
         }}>&rarr;</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {diasSemana.map(d => (
           <div key={d} style={{
-            fontSize: 10, fontWeight: 700, color: T.mut, textAlign: 'center',
-            padding: '5px 0',
+            fontSize: 12, fontWeight: 700, color: T.mut, textAlign: 'center',
+            padding: '6px 0',
           }}>{d}</div>
         ))}
         {cells.map((cell, i) => (
           <div key={i} style={{
-            minHeight: 78, display: 'flex', flexDirection: 'column',
-            borderRadius: 8, fontSize: 12, fontWeight: 500,
+            minHeight: 96, display: 'flex', flexDirection: 'column',
+            borderRadius: 10, fontSize: 14, fontWeight: 500,
             background: cell?.isToday ? T.acc + '22' : 'transparent',
             color: cell ? (cell.isToday ? T.acc : T.txt) : T.mut,
-            border: cell?.isToday ? `1px solid ${T.acc}44` : '1px solid transparent',
-            padding: '3px',
+            border: cell?.isToday ? `2px solid ${T.acc}44` : '1px solid transparent',
+            padding: '4px',
           }}>
             {cell && (
               <>
-                <span style={{ fontWeight: cell.isToday ? 700 : 400, textAlign: 'center', fontSize: 11, marginBottom: 2 }}>{cell.day}</span>
+                <span style={{ fontWeight: cell.isToday ? 700 : 400, textAlign: 'center', fontSize: 13, marginBottom: 3 }}>{cell.day}</span>
                 {cell.reservas.slice(0, 4).map((r, j) => (
                   <div key={j} onClick={e => { e.stopPropagation(); setPopup(r); }}
                     style={{
-                      fontSize: 8, lineHeight: '14px', padding: '1px 4px',
-                      borderRadius: 3, marginBottom: 1, overflow: 'hidden',
+                      fontSize: 9, lineHeight: '16px', padding: '1px 5px',
+                      borderRadius: 4, marginBottom: 2, overflow: 'hidden',
                       whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer',
                       background: r.tipo === 'traslado' ? '#818CF8' : '#00D4AA',
                       color: '#fff', fontWeight: 600,
@@ -255,7 +255,7 @@ function CalendarioMensual({ reservas }) {
                   </div>
                 ))}
                 {cell.reservas.length > 4 && (
-                  <div style={{ fontSize: 8, color: T.mut, textAlign: 'center', lineHeight: '14px' }}>
+                  <div style={{ fontSize: 9, color: T.mut, textAlign: 'center', lineHeight: '16px' }}>
                     +{cell.reservas.length - 4}
                   </div>
                 )}
