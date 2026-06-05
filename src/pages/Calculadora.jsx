@@ -7,7 +7,8 @@ const calcDias = (fi, ff) => {
   if (!fi || !ff) return 1;
   const d1 = new Date(fi + "T12:00:00");
   const d2 = new Date(ff + "T12:00:00");
-  return Math.max(1, Math.ceil((d2 - d1) / 86400000));
+  const diff = Math.floor((d2 - d1) / 86400000) + 1;
+  return Math.max(1, diff);
 };
 
 export default function PageCalculadora({ showToast, empId }) {
@@ -17,6 +18,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const [dias, setDias]     = useState(1);
   const [fechaInicio, setFechaInicio] = useState(today());
   const [fechaFin, setFechaFin]       = useState("");
+  const [horaInicio, setHoraInicio]   = useState("08:00");
+  const [horaFin, setHoraFin]         = useState("18:00");
   const [iva, setIva]       = useState(5);
   const [pago, setPago]     = useState("efectivo");
   const [conTC, setConTC]   = useState(false);
@@ -84,6 +87,10 @@ export default function PageCalculadora({ showToast, empId }) {
       total_gtq: tab === "renta" ? tot : ttot,
       total_usd: (tab === "renta" ? tot : ttot) / (tab === "renta" ? exch : parseFloat(tf.exch) || 7.70),
       vehiculo_nombre: selVeh?.nombre || "",
+      fecha_inicio: tab === "renta" ? fechaInicio : null,
+      fecha_fin: tab === "renta" ? fechaFin : null,
+      hora_inicio: tab === "renta" ? horaInicio : null,
+      hora_fin: tab === "renta" ? horaFin : null,
       estado,
       km_total: tkm,
       costo_vehiculo: tab === "renta" ? rate : (parseFloat(tf.veh) || 0),
@@ -136,9 +143,17 @@ export default function PageCalculadora({ showToast, empId }) {
                 <input style={S.inp} type="date" value={fechaInicio}
                   onChange={e => setFechaInicio(e.target.value)} />
               </Fld>
+              <Fld label="HORA INICIO (opcional)">
+                <input style={S.inp} type="time" value={horaInicio}
+                  onChange={e => setHoraInicio(e.target.value)} />
+              </Fld>
               <Fld label="FECHA FIN">
                 <input style={S.inp} type="date" value={fechaFin}
                   onChange={e => setFechaFin(e.target.value)} />
+              </Fld>
+              <Fld label="HORA REGRESO (opcional)">
+                <input style={S.inp} type="time" value={horaFin}
+                  onChange={e => setHoraFin(e.target.value)} />
               </Fld>
               <Fld label="DIAS">
                 <div style={{ ...S.inp, background: T.card, display: "flex", alignItems: "center", fontWeight: 700, color: T.acc }}>
