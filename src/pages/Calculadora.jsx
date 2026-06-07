@@ -7,12 +7,28 @@ const calcDias = (fi, ff) => {
   if (!fi || !ff) return 1;
   const d1 = new Date(fi + "T12:00:00");
   const d2 = new Date(ff + "T12:00:00");
-  return Math.max(1, Math.ceil((d2 - d1) / 86400000));
+  const diff = Math.floor((d2 - d1) / 86400000) + 1;
+  return Math.max(1, diff);
+};
+
+const generarSaludo = (tipo) => {
+  const base = "en Transportes Tz'unun, nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas, el mercado de renta de vehículos, viajes de turismo y traslado de personas a diferentes lugares de Guatemala y Centroamérica.";
+  switch (tipo) {
+    case 'persona': return `Estimado(a) cliente, ${base}`;
+    case 'empresa': return `Estimados clientes, ${base}`;
+    case 'gobierno': return `Distinguidos señores, ${base}`;
+    case 'ong': return `Estimados miembros, ${base}`;
+    default: return `Estimado(a) cliente, ${base}`;
+  }
 };
 
 export default function PageCalculadora({ showToast, empId }) {
   const [tab, setTab]       = useState("renta");
   const [cli, setCli]       = useState("");
+  const [clienteNit, setClienteNit]   = useState("");
+  const [clienteDir, setClienteDir]   = useState("");
+  const [clienteCodigo, setClienteCodigo] = useState("");
+  const [saludo, setSaludo] = useState("");
   const [selVeh, setSelVeh] = useState(null);
   const [dias, setDias]     = useState(1);
   const [fechaInicio, setFechaInicio] = useState(today());
@@ -24,12 +40,28 @@ export default function PageCalculadora({ showToast, empId }) {
   const [saving, setSaving] = useState(false);
 
   const [tf, setTf] = useState({
-    cliente: "", dias: 1, veh: 0, pil: 0, hos: 0, ali: 0,
+    cliente: "", clienteNit: "", clienteDir: "", clienteCodigo: "",
+    dias: 1, veh: 0, pil: 0, hos: 0, ali: 0,
     galon: 48, kpg: 27, kmi: 0, kmr: 0, varios: 0,
     iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: ""
   });
   const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
+
+  const seleccionarClienteRenta = (c) => {
+    setCli(c.nombre);
+    setClienteNit(c.nit || '');
+    setClienteDir(c.direccion || '');
+    setClienteCodigo(c.codigo || '');
+    setSaludo(generarSaludo(c.tipo));
+  };
+
+  const seleccionarClienteTraslado = (c) => {
+    stf("cliente", c.nombre);
+    stf("clienteNit", c.nit || '');
+    stf("clienteDir", c.direccion || '');
+    stf("clienteCodigo", c.codigo || '');
+  };
 
   // ─ Renta ─────────────────────────────────────────────────────
   const diasCalc = fechaInicio && fechaFin ? calcDias(fechaInicio, fechaFin) : dias;
@@ -73,6 +105,10 @@ export default function PageCalculadora({ showToast, empId }) {
     if (!eId) { showToast("Error: no se encontro empresa", "err"); setSaving(false); return; }
     const p = {
       empresa_id: eId, tipo: tab, cliente_nombre: cn,
+      cliente_nit: tab === "renta" ? clienteNit : tf.clienteNit,
+      cliente_dir: tab === "renta" ? clienteDir : tf.clienteDir,
+      cliente_codigo: tab === "renta" ? clienteCodigo : tf.clienteCodigo,
+      saludo: tab === "renta" ? saludo : "",
       numero: "COT-" + Date.now().toString().slice(-6),
       dias: tab === "renta" ? diasCalc : d2,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
@@ -130,7 +166,20 @@ export default function PageCalculadora({ showToast, empId }) {
           {tab === "renta" ? (
             <div style={{ display: "grid", gap: 12 }}>
               <Fld label="CLIENTE">
-                <BuscadorCliente value={cli} onChange={setCli} empId={empId} />
+                <BuscadorCliente value={cli} onChange={setCli} onSelect={seleccionarClienteRenta} empId={empId} />
+              </Fld>
+              {clienteCodigo && <Fld label="CODIGO">
+                <div style={{ ...S.inp, background: T.card }}>{clienteCodigo}</div>
+              </Fld>}
+              <Fld label="NIT">
+                <input style={S.inp} value={clienteNit} onChange={e => setClienteNit(e.target.value)} placeholder="NIT del cliente" />
+              </Fld>
+              <Fld label="DIRECCION">
+                <input style={S.inp} value={clienteDir} onChange={e => setClienteDir(e.target.value)} placeholder="Direccion del cliente" />
+              </Fld>
+              <Fld label="SALUDO PERSONALIZADO">
+                <textarea style={{ ...S.inp, minHeight: 60, fontSize: 12 }} value={saludo}
+                  onChange={e => setSaludo(e.target.value)} placeholder="Ej: Estimado cliente..." />
               </Fld>
               <Fld label="FECHA INICIO">
                 <input style={S.inp} type="date" value={fechaInicio}
@@ -183,7 +232,13 @@ export default function PageCalculadora({ showToast, empId }) {
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Fld label="CLIENTE" span2>
-                <BuscadorCliente value={tf.cliente} onChange={v => stf("cliente", v)} empId={empId} />
+                <BuscadorCliente value={tf.cliente} onChange={v => stf("cliente", v)} onSelect={seleccionarClienteTraslado} empId={empId} />
+              </Fld>
+              {tf.clienteCodigo && <Fld label="CODIGO" span2>
+                <div style={{ ...S.inp, background: T.card }}>{tf.clienteCodigo}</div>
+              </Fld>}
+              <Fld label="NIT" span2>
+                <input style={S.inp} value={tf.clienteNit} onChange={e => stf("clienteNit", e.target.value)} placeholder="NIT del cliente" />
               </Fld>
               <Fld label="RUTA" span2>
                 <PlanificadorRutas value={rutaCalc} empId={empId} onChange={data => {

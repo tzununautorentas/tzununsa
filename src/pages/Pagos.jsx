@@ -32,7 +32,7 @@ export default function PagePagos({ showToast, empId }) {
     table: 'pagos_recibidos',
     query,
     search: busqueda,
-    columns: ['numero', 'cliente_nombre', 'concepto', 'referencia'],
+    columns: ['numero', 'cliente_nombre', 'concepto', 'referencia', 'notas'],
     order: 'fecha.desc',
   });
 

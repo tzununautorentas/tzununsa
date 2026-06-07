@@ -53,7 +53,7 @@ export default function PageProveedores({ showToast, empId }) {
     table: "proveedores",
     query: filtroTipo !== "todos" ? "tipo=eq."+filtroTipo : "",
     search: busqueda,
-    columns: ['nombre', 'nit', 'telefono'],
+    columns: ['nombre', 'nit', 'telefono', 'email', 'direccion', 'contacto_nombre', 'contacto_tel', 'notas'],
     order: 'nombre.asc',
   });
 

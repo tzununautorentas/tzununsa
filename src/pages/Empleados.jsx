@@ -98,7 +98,7 @@ export default function PageEmpleados({ showToast, empId }) {
     table: "empleados",
     query,
     search: busqueda,
-    columns: ['nombre', 'codigo', 'telefono', 'puesto'],
+    columns: ['nombre', 'codigo', 'telefono', 'puesto', 'dpi', 'nit', 'email', 'direccion', 'notas'],
     order: 'nombre.asc',
   });
 

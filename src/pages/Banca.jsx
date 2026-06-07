@@ -351,7 +351,7 @@ export default function PageBanca({ showToast, empId }) {
     table: 'movimientos_bancarios',
     query: queryMovs,
     search: busqueda,
-    columns: ['concepto', 'referencia', 'descripcion'],
+    columns: ['concepto', 'referencia', 'descripcion', 'categoria', 'notas', 'tipo'],
     order: 'fecha.asc',
   });
 

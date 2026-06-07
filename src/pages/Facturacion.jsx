@@ -137,7 +137,7 @@ export default function PageFacturacion({ showToast, empId }) {
     table: 'facturas',
     query: queryFact,
     search: busqueda,
-    columns: ['numero', 'nombre_receptor', 'nit_receptor'],
+    columns: ['numero', 'nombre_receptor', 'nit_receptor', 'serie', 'descripcion'],
     order: 'created_at.desc',
   });
 

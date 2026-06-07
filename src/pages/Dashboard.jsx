@@ -170,8 +170,9 @@ function CalendarioMensual({ reservas }) {
   const hoy = new Date();
   const [mes, setMes] = useState(hoy.getMonth());
   const [anio, setAnio] = useState(hoy.getFullYear());
+  const [popup, setPopup] = useState(null);
 
-  const diasSemana = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   const navigate = (dir) => {
@@ -183,14 +184,15 @@ function CalendarioMensual({ reservas }) {
   const primerDia = new Date(anio, mes, 1).getDay();
   const ultimoDia = new Date(anio, mes + 1, 0).getDate();
 
-  const countMap = {};
+  const dayMap = {};
   (reservas || []).forEach(r => {
     if (!r.fecha_inicio || ['cancelada','completada'].includes(r.estado)) return;
     const start = new Date(r.fecha_inicio);
     const end = r.fecha_fin ? new Date(r.fecha_fin) : new Date(r.fecha_inicio);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const key = d.toISOString().slice(0, 10);
-      countMap[key] = (countMap[key] || 0) + 1;
+      if (!dayMap[key]) dayMap[key] = [];
+      dayMap[key].push(r);
     }
   });
 
@@ -200,59 +202,114 @@ function CalendarioMensual({ reservas }) {
   for (let i = 0; i < primerDia; i++) cells.push(null);
   for (let d = 1; d <= ultimoDia; d++) {
     const dateStr = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const count = countMap[dateStr] || 0;
+    const dayRes = dayMap[dateStr] || [];
     const isToday = dateStr === todayStr;
-    cells.push({ day: d, count, isToday });
+    cells.push({ day: d, reservas: dayRes, isToday });
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <button onClick={() => navigate(-1)} style={{
           background: 'transparent', border: 'none', color: T.sub, cursor: 'pointer',
-          fontSize: 16, fontWeight: 600, padding: '4px 8px',
+          fontSize: 18, fontWeight: 600, padding: '4px 10px',
         }}>&larr;</button>
-        <div style={{ fontSize: 13, fontWeight: 700, color: T.txt }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
           {meses[mes]} {anio}
         </div>
         <button onClick={() => navigate(1)} style={{
           background: 'transparent', border: 'none', color: T.sub, cursor: 'pointer',
-          fontSize: 16, fontWeight: 600, padding: '4px 8px',
+          fontSize: 18, fontWeight: 600, padding: '4px 10px',
         }}>&rarr;</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, width: '100%', minWidth: 0 }}>
-        {diasSemana.map(d => (
-          <div key={d} style={{
-            fontSize: 9, fontWeight: 700, color: T.mut, textAlign: 'center',
-            padding: '2px 0',
-          }}>{d}</div>
-        ))}
-        {cells.map((cell, i) => (
-          <div key={i} style={{
-            aspectRatio: '1', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            borderRadius: 6, fontSize: 10, fontWeight: 500,
-            background: cell?.isToday ? T.acc + '22' : 'transparent',
-            color: cell ? (cell.isToday ? T.acc : T.txt) : 'transparent',
-            minWidth: 0,
-          }}>
-            {cell && (
-              <>
-                <span style={{ fontWeight: cell.isToday ? 700 : 400 }}>{cell.day}</span>
-                {cell.count > 0 && (
-                  <span style={{
-                    position: 'absolute', bottom: 1, fontSize: 7, fontWeight: 700,
-                    color: '#fff', background: cell.count >= 3 ? T.red : T.acc,
-                    borderRadius: 5, padding: '0 3px', lineHeight: '12px', minWidth: 12,
-                    textAlign: 'center',
-                  }}>{cell.count}</span>
-                )}
-              </>
-            )}
-          </div>
-        ))}
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, minWidth: 500 }}>
+          {diasSemana.map(d => (
+            <div key={d} style={{
+              fontSize: 12, fontWeight: 700, color: T.mut, textAlign: 'center',
+              padding: '6px 0',
+            }}>{d}</div>
+          ))}
+          {cells.map((cell, i) => (
+            <div key={i} style={{
+              minHeight: 96, display: 'flex', flexDirection: 'column',
+              borderRadius: 10, fontSize: 14, fontWeight: 500,
+              background: cell?.isToday ? T.acc + '22' : 'transparent',
+              color: cell ? (cell.isToday ? T.acc : T.txt) : T.mut,
+              border: cell?.isToday ? `2px solid ${T.acc}44` : '1px solid transparent',
+              padding: '4px',
+            }}>
+              {cell && (
+                <>
+                  <span style={{ fontWeight: cell.isToday ? 700 : 400, textAlign: 'center', fontSize: 13, marginBottom: 3 }}>{cell.day}</span>
+                  {cell.reservas.slice(0, 4).map((r, j) => (
+                    <div key={j} onClick={e => { e.stopPropagation(); setPopup(r); }}
+                      style={{
+                        fontSize: 9, lineHeight: '16px', padding: '1px 5px',
+                        borderRadius: 4, marginBottom: 2, overflow: 'hidden',
+                        whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer',
+                        background: r.tipo === 'traslado' ? '#818CF8' : '#00D4AA',
+                        color: '#fff', fontWeight: 600,
+                      }}>
+                      {r.tipo === 'traslado' ? 'T' : 'R'} {r.vehiculo_nombre?.split(' ').slice(0,2).join(' ') || '—'}
+                    </div>
+                  ))}
+                  {cell.reservas.length > 4 && (
+                    <div style={{ fontSize: 9, color: T.mut, textAlign: 'center', lineHeight: '16px' }}>
+                      +{cell.reservas.length - 4}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Popup detalle */}
+      {popup && (
+        <>
+          <div onClick={() => setPopup(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 999 }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            background: T.card, borderRadius: 14, padding: 24, zIndex: 1000,
+            minWidth: 320, maxWidth: 420, boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>Detalle de reserva</div>
+              <button onClick={() => setPopup(null)} style={{
+                background: T.surf, border: 'none', color: T.sub, cursor: 'pointer',
+                fontSize: 16, borderRadius: 6, width: 28, height: 28, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}>&times;</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+              <Fila label="Cliente" value={popup.cliente_nombre} />
+              <Fila label="No." value={popup.numero} />
+              <Fila label="Tipo" value={popup.tipo === 'traslado' ? 'Traslado / Viaje' : 'Renta por días'} />
+              <Fila label="Vehículo" value={popup.vehiculo_nombre || '—'} />
+              <Fila label="Inicio" value={popup.fecha_inicio ? fmtD(popup.fecha_inicio) : '—'} />
+              <Fila label="Fin" value={popup.fecha_fin ? fmtD(popup.fecha_fin) : '—'} />
+              <Fila label="Días" value={popup.dias || '—'} />
+              <Fila label="Total" value={popup.total_gtq ? 'Q ' + fmt(popup.total_gtq) : '—'} bold />
+              <Fila label="Estado" value={popup.estado} />
+              {popup.destino && <Fila label="Destino" value={popup.destino} />}
+              {popup.notas && <Fila label="Notas" value={popup.notas} />}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Fila({ label, value, bold }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${T.bord}22`, padding: '4px 0' }}>
+      <span style={{ color: T.mut, fontSize: 12 }}>{label}</span>
+      <span style={{ fontWeight: bold ? 700 : 400, color: bold ? T.acc : T.txt, textAlign: 'right' }}>{value}</span>
     </div>
   );
 }
@@ -675,7 +732,7 @@ export default function PageDashboard() {
       <div style={{ fontSize: 10, fontWeight: 700, color: T.mut, letterSpacing: 1, marginBottom: 8 }}>
         CALENDARIO DE RESERVAS — {new Date().toLocaleDateString('es-GT', { month: 'long', year: 'numeric' }).toUpperCase()}
       </div>
-      <div style={{ ...S.card, marginBottom: 20, overflow: 'hidden' }}>
+      <div style={{ ...S.card, marginBottom: 20 }}>
         <CalendarioMensual reservas={data.reservas} />
       </div>
 
