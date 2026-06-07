@@ -1,7 +1,7 @@
 -- Tabla para guardar ubicaciones personalizadas (hoteles, fincas, comunidades, etc.)
 create table if not exists ubicaciones_personalizadas (
   id bigint primary key generated always as identity,
-  empresa_id bigint not null references empresas(id) on delete cascade,
+  empresa_id uuid not null references empresas(id) on delete cascade,
   nombre text not null,
   direccion text not null default '',
   lat double precision not null,
