@@ -186,7 +186,7 @@ export default function PageCalculadora({ showToast, empId }) {
                 <BuscadorCliente value={tf.cliente} onChange={v => stf("cliente", v)} empId={empId} />
               </Fld>
               <Fld label="RUTA" span2>
-                <PlanificadorRutas value={rutaCalc} onChange={data => {
+                <PlanificadorRutas value={rutaCalc} empId={empId} onChange={data => {
                   setRutaCalc(data);
                   if (data?.resultado) {
                     stf("dias", data.resultado.dias);

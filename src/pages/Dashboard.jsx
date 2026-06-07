@@ -171,7 +171,7 @@ function CalendarioMensual({ reservas }) {
   const [mes, setMes] = useState(hoy.getMonth());
   const [anio, setAnio] = useState(hoy.getFullYear());
 
-  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+  const diasSemana = ['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   const navigate = (dir) => {
@@ -221,31 +221,30 @@ function CalendarioMensual({ reservas }) {
         }}>&rarr;</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, width: '100%', minWidth: 0 }}>
         {diasSemana.map(d => (
           <div key={d} style={{
             fontSize: 9, fontWeight: 700, color: T.mut, textAlign: 'center',
-            padding: '4px 0',
+            padding: '2px 0',
           }}>{d}</div>
         ))}
         {cells.map((cell, i) => (
           <div key={i} style={{
             aspectRatio: '1', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            borderRadius: 8, fontSize: 11, fontWeight: 500,
+            borderRadius: 6, fontSize: 10, fontWeight: 500,
             background: cell?.isToday ? T.acc + '22' : 'transparent',
-            color: cell ? (cell.isToday ? T.acc : T.txt) : T.mut,
-            border: cell?.isToday ? `1px solid ${T.acc}44` : '1px solid transparent',
-            position: 'relative',
+            color: cell ? (cell.isToday ? T.acc : T.txt) : 'transparent',
+            minWidth: 0,
           }}>
             {cell && (
               <>
                 <span style={{ fontWeight: cell.isToday ? 700 : 400 }}>{cell.day}</span>
                 {cell.count > 0 && (
                   <span style={{
-                    position: 'absolute', bottom: 2, fontSize: 8, fontWeight: 700,
+                    position: 'absolute', bottom: 1, fontSize: 7, fontWeight: 700,
                     color: '#fff', background: cell.count >= 3 ? T.red : T.acc,
-                    borderRadius: 6, padding: '0 4px', lineHeight: '14px', minWidth: 14,
+                    borderRadius: 5, padding: '0 3px', lineHeight: '12px', minWidth: 12,
                     textAlign: 'center',
                   }}>{cell.count}</span>
                 )}
@@ -676,7 +675,7 @@ export default function PageDashboard() {
       <div style={{ fontSize: 10, fontWeight: 700, color: T.mut, letterSpacing: 1, marginBottom: 8 }}>
         CALENDARIO DE RESERVAS — {new Date().toLocaleDateString('es-GT', { month: 'long', year: 'numeric' }).toUpperCase()}
       </div>
-      <div style={{ ...S.card, marginBottom: 20 }}>
+      <div style={{ ...S.card, marginBottom: 20, overflow: 'hidden' }}>
         <CalendarioMensual reservas={data.reservas} />
       </div>
 

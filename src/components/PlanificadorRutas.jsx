@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { T, S, fmt } from '../config.js';
 import { DEPARTAMENTOS, munisByDepto, getMuni } from '../data/municipios.js';
 import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar } from '../services/ruteoService.js';
+import { listarUbicaciones, guardarUbicacion, eliminarUbicacion } from '../services/ubicacionesService.js';
 
 const TIPOS_PUNTO = [
   { v: "municipio", l: "Municipio" },
@@ -9,12 +10,27 @@ const TIPOS_PUNTO = [
   { v: "mi_ubicacion", l: "Mi ubicación" },
 ];
 
-const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino }) {
+const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemove, esOrigen, esDestino, empId }) {
   const [buscando, setBuscando] = useState(false);
   const [sugs, setSugs] = useState(null);
   const [showSugs, setShowSugs] = useState(false);
   const [gpsState, setGpsState] = useState("idle");
+  const [ubicaciones, setUbicaciones] = useState(null);
+  const [mostrarUbi, setMostrarUbi] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [nombreGuardar, setNombreGuardar] = useState("");
+  const [showGuardar, setShowGuardar] = useState(false);
   const refSugs = useRef(null);
+
+  useEffect(() => {
+    if (!empId) return;
+    listarUbicaciones(empId).then(setUbicaciones);
+  }, [empId]);
+
+  const recargarUbi = useCallback(() => {
+    if (!empId) return;
+    listarUbicaciones(empId).then(setUbicaciones);
+  }, [empId]);
 
   const cambiar = useCallback((campo, val) => {
     onChange(idx, { ...punto, [campo]: val });
@@ -121,6 +137,34 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
       {/* Dirección */}
       {punto.tipo === "direccion" && (
         <div ref={refSugs} style={{ position: "relative" }}>
+          {/* Mis ubicaciones guardadas */}
+          {empId && ubicaciones && ubicaciones.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <button type="button" onClick={() => setMostrarUbi(!mostrarUbi)}
+                style={{ ...S.btn("ghost"), fontSize: 10, padding: "2px 8px", pointerEvents: "auto" }}>
+                {mostrarUbi ? "Ocultar" : "Mis ubicaciones"} ({ubicaciones.length})
+              </button>
+              {mostrarUbi && (
+                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2, maxHeight: 160, overflowY: "auto" }}>
+                  {ubicaciones.map(u => (
+                    <div key={u.id} style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                      <button type="button" onClick={() => {
+                        onChange(idx, { ...punto, nombre: u.nombre, direccion: u.direccion || u.nombre, lat: u.lat, lng: u.lng });
+                      }} style={{ flex: 1, textAlign: "left", ...S.btn("ghost"), fontSize: 10, padding: "3px 8px", pointerEvents: "auto" }}>
+                        <span style={{ fontWeight: 600, color: T.acc }}>{u.nombre}</span>
+                        {u.direccion && u.direccion !== u.nombre && <span style={{ color: T.mut, marginLeft: 4 }}>— {u.direccion?.slice(0, 40)}</span>}
+                      </button>
+                      <button type="button" onClick={async () => {
+                        if (!confirm("Eliminar " + u.nombre + "?")) return;
+                        await eliminarUbicacion(u.id);
+                        recargarUbi();
+                      }} style={{ ...S.btn("danger"), padding: "2px 5px", fontSize: 8, pointerEvents: "auto" }}>X</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 6 }}>
             <input style={inpBase} value={punto.direccion || ""}
               onChange={e => { setSugs(null); onChange(idx, { ...punto, direccion: e.target.value, nombre: e.target.value, lat: null, lng: null }); }}
@@ -161,6 +205,41 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
               {punto._latManual && punto._lngManual && (
                 <button type="button" onClick={() => { cambiar("lat", parseFloat(punto._latManual)); cambiar("lng", parseFloat(punto._lngManual)); }}
                   style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Fijar</button>
+              )}
+            </div>
+          )}
+          {/* Guardar ubicación */}
+          {empId && punto.lat && punto.lng && (
+            <div style={{ marginTop: 6 }}>
+              {!showGuardar ? (
+                <button type="button" onClick={() => setShowGuardar(true)}
+                  style={{ ...S.btn("primary"), fontSize: 10, padding: "3px 10px", pointerEvents: "auto" }}>
+                  + Guardar ubicación
+                </button>
+              ) : (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inpBase, flex: 1, fontSize: 10, padding: "4px 8px" }}
+                    value={nombreGuardar} onChange={e => setNombreGuardar(e.target.value)}
+                    placeholder="Nombre de la ubicación..." />
+                  <button type="button" disabled={guardando || !nombreGuardar.trim()}
+                    onClick={async () => {
+                      setGuardando(true);
+                      const r = await guardarUbicacion({
+                        empresa_id: empId, nombre: nombreGuardar.trim(),
+                        direccion: punto.direccion || punto.nombre || "",
+                        lat: punto.lat, lng: punto.lng,
+                      });
+                      setGuardando(false);
+                      if (r?.error) { alert(r.error); return; }
+                      setShowGuardar(false);
+                      setNombreGuardar("");
+                      recargarUbi();
+                    }} style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>
+                    {guardando ? "..." : "Guardar"}
+                  </button>
+                  <button type="button" onClick={() => { setShowGuardar(false); setNombreGuardar(""); }}
+                    style={{ ...S.btn("ghost"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Cancelar</button>
+                </div>
               )}
             </div>
           )}
@@ -213,7 +292,7 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
   );
 });
 
-export default function PlanificadorRutas({ value, onChange }) {
+export default function PlanificadorRutas({ value, onChange, empId }) {
   const initPuntos = value?.puntos?.length > 0
     ? value.puntos
     : [
@@ -328,7 +407,7 @@ export default function PlanificadorRutas({ value, onChange }) {
           onRemove={quitarParada}
           esOrigen={i === 0}
           esDestino={i === puntos.length - 1}
-          esUnico={puntos.length <= 2}
+          empId={empId}
         />
       ))}
 
