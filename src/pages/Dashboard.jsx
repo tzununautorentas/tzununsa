@@ -172,7 +172,7 @@ function CalendarioMensual({ reservas }) {
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [popup, setPopup] = useState(null);
 
-  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+  const diasSemana = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   const navigate = (dir) => {
@@ -223,48 +223,37 @@ function CalendarioMensual({ reservas }) {
         }}>&rarr;</button>
       </div>
 
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, minWidth: 500 }}>
-          {diasSemana.map(d => (
-            <div key={d} style={{
-              fontSize: 12, fontWeight: 700, color: T.mut, textAlign: 'center',
-              padding: '6px 0',
-            }}>{d}</div>
-          ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, width: '100%', minWidth: 0 }}>
+        {diasSemana.map(d => (
+          <div key={d} style={{
+            fontSize: 9, fontWeight: 700, color: T.mut, textAlign: 'center',
+            padding: '3px 0',
+          }}>{d}</div>
+        ))}
           {cells.map((cell, i) => (
-            <div key={i} style={{
-              minHeight: 96, display: 'flex', flexDirection: 'column',
-              borderRadius: 10, fontSize: 14, fontWeight: 500,
+          <div key={i} onClick={() => cell?.reservas?.length > 0 && setPopup(cell.reservas[0])}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              borderRadius: 6, fontSize: 11, fontWeight: 500, minWidth: 0,
               background: cell?.isToday ? T.acc + '22' : 'transparent',
-              color: cell ? (cell.isToday ? T.acc : T.txt) : T.mut,
-              border: cell?.isToday ? `2px solid ${T.acc}44` : '1px solid transparent',
-              padding: '4px',
+              color: cell ? (cell.isToday ? T.acc : T.txt) : 'transparent',
+              padding: '3px 1px', position: 'relative',
+              cursor: cell?.reservas?.length > 0 ? 'pointer' : 'default',
             }}>
-              {cell && (
-                <>
-                  <span style={{ fontWeight: cell.isToday ? 700 : 400, textAlign: 'center', fontSize: 13, marginBottom: 3 }}>{cell.day}</span>
-                  {cell.reservas.slice(0, 4).map((r, j) => (
-                    <div key={j} onClick={e => { e.stopPropagation(); setPopup(r); }}
-                      style={{
-                        fontSize: 9, lineHeight: '16px', padding: '1px 5px',
-                        borderRadius: 4, marginBottom: 2, overflow: 'hidden',
-                        whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer',
-                        background: r.tipo === 'traslado' ? '#818CF8' : '#00D4AA',
-                        color: '#fff', fontWeight: 600,
-                      }}>
-                      {r.tipo === 'traslado' ? 'T' : 'R'} {r.vehiculo_nombre?.split(' ').slice(0,2).join(' ') || '—'}
-                    </div>
-                  ))}
-                  {cell.reservas.length > 4 && (
-                    <div style={{ fontSize: 9, color: T.mut, textAlign: 'center', lineHeight: '16px' }}>
-                      +{cell.reservas.length - 4}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+            {cell && (
+              <>
+                <span style={{ fontWeight: cell.isToday ? 700 : 400, fontSize: 11 }}>{cell.day}</span>
+                {cell.reservas.length > 0 && (
+                  <span style={{
+                    fontSize: 7, fontWeight: 700, color: '#fff', marginTop: 1,
+                    background: cell.reservas.length >= 3 ? T.red : T.acc,
+                    borderRadius: 5, padding: '0 4px', lineHeight: '13px',
+                  }}>{cell.reservas.length}</span>
+                )}
+              </>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Popup detalle */}

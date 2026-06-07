@@ -258,10 +258,46 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
           )}
           {gpsState === "buscando" && <div style={{ fontSize: 12, color: T.acc }}>Obteniendo ubicación GPS...</div>}
           {gpsState === "ok" && punto.lat && punto.lng && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.green }}>Ubicación: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}</span>
-              <button type="button" onClick={obtenerGps}
-                style={{ ...S.btn("ghost"), padding: "2px 8px", fontSize: 9, pointerEvents: "auto" }}>Actualizar</button>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.green }}>Ubicación: {punto.lat.toFixed(5)}, {punto.lng.toFixed(5)}</span>
+                <button type="button" onClick={obtenerGps}
+                  style={{ ...S.btn("ghost"), padding: "2px 8px", fontSize: 9, pointerEvents: "auto" }}>Actualizar</button>
+              </div>
+              {empId && (
+                <div style={{ marginTop: 6 }}>
+                  {!showGuardar ? (
+                    <button type="button" onClick={() => setShowGuardar(true)}
+                      style={{ ...S.btn("primary"), fontSize: 10, padding: "3px 10px", pointerEvents: "auto" }}>
+                      + Guardar ubicación
+                    </button>
+                  ) : (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input style={{ ...inpBase, flex: 1, fontSize: 10, padding: "4px 8px" }}
+                        value={nombreGuardar} onChange={e => setNombreGuardar(e.target.value)}
+                        placeholder="Nombre de la ubicación..." />
+                      <button type="button" disabled={guardando || !nombreGuardar.trim()}
+                        onClick={async () => {
+                          setGuardando(true);
+                          const r = await guardarUbicacion({
+                            empresa_id: empId, nombre: nombreGuardar.trim(),
+                            direccion: punto.direccion || punto.nombre || "",
+                            lat: punto.lat, lng: punto.lng,
+                          });
+                          setGuardando(false);
+                          if (r?.error) { alert(r.error); return; }
+                          setShowGuardar(false);
+                          setNombreGuardar("");
+                          recargarUbi();
+                        }} style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>
+                        {guardando ? "..." : "Guardar"}
+                      </button>
+                      <button type="button" onClick={() => { setShowGuardar(false); setNombreGuardar(""); }}
+                        style={{ ...S.btn("ghost"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Cancelar</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {gpsState === "error" && (
