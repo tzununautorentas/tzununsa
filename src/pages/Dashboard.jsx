@@ -230,33 +230,40 @@ function CalendarioMensual({ reservas }) {
             padding: '3px 0',
           }}>{d}</div>
         ))}
-          {cells.map((cell, i) => (
-          <div key={i} onClick={() => cell?.reservas?.length > 0 && setPopup(cell.reservas[0])}
+        {cells.map((cell, i) => (
+          <div key={i} onClick={() => cell?.reservas?.length > 0 && setPopup(cell.reservas)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              display: 'flex', flexDirection: 'column',
               borderRadius: 6, fontSize: 11, fontWeight: 500, minWidth: 0,
               background: cell?.isToday ? T.acc + '22' : 'transparent',
               color: cell ? (cell.isToday ? T.acc : T.txt) : 'transparent',
-              padding: '3px 1px', position: 'relative',
+              padding: '3px 2px', position: 'relative',
               cursor: cell?.reservas?.length > 0 ? 'pointer' : 'default',
+              minHeight: 42,
             }}>
             {cell && (
               <>
-                <span style={{ fontWeight: cell.isToday ? 700 : 400, fontSize: 11 }}>{cell.day}</span>
-                {cell.reservas.length > 0 && (
-                  <span style={{
-                    fontSize: 7, fontWeight: 700, color: '#fff', marginTop: 1,
-                    background: cell.reservas.length >= 3 ? T.red : T.acc,
-                    borderRadius: 5, padding: '0 4px', lineHeight: '13px',
-                  }}>{cell.reservas.length}</span>
-                )}
+                <span style={{ fontWeight: cell.isToday ? 700 : 400, fontSize: 10, marginBottom: 1 }}>{cell.day}</span>
+                {cell.reservas.map((r, ri) => (
+                  ri < 2 ? (
+                    <span key={r.id || ri} style={{
+                      fontSize: 8, lineHeight: 1.2, color: T.sub,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      padding: '0 2px',
+                    }}>{r.cliente_nombre || '—'}</span>
+                  ) : ri === 2 ? (
+                    <span key="more" style={{
+                      fontSize: 7, fontWeight: 700, color: T.acc, marginTop: 1,
+                    }}>+{cell.reservas.length - 2} m&aacute;s</span>
+                  ) : null
+                ))}
               </>
             )}
           </div>
         ))}
       </div>
 
-      {/* Popup detalle */}
+      {/* Popup detalle — lista de reservas del día */}
       {popup && (
         <>
           <div onClick={() => setPopup(null)}
@@ -265,9 +272,12 @@ function CalendarioMensual({ reservas }) {
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
             background: T.card, borderRadius: 14, padding: 24, zIndex: 1000,
             minWidth: 320, maxWidth: 420, boxShadow: '0 8px 40px rgba(0,0,0,0.25)',
+            maxHeight: '80vh', overflowY: 'auto',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>Detalle de reserva</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
+                Reservas {popup[0]?.fecha_inicio ? fmtD(popup[0].fecha_inicio) : ''}
+              </div>
               <button onClick={() => setPopup(null)} style={{
                 background: T.surf, border: 'none', color: T.sub, cursor: 'pointer',
                 fontSize: 16, borderRadius: 6, width: 28, height: 28, display: 'flex',
@@ -275,17 +285,27 @@ function CalendarioMensual({ reservas }) {
               }}>&times;</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
-              <Fila label="Cliente" value={popup.cliente_nombre} />
-              <Fila label="No." value={popup.numero} />
-              <Fila label="Tipo" value={popup.tipo === 'traslado' ? 'Traslado / Viaje' : 'Renta por días'} />
-              <Fila label="Vehículo" value={popup.vehiculo_nombre || '—'} />
-              <Fila label="Inicio" value={popup.fecha_inicio ? fmtD(popup.fecha_inicio) : '—'} />
-              <Fila label="Fin" value={popup.fecha_fin ? fmtD(popup.fecha_fin) : '—'} />
-              <Fila label="Días" value={popup.dias || '—'} />
-              <Fila label="Total" value={popup.total_gtq ? 'Q ' + fmt(popup.total_gtq) : '—'} bold />
-              <Fila label="Estado" value={popup.estado} />
-              {popup.destino && <Fila label="Destino" value={popup.destino} />}
-              {popup.notas && <Fila label="Notas" value={popup.notas} />}
+              {popup.map((r, i) => (
+                <div key={r.id || i} style={{
+                  background: T.surf, borderRadius: 10, padding: '10px 12px',
+                  border: `1px solid ${T.bord}44`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, color: T.txt, fontSize: 13 }}>{r.cliente_nombre || '—'}</span>
+                    <span style={{ color: T.mut, fontSize: 10, fontFamily: 'monospace' }}>{r.numero}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px', fontSize: 11 }}>
+                    <Fila label="Tipo" value={r.tipo === 'traslado' ? 'Traslado' : 'Renta'} />
+                    <Fila label="Vehículo" value={r.vehiculo_nombre || '—'} />
+                    <Fila label="Inicio" value={r.fecha_inicio ? fmtD(r.fecha_inicio) : '—'} />
+                    <Fila label="Fin" value={r.fecha_fin ? fmtD(r.fecha_fin) : '—'} />
+                    <Fila label="Días" value={r.dias || '—'} />
+                    <Fila label="Total" value={r.total_gtq ? 'Q ' + fmt(r.total_gtq) : '—'} bold />
+                    <Fila label="Estado" value={r.estado} />
+                    {r.destino && <Fila label="Destino" value={r.destino} />}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
