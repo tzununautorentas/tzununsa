@@ -3,6 +3,7 @@ import { T, S, fmt } from '../config.js';
 import { DEPARTAMENTOS, munisByDepto, getMuni } from '../data/municipios.js';
 import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar } from '../services/ruteoService.js';
 import { listarUbicaciones, guardarUbicacion, eliminarUbicacion } from '../services/ubicacionesService.js';
+import MapaRuta from './MapaRuta.jsx';
 
 const TIPOS_PUNTO = [
   { v: "municipio", l: "Municipio" },
@@ -338,6 +339,7 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
 
   const [puntos, setPuntos] = useState(initPuntos);
   const [resultado, setResultado] = useState(value?.resultado || null);
+  const [geometria, setGeometria] = useState(null);
   const [calculando, setCalculando] = useState(false);
   const [manualKm, setManualKm] = useState(value?.manualKm || "");
   const [modo, setModo] = useState(value?.modo || "auto");
@@ -380,16 +382,18 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
     if (validos.length < 2) return;
 
     setCalculando(true);
+    setGeometria(null);
 
     const coords = validos.map(obtenerCoords);
     if (coords.some(c => !c)) { setCalculando(false); return; }
 
-    let km, minutos;
+    let km, minutos, geometriaRuta;
     if (modo === "auto") {
       const osrm = await consultarOSRM(coords);
       if (osrm) {
         km = osrm.km;
         minutos = osrm.minutos;
+        geometriaRuta = osrm.geometria;
       } else {
         km = distanciaHaversine(coords);
         minutos = Math.round(km * 1.5 * 60 / 50);
@@ -404,6 +408,7 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
 
     const res = { km, minutos, dias, ...comb };
     setResultado(res);
+    if (geometriaRuta) setGeometria(geometriaRuta);
     setCalculando(false);
 
     const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
@@ -496,6 +501,15 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
             type="number" step="0.01" value={pGalon} onChange={e => setPGalon(e.target.value)} />
         </label>
       </div>
+
+      {/* Mapa */}
+      {resultado && puntos.length >= 2 && (
+        <MapaRuta
+          points={puntos.filter(p => p.lat && p.lng).map(p => ({ lat: p.lat, lng: p.lng, nombre: p.nombre || p.direccion }))}
+          geometria={geometria}
+          style={{ border: `1px solid ${T.bord}`, boxShadow: `0 2px 12px rgba(0,0,0,.15)` }}
+        />
+      )}
 
       {/* Resultado */}
       {resultado && (
