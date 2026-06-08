@@ -565,14 +565,6 @@ function GraficoIngresos({ data }) {
     </div>
   );
 }
-        <div style={{ textAlign: 'center', padding: 40, color: T.mut, fontSize: 13 }}>
-          Sin movimientos registrados
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Centro de control principal ───────────────────────────────────
 export default function PageDashboard() {
   const [data, setData] = useState(null);
