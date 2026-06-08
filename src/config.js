@@ -121,7 +121,7 @@ export const S = {
     fontWeight: 600, background: T.surf, borderBottom: `1px solid ${T.bord}`,
   },
   td: { padding: "9px 10px", borderBottom: `1px solid ${T.bord}22`, fontSize: 13 },
-  btn: (v) => ({
+   btn: (v) => ({
     padding: "8px 14px", borderRadius: 8, cursor: "pointer",
     fontSize: 12, fontWeight: 600, fontFamily: "inherit",
     border: v === "ghost" ? `1px solid ${T.bord}` : "none",
@@ -129,7 +129,7 @@ export const S = {
       v === "primary" ? T.acc    : v === "danger"  ? T.red    :
       v === "blue"    ? T.blue   : v === "purple"   ? T.purple :
       v === "green"   ? T.green  : v === "warn"     ? T.sec    : T.card,
-    color: (v === "primary" || v === "green") ? "#0A0F1E" : T.txt,
+    color: v === "ghost" ? T.txt : "#0A0F1E",
   }),
   // Fila de resumen financiero: srow(true) = resaltado, srow(false) = normal
   srow: (hi) => ({
