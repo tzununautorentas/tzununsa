@@ -319,6 +319,15 @@ function CalendarioMensual({ reservas }) {
   );
 }
 
+function Fila({ label, value, bold }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${T.bord}22`, padding: '4px 0' }}>
+      <span style={{ color: T.mut, fontSize: 12 }}>{label}</span>
+      <span style={{ fontWeight: bold ? 700 : 400, color: bold ? T.acc : T.txt, textAlign: 'right' }}>{value}</span>
+    </div>
+  );
+}
+
 // ─── Seccion de alertas rápidas ────────────────────────────────────
 function AlertasRapidas({ alertas }) {
   const readVer = useSyncExternalStore(
