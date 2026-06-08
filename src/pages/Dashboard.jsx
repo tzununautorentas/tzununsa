@@ -267,7 +267,7 @@ function CalendarioMensual({ reservas }) {
       </div>
 
       {/* Popup detalle — lista de reservas del día */}
-      {popup && (
+      {Array.isArray(popup) && popup.length > 0 && (
         <>
           <div onClick={() => setPopup(null)}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 999 }} />
@@ -279,7 +279,7 @@ function CalendarioMensual({ reservas }) {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>
-                Reservas {popup[0]?.fecha_inicio ? fmtD(popup[0].fecha_inicio) : ''}
+                Reservas {fmtD(popup[0]?.fecha_inicio)}
               </div>
               <button onClick={() => setPopup(null)} style={{
                 background: T.surf, border: 'none', color: T.sub, cursor: 'pointer',
@@ -288,7 +288,8 @@ function CalendarioMensual({ reservas }) {
               }}>&times;</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
-              {popup.map((r, i) => (
+              {popup.map((r, i) =>
+                !r ? null : (
                 <div key={r.id || i} style={{
                   background: T.surf, borderRadius: 10, padding: '10px 12px',
                   border: `1px solid ${T.bord}44`,
@@ -300,15 +301,16 @@ function CalendarioMensual({ reservas }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px', fontSize: 11 }}>
                     <Fila label="Tipo" value={r.tipo === 'traslado' ? 'Traslado' : 'Renta'} />
                     <Fila label="Vehículo" value={r.vehiculo_nombre || '—'} />
-                    <Fila label="Inicio" value={r.fecha_inicio ? fmtD(r.fecha_inicio) : '—'} />
-                    <Fila label="Fin" value={r.fecha_fin ? fmtD(r.fecha_fin) : '—'} />
+                    <Fila label="Inicio" value={fmtD(r.fecha_inicio)} />
+                    <Fila label="Fin" value={fmtD(r.fecha_fin)} />
                     <Fila label="Días" value={r.dias || '—'} />
                     <Fila label="Total" value={r.total_gtq ? 'Q ' + fmt(r.total_gtq) : '—'} bold />
                     <Fila label="Estado" value={r.estado} />
                     {r.destino && <Fila label="Destino" value={r.destino} />}
                   </div>
                 </div>
-              ))}
+                )
+              )}
             </div>
           </div>
         </>
