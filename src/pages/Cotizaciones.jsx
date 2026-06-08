@@ -1,6 +1,6 @@
 // src/pages/Cotizaciones.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, siguienteNumero } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -259,7 +259,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
         tipo: "renta",
-        numero: (!initial?.id || isClone) ? "COT-" + Date.now().toString().slice(-6) : initial.numero,
+        numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones") : initial.numero,
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
@@ -465,7 +465,7 @@ export default function PageCotizaciones({ showToast, empId }) {
     query,
     search: busqueda,
     columns: ['numero', 'cliente_nombre', 'cliente_nit', 'cliente_dir', 'vehiculo_nombre', 'descripcion_servicio', 'notas'],
-    order: 'created_at.desc',
+    order: 'numero.desc',
   });
 
   useEffect(() => {
@@ -486,7 +486,7 @@ export default function PageCotizaciones({ showToast, empId }) {
   const convertirAReserva = async (cot) => {
     if (!confirm(`Convertir ${cot.numero} en Reserva confirmada?`)) return;
     const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
-    const numero = "RES-" + Date.now().toString().slice(-6);
+    const numero = await siguienteNumero("RES-", "reservas");
 
     const r = await dbIns("reservas", {
       empresa_id: eId,

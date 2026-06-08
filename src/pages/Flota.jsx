@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { T, S, dbIns, dbUpd, dbDel, EST_VEH } from '../config.js';
 import { Spinner, Empty, Fld, Badge, Paginador, Buscador, ModalExportar } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
@@ -27,6 +27,17 @@ export default function PageFlota({ showToast, empId }) {
     columns: ['marca', 'modelo', 'placa', 'codigo', 'color', 'tipo', 'vin', 'notas'],
     order: 'codigo.asc',
   });
+
+  const ordenProp = { propio: 0, socio: 1, alquilado: 2 };
+  const sortedRows = useMemo(() => {
+    if (!rows) return rows;
+    return [...rows].sort((a, b) => {
+      const pa = ordenProp[a.propietario] ?? 3;
+      const pb = ordenProp[b.propietario] ?? 3;
+      if (pa !== pb) return pa - pb;
+      return (a.codigo || '').localeCompare(b.codigo || '');
+    });
+  }, [rows]);
 
   const SFX = { propio: "P", socio: "A", alquilado: "R" };
 
@@ -232,11 +243,11 @@ export default function PageFlota({ showToast, empId }) {
         </div>
       </div>
 
-      {loading ? <Spinner /> : rows.length === 0 ? (
+      {loading ? <Spinner /> : sortedRows.length === 0 ? (
         <Empty icon="V" msg="Sin vehículos registrados" action="+ Registrar" onAction={abrirNuevo} />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {rows.map(v => {
+          {sortedRows.map(v => {
             const e = EST_VEH[v.estado] || EST_VEH.disponible;
             const segVenc = v.vencimiento_seguro && new Date(v.vencimiento_seguro) < new Date();
             const pBadge = { propio: { c: T.acc, bg: T.accDim }, socio: { c: T.blue, bg: T.blueDim }, alquilado: { c: T.sec, bg: T.secDim } }[v.propietario] || { c: T.mut, bg: T.bg2 };

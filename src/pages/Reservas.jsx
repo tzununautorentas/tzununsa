@@ -1,6 +1,6 @@
 // src/pages/Reservas.jsx
 import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES } from '../config.js';
+import { T, S, fmt, fmtD, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES, siguienteNumero } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -64,10 +64,10 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       alert("Cliente y fecha inicio son requeridos"); return;
     }
     setSaving(true);
-    const numero = "RES-" + Date.now().toString().slice(-6);
+    const numero = initial?.numero || await siguienteNumero("RES-", "reservas");
     const payload = {
       ...f, empresa_id: empId,
-      numero: initial?.numero || numero,
+      numero,
       dias, tarifa, subtotal: sub, total_iva: iva, total_gtq: tot,
       tasa_iva: f.tasa_iva, tasa_cambio: f.tasa_cambio,
       metodo_pago: f.metodo_pago,
@@ -277,7 +277,7 @@ export default function PageReservas({ showToast, empId }) {
     query,
     search: busqueda,
     columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
-    order: 'fecha_inicio.desc',
+    order: 'numero.desc',
   });
 
   const cambiarEstado = async (id, nuevoEstado) => {

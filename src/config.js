@@ -30,6 +30,19 @@ export async function dbIns(table, data, timeoutMs) {
   } catch (e) { return { error: e.message || "Timeout" }; }
 }
 
+export async function siguienteNumero(prefijo, tabla) {
+  try {
+    const r = await fetch(`${SB}/rest/v1/${tabla}?select=numero&order=numero.desc&limit=1`, { headers: H });
+    if (!r.ok) return prefijo + '000001';
+    const d = await r.json();
+    const last = Array.isArray(d) && d.length > 0 ? d[0].numero || '' : '';
+    const num = last.startsWith(prefijo) ? parseInt(last.slice(prefijo.length), 10) || 0 : 0;
+    return prefijo + String(num + 1).padStart(6, '0');
+  } catch {
+    return prefijo + '000001';
+  }
+}
+
 export async function dbUpd(table, id, data) {
   try {
     const r = await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`, {

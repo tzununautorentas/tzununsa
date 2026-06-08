@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { T, S, fmt, dbIns, dbGet, today, CATALOGO } from '../config.js';
+import { T, S, fmt, dbIns, dbGet, today, CATALOGO, siguienteNumero } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
 import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
 
@@ -109,7 +109,7 @@ export default function PageCalculadora({ showToast, empId }) {
       cliente_dir: tab === "renta" ? clienteDir : tf.clienteDir,
       cliente_codigo: tab === "renta" ? clienteCodigo : tf.clienteCodigo,
       saludo: tab === "renta" ? saludo : "",
-      numero: "COT-" + Date.now().toString().slice(-6),
+      numero: await siguienteNumero("COT-", "cotizaciones"),
       dias: tab === "renta" ? diasCalc : d2,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
       metodo_pago: tab === "renta" ? pago : tf.pago,
