@@ -6,7 +6,7 @@ import {
   IconDashboard, IconCalculadora, IconCotizaciones, IconReservas, IconFlota,
   IconMantenimiento, IconClientes, IconCatalogo, IconFacturacion, IconBanca,
   IconGastos, IconPagos, IconProveedores, IconEmpleados, IconContratos,
-  IconContabilidad, IconReportes,
+  IconContabilidad, IconReportes, IconSettings,
   IconMenu, IconLogout,
 } from "./components/icons.jsx";
 
@@ -27,6 +27,7 @@ import PageReportes      from "./pages/Reportes.jsx";
 import PageProveedores   from "./pages/Proveedores.jsx";
 import PageEmpleados     from "./pages/Empleados.jsx";
 import PageContratos     from "./pages/Contratos.jsx";
+import PageConfiguracion from "./pages/Configuracion.jsx";
 
 // ─── Error Boundary ───────────────────────────────────────────────
 class ErrBoundary extends Component {
@@ -67,6 +68,7 @@ const MODS = [
   { id: "contratos",     label: "Contratos",      icon: IconContratos,     c1: "#6366F1", c2: "#4338ca" },
   { id: "contabilidad",  label: "Contabilidad",   icon: IconContabilidad,  c1: "#8B5CF6", c2: "#6d28d9" },
   { id: "reportes",      label: "Reportes",       icon: IconReportes,      c1: "#EC4899", c2: "#be185d" },
+  { id: "configuracion", label: "Configuración",  icon: IconSettings,      c1: "#94A3B8", c2: "#64748b" },
 ];
 
 const TITULOS = {
@@ -87,6 +89,7 @@ const TITULOS = {
   contratos:     "Contratos",
   contabilidad:  "Contabilidad",
   reportes:      "Reportes",
+  configuracion: "Configuración",
 };
 
 const NAV_ICONS = {
@@ -96,6 +99,7 @@ const NAV_ICONS = {
   banca: IconBanca, gastos: IconGastos, pagos: IconPagos,
   proveedores: IconProveedores, empleados: IconEmpleados, contratos: IconContratos,
   contabilidad: IconContabilidad, reportes: IconReportes,
+  configuracion: IconSettings,
 };
 
 const DESKTOP_NAV = [
@@ -122,6 +126,8 @@ const DESKTOP_NAV = [
   { sep: true,  label: "ANALISIS"     },
   { id: "contabilidad",  label: "Contabilidad",     c: "#8B5CF6", icon: NAV_ICONS.contabilidad },
   { id: "reportes",      label: "Reportes",         c: "#EC4899", icon: NAV_ICONS.reportes },
+  { sep: true,  label: "SISTEMA"      },
+  { id: "configuracion", label: "Configuración",    c: "#94A3B8", icon: NAV_ICONS.configuracion },
 ];
 
 const MENU_SECTIONS = [
@@ -130,6 +136,7 @@ const MENU_SECTIONS = [
   { label: "FINANZAS",     ids: ["facturacion","banca","gastos","pagos"] },
   { label: "EQUIPO",       ids: ["proveedores","empleados","contratos"] },
   { label: "ANALISIS",     ids: ["contabilidad","reportes"] },
+  { label: "SISTEMA",      ids: ["configuracion"] },
 ];
 
 // ─── Theme Toggle Icon ─────────────────────────────────────────────
@@ -203,6 +210,7 @@ function RenderPage({ pag, empId, showToast }) {
     contratos:     <PageContratos     {...p} />,
     contabilidad:  <PageContabilidad  {...p} />,
     reportes:      <PageReportes      {...p} />,
+    configuracion: <PageConfiguracion {...p} />,
   };
   return pages[pag] || pages.dashboard;
 }

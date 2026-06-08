@@ -1,236 +1,558 @@
-﻿import React, { useState, useEffect, useRef, Component } from 'react';
-import { T, S, fmt, fmtD, fmtK, dbGet, dbIns, dbUpd, dbDel, sbLogin, sbLogout, today, newId, getEmpId, CATALOGO, tarifaVeh, GT, EST_RES, FLUJO_RES, RUTAS, LOGO_B64 } from '../config.js';
-import { Toast, Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, BotonesCompartir, ErrBoundary } from '../components/shared.jsx';
+﻿import React, { useState, useEffect } from 'react';
+import { T, S, fmt, dbGet, dbIns, dbUpd, dbDel, CATALOGO } from '../config.js';
+import { Spinner, Fld } from '../components/shared.jsx';
 
-export default function PageConfiguracion({showToast}){
-  const [tab, setTab] = useState("empresa");
+const SECCIONES = [
+  { id: "org",      label: "Organización",     icon: "🏢", sub: [
+    { id: "empresa",    label: "Empresa" },
+    { id: "perfil",     label: "Perfil" },
+    { id: "marca",      label: "Personalización" },
+    { id: "suscripcion",label: "Suscripción" },
+  ]},
+  { id: "usuarios", label: "Usuarios y Roles",  icon: "👥", sub: [
+    { id: "usuarios",   label: "Usuarios" },
+    { id: "roles",      label: "Roles" },
+  ]},
+  { id: "fiscal",   label: "Impuestos",         icon: "💰", sub: [
+    { id: "impuestos",  label: "Impuestos" },
+  ]},
+  { id: "config",   label: "Configuración",     icon: "⚙️", sub: [
+    { id: "general",    label: "General" },
+    { id: "monedas",    label: "Monedas" },
+    { id: "terminos",   label: "Términos de pago" },
+    { id: "recordatorios", label: "Recordatorios" },
+  ]},
+  { id: "portal",   label: "Portal del Cliente",icon: "🌐", sub: [
+    { id: "portal",     label: "Personalización" },
+  ]},
+  { id: "series",   label: "Series",            icon: "🔢", sub: [
+    { id: "series",     label: "Series de números" },
+  ]},
+  { id: "pdf",      label: "Plantillas PDF",    icon: "📄", sub: [
+    { id: "pdf",        label: "Plantillas PDF" },
+  ]},
+  { id: "notif",    label: "Notificaciones",    icon: "🔔", sub: [
+    { id: "notif",      label: "Correo electrónico" },
+  ]},
+];
+
+const ORDEN_PROP = { propio: 0, socio: 1, alquilado: 2 };
+
+function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
+  const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Datos de la Empresa</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Fld label="NOMBRE"><input style={S.inp} value={emp.nombre || ""} onChange={e => se("nombre", e.target.value)} placeholder="Tz'unun AutoRentas" /></Fld>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+            <Fld label="NIT"><input style={S.inp} value={emp.nit || ""} onChange={e => se("nit", e.target.value)} placeholder="16693949" /></Fld>
+            <Fld label="TELÉFONO"><input style={S.inp} value={emp.telefono || ""} onChange={e => se("telefono", e.target.value)} placeholder="502-31221538" /></Fld>
+          </div>
+          <Fld label="EMAIL"><input style={S.inp} value={emp.email || ""} onChange={e => se("email", e.target.value)} placeholder="tzununautorentas@gmail.com" /></Fld>
+          <Fld label="DIRECCIÓN"><input style={S.inp} value={emp.direccion || ""} onChange={e => se("direccion", e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3" /></Fld>
+          <Fld label="ESLOGAN"><input style={S.inp} value={emp.eslogan || ""} onChange={e => se("eslogan", e.target.value)} placeholder="MAS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS" /></Fld>
+          <button onClick={guardarEmp} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Vista previa</div>
+          <div style={{ background: T.surf, borderRadius: 10, padding: 16, border: `1px solid ${T.bord}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: T.accDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: T.acc }}>T</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>{emp.nombre || "Tz'unun AutoRentas"}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>{emp.eslogan || "MAS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS"}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.8 }}>
+              <div>{emp.direccion || "2da. Av. 0-68, Col. Bran, Zona 3"}</div>
+              <div>{emp.telefono || "502-31221538"}</div>
+              <div>{emp.email || "tzununautorentas@gmail.com"}</div>
+              <div>NIT: {emp.nit || "16693949"}</div>
+            </div>
+          </div>
+        </div>
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Cuentas bancarias</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <Fld label="BANCO 1"><input style={S.inp} value={emp.banco1 || ""} onChange={e => se("banco1", e.target.value)} placeholder="Banco Industrial - 853-000016-8" /></Fld>
+            <Fld label="BANCO 2"><input style={S.inp} value={emp.banco2 || ""} onChange={e => se("banco2", e.target.value)} placeholder="Banrural - 3309159475" /></Fld>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelPerfil({ emp, setEmp, guardarEmp, saving }) {
+  const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Información de contacto</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Fld label="PERSONA DE CONTACTO"><input style={S.inp} value={emp.contacto || ""} onChange={e => se("contacto", e.target.value)} placeholder="Oscar Gálvez" /></Fld>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+            <Fld label="TEL. CONTACTO"><input style={S.inp} value={emp.tel_contacto || ""} onChange={e => se("tel_contacto", e.target.value)} placeholder="502-31221538" /></Fld>
+            <Fld label="EMAIL CONTACTO"><input style={S.inp} value={emp.email_contacto || ""} onChange={e => se("email_contacto", e.target.value)} placeholder="oscar@tzununsa.com" /></Fld>
+          </div>
+          <Fld label="SITIO WEB"><input style={S.inp} value={emp.web || ""} onChange={e => se("web", e.target.value)} placeholder="https://tzununsa.com" /></Fld>
+          <button onClick={guardarEmp} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
+            {saving ? "Guardando..." : "Guardar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelMarca({ theme, setTheme, showToast }) {
+  const colores = [
+    { key: "acc", label: "Color principal", desc: "Botones, enlaces, acentos" },
+    { key: "sec", label: "Color secundario", desc: "Etiquetas, destacados" },
+    { key: "red", label: "Rojo", desc: "Peligro, cancelación" },
+    { key: "blue", label: "Azul", desc: "Información, acción" },
+    { key: "green", label: "Verde", desc: "Éxito, completado" },
+    { key: "purple", label: "Púrpura", desc: "Especial" },
+  ];
+  const paletas = [
+    { l: "Pastel (actual)", c: { acc: "#5EEAD4", sec: "#FCD34D", red: "#FCA5A5", blue: "#93C5FD", green: "#86EFAC", purple: "#C4B5FD" } },
+    { l: "Oceano", c: { acc: "#00D4AA", sec: "#F59E0B", red: "#EF4444", blue: "#3B82F6", green: "#22C55E", purple: "#8B5CF6" } },
+    { l: "Bosque", c: { acc: "#34D399", sec: "#FBBF24", red: "#F87171", blue: "#60A5FA", green: "#4ADE80", purple: "#A78BFA" } },
+    { l: "Atardecer", c: { acc: "#F472B6", sec: "#FB923C", red: "#FB7185", blue: "#67E8F9", green: "#86EFAC", purple: "#C084FC" } },
+  ];
+  const [activePal, setActivePal] = useState(null);
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Paletas predefinidas</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          {paletas.map((p, i) => (
+            <button key={i} onClick={() => { setActivePal(i); Object.entries(p.c).forEach(([k, v]) => setTheme(k, v)); }}
+              style={{
+                padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontSize: 11, fontWeight: 600,
+                background: activePal === i ? T.accDim : T.surf,
+                border: `1px solid ${activePal === i ? T.acc : T.bord}`, color: activePal === i ? T.acc : T.sub,
+              }}>
+              {p.l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Colores personalizados</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {colores.map(c => (
+            <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input type="color" value={theme[c.key] || "#5EEAD4"}
+                onChange={e => setTheme(c.key, e.target.value)}
+                style={{ width: 40, height: 40, borderRadius: 8, border: "none", cursor: "pointer", background: "transparent" }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: T.txt }}>{c.label}</div>
+                <div style={{ fontSize: 10, color: T.mut }}>{c.desc}</div>
+              </div>
+              <input style={{ ...S.inp, width: 90, fontSize: 11, fontFamily: "monospace" }}
+                value={theme[c.key] || ""}
+                onChange={e => setTheme(c.key, e.target.value)}
+                placeholder="#HEX" />
+            </div>
+          ))}
+        </div>
+        <button onClick={() => showToast("Colores guardados en el tema")} style={{ ...S.btn("primary"), marginTop: 16, width: "100%" }}>
+          Aplicar colores
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PanelSuscripcion({ empId }) {
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 8 }}>Suscripción</div>
+        <div style={{ fontSize: 12, color: T.sub, marginBottom: 16 }}>
+          Plan actual: <strong style={{ color: T.green }}>Gratuito</strong>
+        </div>
+        <div style={{ background: T.surf, borderRadius: 10, padding: 16, border: `1px solid ${T.bord}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
+            <span style={{ color: T.sub }}>Empresas</span>
+            <span style={{ fontWeight: 600 }}>1 / 1</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
+            <span style={{ color: T.sub }}>Usuarios</span>
+            <span style={{ fontWeight: 600 }}>Ilimitado</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+            <span style={{ color: T.sub }}>Almacenamiento</span>
+            <span style={{ fontWeight: 600 }}>Ilimitado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelUsuarios({ showToast }) {
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Usuarios del sistema</div>
+      </div>
+      <div style={S.card}>
+        <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
+          La gestión de usuarios se maneja desde Supabase Auth.
+          <div style={{ marginTop: 8, fontSize: 11 }}>Para invitar usuarios, usa la sección Authentication en el panel de Supabase.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelRoles() {
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Roles y permisos</div>
+      </div>
+      <div style={S.card}>
+        <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
+          Los roles estarán disponibles próximamente.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelImpuestos({ empId, showToast }) {
+  const [iva, setIva] = useState(5);
+  const [exch, setExch] = useState(7.70);
+  useEffect(() => {
+    dbGet("empresas", `&select=id&id=eq.${empId}`).then(d => {
+      if (d?.[0]) {
+        if (d[0].tasa_iva) setIva(d[0].tasa_iva);
+        if (d[0].tasa_cambio) setExch(d[0].tasa_cambio);
+      }
+    });
+  }, [empId]);
+  const guardar = async () => {
+    await dbUpd("empresas", empId, { tasa_iva: iva, tasa_cambio: exch });
+    showToast("Configuración fiscal guardada");
+  };
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 640 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Tasa de Cambio</div>
+        <label style={S.lbl}>GTQ por 1 USD</label>
+        <input style={{ ...S.inp, fontSize: 20, fontWeight: 700, color: T.acc }}
+          type="number" step="0.01" value={exch} onChange={e => setExch(parseFloat(e.target.value) || 7.70)} />
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, padding: "10px 14px", background: T.surf, borderRadius: 9, fontSize: 14 }}>
+          <span style={{ color: T.sub }}>1 USD =</span>
+          <span style={{ fontWeight: 800, color: T.acc }}>Q {fmt(exch)}</span>
+        </div>
+      </div>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Régimen Fiscal (IVA)</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[
+            { v: 12, l: "12% - Régimen General" },
+            { v: 5, l: "5% - Pequeño Contribuyente" },
+            { v: 0, l: "Sin IVA" },
+          ].map(o => (
+            <button key={o.v} onClick={() => setIva(o.v)}
+              style={{ ...S.btn(iva === o.v ? "primary" : "ghost"), textAlign: "left", justifyContent: "flex-start" }}>
+              {o.l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ gridColumn: "span 2" }}>
+        <button onClick={guardar} style={{ ...S.btn("primary"), width: "100%" }}>Guardar configuración fiscal</button>
+      </div>
+    </div>
+  );
+}
+
+function PanelGeneral({ empId, showToast }) {
+  const [moneda, setMoneda] = useState("GTQ");
+  const [pagoDef, setPagoDef] = useState("efectivo");
+  useEffect(() => {
+    dbGet("empresas", `&select=id&id=eq.${empId}`).then(d => {
+      if (d?.[0]) {
+        if (d[0].moneda_def) setMoneda(d[0].moneda_def);
+        if (d[0].pago_def) setPagoDef(d[0].pago_def);
+      }
+    });
+  }, [empId]);
+  const guardar = async () => {
+    await dbUpd("empresas", empId, { moneda_def: moneda, pago_def: pagoDef });
+    showToast("Configuración general guardada");
+  };
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Configuración general</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Fld label="MONEDA PREDETERMINADA">
+            <select style={S.sel} value={moneda} onChange={e => setMoneda(e.target.value)}>
+              <option value="GTQ">GTQ — Quetzal Guatemalteco</option>
+              <option value="USD">USD — Dólar Americano</option>
+            </select>
+          </Fld>
+          <Fld label="MÉTODO DE PAGO PREDETERMINADO">
+            <select style={S.sel} value={pagoDef} onChange={e => setPagoDef(e.target.value)}>
+              <option value="efectivo">Efectivo / Transferencia</option>
+              <option value="tarjeta">Tarjeta Crédito/Débito</option>
+              <option value="mixto">Mixto</option>
+            </select>
+          </Fld>
+          <button onClick={guardar} style={{ ...S.btn("primary"), width: "100%" }}>Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelMonedas() {
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Monedas soportadas</div>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            {["Código", "Nombre", "Símbolo", "Tasa (a GTQ)"].map(h => <th key={h} style={S.th}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            { c: "GTQ", n: "Quetzal Guatemalteco", s: "Q", t: "1.00" },
+            { c: "USD", n: "Dólar Americano", s: "$", t: "7.70" },
+          ].map(m => (
+            <tr key={m.c}>
+              <td style={{ ...S.td, fontWeight: 700, color: T.acc }}>{m.c}</td>
+              <td style={S.td}>{m.n}</td>
+              <td style={S.td}>{m.s}</td>
+              <td style={S.td}>{m.t}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PanelTerminos() {
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Términos de pago</div>
+      <div style={{ fontSize: 12, color: T.sub, marginBottom: 14 }}>Define los plazos de pago disponibles al crear cotizaciones y facturas.</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {["Contado", "7 días", "15 días", "30 días", "50% anticipo", "75% anticipo"].map(t => (
+          <span key={t} style={{ padding: "6px 14px", borderRadius: 20, background: T.accDim, color: T.acc, fontSize: 11, fontWeight: 600 }}>
+            {t}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PanelRecordatorios() {
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Recordatorios automáticos</div>
+      <div style={{ fontSize: 12, color: T.sub, marginBottom: 14 }}>Configura los recordatorios para eventos importantes.</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {[
+          { l: "Recordar vencimiento de seguro", v: "30 días antes" },
+          { l: "Recordar mantenimiento por km", v: "Al alcanzar límite" },
+          { l: "Recordar saldos pendientes", v: "Al vencerse" },
+          { l: "Recordar cotizaciones sin respuesta", v: "3 días después" },
+        ].map(r => (
+          <div key={r.l} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: T.surf, borderRadius: 8 }}>
+            <span style={{ fontSize: 12, color: T.txt }}>{r.l}</span>
+            <span style={{ fontSize: 11, color: T.acc }}>{r.v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PanelPortal() {
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 8 }}>Portal del Cliente</div>
+      <div style={{ fontSize: 12, color: T.sub }}>
+        Portal del cliente disponible próximamente. Los clientes podrán ver sus cotizaciones, reservas y facturas en línea.
+      </div>
+    </div>
+  );
+}
+
+function PanelSeries({ empId, showToast }) {
+  const [series, setSeries] = useState({
+    cotizaciones: "COT-{000000}",
+    reservas: "RES-{000000}",
+    facturas: "FEL-{000000}",
+  });
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Series de números de transacción</div>
+        <div style={{ fontSize: 11, color: T.mut, marginBottom: 14 }}>
+          Formato actual de numeración secuencial. Se auto-incrementa por cada nuevo registro.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {Object.entries(series).map(([k, v]) => (
+            <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", background: T.surf, borderRadius: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.txt, minWidth: 100, textTransform: "capitalize" }}>{k}</span>
+              <code style={{ fontSize: 12, fontFamily: "monospace", color: T.acc, fontWeight: 700 }}>{v}</code>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelPDF({ emp, setEmp }) {
+  const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Información para documentos PDF</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Fld label="NOMBRE DEL FIRMANTE"><input style={S.inp} value={emp.firmante || ""} onChange={e => se("firmante", e.target.value)} placeholder="Oscar Gálvez" /></Fld>
+          <Fld label="TELÉFONO DEL FIRMANTE"><input style={S.inp} value={emp.tel_firmante || ""} onChange={e => se("tel_firmante", e.target.value)} placeholder="502-31221538" /></Fld>
+          <Fld label="NOTA DE PIE DE PÁGINA"><input style={S.inp} value={emp.nota_pie || ""} onChange={e => se("nota_pie", e.target.value)} placeholder="Muchas gracias por su preferencia." /></Fld>
+          <div style={{ background: T.surf, borderRadius: 10, padding: 12, fontSize: 11, color: T.sub, border: `1px solid ${T.bord}` }}>
+            <div style={{ fontWeight: 700, color: T.acc, marginBottom: 4 }}>Ejemplo de firma en PDF:</div>
+            <div>{emp.firmante || "Oscar Gálvez"}</div>
+            <div>{emp.tel_firmante || "502-31221538"}</div>
+            <div style={{ marginTop: 6, fontStyle: "italic" }}>"{emp.nota_pie || "Muchas gracias por su preferencia."}"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelNotif() {
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 8 }}>Notificaciones por correo electrónico</div>
+      <div style={{ fontSize: 12, color: T.sub }}>
+        Configuración de correo electrónico disponible próximamente.
+      </div>
+    </div>
+  );
+}
+
+const PANELS = {
+  empresa: PanelEmpresa, perfil: PanelPerfil, marca: PanelMarca, suscripcion: PanelSuscripcion,
+  usuarios: PanelUsuarios, roles: PanelRoles,
+  impuestos: PanelImpuestos,
+  general: PanelGeneral, monedas: PanelMonedas, terminos: PanelTerminos, recordatorios: PanelRecordatorios,
+  portal: PanelPortal,
+  series: PanelSeries,
+  pdf: PanelPDF,
+  notif: PanelNotif,
+};
+
+export default function PageConfiguracion({ showToast }) {
+  const [sec, setSec] = useState("org");
+  const [sub, setSub] = useState("empresa");
   const [emp, setEmp] = useState({});
   const [empId, setEmpId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [exch, setExch] = useState(7.70);
-  const [iva, setIva] = useState(5);
-  const [catalogo, setCatalogo] = useState(CATALOGO.map(v=>({...v})));
-  const [editId, setEditId] = useState(null);
-  const [editVals, setEditVals] = useState({});
-  const [showNewVeh, setShowNewVeh] = useState(false);
-  const [newVeh, setNewVeh] = useState({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});
-  const TIPOS = ["Sedan","SUV","Pickup","Van","Microbus","Bus"];
+  const [theme, setThemeState] = useState({
+    acc: "#5EEAD4", sec: "#FCD34D", red: "#FCA5A5", blue: "#93C5FD", green: "#86EFAC", purple: "#C4B5FD",
+  });
 
-  useEffect(()=>{
-    dbGet("empresas","&select=*&limit=1").then(d=>{if(d&&d[0]){setEmp(d[0]);setEmpId(d[0].id);}});
-  },[]);
+  useEffect(() => {
+    dbGet("empresas", "&select=*&limit=1").then(d => {
+      if (d && d[0]) { setEmp(d[0]); setEmpId(d[0].id); }
+    });
+  }, []);
 
-  const guardarEmp = async()=>{
-    if(!emp.nombre?.trim()){showToast("Nombre requerido","err");return;}
+  const guardarEmp = async () => {
+    if (!emp.nombre?.trim()) { showToast("Nombre requerido", "err"); return; }
     setSaving(true);
-    if(empId) await dbUpd("empresas",empId,{
+    if (empId) await dbUpd("empresas", empId, {
       nombre: emp.nombre, nit: emp.nit, direccion: emp.direccion,
       telefono: emp.telefono, email: emp.email,
+      eslogan: emp.eslogan, banco1: emp.banco1, banco2: emp.banco2,
+      contacto: emp.contacto, tel_contacto: emp.tel_contacto,
+      email_contacto: emp.email_contacto, web: emp.web,
+      firmante: emp.firmante, tel_firmante: emp.tel_firmante, nota_pie: emp.nota_pie,
     });
     showToast("Guardado");
     setSaving(false);
   };
 
-  const se = (k,v) => setEmp(p=>({...p,[k]:v}));
-
-  const saveEdit = () => {
-    setCatalogo(p=>p.map(v=>v.id===editId?{...v,...editVals}:v));
-    setEditId(null);
-    showToast("Tarifa actualizada");
+  const setTheme = (key, val) => {
+    setThemeState(p => ({ ...p, [key]: val }));
+    document.documentElement.style.setProperty(`--theme-${key}`, val);
   };
 
-  const delVeh = id => {
-    if(!confirm("Eliminar?")) return;
-    setCatalogo(p=>p.filter(v=>v.id!==id));
-  };
+  const seccion = SECCIONES.find(s => s.id === sec);
+  const Panel = PANELS[sub] || PanelEmpresa;
+  const panelProps = { emp, setEmp, guardarEmp, saving, showToast, empId, theme, setTheme };
 
-  const addVeh = () => {
-    if(!newVeh.nombre.trim()){showToast("Nombre requerido","err");return;}
-    setCatalogo(p=>[...p,{
-      ...newVeh, id:`c${Date.now()}`,
-      dia: parseFloat(newVeh.dia)||0,
-      sem: parseFloat(newVeh.sem)||0,
-      mes: parseFloat(newVeh.mes)||0,
-    }]);
-    setNewVeh({nombre:"",tipo:"SUV",dia:"",sem:"",mes:""});
-    setShowNewVeh(false);
-    showToast("Agregado");
-  };
-
-  return(
-    <div>
-      <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.bord}`,marginBottom:20}}>
-        {[
-          {id:"empresa", l:"Empresa"},
-          {id:"tarifas",  l:"Tarifas"},
-          {id:"fiscal",   l:"Fiscal"},
-        ].map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)}
-            style={{
-              padding:"10px 16px", background:"transparent", border:"none",
-              cursor:"pointer", fontSize:13, fontWeight:600,
-              color: tab===t.id ? T.acc : T.sub,
-              borderBottom: tab===t.id ? `2px solid ${T.acc}` : "2px solid transparent",
-            }}>
-            {t.l}
-          </button>
+  return (
+    <div style={{ display: "flex", gap: 0, minHeight: "calc(100vh - 100px)" }}>
+      {/* Sidebar */}
+      <div style={{
+        width: 240, flexShrink: 0, background: T.surf, borderRadius: 12,
+        border: `1px solid ${T.bord}`, overflow: "hidden", alignSelf: "flex-start",
+      }}>
+        {SECCIONES.map(s => (
+          <div key={s.id}>
+            {sec === s.id && (
+              <div style={{ background: T.accDim, borderLeft: `3px solid ${T.acc}` }}>
+                <div style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: T.acc, letterSpacing: 0.5 }}>
+                  {s.icon} {s.label}
+                </div>
+                {s.sub.map(sb => (
+                  <button key={sb.id} onClick={() => { setSec(s.id); setSub(sb.id); }}
+                    style={{
+                      display: "block", width: "100%", textAlign: "left", padding: "7px 14px 7px 24px",
+                      background: sub === sb.id ? T.accDim : "transparent",
+                      color: sub === sb.id ? T.acc : T.sub, fontSize: 12, fontWeight: sub === sb.id ? 600 : 400,
+                      border: "none", cursor: "pointer",
+                      borderBottom: `1px solid ${T.bord}22`,
+                    }}>
+                    {sb.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {sec !== s.id && (
+              <button onClick={() => { setSec(s.id); setSub(s.sub[0]?.id || s.id); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left",
+                  padding: "10px 14px", background: "transparent", border: "none", cursor: "pointer",
+                  color: T.sub, fontSize: 12, fontWeight: 500,
+                  borderBottom: `1px solid ${T.bord}22`,
+                }}>
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
-      {tab==="empresa" && (
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:20}}>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Datos de la Empresa</div>
-            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:11}}>
-              <Fld label="NOMBRE" span2>
-                <input style={S.inp} value={emp.nombre||""} onChange={e=>se("nombre",e.target.value)} placeholder="Tz'unun AutoRentas"/>
-              </Fld>
-              <Fld label="NIT">
-                <input style={S.inp} value={emp.nit||""} onChange={e=>se("nit",e.target.value)} placeholder="16693949"/>
-              </Fld>
-              <Fld label="TELEFONO">
-                <input style={S.inp} value={emp.telefono||""} onChange={e=>se("telefono",e.target.value)} placeholder="502-31221538"/>
-              </Fld>
-              <Fld label="EMAIL" span2>
-                <input style={S.inp} value={emp.email||""} onChange={e=>se("email",e.target.value)} placeholder="tzununautorentas@gmail.com"/>
-              </Fld>
-              <Fld label="DIRECCION" span2>
-                <input style={S.inp} value={emp.direccion||""} onChange={e=>se("direccion",e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3"/>
-              </Fld>
-              <div style={{gridColumn:"span 2"}}>
-                <button onClick={guardarEmp} disabled={saving} style={{...S.btn("primary"),width:"100%"}}>
-                  {saving ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div style={S.card}>
-            <div style={{fontSize:12,fontWeight:700,color:T.acc,marginBottom:12}}>Vista previa encabezado</div>
-            <div style={{background:T.surf, borderRadius:10, padding:16, border:`1px solid ${T.bord}`}}>
-              <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:10}}>
-                <div style={{width:44,height:44,borderRadius:10,background:T.accDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:T.acc}}>T</div>
-                <div>
-                  <div style={{fontSize:14,fontWeight:800,color:T.acc}}>{emp.nombre||"Tz'unun AutoRentas"}</div>
-                  <div style={{fontSize:10,color:T.sub}}>MAS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS</div>
-                </div>
-              </div>
-              <div style={{fontSize:11,color:T.sub, lineHeight:1.8}}>
-                <div>{emp.direccion||"2da. Av. 0-68, Col. Bran, Zona 3"}</div>
-                <div>{emp.telefono||"502-31221538"}</div>
-                <div>{emp.email||"tzununautorentas@gmail.com"}</div>
-                <div>NIT: {emp.nit||"16693949"}</div>
-              </div>
-            </div>
-            <div style={{...S.card, marginTop:12, background:T.surf, fontSize:12, color:T.sub, lineHeight:2}}>
-              <div>Banco Industrial - 853-000016-8</div>
-              <div>Banrural - 3309159475</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tab==="tarifas" && (
-        <div style={S.card}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:700}}>Catalogo y Tarifas</div>
-            <button onClick={()=>setShowNewVeh(!showNewVeh)} style={{...S.btn(showNewVeh?"warn":"primary"),fontSize:12}}>
-              {showNewVeh ? "Cancelar" : "+ Agregar vehiculo"}
-            </button>
-          </div>
-          {showNewVeh && (
-            <div style={{
-              background:T.surf, borderRadius:10, padding:14, marginBottom:14,
-              display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr auto", gap:10, alignItems:"flex-end",
-            }}>
-              <Fld label="NOMBRE"><input style={S.inp} value={newVeh.nombre} onChange={e=>setNewVeh(p=>({...p,nombre:e.target.value}))} placeholder="Nombre..."/></Fld>
-              <Fld label="TIPO"><select style={S.sel} value={newVeh.tipo} onChange={e=>setNewVeh(p=>({...p,tipo:e.target.value}))}>{TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select></Fld>
-              <Fld label="Q/DIA"><input style={S.inp} type="number" value={newVeh.dia} onChange={e=>setNewVeh(p=>({...p,dia:e.target.value}))} placeholder="0"/></Fld>
-              <Fld label="Q/SEM"><input style={S.inp} type="number" value={newVeh.sem} onChange={e=>setNewVeh(p=>({...p,sem:e.target.value}))} placeholder="0"/></Fld>
-              <Fld label="Q/MES"><input style={S.inp} type="number" value={newVeh.mes} onChange={e=>setNewVeh(p=>({...p,mes:e.target.value}))} placeholder="0"/></Fld>
-              <button onClick={addVeh} style={{...S.btn("primary"),padding:"9px 14px",alignSelf:"flex-end"}}>+</button>
-            </div>
-          )}
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead>
-              <tr>
-                {["Vehiculo","Tipo","Q/Dia","Q/Semana","Q/Mes",""].map(h=><th key={h} style={S.th}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {catalogo.map(v=>(
-                <tr key={v.id}>
-                  <td style={{...S.td,fontWeight:600}}>
-                    {editId===v.id ? (
-                      <input style={{...S.inp,padding:"5px 8px",fontSize:12}} value={editVals.nombre} onChange={e=>setEditVals(p=>({...p,nombre:e.target.value}))}/>
-                    ) : v.nombre}
-                  </td>
-                  <td style={S.td}>
-                    {editId===v.id ? (
-                      <select style={{...S.sel,padding:"5px 8px",fontSize:12}} value={editVals.tipo} onChange={e=>setEditVals(p=>({...p,tipo:e.target.value}))}>
-                        {TIPOS.map(t=><option key={t} value={t}>{t}</option>)}
-                      </select>
-                    ) : v.tipo}
-                  </td>
-                  {["dia","sem","mes"].map(c=>(
-                    <td key={c} style={{...S.td,fontWeight:700,color:T.acc}}>
-                      {editId===v.id ? (
-                        <input style={{...S.inp,padding:"5px 8px",fontSize:12,width:80}} type="number" value={editVals[c]} onChange={e=>setEditVals(p=>({...p,[c]:parseFloat(e.target.value)||0}))}/>
-                      ) : `Q ${fmt(v[c])}`}
-                    </td>
-                  ))}
-                  <td style={S.td}>
-                    <div style={{display:"flex",gap:4}}>
-                      {editId===v.id ? (
-                        <>
-                          <button onClick={saveEdit} style={{...S.btn("primary"),padding:"4px 9px",fontSize:11}}>OK</button>
-                          <button onClick={()=>setEditId(null)} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>X</button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={()=>{setEditId(v.id);setEditVals({...v});}} style={{...S.btn("ghost"),padding:"4px 9px",fontSize:11}}>Editar</button>
-                          <button onClick={()=>delVeh(v.id)} style={{...S.btn("danger"),padding:"4px 9px",fontSize:11}}>Eliminar</button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{marginTop:10,fontSize:11,color:T.mut}}>
-            * 1-7 dias = diaria / 8-29 dias = semanal / 30+ dias = mensual
-          </div>
-        </div>
-      )}
-
-      {tab==="fiscal" && (
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:16}}>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Tasa de Cambio del Dia</div>
-            <label style={S.lbl}>GTQ POR 1 USD</label>
-            <input style={{...S.inp,fontSize:20,fontWeight:700,color:T.acc}} type="number" step="0.01" value={exch} onChange={e=>setExch(parseFloat(e.target.value)||7.70)}/>
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:10,padding:"10px 14px",background:T.surf,borderRadius:9,fontSize:14}}>
-              <span style={{color:T.sub}}>1 USD =</span>
-              <span style={{fontWeight:800,color:T.acc}}>Q {fmt(exch)}</span>
-            </div>
-          </div>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Regimen Fiscal</div>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {[
-                {v:12, l:"12% - Regimen General"},
-                {v:5,  l:"5% - Pequeno Contribuyente"},
-                {v:0,  l:"Sin IVA"},
-              ].map(o=>(
-                <button key={o.v} onClick={()=>setIva(o.v)}
-                  style={{...S.btn(iva===o.v?"primary":"ghost"), textAlign:"left"}}>
-                  {o.l}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Content */}
+      <div style={{ flex: 1, marginLeft: 20, overflow: "auto" }}>
+        <Panel {...panelProps} />
+      </div>
     </div>
   );
 }
