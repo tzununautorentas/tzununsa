@@ -64,7 +64,7 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       alert("Cliente y fecha inicio son requeridos"); return;
     }
     setSaving(true);
-    const numero = initial?.numero || await siguienteNumero("RES-", "reservas");
+    const numero = initial?.numero || await siguienteNumero("RES-", "reservas", empId);
     const payload = {
       ...f, empresa_id: empId,
       numero,
@@ -180,17 +180,27 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
 
         {/* Columna derecha */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Monto global — se muestra siempre el total de la cotización */}
+          {tot > 0 && (
+            <div style={{ ...S.card, background: fromCotizacion ? T.accDim : T.surf, border: `1px solid ${T.acc}44` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 10, letterSpacing: 1 }}>
+                {fromCotizacion ? "MONTO GLOBAL DE COTIZACIÓN" : "MONTO TOTAL"}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 22, fontWeight: 800, color: T.acc }}>
+                <span>Total</span><span>Q {fmt(tot)}</span>
+              </div>
+              {fromCotizacion && (
+                <div style={{ fontSize: 11, color: T.mut, marginTop: 4 }}>
+                  Monto heredado de la cotización — no se modifican costos individuales
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={S.card}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>FINANZAS</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>PAGO</div>
             <div style={{ display: "grid", gap: 11 }}>
-              <Fld label="IVA">
-                <select style={S.sel} value={f.tasa_iva} onChange={e => sf("tasa_iva", parseInt(e.target.value))} disabled={fromCotizacion}>
-                  <option value={12}>12% Regimen General</option>
-                  <option value={5}>5% Pequeno Contribuyente</option>
-                  <option value={0}>Sin IVA</option>
-                </select>
-              </Fld>
-              <Fld label="METODO DE PAGO">
+              <Fld label="MÉTODO DE PAGO">
                 <div style={{ display: "flex", gap: 8 }}>
                   {["efectivo", "transferencia", "tarjeta"].map(p => (
                     <button key={p} onClick={() => sf("metodo_pago", p)}
@@ -200,38 +210,16 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
                   ))}
                 </div>
               </Fld>
-              <Fld label="TASA CAMBIO (Q por $1)">
-                <input style={S.inp} type="number" step="0.01" value={f.tasa_cambio} onChange={e => sf("tasa_cambio", parseFloat(e.target.value) || 7.70)} disabled={fromCotizacion} />
-              </Fld>
               <Fld label="ANTICIPO RECIBIDO (Q)">
                 <input style={S.inp} type="number" step="0.01" value={f.anticipo} onChange={e => sf("anticipo", e.target.value)} placeholder="0.00" />
               </Fld>
+              <Fld label="SALDO PENDIENTE">
+                <div style={{ ...S.inp, background: T.card, display: "flex", alignItems: "center", fontWeight: 700, color: T.red }}>
+                  Q {fmt((tot || 0) - (parseFloat(f.anticipo) || 0))}
+                </div>
+              </Fld>
             </div>
           </div>
-
-          {/* Resumen de costos */}
-          {tot > 0 && (
-            <div style={{ ...S.card, background: fromCotizacion ? T.accDim : T.surf, border: `1px solid ${T.acc}44` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 12, letterSpacing: 1 }}>
-                {fromCotizacion ? "COSTOS HEREDADOS DE COTIZACION" : "RESUMEN DE COSTOS"}
-              </div>
-              {[
-                { l: "Tarifa diaria", v: `Q ${fmt(tarifa)}` },
-                { l: `Dias (x${dias})`, v: `Q ${fmt(sub)}` },
-                { l: `IVA ${f.tasa_iva}%`, v: `Q ${fmt(iva)}` },
-              ].map(r => (
-                <div key={r.l} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", color: T.sub }}>
-                  <span>{r.l}</span><span>{r.v}</span>
-                </div>
-              ))}
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: T.acc, borderTop: `1px solid ${T.acc}44`, paddingTop: 10, marginTop: 6 }}>
-                <span>TOTAL</span><span>Q {fmt(tot)}</span>
-              </div>
-              <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
-                $ {fmt(f.tasa_cambio > 0 ? tot / f.tasa_cambio : 0)} USD
-              </div>
-            </div>
-          )}
 
           <div style={S.card}>
             <Fld label="ESTADO">

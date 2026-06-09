@@ -259,7 +259,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
         tipo: "renta",
-        numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones") : initial.numero,
+        numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones", eId) : initial.numero,
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
@@ -486,7 +486,7 @@ export default function PageCotizaciones({ showToast, empId }) {
   const convertirAReserva = async (cot) => {
     if (!confirm(`Convertir ${cot.numero} en Reserva confirmada?`)) return;
     const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
-    const numero = await siguienteNumero("RES-", "reservas");
+    const numero = await siguienteNumero("RES-", "reservas", eId);
 
     const r = await dbIns("reservas", {
       empresa_id: eId,

@@ -198,32 +198,82 @@ function PanelSuscripcion({ empId }) {
   );
 }
 
-function PanelUsuarios({ showToast }) {
+function PanelUsuarios({ showToast, empId }) {
+  const [usuarios, setUsuarios] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const cargar = () => {
+    setCargando(true);
+    dbGet("usuarios_sistema", `&select=*,rol:rol_id(*)&empresa_id=eq.${empId}`).then(d => {
+      setUsuarios(Array.isArray(d) ? d : []);
+      setCargando(false);
+    });
+  };
+  useEffect(() => { if (empId) cargar(); }, [empId]);
+  if (cargando) return <Spinner />;
   return (
-    <div style={{ maxWidth: 600 }}>
+    <div style={{ maxWidth: 700 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>Usuarios del sistema</div>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Usuarios del sistema ({usuarios.length})</div>
       </div>
       <div style={S.card}>
-        <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
-          La gestión de usuarios se maneja desde Supabase Auth.
-          <div style={{ marginTop: 8, fontSize: 11 }}>Para invitar usuarios, usa la sección Authentication en el panel de Supabase.</div>
-        </div>
+        {usuarios.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
+            No hay usuarios registrados en esta empresa.
+            <div style={{ marginTop: 8, fontSize: 11 }}>Los usuarios se vinculan desde Supabase Auth con la tabla usuarios_sistema.</div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {usuarios.map(u => (
+              <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: T.surf, borderRadius: 10 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>{u.nombre}</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{u.email} · {u.rol?.nombre || "—"}</div>
+                </div>
+                <span style={{ padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600, background: u.activo ? T.greenDim : T.redDim, color: u.activo ? T.green : T.red }}>
+                  {u.activo ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function PanelRoles() {
+function PanelRoles({ showToast }) {
+  const [roles, setRoles] = useState([]);
+  useEffect(() => { dbGet("roles", "&order=id.asc").then(d => setRoles(Array.isArray(d) ? d : [])); }, []);
   return (
-    <div style={{ maxWidth: 600 }}>
+    <div style={{ maxWidth: 700 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 700 }}>Roles y permisos</div>
       </div>
-      <div style={S.card}>
-        <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
-          Los roles estarán disponibles próximamente.
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {roles.length === 0 ? (
+          <div style={S.card}>
+            <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>No hay roles configurados.</div>
+          </div>
+        ) : roles.map(r => (
+          <div key={r.id} style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.acc }}>{r.nombre === "super_admin" ? "🔒 Super Admin" : r.nombre === "admin" ? "👤 Admin" : "👤 Usuario"}</div>
+                <div style={{ fontSize: 11, color: T.sub }}>{r.descripcion}</div>
+              </div>
+              {r.nombre === "super_admin" && <span style={{ padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600, background: T.accDim, color: T.acc }}>Acceso total</span>}
+            </div>
+            {r.permisos && typeof r.permisos === 'object' && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {Object.entries(r.permisos).map(([k, v]) => (
+                  <span key={k} style={{ padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600, background: v ? T.greenDim : T.redDim, color: v ? T.green : T.red }}>
+                    {k} · {v ? "✓" : "✗"}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -346,18 +396,37 @@ function PanelMonedas() {
   );
 }
 
-function PanelTerminos() {
+function PanelTerminos({ empId, showToast }) {
+  const [seleccion, setSeleccion] = useState("50% anticipo");
+  useEffect(() => {
+    dbGet("empresas", `&select=termino_pago_def&id=eq.${empId}`).then(d => {
+      if (d?.[0]?.termino_pago_def) setSeleccion(d[0].termino_pago_def);
+    });
+  }, [empId]);
+  const guardar = async (v) => {
+    setSeleccion(v);
+    await dbUpd("empresas", empId, { termino_pago_def: v });
+    showToast("Término de pago actualizado: " + v);
+  };
+  const OPCIONES = ["Contado", "7 días", "15 días", "30 días", "50% anticipo", "75% anticipo"];
   return (
     <div style={S.card}>
       <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Términos de pago</div>
-      <div style={{ fontSize: 12, color: T.sub, marginBottom: 14 }}>Define los plazos de pago disponibles al crear cotizaciones y facturas.</div>
+      <div style={{ fontSize: 12, color: T.sub, marginBottom: 14 }}>Seleccioná el plazo por defecto para cotizaciones y facturas.</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {["Contado", "7 días", "15 días", "30 días", "50% anticipo", "75% anticipo"].map(t => (
-          <span key={t} style={{ padding: "6px 14px", borderRadius: 20, background: T.accDim, color: T.acc, fontSize: 11, fontWeight: 600 }}>
-            {t}
-          </span>
+        {OPCIONES.map(t => (
+          <button key={t} onClick={() => guardar(t)}
+            style={{
+              padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer",
+              background: seleccion === t ? T.accDim : T.surf,
+              border: `1px solid ${seleccion === t ? T.acc : T.bord}`,
+              color: seleccion === t ? T.acc : T.sub,
+            }}>
+            {t} {seleccion === t ? "✓" : ""}
+          </button>
         ))}
       </div>
+      <div style={{ marginTop: 12, fontSize: 11, color: T.mut }}>Predeterminado: <strong>{seleccion}</strong></div>
     </div>
   );
 }
@@ -396,25 +465,47 @@ function PanelPortal() {
 }
 
 function PanelSeries({ empId, showToast }) {
-  const [series, setSeries] = useState({
-    cotizaciones: "COT-{000000}",
-    reservas: "RES-{000000}",
-    facturas: "FEL-{000000}",
-  });
+  const [series, setSeries] = useState({ cotizaciones: "", reservas: "", facturas: "" });
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!empId) return;
+    dbGet("empresas", `&select=ultima_cotizacion,ultima_reserva,ultima_factura&id=eq.${empId}`).then(d => {
+      if (d?.[0]) setSeries({
+        cotizaciones: d[0].ultima_cotizacion || "COT-000000",
+        reservas: d[0].ultima_reserva || "RES-000000",
+        facturas: d[0].ultima_factura || "FEL-000000",
+      });
+      setLoading(false);
+    });
+  }, [empId]);
+  const guardar = async (k, v) => {
+    const campo = k === 'cotizaciones' ? 'ultima_cotizacion' : k === 'reservas' ? 'ultima_reserva' : 'ultima_factura';
+    setSeries(p => ({ ...p, [k]: v }));
+    await dbUpd("empresas", empId, { [campo]: v });
+    showToast(`Serie ${k} actualizada`);
+  };
+  if (loading) return <Spinner />;
   return (
-    <div style={{ maxWidth: 500 }}>
+    <div style={{ maxWidth: 600 }}>
       <div style={S.card}>
         <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 10 }}>Series de números de transacción</div>
         <div style={{ fontSize: 11, color: T.mut, marginBottom: 14 }}>
-          Formato actual de numeración secuencial. Se auto-incrementa por cada nuevo registro.
+          Editá el último número usado. El sistema generará el siguiente automáticamente.
+          <br/>Ej: si ponés <strong>COT-000050</strong>, la próxima cotización será <strong>COT-000051</strong>.
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {Object.entries(series).map(([k, v]) => (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", background: T.surf, borderRadius: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.txt, minWidth: 100, textTransform: "capitalize" }}>{k}</span>
-              <code style={{ fontSize: 12, fontFamily: "monospace", color: T.acc, fontWeight: 700 }}>{v}</code>
+            <div key={k} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.txt, minWidth: 110, textTransform: "capitalize" }}>{k}</span>
+              <input style={{ ...S.inp, fontFamily: "monospace", fontWeight: 700, flex: 1 }}
+                value={v} onChange={e => setSeries(p => ({ ...p, [k]: e.target.value }))}
+                placeholder={k === 'cotizaciones' ? "COT-000000" : k === 'reservas' ? "RES-000000" : "FEL-000000"} />
+              <button onClick={() => guardar(k, v)} style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: 11 }}>Guardar</button>
             </div>
           ))}
+        </div>
+        <div style={{ marginTop: 14, fontSize: 11, color: T.mut, background: T.surf, borderRadius: 8, padding: "10px 14px" }}>
+          El número se incrementa automáticamente con cada cotización, reserva o factura nueva.
         </div>
       </div>
     </div>

@@ -109,7 +109,7 @@ export default function PageCalculadora({ showToast, empId }) {
       cliente_dir: tab === "renta" ? clienteDir : tf.clienteDir,
       cliente_codigo: tab === "renta" ? clienteCodigo : tf.clienteCodigo,
       saludo: tab === "renta" ? saludo : "",
-      numero: await siguienteNumero("COT-", "cotizaciones"),
+      numero: await siguienteNumero("COT-", "cotizaciones", empId),
       dias: tab === "renta" ? diasCalc : d2,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
       metodo_pago: tab === "renta" ? pago : tf.pago,

@@ -13,7 +13,7 @@ export default function PageFlota({ showToast, empId }) {
   const [f, setF] = useState({
     codigo: "", propietario: "propio", placa: "", marca: "", modelo: "",
     anio: new Date().getFullYear(), tipo: "SUV", estado: "disponible", km_actual: 0,
-    color: "", vin: "", poliza_seguro: "", vencimiento_seguro: "", notas: ""
+    color: "", vin: "", poliza_seguro: "", vencimiento_seguro: "", tipo_deducible: "", monto_deducible: "", notas: ""
   });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const TIPOS = ["Sedan", "SUV", "Pickup", "Van", "Microbus", "Bus"];
@@ -59,7 +59,7 @@ export default function PageFlota({ showToast, empId }) {
       estado: v.estado || 'disponible', km_actual: v.km_actual || 0,
       color: v.color || '', vin: v.vin || '',
       poliza_seguro: v.poliza_seguro || '', vencimiento_seguro: v.vencimiento_seguro || '',
-      notas: v.notas || ''
+      tipo_deducible: v.tipo_deducible || '', monto_deducible: v.monto_deducible || 0, notas: v.notas || ''
     });
     setEditItem(v); setVista("form");
   };
@@ -74,7 +74,7 @@ export default function PageFlota({ showToast, empId }) {
   const guardar = async () => {
     if (!f.placa.trim()) { showToast("Placa requerida", "err"); return; }
     setSaving(true);
-    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, notas: f.notas };
+    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, tipo_deducible: f.tipo_deducible, monto_deducible: parseFloat(f.monto_deducible) || 0, notas: f.notas };
     let res;
     if (editItem?.id) res = await dbUpd("vehiculos", editItem.id, payload);
     else res = await dbIns("vehiculos", payload);
@@ -184,6 +184,19 @@ export default function PageFlota({ showToast, empId }) {
           <Fld label="VENCIMIENTO SEGURO">
             <input style={S.inp} type="date" value={f.vencimiento_seguro} onChange={e => sf("vencimiento_seguro", e.target.value)} />
           </Fld>
+          <Fld label="DEDUCIBLE">
+            <select style={S.sel} value={f.tipo_deducible} onChange={e => sf("tipo_deducible", e.target.value)}>
+              <option value="">Sin deducible</option>
+              <option value="fijo">Monto fijo</option>
+              <option value="porcentaje">Porcentaje</option>
+            </select>
+          </Fld>
+          {f.tipo_deducible && (
+            <Fld label={f.tipo_deducible === "fijo" ? "MONTO DEDUCIBLE (Q)" : "% DEDUCIBLE"}>
+              <input style={S.inp} type="number" step="0.01" value={f.monto_deducible}
+                onChange={e => sf("monto_deducible", e.target.value)} placeholder="0.00" />
+            </Fld>
+          )}
           <Fld label="NOTAS">
             <input style={S.inp} value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." />
           </Fld>

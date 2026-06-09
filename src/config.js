@@ -30,7 +30,25 @@ export async function dbIns(table, data, timeoutMs) {
   } catch (e) { return { error: e.message || "Timeout" }; }
 }
 
-export async function siguienteNumero(prefijo, tabla) {
+export async function siguienteNumero(prefijo, tabla, empId) {
+  // Usa el contador almacenado en empresas (serie editable)
+  if (empId) {
+    try {
+      const campo = tabla === 'cotizaciones' ? 'ultima_cotizacion'
+        : tabla === 'reservas' ? 'ultima_reserva' : 'ultima_factura';
+      const r = await fetch(`${SB}/rest/v1/empresas?select=${campo}&id=eq.${empId}`, { headers: H });
+      const d = await r.json();
+      const actual = Array.isArray(d) && d.length > 0 ? d[0][campo] || '' : '';
+      const num = actual.startsWith(prefijo) ? parseInt(actual.slice(prefijo.length), 10) || 0 : 0;
+      const nuevo = prefijo + String(num + 1).padStart(6, '0');
+      await fetch(`${SB}/rest/v1/empresas?id=eq.${empId}`, {
+        method: "PATCH", headers: { ...H },
+        body: JSON.stringify({ [campo]: nuevo }),
+      });
+      return nuevo;
+    } catch {}
+  }
+  // Fallback: max desde la tabla
   try {
     const r = await fetch(`${SB}/rest/v1/${tabla}?select=numero&order=numero.desc&limit=1`, { headers: H });
     if (!r.ok) return prefijo + '000001';
