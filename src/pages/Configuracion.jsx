@@ -28,8 +28,10 @@ const SECCIONES = [
   { id: "series",   label: "Series",            icon: "🔢", sub: [
     { id: "series",     label: "Series de números" },
   ]},
-  { id: "pdf",      label: "Plantillas PDF",    icon: "📄", sub: [
-    { id: "pdf",        label: "Plantillas PDF" },
+  { id: "pdf",      label: "Documentos PDF",    icon: "📄", sub: [
+    { id: "pdf",        label: "Configuración" },
+    { id: "firma",      label: "Firma de Documentos" },
+    { id: "cargos",     label: "Catálogo de Cargos" },
   ]},
   { id: "notif",    label: "Notificaciones",    icon: "🔔", sub: [
     { id: "notif",      label: "Correo electrónico" },
@@ -40,6 +42,13 @@ const ORDEN_PROP = { propio: 0, socio: 1, alquilado: 2 };
 
 function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
   const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
+  const subirLogo = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => se("logo_url", ev.target.result);
+    reader.readAsDataURL(file);
+  };
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 20 }}>
       <div style={S.card}>
@@ -52,7 +61,7 @@ function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
           </div>
           <Fld label="EMAIL"><input style={S.inp} value={emp.email || ""} onChange={e => se("email", e.target.value)} placeholder="tzununautorentas@gmail.com" /></Fld>
           <Fld label="DIRECCIÓN"><input style={S.inp} value={emp.direccion || ""} onChange={e => se("direccion", e.target.value)} placeholder="2da. Avenida 0-68, Col. Bran, Zona 3" /></Fld>
-          <Fld label="ESLOGAN"><input style={S.inp} value={emp.eslogan || ""} onChange={e => se("eslogan", e.target.value)} placeholder="MAS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS" /></Fld>
+          <Fld label="ESLOGAN"><input style={S.inp} value={emp.eslogan || ""} onChange={e => se("eslogan", e.target.value)} placeholder="Servicios de Movilidad Corporativa" /></Fld>
           <button onClick={guardarEmp} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
             {saving ? "Guardando..." : "Guardar cambios"}
           </button>
@@ -60,13 +69,35 @@ function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Logo corporativo</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {emp.logo_url ? (
+              <img src={emp.logo_url} alt="Logo" style={{ width: 80, height: 80, borderRadius: 10, objectFit: "contain", background: T.surf }} />
+            ) : (
+              <div style={{ width: 80, height: 80, borderRadius: 10, background: T.accDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 900, color: T.acc }}>T</div>
+            )}
+            <label style={{ ...S.btn("primary"), fontSize: 11, cursor: "pointer" }}>
+              {emp.logo_url ? "Cambiar logo" : "Subir logo"}
+              <input type="file" accept="image/png,image/jpeg" style={{ display: "none" }} onChange={subirLogo} />
+            </label>
+            {emp.logo_url && (
+              <button onClick={() => se("logo_url", "")} style={{ ...S.btn("ghost"), fontSize: 11 }}>Eliminar</button>
+            )}
+          </div>
+          <div style={{ fontSize: 10, color: T.mut, marginTop: 6 }}>PNG o JPG. Se mostrará en cotizaciones PDF.</div>
+        </div>
+        <div style={S.card}>
           <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Vista previa</div>
           <div style={{ background: T.surf, borderRadius: 10, padding: 16, border: `1px solid ${T.bord}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: T.accDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: T.acc }}>T</div>
+              {emp.logo_url ? (
+                <img src={emp.logo_url} alt="Logo" style={{ width: 44, height: 44, borderRadius: 10, objectFit: "contain" }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: T.accDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: T.acc }}>T</div>
+              )}
               <div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: T.acc }}>{emp.nombre || "Tz'unun AutoRentas"}</div>
-                <div style={{ fontSize: 10, color: T.sub }}>{emp.eslogan || "MAS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS"}</div>
+                <div style={{ fontSize: 10, color: T.sub }}>{emp.eslogan || "Servicios de Movilidad Corporativa"}</div>
               </div>
             </div>
             <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.8 }}>
@@ -80,9 +111,15 @@ function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
         <div style={S.card}>
           <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Cuentas bancarias</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Fld label="BANCO 1"><input style={S.inp} value={emp.banco1 || ""} onChange={e => se("banco1", e.target.value)} placeholder="Banco Industrial - 853-000016-8" /></Fld>
-            <Fld label="BANCO 2"><input style={S.inp} value={emp.banco2 || ""} onChange={e => se("banco2", e.target.value)} placeholder="Banrural - 3309159475" /></Fld>
+            <Fld label="BANCO 1"><input style={S.inp} value={emp.banco1 || ""} onChange={e => se("banco1", e.target.value)} placeholder="Banco Industrial — Cta. Monetaria No. 853-000016-8" /></Fld>
+            <Fld label="BANCO 2"><input style={S.inp} value={emp.banco2 || ""} onChange={e => se("banco2", e.target.value)} placeholder="Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475" /></Fld>
           </div>
+        </div>
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 8 }}>Tarifa de limpieza</div>
+          <Fld label="MONTO (Q)">
+            <input style={S.inp} type="number" step="0.01" value={emp.tarifa_limpieza ?? 75} onChange={e => se("tarifa_limpieza", parseFloat(e.target.value) || 0)} placeholder="75.00" />
+          </Fld>
         </div>
       </div>
     </div>
@@ -517,17 +554,132 @@ function PanelPDF({ emp, setEmp }) {
   return (
     <div style={{ maxWidth: 600 }}>
       <div style={S.card}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Información para documentos PDF</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Configuración de documentos PDF</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Fld label="NOTA DE CIERRE"><input style={S.inp} value={emp.nota_pie || ""} onChange={e => se("nota_pie", e.target.value)} placeholder="Muchas gracias por su preferencia." /></Fld>
+          <Fld label="FRASE INSTITUCIONAL (FOOTER)"><input style={S.inp} value={emp.titulo_footer || ""} onChange={e => se("titulo_footer", e.target.value)} placeholder="Conduciendo confianza, llegando más lejos." /></Fld>
+          <Fld label="MENSAJE DE CIERRE CORPORATIVO">
+            <textarea style={{ ...S.inp, minHeight: 60, resize: "vertical" }} value={emp.cierre_corporativo || ""}
+              onChange={e => se("cierre_corporativo", e.target.value)}
+              placeholder="En Tz'unun AutoRentas nos comprometemos a brindarle un servicio seguro, puntual y a la altura de sus requerimientos. Quedamos a su disposición para cualquier consulta o ajuste adicional." />
+          </Fld>
+          <div style={{ background: T.surf, borderRadius: 10, padding: 12, fontSize: 11, color: T.sub, border: `1px solid ${T.bord}` }}>
+            <div style={{ fontWeight: 700, color: T.acc, marginBottom: 4 }}>Vista previa del cierre en PDF:</div>
+            <div style={{ fontStyle: "italic" }}>"{emp.nota_pie || "Muchas gracias por su preferencia."}"</div>
+            <div style={{ marginTop: 6, color: T.mut, fontSize: 10 }}>— {emp.titulo_footer || "Conduciendo confianza, llegando más lejos."}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelFirmaDigital({ emp, setEmp }) {
+  const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
+  const catalogo = Array.isArray(emp.cargo_catalogo) ? emp.cargo_catalogo : [];
+  const subirFirma = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => se("firma_digital", ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Firma de Documentos</div>
+        <div style={{ fontSize: 11, color: T.mut, marginBottom: 14 }}>
+          Esta información aparecerá al pie de las cotizaciones y documentos PDF.
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           <Fld label="NOMBRE DEL FIRMANTE"><input style={S.inp} value={emp.firmante || ""} onChange={e => se("firmante", e.target.value)} placeholder="Oscar Gálvez" /></Fld>
-          <Fld label="TELÉFONO DEL FIRMANTE"><input style={S.inp} value={emp.tel_firmante || ""} onChange={e => se("tel_firmante", e.target.value)} placeholder="502-31221538" /></Fld>
-          <Fld label="NOTA DE PIE DE PÁGINA"><input style={S.inp} value={emp.nota_pie || ""} onChange={e => se("nota_pie", e.target.value)} placeholder="Muchas gracias por su preferencia." /></Fld>
-          <div style={{ background: T.surf, borderRadius: 10, padding: 12, fontSize: 11, color: T.sub, border: `1px solid ${T.bord}` }}>
-            <div style={{ fontWeight: 700, color: T.acc, marginBottom: 4 }}>Ejemplo de firma en PDF:</div>
-            <div>{emp.firmante || "Oscar Gálvez"}</div>
-            <div>{emp.tel_firmante || "502-31221538"}</div>
-            <div style={{ marginTop: 6, fontStyle: "italic" }}>"{emp.nota_pie || "Muchas gracias por su preferencia."}"</div>
+          <Fld label="CARGO">
+            <div style={{ display: "flex", gap: 8 }}>
+              <select style={{ ...S.sel, flex: 1 }} value={emp.cargo_firmante || ""}
+                onChange={e => se("cargo_firmante", e.target.value)}>
+                <option value="">Seleccionar cargo...</option>
+                {catalogo.map((c, i) => <option key={i} value={c}>{c}</option>)}
+                <option value="__otro__">Otro (escribir abajo)</option>
+              </select>
+              {emp.cargo_firmante === "__otro__" && (
+                <input style={{ ...S.inp, flex: 1 }} value={emp.cargo_firmante_custom || ""}
+                  onChange={e => se("cargo_firmante_custom", e.target.value)} placeholder="Escribir cargo personalizado" />
+              )}
+            </div>
+          </Fld>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+            <Fld label="TELÉFONO"><input style={S.inp} value={emp.tel_firmante || ""} onChange={e => se("tel_firmante", e.target.value)} placeholder="502-31221538" /></Fld>
+            <Fld label="CORREO"><input style={S.inp} value={emp.email_contacto || emp.email || ""} onChange={e => se("email_contacto", e.target.value)} placeholder="propuestas@tzunun.com" /></Fld>
           </div>
+          <Fld label="FIRMA DIGITAL (OPCIONAL)">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {emp.firma_digital ? (
+                <img src={emp.firma_digital} alt="Firma" style={{ height: 50, borderRadius: 6, background: T.surf }} />
+              ) : (
+                <div style={{ height: 50, width: 200, borderRadius: 6, border: `1px dashed ${T.bord}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: T.mut }}>Sin firma digital</div>
+              )}
+              <label style={{ ...S.btn("primary"), fontSize: 11, cursor: "pointer" }}>
+                {emp.firma_digital ? "Cambiar" : "Subir imagen"}
+                <input type="file" accept="image/png,image/jpeg" style={{ display: "none" }} onChange={subirFirma} />
+              </label>
+              {emp.firma_digital && (
+                <button onClick={() => se("firma_digital", "")} style={{ ...S.btn("ghost"), fontSize: 11 }}>Eliminar</button>
+              )}
+            </div>
+          </Fld>
+          <div style={{ background: T.surf, borderRadius: 10, padding: 14, fontSize: 11, color: T.sub, border: `1px solid ${T.bord}`, marginTop: 6 }}>
+            <div style={{ fontWeight: 700, color: T.acc, marginBottom: 6 }}>Vista previa de la firma en PDF:</div>
+            {emp.firma_digital && <img src={emp.firma_digital} alt="Firma" style={{ height: 40, marginBottom: 4 }} />}
+            <div style={{ fontWeight: 600, color: T.txt }}>{emp.firmante || "Oscar Gálvez"}</div>
+            <div style={{ color: T.mut }}>{emp.cargo_firmante && emp.cargo_firmante !== "__otro__" ? emp.cargo_firmante : emp.cargo_firmante_custom || "Coordinador de Servicios Corporativos"}</div>
+            <div style={{ color: T.mut }}>Cel. {emp.tel_firmante || "+502 3122 1538"} · {emp.email_contacto || emp.email || "propuestas@tzunun.com"}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelCargos({ emp, setEmp, showToast }) {
+  const [nuevo, setNuevo] = useState("");
+  const catalogo = Array.isArray(emp.cargo_catalogo) ? emp.cargo_catalogo : [];
+  const agregar = () => {
+    if (!nuevo.trim()) return;
+    const upd = [...catalogo, nuevo.trim()];
+    setEmp(p => ({ ...p, cargo_catalogo: upd }));
+    setNuevo("");
+    showToast("Cargo agregado");
+  };
+  const eliminar = i => {
+    const upd = catalogo.filter((_, idx) => idx !== i);
+    setEmp(p => ({ ...p, cargo_catalogo: upd }));
+  };
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <div style={S.card}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Catálogo de Cargos</div>
+        <div style={{ fontSize: 11, color: T.mut, marginBottom: 14 }}>
+          Estos cargos estarán disponibles al configurar la firma de documentos.
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <input style={{ ...S.inp, flex: 1 }} value={nuevo} onChange={e => setNuevo(e.target.value)}
+            placeholder="Ej: Director de Operaciones" onKeyDown={e => e.key === "Enter" && agregar()} />
+          <button onClick={agregar} style={{ ...S.btn("primary"), fontSize: 11, padding: "6px 14px" }}>Agregar</button>
+        </div>
+        {catalogo.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 16, color: T.mut, fontSize: 12 }}>No hay cargos registrados.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {catalogo.map((c, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: T.surf, borderRadius: 8 }}>
+                <span style={{ fontSize: 13, color: T.txt }}>{c}</span>
+                <button onClick={() => eliminar(i)} style={{ ...S.btn("ghost"), fontSize: 10, padding: "4px 8px", color: T.red }}>Eliminar</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ marginTop: 14, fontSize: 10, color: T.mut }}>
+          Los cambios en el catálogo se guardan al guardar la configuración de la empresa.
         </div>
       </div>
     </div>
@@ -552,7 +704,7 @@ const PANELS = {
   general: PanelGeneral, monedas: PanelMonedas, terminos: PanelTerminos, recordatorios: PanelRecordatorios,
   portal: PanelPortal,
   series: PanelSeries,
-  pdf: PanelPDF,
+  pdf: PanelPDF, firma: PanelFirmaDigital, cargos: PanelCargos,
   notif: PanelNotif,
 };
 
@@ -582,6 +734,10 @@ export default function PageConfiguracion({ showToast }) {
       contacto: emp.contacto, tel_contacto: emp.tel_contacto,
       email_contacto: emp.email_contacto, web: emp.web,
       firmante: emp.firmante, tel_firmante: emp.tel_firmante, nota_pie: emp.nota_pie,
+      logo_url: emp.logo_url, cargo_firmante: emp.cargo_firmante === "__otro__" ? (emp.cargo_firmante_custom || emp.cargo_firmante) : emp.cargo_firmante,
+      cargo_catalogo: emp.cargo_catalogo, tarifa_limpieza: emp.tarifa_limpieza,
+      firma_digital: emp.firma_digital, titulo_footer: emp.titulo_footer,
+      cierre_corporativo: emp.cierre_corporativo,
     });
     showToast("Guardado");
     setSaving(false);

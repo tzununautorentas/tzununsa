@@ -37,105 +37,226 @@ function ClienteAC({ value, onChange, onSelect, clientes }) {
   );
 }
 
-// ─── PDF (HTML - abre en nueva ventana para imprimir) ─────────────────────────
-function generarPDF(d) {
-  const svc = [];
-  if (d.incl_piloto)       svc.push("Conductor / piloto profesional");
-  if (d.incl_combustible)  svc.push("Combustible segun recorrido");
-  if (d.incl_peajes)       svc.push("Peajes y casetas de cobro");
-  if (d.incl_hospedaje)    svc.push("Hospedaje del piloto");
-  if (d.incl_alimentacion) svc.push("Alimentacion del piloto");
-  if (d.incl_seguro)       svc.push("Seguro basico de viaje");
-  if (!d.incl_piloto)      svc.push("Vehiculo entregado con tanque lleno");
-  svc.push("Vehiculo higienizado antes del servicio");
-  svc.push("Atencion personalizada");
+// ─── PDF Premium — Propuesta Comercial Corporativa ──────────────────────────────
+async function generarPDFPremium(d, empId) {
+  // Cargar config de empresa desde DB
+  const empData = await dbGet("empresas", `&select=*&id=eq.${empId}`).then(dd => dd?.[0] || {});
+  const e = {
+    nombre:    empData.nombre             || "Tz'unun AutoRentas",
+    eslogan:   empData.eslogan            || "Servicios de Movilidad Corporativa",
+    direccion: empData.direccion          || "2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala",
+    telefono:  empData.telefono           || "502-31221538",
+    email:     empData.email              || "tzununautorentas@gmail.com",
+    email_contacto: empData.email_contacto || empData.email || "propuestas@tzunun.com",
+    web:       empData.web                || "@TzununAutorentas",
+    nit:       empData.nit                || "16693949",
+    logo_url:  empData.logo_url           || "",
+    banco1:    empData.banco1             || "Banco Industrial — Cta. Monetaria No. 853-000016-8",
+    banco2:    empData.banco2             || "Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475",
+    firmante:  empData.firmante           || "Oscar Gálvez",
+    cargo_firmante: empData.cargo_firmante || "Coordinador de Servicios Corporativos",
+    tel_firmante: empData.tel_firmante    || "+502 3122 1538",
+    firma_digital: empData.firma_digital  || "",
+    nota_pie:  empData.nota_pie           || "Muchas gracias por su preferencia.",
+    titulo_footer: empData.titulo_footer  || "Conduciendo confianza, llegando más lejos.",
+    cierre_corporativo: empData.cierre_corporativo || "En Tz'unun AutoRentas nos comprometemos a brindarle un servicio seguro, puntual y a la altura de sus requerimientos. Quedamos a su disposición para cualquier consulta o ajuste adicional.",
+    tarifa_limpieza: parseFloat(empData.tarifa_limpieza) || 75,
+    termino_pago_def: empData.termino_pago_def || "50% anticipo",
+  };
+  const pctAnticipo = parseInt(e.termino_pago_def) || 50;
 
-  const rows = [];
-  if (d.sub_veh > 0)                           rows.push([`Vehiculo — ${d.vehiculo}`, `${d.dias}d x Q${fmt(d.rate)}`, d.sub_veh]);
-  if (d.incl_piloto && d.sub_piloto > 0)       rows.push(["Piloto / conductor", `${d.dias}d x Q${fmt(d.cp)}`, d.sub_piloto]);
-  if (d.incl_hospedaje && d.sub_hos > 0)       rows.push(["Hospedaje piloto", `${d.dias}d x Q${fmt(d.ch)}`, d.sub_hos]);
-  if (d.incl_alimentacion && d.sub_ali > 0)    rows.push(["Alimentacion piloto", `${d.dias}d x Q${fmt(d.ca)}`, d.sub_ali]);
-  if (d.incl_combustible && d.sub_comb > 0)    rows.push(["Combustible", `${fmt(d.gals)} gal x Q${fmt(d.pgal)}`, d.sub_comb]);
-  if (d.incl_peajes && d.sub_peajes > 0)       rows.push(["Peajes", "Segun recorrido", d.sub_peajes]);
-  if (d.extras > 0)                            rows.push(["Gastos extras", "", d.extras]);
+  // Servicios incluidos (siempre mostrar 8, marcando según disponibilidad)
+  const Included = [
+    { l: "Piloto profesional",              v: d.incl_piloto },
+    { l: "Combustible según recorrido",      v: d.incl_combustible },
+    { l: "Peajes y casetas de cobro",        v: d.incl_peajes },
+    { l: "Hospedaje del piloto",             v: d.incl_hospedaje },
+    { l: "Alimentación del piloto",          v: d.incl_alimentacion },
+    { l: "Seguro básico de viaje",           v: d.incl_seguro },
+    { l: "Vehículo higienizado",             v: true },
+    { l: "Atención personalizada",           v: true },
+  ];
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
-<title>${d.es_orden ? "Orden de Venta" : "Cotizacion"} ${d.numero}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B}
-.hdr{background:#1B2D5C;color:#fff;padding:18px 22px;display:flex;justify-content:space-between}
-.hdr h1{font-size:15px;color:#00D4AA;margin-bottom:3px}.hdr p{font-size:8px;color:#94A3B8;margin-top:1px}
-.hr{text-align:right}.hr .tipo{font-size:18px;font-weight:700;color:#00D4AA}
-.hr .n{font-size:11px;color:#fff;margin-top:3px}.hr .f{font-size:8px;color:#94A3B8;margin-top:2px}
-.bar{height:3px;background:linear-gradient(to right,#00D4AA,#1B2D5C)}
-.body{padding:18px 22px}.sec{margin-bottom:14px}
-.st{font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #E2E8F0;padding-bottom:3px;margin-bottom:7px}
-.cn{font-size:13px;font-weight:700;color:#1B2D5C}.cs{font-size:9px;color:#64748B;margin-top:2px}
-.gt{background:#F0FDF9;border-left:3px solid #00D4AA;padding:9px 13px;font-size:10px;color:#334155;font-style:italic}
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:3px}
-.si{display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:9.5px}
-.ck{width:13px;height:13px;background:#00D4AA;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;flex-shrink:0}
-table{width:100%;border-collapse:collapse}th{background:#1B2D5C;color:#fff;padding:5px 7px;text-align:left;font-size:9.5px}
-td{padding:4px 7px;border-bottom:1px solid #F1F5F9;font-size:9.5px}.amt{text-align:right;font-weight:600}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.tot{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:11px}
-.tr{display:flex;justify-content:space-between;padding:2px 0;font-size:10px;color:#64748B}
-.tm{display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:#00D4AA;border-top:2px solid #00D4AA;margin-top:5px;padding-top:5px}
-.tc{display:flex;justify-content:space-between;font-size:10px;color:#F59E0B;font-weight:600;margin-top:3px}
-.bk{font-size:9.5px}.bn{font-weight:700;color:#00D4AA;display:block;margin-bottom:1px;margin-top:8px}
-.tl li{font-size:9px;color:#475569;padding:2px 0 2px 12px;position:relative}
-.tl li::before{content:"\\2022";position:absolute;left:0;color:#00D4AA}
-.ft{margin-top:14px;border-top:2px solid #E2E8F0;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end}
-.fb{background:#1B2D5C;color:#94A3B8;font-size:7.5px;text-align:center;padding:7px;margin-top:12px}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
-<div class="hdr">
-  <div><h1>TZ'UNUN AUTORENTAS</h1><p>MAS COMODIDAD, RAPIDEZ Y MEJORES PRECIOS</p><p>2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala</p><p>502-31221538 | tzununautorentas@gmail.com | @TzununAutorentas</p></div>
-  <div class="hr"><div class="tipo">${d.es_orden ? "ORDEN DE VENTA" : "COTIZACION"}</div><div class="n"># ${d.numero}</div><div class="f">Emision: ${d.fecha}</div><div class="f">Valida hasta: ${d.fecha_vence || "15 dias"}</div></div>
-</div><div class="bar"></div>
-<div class="body">
-  <div class="sec"><div class="st">Facturar a</div>
-    <div class="cn">${d.cliente}</div>
-    <div class="cs">${d.codigo ? "Cod: " + d.codigo + " | " : ""}NIT: ${d.nit || "CF"}${d.dir ? " | " + d.dir : ""}</div>
-  </div>
-  ${d.saludo ? `<div class="sec"><div class="gt">${d.saludo}:<br/>Le presentamos la siguiente cotizacion con mucho gusto.</div></div>` : ""}
-  ${d.servicio ? `<div class="sec"><div class="st">Descripcion del servicio</div><p style="font-size:9.5px;color:#475569;font-style:italic">${d.servicio}</p></div>` : ""}
-  <div class="sec"><div class="st">Servicios incluidos</div>
-    <div class="sg">${svc.map(s => `<div class="si"><div class="ck">&#10003;</div><span>${s}</span></div>`).join("")}</div>
-  </div>
-  <div class="sec"><div class="st">Desglose de costos</div>
-    <table><thead><tr><th>Concepto</th><th>Detalle</th><th style="text-align:right">GTQ</th></tr></thead>
-    <tbody>${rows.map(([c, det, tot]) => `<tr><td>${c}</td><td style="color:#64748B">${det}</td><td class="amt">Q ${fmt(tot)}</td></tr>`).join("")}</tbody></table>
-  </div>
-  <div class="two">
-    <div><div class="st">Resumen financiero</div>
-      <div class="tot">
-        <div class="tr"><span>Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
-        <div class="tr"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>
-        <div class="tm"><span>PRECIO BENEFICIO</span><span>Q ${fmt(d.total_ef)}</span></div>
-        <div class="tc"><span>Con tarjeta C/D (+5%)</span><span>Q ${fmt(d.total_tc)}</span></div>
-        <div style="text-align:right;font-size:8.5px;color:#94A3B8;margin-top:2px">$ ${fmt(d.total_ef / (d.exch || 7.70))} USD</div>
-      </div>
-      ${d.iva_pct === 5 ? '<p style="font-size:8px;color:#94A3B8;margin-top:3px">* No genera derecho a credito fiscal</p>' : ""}
-    </div>
-    <div><div class="st">Datos de pago</div>
-      <div class="bk"><span class="bn">Banco Industrial</span>Cta. Monetaria No. 853-000016-8<br/>A nombre de: Transportes Tz'unun<span class="bn">Banrural</span>Cta. No. 3309159475</div>
-      <div class="st" style="margin-top:10px">Terminos y condiciones</div>
-      <ul class="tl">
-        <li>Higienizacion del vehiculo incluida.</li>
-        <li>Se requiere copia de DPI del responsable.</li>
-        <li>Anticipo del 75% para confirmar el servicio.</li>
-        <li>${d.incl_piloto ? "Combustible incluido segun recorrido." : "Vehiculo con tanque lleno \u2014 devolver lleno."}</li>
-        <li>Vehiculo debe devolverse limpio (recargo Q 75.00).</li>
-        <li>Saldo se cancela al finalizar el servicio.</li>
-      </ul>
+<title>COTIZACIÓN ${d.numero}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#1E293B;background:#fff}
+@page{size:A4;margin:12mm 15mm}
+.page{max-width:100%}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:2px solid #1B2D5C;margin-bottom:10px}
+.h-left{display:flex;gap:10px;align-items:center}
+.h-logo{width:52px;height:52px;border-radius:6px;object-fit:contain}
+.h-logo-fallback{width:52px;height:52px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900}
+.h-info h1{font-size:14px;font-weight:800;color:#1B2D5C;letter-spacing:-0.3px}
+.h-info .slogan{font-size:8px;color:#64748B;margin-top:1px}
+.h-info .detail{font-size:7.5px;color:#94A3B8;margin-top:1px;line-height:1.5}
+.h-right{text-align:right}
+.h-right .doc-type{font-size:16px;font-weight:800;color:#00D4AA;letter-spacing:1px}
+.h-right .doc-num{font-size:10px;color:#1B2D5C;font-weight:700;margin-top:2px}
+.h-right .doc-date{font-size:7.5px;color:#94A3B8;margin-top:1px}
+.section{margin-bottom:7px}
+.st{font-size:7px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #E2E8F0;padding-bottom:2px;margin-bottom:5px}
+.saludo-box{background:#F0FDF9;border-left:3px solid #00D4AA;padding:7px 11px;font-size:9px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:7px}
+.client-name{font-size:12px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:8px;color:#64748B;margin-top:1px}
+.servicio-line{font-size:9px;color:#475569;line-height:1.7}
+.inc-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.inc-item{display:flex;align-items:center;gap:5px;padding:2px 4px;font-size:8px;color:#475569}
+.inc-check{width:12px;height:12px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
+.inc-cross{width:12px;height:12px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0;color:#CBD5E1;background:#F1F5F9}
+table.inv{width:100%;border-collapse:collapse;margin-top:2px}
+table.inv thead tr{background:#1B2D5C}
+table.inv th{color:#fff;padding:3px 7px;text-align:left;font-size:7.5px;font-weight:600;letter-spacing:0.5px}
+table.inv td{padding:3px 7px;border-bottom:1px solid #F1F5F9;font-size:8.5px}
+table.inv .amt{text-align:right;font-weight:600}
+table.inv .tot-row td{border-top:2px solid #00D4AA;border-bottom:none;font-weight:700;font-size:9px}
+table.inv strong{font-size:14px;color:#00D4AA}
+.pago-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.pago-card{border:1px solid #E2E8F0;border-radius:6px;padding:7px 9px;text-align:center;background:#F8FAFC}
+.pago-card .label{font-size:7.5px;color:#64748B;margin-bottom:3px}
+.pago-card .monto{font-size:14px;font-weight:800;color:#1B2D5C}
+.anticipo-line{font-size:8px;color:#64748B;margin-top:4px;text-align:center}
+.bancos{font-size:8px;color:#475569;line-height:1.6;margin-top:2px}
+.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:2px}
+.terms{font-size:8px;color:#475569;line-height:1.6;padding-left:12px;margin-top:2px}
+.terms li{margin-bottom:4px}
+.cierre{font-size:8.5px;color:#475569;font-style:italic;line-height:1.5;margin-top:4px;padding:6px 10px;background:#F8FAFC;border-radius:4px}
+.firma-box{display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;padding-top:6px;border-top:1px solid #E2E8F0}
+.firma-left .f-name{font-weight:700;color:#1B2D5C;font-size:9px}
+.firma-left .f-title{font-size:8px;color:#64748B}
+.firma-left .f-contact{font-size:7.5px;color:#94A3B8;margin-top:1px}
+.footer{text-align:center;font-size:7px;color:#94A3B8;margin-top:6px;padding-top:5px;border-top:1px solid #E2E8F0;line-height:1.5}
+.footer strong{color:#64748B}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="h-left">
+    ${e.logo_url ? `<img src="${e.logo_url}" class="h-logo" alt="Logo"/>` : `<div class="h-logo-fallback">T</div>`}
+    <div class="h-info">
+      <h1>${e.nombre}</h1>
+      <div class="slogan">${e.eslogan}</div>
+      <div class="detail">${e.direccion}<br/>${e.telefono} | ${e.email} | ${e.web}</div>
     </div>
   </div>
-  <div class="ft">
-    <div style="font-size:9px;color:#64748B"><div style="border-top:1px solid #E2E8F0;padding-top:4px;margin-top:22px;width:150px">Oscar Galvez</div><div>Cel. 502 31221538 | @TzununAutorentas</div></div>
-    <div style="font-size:10px;font-style:italic;color:#1B2D5C;font-weight:600;text-align:right">Muchas gracias por su preferencia.<br/>Quedamos a la espera de su aprobacion.</div>
+  <div class="h-right">
+    <div class="doc-type">COTIZACI&Oacute;N DE SERVICIOS</div>
+    <div class="doc-num"># ${d.numero}</div>
+    <div class="doc-date">Emisi&oacute;n: ${d.fecha}</div>
+    <div class="doc-date">Vigencia: ${d.fecha_vence || "15 d&iacute;as"}</div>
   </div>
 </div>
-<div class="fb">TZ'UNUN AUTORENTAS \u2014 502-31221538 | tzununautorentas@gmail.com | Guatemala</div>
-<script>window.onload=()=>window.print();</script></body></html>`;
+
+<!-- SALUDO -->
+${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
+
+<!-- CLIENTE -->
+<div class="section">
+  <div class="st">Datos del cliente</div>
+  <div class="client-name">${d.cliente}</div>
+  <div class="client-meta">NIT: ${d.nit || "CF"}${d.dir ? " | " + d.dir : ""}</div>
+</div>
+
+<!-- DESCRIPCIÓN DEL SERVICIO -->
+<div class="section">
+  <div class="st">Descripci&oacute;n del servicio</div>
+  ${d.servicio ? `<div class="servicio-line">${d.servicio}</div>` : ""}
+  <div class="servicio-line">Tipo de veh&iacute;culo: ${d.vehiculo || "Por definir"}</div>
+  <div class="servicio-line">Duraci&oacute;n: ${d.dias} d&iacute;a${d.dias !== 1 ? "s" : ""}</div>
+</div>
+
+<!-- SERVICIOS INCLUIDOS -->
+<div class="section">
+  <div class="st">Servicios incluidos</div>
+  <div class="inc-grid">
+    ${Included.map(s => `<div class="inc-item">
+      <div class="${s.v ? "inc-check" : "inc-cross"}">${s.v ? "✓" : "—"}</div>
+      <span>${s.l}</span>
+    </div>`).join("")}
+  </div>
+</div>
+
+<!-- INVERSIÓN DEL SERVICIO -->
+<div class="section">
+  <div class="st">Inversi&oacute;n del servicio</div>
+  <table class="inv">
+    <thead><tr><th>Concepto</th><th style="text-align:right">Monto (GTQ)</th></tr></thead>
+    <tbody>
+      <tr><td>Servicio de transporte — ${d.dias} d&iacute;a${d.dias !== 1 ? "s" : ""}</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
+      <tr style="color:#64748B;font-size:8px"><td>Subtotal</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
+      <tr style="color:#64748B;font-size:8px"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>
+      <tr class="tot-row"><td><strong>TOTAL DEL SERVICIO</strong></td><td class="amt"><strong>Q ${fmt(d.total_ef)}</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- MODALIDADES DE PAGO -->
+<div class="section">
+  <div class="st">Modalidades de pago</div>
+  <div class="pago-grid">
+    <div class="pago-card">
+      <div class="label">Transferencia, dep&oacute;sito o efectivo</div>
+      <div class="monto">Q ${fmt(d.total_ef)}</div>
+    </div>
+    <div class="pago-card">
+      <div class="label">Pago electr&oacute;nico con tarjeta</div>
+      <div class="monto">Q ${fmt(d.total_ef)}</div>
+    </div>
+  </div>
+  <div class="anticipo-line">Anticipo requerido para confirmar el servicio: <strong>${pctAnticipo}%</strong> (Q ${fmt(d.total_ef * pctAnticipo / 100)})</div>
+</div>
+
+<!-- DATOS BANCARIOS -->
+<div class="section">
+  <div class="st">Datos bancarios</div>
+  <div class="bancos">
+    <div class="titular">A nombre de: Transportes Tz'unun</div>
+    <div>&bull; ${e.banco1}</div>
+    <div>&bull; ${e.banco2}</div>
+  </div>
+</div>
+
+<!-- TÉRMINOS Y CONDICIONES -->
+<div class="section">
+  <div class="st">T&eacute;rminos y condiciones</div>
+  <ol class="terms">
+    <li>La presente cotizaci&oacute;n tiene una vigencia de 15 d&iacute;as calendario a partir de su fecha de emisi&oacute;n.</li>
+    <li>La reserva del servicio se confirma mediante el pago del anticipo acordado entre las partes.</li>
+    <li>Todos nuestros veh&iacute;culos son entregados limpios e higienizados antes de cada servicio. Cuando sea necesaria una limpieza al finalizar el servicio, se aplicar&aacute; la tarifa vigente de limpieza establecida por la empresa (Q ${fmt(e.tarifa_limpieza)}).</li>
+    <li>Cualquier servicio, recorrido o requerimiento adicional no contemplado en la presente cotizaci&oacute;n ser&aacute; cotizado por separado.</li>
+    <li>Se emitir&aacute; la correspondiente Factura Electr&oacute;nica en L&iacute;nea (FEL) por los servicios contratados.</li>
+  </ol>
+</div>
+
+<!-- CIERRE INSTITUCIONAL -->
+<div class="cierre">${e.cierre_corporativo}</div>
+
+<!-- FIRMA -->
+<div class="firma-box">
+  <div class="firma-left">
+    ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" style="height:32px;margin-bottom:4px"/>` : ""}
+    <div class="f-name">${e.firmante}</div>
+    <div class="f-title">${e.cargo_firmante}</div>
+    <div class="f-contact">Cel. ${e.tel_firmante} · ${e.email_contacto}</div>
+  </div>
+  <div style="font-size:7.5px;font-style:italic;color:#64748B;text-align:right;max-width:200px">
+    "${e.nota_pie}"
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <strong>${e.titulo_footer}</strong><br/>
+  ${e.nombre} · ${e.direccion} · ${e.telefono} · ${e.email}
+</div>
+
+</div>
+<script>window.onload=()=>{window.print();window.close();}</script>
+</body></html>`;
+
   const w = window.open("", "_blank");
   if (!w) { alert("Permite ventanas emergentes para generar el PDF."); return; }
   w.document.write(html); w.document.close();
@@ -144,40 +265,24 @@ td{padding:4px 7px;border-bottom:1px solid #F1F5F9;font-size:9.5px}.amt{text-ali
 // Construye datos PDF desde registro guardado
 function makePDFData(r) {
   const dias = parseInt(r.dias) || 1;
-  const rate = parseFloat(r.precio_personalizado) || parseFloat(r.costo_vehiculo) || 0;
-  const cp = parseFloat(r.costo_piloto) || 0;
-  const ch = parseFloat(r.costo_hospedaje) || 0;
-  const ca = parseFloat(r.costo_alimentacion) || 0;
-  const sub_veh = dias * rate;
-  const sub_piloto = dias * cp;
-  const sub_hos = dias * ch;
-  const sub_ali = dias * ca;
-  const kmpg = parseFloat(r.km_por_galon) || 1;
-  const gals = (parseFloat(r.km_total) || 0) / kmpg;
-  const pgal = parseFloat(r.precio_galon) || 0;
-  const sub_comb = gals * pgal;
-  const sub_peajes = parseFloat(r.peajes) || 0;
-  const extras = parseFloat(r.extras) || 0;
+  const total_ef = parseFloat(r.total_gtq) || 0;
   let svc = {};
   try { svc = JSON.parse(r.servicios_incluidos || "{}"); } catch {}
   return {
     numero: r.numero, fecha: r.fecha_emision || today(), fecha_vence: r.fecha_vence,
-    es_orden: r.orden_venta, cliente: r.cliente_nombre, codigo: r.cliente_codigo,
+    cliente: r.cliente_nombre, codigo: r.cliente_codigo,
     nit: r.cliente_nit, dir: r.cliente_dir, saludo: r.saludo, servicio: r.descripcion_servicio,
-    vehiculo: r.vehiculo_nombre, dias, rate, cp, ch, ca, gals, pgal,
-    sub_veh, sub_piloto, sub_hos, sub_ali, sub_comb, sub_peajes, extras,
-    incl_piloto: svc.piloto || sub_piloto > 0,
-    incl_combustible: svc.combustible || sub_comb > 0,
-    incl_peajes: svc.peajes || sub_peajes > 0,
-    incl_hospedaje: svc.hospedaje || sub_hos > 0,
-    incl_alimentacion: svc.alimentacion || sub_ali > 0,
+    vehiculo: r.vehiculo_nombre, dias,
+    incl_piloto: !!svc.piloto || parseFloat(r.costo_piloto) > 0,
+    incl_combustible: !!svc.combustible || parseFloat(r.km_total) > 0,
+    incl_peajes: !!svc.peajes || parseFloat(r.peajes) > 0,
+    incl_hospedaje: !!svc.hospedaje || parseFloat(r.costo_hospedaje) > 0,
+    incl_alimentacion: !!svc.alimentacion || parseFloat(r.costo_alimentacion) > 0,
     incl_seguro: svc.seguro !== false,
-    sub: parseFloat(r.subtotal) || (sub_veh + sub_piloto + sub_hos + sub_ali + sub_comb + sub_peajes + extras),
+    sub: parseFloat(r.subtotal) || 0,
     iva_pct: parseFloat(r.tasa_iva) || 5,
     iva_amt: parseFloat(r.total_iva) || 0,
-    total_ef: parseFloat(r.total_gtq) || 0,
-    total_tc: (parseFloat(r.total_gtq) || 0) * 1.05,
-    exch: parseFloat(r.tasa_cambio) || 7.70,
+    total_ef,
   };
 }
 
@@ -582,7 +687,7 @@ export default function PageCotizaciones({ showToast, empId }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 5, paddingTop: 10, borderTop: `1px solid ${T.bord}22`, flexWrap: "wrap" }}>
-                  <button onClick={() => generarPDF(makePDFData(r))} style={{ ...S.btn("blue"), fontSize: 11, padding: "4px 9px" }}>Ver PDF</button>
+                  <button onClick={() => generarPDFPremium(makePDFData(r), empId)} style={{ ...S.btn("blue"), fontSize: 11, padding: "4px 9px" }}>Ver PDF</button>
                   <button onClick={() => { setEditItem({ ...r, __clon: true }); setVista("form"); }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Clonar</button>
                   <button onClick={() => { setEditItem(r); setVista("form"); }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Editar</button>
                   {r.estado === "enviada" && <button onClick={() => chEst(r.id, "aprobada")} style={{ ...S.btn("primary"), fontSize: 11, padding: "4px 9px" }}>Aprobar</button>}
