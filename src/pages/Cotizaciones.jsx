@@ -39,7 +39,6 @@ function ClienteAC({ value, onChange, onSelect, clientes }) {
 
 // ─── PDF Premium — Propuesta Comercial Corporativa ──────────────────────────────
 async function generarPDFPremium(d, empId) {
-  // Cargar config de empresa desde DB
   const empData = await dbGet("empresas", `&select=*&id=eq.${empId}`).then(dd => dd?.[0] || {});
   const e = {
     nombre:    empData.nombre             || "Tz'unun AutoRentas",
@@ -57,7 +56,6 @@ async function generarPDFPremium(d, empId) {
     cargo_firmante: empData.cargo_firmante || "Coordinador de Servicios Corporativos",
     tel_firmante: empData.tel_firmante    || "+502 3122 1538",
     firma_digital: empData.firma_digital  || "",
-    nota_pie:  empData.nota_pie           || "Muchas gracias por su preferencia.",
     titulo_footer: empData.titulo_footer  || "Conduciendo confianza, llegando más lejos.",
     cierre_corporativo: empData.cierre_corporativo || "En Tz'unun AutoRentas nos comprometemos a brindarle un servicio seguro, puntual y a la altura de sus requerimientos. Quedamos a su disposición para cualquier consulta o ajuste adicional.",
     tarifa_limpieza: parseFloat(empData.tarifa_limpieza) || 75,
@@ -65,70 +63,69 @@ async function generarPDFPremium(d, empId) {
   };
   const pctAnticipo = parseInt(e.termino_pago_def) || 50;
 
-  // Servicios incluidos (siempre mostrar 8, marcando según disponibilidad)
+  // Solo servicios incluidos (filtrados)
   const Included = [
     { l: "Piloto profesional",              v: d.incl_piloto },
-    { l: "Combustible según recorrido",      v: d.incl_combustible },
+    { l: "Combustible seg&uacute;n recorrido", v: d.incl_combustible },
     { l: "Peajes y casetas de cobro",        v: d.incl_peajes },
     { l: "Hospedaje del piloto",             v: d.incl_hospedaje },
-    { l: "Alimentación del piloto",          v: d.incl_alimentacion },
-    { l: "Seguro básico de viaje",           v: d.incl_seguro },
-    { l: "Vehículo higienizado",             v: true },
-    { l: "Atención personalizada",           v: true },
-  ];
+    { l: "Alimentaci&oacute;n del piloto",   v: d.incl_alimentacion },
+    { l: "Seguro b&aacute;sico de viaje",    v: d.incl_seguro },
+    { l: "Veh&iacute;culo higienizado",       v: true },
+    { l: "Atenci&oacute;n personalizada",    v: true },
+  ].filter(s => s.v);
+
+  const mostrarIVA = d.iva_pct > 0 && d.iva_amt > 0;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
 <title>COTIZACIÓN ${d.numero}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#1E293B;background:#fff}
-@page{size:A4;margin:12mm 15mm}
+@page{size:A4;margin:10mm 14mm}
+@media print{@page{size:A4;margin:10mm 14mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group}}
 .page{max-width:100%}
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:2px solid #1B2D5C;margin-bottom:10px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2px solid #1B2D5C;margin-bottom:8px}
 .h-left{display:flex;gap:10px;align-items:center}
-.h-logo{width:52px;height:52px;border-radius:6px;object-fit:contain}
-.h-logo-fallback{width:52px;height:52px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900}
-.h-info h1{font-size:14px;font-weight:800;color:#1B2D5C;letter-spacing:-0.3px}
-.h-info .slogan{font-size:8px;color:#64748B;margin-top:1px}
-.h-info .detail{font-size:7.5px;color:#94A3B8;margin-top:1px;line-height:1.5}
+.h-logo{width:48px;height:48px;border-radius:6px;object-fit:contain}
+.h-logo-fallback{width:48px;height:48px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900}
+.h-info h1{font-size:13px;font-weight:800;color:#1B2D5C;letter-spacing:-0.3px}
+.h-info .slogan{font-size:7.5px;color:#64748B;margin-top:1px}
+.h-info .detail{font-size:7px;color:#94A3B8;margin-top:1px;line-height:1.5}
 .h-right{text-align:right}
-.h-right .doc-type{font-size:16px;font-weight:800;color:#00D4AA;letter-spacing:1px}
+.h-right .doc-type{font-size:15px;font-weight:800;color:#00D4AA;letter-spacing:1px}
 .h-right .doc-num{font-size:10px;color:#1B2D5C;font-weight:700;margin-top:2px}
-.h-right .doc-date{font-size:7.5px;color:#94A3B8;margin-top:1px}
-.section{margin-bottom:7px}
-.st{font-size:7px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #E2E8F0;padding-bottom:2px;margin-bottom:5px}
-.saludo-box{background:#F0FDF9;border-left:3px solid #00D4AA;padding:7px 11px;font-size:9px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:7px}
-.client-name{font-size:12px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:8px;color:#64748B;margin-top:1px}
-.servicio-line{font-size:9px;color:#475569;line-height:1.7}
-.inc-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.inc-item{display:flex;align-items:center;gap:5px;padding:2px 4px;font-size:8px;color:#475569}
-.inc-check{width:12px;height:12px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
-.inc-cross{width:12px;height:12px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0;color:#CBD5E1;background:#F1F5F9}
+.h-right .doc-date{font-size:7px;color:#94A3B8;margin-top:1px}
+.section{margin-bottom:6px}
+.st{font-size:6.5px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #E2E8F0;padding-bottom:2px;margin-bottom:4px}
+.saludo-box{background:#F0FDF9;border-left:3px solid #00D4AA;padding:6px 10px;font-size:8.5px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:6px}
+.client-name{font-size:11px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:7.5px;color:#64748B;margin-top:1px;line-height:1.5}
+.servicio-line{font-size:8.5px;color:#475569;line-height:1.6}
+.inc-grid{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.inc-item{display:flex;align-items:center;gap:4px;padding:2px 7px;font-size:7.5px;color:#475569;background:#F8FAFC;border-radius:4px;border:1px solid #E2E8F0}
+.inc-check{width:10px;height:10px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
 table.inv{width:100%;border-collapse:collapse;margin-top:2px}
 table.inv thead tr{background:#1B2D5C}
-table.inv th{color:#fff;padding:3px 7px;text-align:left;font-size:7.5px;font-weight:600;letter-spacing:0.5px}
-table.inv td{padding:3px 7px;border-bottom:1px solid #F1F5F9;font-size:8.5px}
+table.inv th{color:#fff;padding:2px 6px;text-align:left;font-size:7px;font-weight:600;letter-spacing:0.5px}
+table.inv td{padding:2px 6px;border-bottom:1px solid #F1F5F9;font-size:8px}
 table.inv .amt{text-align:right;font-weight:600}
-table.inv .tot-row td{border-top:2px solid #00D4AA;border-bottom:none;font-weight:700;font-size:9px}
-table.inv strong{font-size:14px;color:#00D4AA}
-.pago-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
-.pago-card{border:1px solid #E2E8F0;border-radius:6px;padding:7px 9px;text-align:center;background:#F8FAFC}
-.pago-card .label{font-size:7.5px;color:#64748B;margin-bottom:3px}
-.pago-card .monto{font-size:14px;font-weight:800;color:#1B2D5C}
-.anticipo-line{font-size:8px;color:#64748B;margin-top:4px;text-align:center}
-.bancos{font-size:8px;color:#475569;line-height:1.6;margin-top:2px}
-.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:2px}
-.terms{font-size:8px;color:#475569;line-height:1.6;padding-left:12px;margin-top:2px}
-.terms li{margin-bottom:4px}
-.cierre{font-size:8.5px;color:#475569;font-style:italic;line-height:1.5;margin-top:4px;padding:6px 10px;background:#F8FAFC;border-radius:4px}
-.firma-box{display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;padding-top:6px;border-top:1px solid #E2E8F0}
-.firma-left .f-name{font-weight:700;color:#1B2D5C;font-size:9px}
-.firma-left .f-title{font-size:8px;color:#64748B}
-.firma-left .f-contact{font-size:7.5px;color:#94A3B8;margin-top:1px}
-.footer{text-align:center;font-size:7px;color:#94A3B8;margin-top:6px;padding-top:5px;border-top:1px solid #E2E8F0;line-height:1.5}
+table.inv .tot-row td{border-top:2px solid #00D4AA;border-bottom:none;font-weight:700;font-size:8.5px}
+table.inv strong{font-size:12px;color:#00D4AA}
+.pago-metodos{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px;margin-bottom:4px}
+.pago-chip{padding:2px 8px;font-size:7.5px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:4px}
+.bancos{font-size:7.5px;color:#475569;line-height:1.6;margin-top:2px}
+.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:2px;font-size:8px}
+.anticipo-line{font-size:7.5px;color:#64748B;margin-top:3px}
+.terms{font-size:7.5px;color:#475569;line-height:1.6;padding-left:12px;margin-top:2px}
+.terms li{margin-bottom:3px}
+.cierre{font-size:8px;color:#475569;font-style:italic;line-height:1.5;margin-top:4px;padding:5px 9px;background:#F8FAFC;border-radius:4px}
+.firma-box{display:flex;justify-content:space-between;align-items:flex-end;margin-top:5px;padding-top:5px;border-top:1px solid #E2E8F0}
+.firma-left .f-name{font-weight:700;color:#1B2D5C;font-size:8.5px}
+.firma-left .f-title{font-size:7.5px;color:#64748B}
+.firma-left .f-contact{font-size:7px;color:#94A3B8;margin-top:1px}
+.footer{text-align:center;font-size:6.5px;color:#94A3B8;margin-top:5px;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.5}
 .footer strong{color:#64748B}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style></head><body>
 <div class="page">
 
@@ -150,73 +147,63 @@ table.inv strong{font-size:14px;color:#00D4AA}
   </div>
 </div>
 
-<!-- SALUDO -->
-${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
-
-<!-- CLIENTE -->
+<!-- CLIENTE (sin título) -->
 <div class="section">
-  <div class="st">Datos del cliente</div>
   <div class="client-name">${d.cliente}</div>
-  <div class="client-meta">NIT: ${d.nit || "CF"}${d.dir ? " | " + d.dir : ""}</div>
-</div>
-
-<!-- DESCRIPCIÓN DEL SERVICIO -->
-<div class="section">
-  <div class="st">Descripci&oacute;n del servicio</div>
-  ${d.servicio ? `<div class="servicio-line">${d.servicio}</div>` : ""}
-  <div class="servicio-line">Tipo de veh&iacute;culo: ${d.vehiculo || "Por definir"}</div>
-  <div class="servicio-line">Duraci&oacute;n: ${d.dias} d&iacute;a${d.dias !== 1 ? "s" : ""}</div>
-</div>
-
-<!-- SERVICIOS INCLUIDOS -->
-<div class="section">
-  <div class="st">Servicios incluidos</div>
-  <div class="inc-grid">
-    ${Included.map(s => `<div class="inc-item">
-      <div class="${s.v ? "inc-check" : "inc-cross"}">${s.v ? "✓" : "—"}</div>
-      <span>${s.l}</span>
-    </div>`).join("")}
+  <div class="client-meta">
+    NIT: ${d.nit || "CF"}${d.dir ? "&ensp;|&ensp;" + d.dir : ""}
+    ${d.contacto ? "<br/>Contacto: " + d.contacto : ""}
   </div>
 </div>
 
-<!-- INVERSIÓN DEL SERVICIO -->
+<!-- SALUDO (después de datos del cliente) -->
+${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
+
+<!-- DESCRIPCIÓN DEL SERVICIO (solo texto del usuario) -->
+${d.servicio ? `<div class="section">
+  <div class="st">Descripci&oacute;n del servicio</div>
+  <div class="servicio-line">${d.servicio}</div>
+</div>` : ""}
+
+<!-- SERVICIOS INCLUIDOS (solo los activos) -->
+${Included.length > 0 ? `<div class="section">
+  <div class="st">Servicios incluidos</div>
+  <div class="inc-grid">
+    ${Included.map(s => `<div class="inc-item">
+      <div class="inc-check">&#10003;</div>
+      <span>${s.l}</span>
+    </div>`).join("")}
+  </div>
+</div>` : ""}
+
+<!-- RESUMEN ECONÓMICO -->
 <div class="section">
-  <div class="st">Inversi&oacute;n del servicio</div>
+  <div class="st">Resumen econ&oacute;mico</div>
   <table class="inv">
     <thead><tr><th>Concepto</th><th style="text-align:right">Monto (GTQ)</th></tr></thead>
     <tbody>
-      <tr><td>Servicio de transporte — ${d.dias} d&iacute;a${d.dias !== 1 ? "s" : ""}</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
-      <tr style="color:#64748B;font-size:8px"><td>Subtotal</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
-      <tr style="color:#64748B;font-size:8px"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>
+      <tr><td>Subtotal</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
+      ${mostrarIVA ? `<tr style="color:#64748B;font-size:7.5px"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>` : ""}
       <tr class="tot-row"><td><strong>TOTAL DEL SERVICIO</strong></td><td class="amt"><strong>Q ${fmt(d.total_ef)}</strong></td></tr>
     </tbody>
   </table>
 </div>
 
-<!-- MODALIDADES DE PAGO -->
+<!-- FORMAS DE PAGO -->
 <div class="section">
-  <div class="st">Modalidades de pago</div>
-  <div class="pago-grid">
-    <div class="pago-card">
-      <div class="label">Transferencia, dep&oacute;sito o efectivo</div>
-      <div class="monto">Q ${fmt(d.total_ef)}</div>
-    </div>
-    <div class="pago-card">
-      <div class="label">Pago electr&oacute;nico con tarjeta</div>
-      <div class="monto">Q ${fmt(d.total_ef)}</div>
-    </div>
+  <div class="st">Formas de pago</div>
+  <div class="pago-metodos">
+    <span class="pago-chip">Transferencia bancaria</span>
+    <span class="pago-chip">Dep&oacute;sito bancario</span>
+    <span class="pago-chip">Efectivo</span>
+    <span class="pago-chip">Tarjeta de cr&eacute;dito o d&eacute;bito</span>
   </div>
-  <div class="anticipo-line">Anticipo requerido para confirmar el servicio: <strong>${pctAnticipo}%</strong> (Q ${fmt(d.total_ef * pctAnticipo / 100)})</div>
-</div>
-
-<!-- DATOS BANCARIOS -->
-<div class="section">
-  <div class="st">Datos bancarios</div>
   <div class="bancos">
     <div class="titular">A nombre de: Transportes Tz'unun</div>
     <div>&bull; ${e.banco1}</div>
     <div>&bull; ${e.banco2}</div>
   </div>
+  <div class="anticipo-line">Anticipo requerido para confirmar el servicio: <strong>${pctAnticipo}%</strong></div>
 </div>
 
 <!-- TÉRMINOS Y CONDICIONES -->
@@ -232,25 +219,26 @@ ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
 </div>
 
 <!-- CIERRE INSTITUCIONAL -->
-<div class="cierre">${e.cierre_corporativo}</div>
+${
+  e.cierre_corporativo && e.cierre_corporativo !== "En Tz'unun AutoRentas nos comprometemos a brindarle un servicio seguro, puntual y a la altura de sus requerimientos. Quedamos a su disposici\u00f3n para cualquier consulta o ajuste adicional."
+    ? `<div class="cierre">${e.cierre_corporativo}</div>`
+    : ""
+}
 
 <!-- FIRMA -->
 <div class="firma-box">
   <div class="firma-left">
-    ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" style="height:32px;margin-bottom:4px"/>` : ""}
+    ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" style="height:28px;margin-bottom:3px"/>` : ""}
     <div class="f-name">${e.firmante}</div>
     <div class="f-title">${e.cargo_firmante}</div>
-    <div class="f-contact">Cel. ${e.tel_firmante} · ${e.email_contacto}</div>
-  </div>
-  <div style="font-size:7.5px;font-style:italic;color:#64748B;text-align:right;max-width:200px">
-    "${e.nota_pie}"
+    <div class="f-contact">Cel. ${e.tel_firmante} &middot; ${e.email_contacto}</div>
   </div>
 </div>
 
 <!-- FOOTER -->
 <div class="footer">
   <strong>${e.titulo_footer}</strong><br/>
-  ${e.nombre} · ${e.direccion} · ${e.telefono} · ${e.email}
+  ${e.nombre} &middot; ${e.direccion} &middot; ${e.telefono} &middot; ${e.email}
 </div>
 
 </div>
@@ -271,7 +259,9 @@ function makePDFData(r) {
   return {
     numero: r.numero, fecha: r.fecha_emision || today(), fecha_vence: r.fecha_vence,
     cliente: r.cliente_nombre, codigo: r.cliente_codigo,
-    nit: r.cliente_nit, dir: r.cliente_dir, saludo: r.saludo, servicio: r.descripcion_servicio,
+    nit: r.cliente_nit, dir: r.cliente_dir, tipo: r.cliente_tipo || "",
+    contacto: r.cliente_contacto || "",
+    saludo: r.saludo, servicio: r.descripcion_servicio,
     vehiculo: r.vehiculo_nombre, dias,
     incl_piloto: !!svc.piloto || parseFloat(r.costo_piloto) > 0,
     incl_combustible: !!svc.combustible || parseFloat(r.km_total) > 0,
@@ -289,6 +279,7 @@ function makePDFData(r) {
 // ─── Estado inicial formulario ────────────────────────────────────────────────
 const EMPTY_F = {
   cliente_nombre: "", cliente_nit: "", cliente_dir: "", cliente_codigo: "",
+  cliente_tipo: "", cliente_contacto: "",
   saludo: "", descripcion_servicio: "",
   vehiculo_nombre: "", dias: 1, precio_custom: "",
   incl_piloto: false, incl_combustible: false, incl_peajes: false,
@@ -311,6 +302,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       ...EMPTY_F,
       cliente_nombre: initial.cliente_nombre || "", cliente_nit: initial.cliente_nit || "",
       cliente_dir: initial.cliente_dir || "", cliente_codigo: initial.cliente_codigo || "",
+      cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "",
       saludo: initial.saludo || "", descripcion_servicio: initial.descripcion_servicio || "",
       vehiculo_nombre: initial.vehiculo_nombre || "", dias: initial.dias || 1,
       precio_custom: initial.precio_personalizado || "",
@@ -363,7 +355,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       const payload = {
         empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
-        tipo: "renta",
+        tipo: "renta", cliente_tipo: f.cliente_tipo || "", cliente_contacto: f.cliente_contacto || "",
         numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones", eId) : initial.numero,
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
@@ -416,9 +408,22 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                 <ClienteAC value={f.cliente_nombre} onChange={v => sf("cliente_nombre", v)}
                   onSelect={c => {
                     sf("cliente_nombre", c.nombre); sf("cliente_nit", c.nit || ""); sf("cliente_dir", c.direccion || ""); sf("cliente_codigo", c.codigo || "");
-                    const base = "en Transportes Tz'unun, nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas, el mercado de renta de vehículos, viajes de turismo y traslado de personas a diferentes lugares de Guatemala y Centroamérica.";
-                    const saludos = { persona: "Estimado(a) cliente", empresa: "Estimados clientes", gobierno: "Distinguidos señores", ong: "Estimados miembros" };
-                    sf("saludo", (saludos[c.tipo] || "Estimado(a) cliente") + ", " + base);
+                    sf("cliente_tipo", c.tipo || ""); sf("cliente_contacto", c.contacto || "");
+                    const nom = c.nombre || "";
+                    const tipo = c.tipo || "empresa";
+                    let saludo = "";
+                    if (tipo === "persona") {
+                      const pn = nom.trim().split(/\s+/)[0] || "";
+                      const fem = pn.endsWith("a");
+                      saludo = (fem ? "Estimada " : "Estimado ") + nom + ":";
+                    } else if (tipo === "empresa") {
+                      saludo = "Estimados señores:";
+                    } else if (tipo === "gobierno") {
+                      saludo = "Distinguidos señores:";
+                    } else {
+                      saludo = "Reciban un cordial saludo integrantes de " + nom + ":";
+                    }
+                    sf("saludo", saludo);
                   }}
                   clientes={clientes} />
               </div>
