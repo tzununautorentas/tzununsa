@@ -277,7 +277,7 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
 
   // Construir DOM oculto para renderizar el PDF
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:750px;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
   wrapper.innerHTML = `<style>${css}</style>${htmlContent}`;
   document.body.appendChild(wrapper);
 
@@ -287,11 +287,14 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
       .filter(img => !img.complete)
       .map(img => new Promise(r => { img.onload = r; img.onerror = r; }))
   );
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 400));
 
   // Generar y descargar PDF
   const sanitizar = s => (s || "").replace(/[^a-zA-Z0-9À-ÿ\-_ ]/g, "").trim().replace(/\s+/g, "_").slice(0, 40);
   const filename = `${d.numero || "COT"}-${sanitizar(d.cliente)}.pdf`;
+
+  const isMobile = window.innerWidth < 768;
+  const canvasScale = isMobile ? 1.2 : 2;
 
   try {
     await window.html2pdf()
@@ -299,7 +302,7 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
         margin: [8, 10, 8, 10],
         filename,
         image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: false, letterRendering: true },
+        html2canvas: { scale: canvasScale, useCORS: true, allowTaint: false, letterRendering: true, logging: false },
         jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
