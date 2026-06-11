@@ -37,6 +37,15 @@ function ClienteAC({ value, onChange, onSelect, clientes }) {
   );
 }
 
+// ─── Cargar script dinámicamente ──────────────────────────────────────────────
+const cargarScript = (url) => new Promise((resolve, reject) => {
+  const s = document.createElement('script');
+  s.src = url;
+  s.onload = () => resolve();
+  s.onerror = () => reject(new Error('Error al cargar ' + url));
+  document.head.appendChild(s);
+});
+
 // ─── PDF Premium — Propuesta Comercial Corporativa ──────────────────────────────
 async function generarPDFPremium(d, empId) {
   const empData = await dbGet("empresas", `&select=*&id=eq.${empId}`).then(dd => dd?.[0] || {});
@@ -48,7 +57,6 @@ async function generarPDFPremium(d, empId) {
     email:     empData.email              || "tzununautorentas@gmail.com",
     email_contacto: empData.email_contacto || empData.email || "propuestas@tzunun.com",
     web:       empData.web                || "@TzununAutorentas",
-    nit:       empData.nit                || "16693949",
     logo_url:  empData.logo_url           || "",
     banco1:    empData.banco1             || "Banco Industrial — Cta. Monetaria No. 853-000016-8",
     banco2:    empData.banco2             || "Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475",
@@ -59,10 +67,19 @@ async function generarPDFPremium(d, empId) {
     titulo_footer: empData.titulo_footer  || "Conduciendo confianza, llegando más lejos.",
     cierre_corporativo: empData.cierre_corporativo || "",
     tarifa_limpieza: parseFloat(empData.tarifa_limpieza) || 75,
-    termino_pago_def: empData.termino_pago_def || "50% anticipo",
   };
 
-  // Buscar foto del vehículo en la tabla vehiculos
+  // Cargar html2pdf.js si no está disponible
+  if (typeof window.html2pdf === "undefined") {
+    try {
+      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+    } catch {
+      alert("Error al cargar el generador de PDF. Verifica tu conexión.");
+      return;
+    }
+  }
+
+  // Buscar foto del vehículo
   let fotoVehiculo = "";
   if (d.vehiculo) {
     try {
@@ -79,68 +96,73 @@ async function generarPDFPremium(d, empId) {
   const mostrarIVA = d.iva_pct > 0 && d.iva_amt > 0;
   const totalTC = d.total_ef ? d.total_ef * 1.05 : 0;
 
-  const style = `
+  // Determinar tipo de servicio
+  const tieneVehiculo = !!d.vehiculo;
+  const tienePiloto = d.incl_piloto;
+  const tipoServicio = !tieneVehiculo && !tienePiloto ? "Transporte corporativo"
+    : tieneVehiculo && tienePiloto ? "Servicio de transporte ejecutivo"
+    : tieneVehiculo ? "Alquiler de vehículo"
+    : "Servicio con piloto";
+
+  const css = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#1E293B;background:#fff}
-@page{size:letter;margin:8mm 12mm}
-@media print{@page{size:letter;margin:8mm 12mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-.page{max-width:100%}
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:2px solid #1B2D5C;margin-bottom:6px}
-.h-left{display:flex;gap:10px;align-items:center}
-.h-logo{width:52px;height:52px;border-radius:6px;object-fit:contain}
-.h-logo-fallback{width:52px;height:52px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900}
-.h-info h1{font-size:14px;font-weight:800;color:#1B2D5C;letter-spacing:-0.3px}
-.h-info .slogan{font-size:8px;color:#64748B;margin-top:1px}
-.h-info .detail{font-size:7.5px;color:#94A3B8;margin-top:1px;line-height:1.5}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#1E293B;background:#fff;line-height:1.5}
+.page{width:100%;padding:0}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2.5px solid #1B2D5C;margin-bottom:8px}
+.h-left{display:flex;gap:14px;align-items:center}
+.h-logo{width:70px;height:70px;border-radius:8px;object-fit:contain}
+.h-logo-fallback{width:70px;height:70px;border-radius:8px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900}
+.h-info h1{font-size:18px;font-weight:800;color:#1B2D5C;letter-spacing:-0.5px}
+.h-info .slogan{font-size:10px;color:#64748B;margin-top:2px}
+.h-info .detail{font-size:8.5px;color:#94A3B8;margin-top:2px;line-height:1.5}
 .h-right{text-align:right}
-.h-right .doc-type{font-size:16px;font-weight:800;color:#00D4AA;letter-spacing:1px}
-.h-right .doc-num{font-size:11px;color:#1B2D5C;font-weight:700;margin-top:2px}
-.h-right .doc-date{font-size:7.5px;color:#94A3B8;margin-top:1px}
-.section{margin-bottom:5px}
-.st{font-size:7px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #E2E8F0;padding-bottom:2px;margin-bottom:3px}
-.saludo-box{background:#F0FDF9;border-left:3px solid #00D4AA;padding:5px 10px;font-size:9px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:5px}
-.client-name{font-size:12px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:8px;color:#64748B;margin-top:1px;line-height:1.5}
-.vehiculo-foto{display:flex;gap:10px;align-items:flex-start;margin-top:3px}
-.vehiculo-foto img{width:120px;height:80px;border-radius:6px;object-fit:cover;border:1px solid #E2E8F0;flex-shrink:0}
-.vehiculo-foto .servicio-line{flex:1;font-size:9px;color:#475569;line-height:1.6}
-.inc-grid{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
-.inc-item{display:flex;align-items:center;gap:4px;padding:2px 8px;font-size:8px;color:#475569;background:#F8FAFC;border-radius:4px;border:1px solid #E2E8F0}
-.inc-check{width:11px;height:11px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
-table.inv{width:100%;border-collapse:collapse;margin-top:2px}
+.h-right .doc-type{font-size:18px;font-weight:800;color:#00D4AA;letter-spacing:1.5px}
+.h-right .doc-num{font-size:13px;color:#1B2D5C;font-weight:700;margin-top:3px}
+.h-right .doc-date{font-size:8.5px;color:#94A3B8;margin-top:2px}
+.section{margin-bottom:7px}
+.st{font-size:8px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid #E2E8F0;padding-bottom:3px;margin-bottom:4px}
+.saludo-box{background:#F0FDF9;border-left:4px solid #00D4AA;padding:8px 14px;font-size:11px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:7px}
+.client-name{font-size:15px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:10px;color:#64748B;margin-top:2px;line-height:1.5}
+.vehiculo-bloque{text-align:center;margin:6px 0}
+.vehiculo-bloque img{width:100%;max-width:340px;height:auto;border-radius:8px;border:1px solid #E2E8F0;object-fit:cover}
+.vehiculo-bloque .veh-nombre{font-size:12px;color:#1B2D5C;font-weight:700;margin-top:4px}
+.tipo-servicio{display:inline-block;background:#1B2D5C;color:#fff;padding:4px 16px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;margin-bottom:4px}
+.servicio-line{font-size:10.5px;color:#475569;line-height:1.6}
+.inc-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.inc-item{display:flex;align-items:center;gap:5px;padding:3px 10px;font-size:9.5px;color:#475569;background:#F8FAFC;border-radius:5px;border:1px solid #E2E8F0}
+.inc-check{width:13px;height:13px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
+table.inv{width:100%;border-collapse:collapse;margin-top:3px}
 table.inv thead tr{background:#1B2D5C}
-table.inv th{color:#fff;padding:3px 7px;text-align:left;font-size:7.5px;font-weight:600;letter-spacing:0.5px}
-table.inv td{padding:3px 7px;border-bottom:1px solid #F1F5F9;font-size:8.5px}
+table.inv th{color:#fff;padding:4px 10px;text-align:left;font-size:9px;font-weight:600;letter-spacing:0.5px}
+table.inv td{padding:4px 10px;border-bottom:1px solid #F1F5F9;font-size:10px}
 table.inv .amt{text-align:right;font-weight:600}
-table.inv .tot-row td{border-top:2px solid #00D4AA;border-bottom:none;font-weight:700;font-size:9px}
-table.inv strong{font-size:13px;color:#00D4AA}
-.pago-valor{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;border-radius:6px;margin-top:3px}
-.pago-valor.efectivo{background:#F0FDF9;border:1px solid #00D4AA55}
-.pago-valor.tarjeta{background:#FEF2F2;border:1px solid #F8717155;margin-top:2px}
-.pago-valor .pago-label{font-size:8px;color:#64748B}
-.pago-valor .pago-monto{font-size:14px;font-weight:800;color:#1B2D5C}
-.pago-valor.tarjeta .pago-monto{font-size:12px}
-.bancos{font-size:8px;color:#475569;line-height:1.6;margin-top:3px}
-.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:2px;font-size:8.5px}
-.terms{font-size:8px;color:#475569;line-height:1.6;padding-left:14px;margin-top:2px}
-.terms li{margin-bottom:2px}
-.cierre{font-size:8.5px;color:#475569;font-style:italic;line-height:1.5;margin-top:3px;padding:5px 9px;background:#F8FAFC;border-radius:4px}
-.firma-box{display:flex;justify-content:flex-start;align-items:flex-end;margin-top:6px;padding-top:6px;border-top:1px solid #E2E8F0}
-.firma-left{max-width:100%}
-.firma-left .firma-img{height:45px;margin-bottom:4px}
-.firma-left .f-name{font-weight:700;color:#1B2D5C;font-size:10px}
-.firma-left .f-title{font-size:8.5px;color:#64748B}
-.firma-left .f-contact{font-size:7.5px;color:#94A3B8;margin-top:1px}
-.footer{text-align:center;font-size:7px;color:#94A3B8;margin-top:6px;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.5}
+table.inv .tot-row td{border-top:2.5px solid #00D4AA;border-bottom:none;font-weight:700;font-size:11px}
+table.inv strong{font-size:15px;color:#00D4AA}
+.pago-card{border-radius:8px;padding:10px 16px;margin-top:4px}
+.pago-card.efectivo{background:#F0FDF9;border:1.5px solid #00D4AA66}
+.pago-card.tarjeta{background:#FFF7ED;border:1.5px solid #F9731666;margin-top:3px}
+.pago-card .pago-label{font-size:9px;color:#64748B;font-weight:600}
+.pago-card .pago-monto{font-size:20px;font-weight:800;color:#1B2D5C;margin-top:2px}
+.pago-card .pago-monto.tarjeta-monto{font-size:17px}
+.pago-nota{font-size:8px;color:#94A3B8;margin-top:4px;font-style:italic}
+.bancos{font-size:9px;color:#475569;line-height:1.6;margin-top:5px}
+.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:3px;font-size:10px}
+.terms{font-size:9px;color:#475569;line-height:1.6;padding-left:16px;margin-top:3px}
+.terms li{margin-bottom:3px}
+.cierre{font-size:10px;color:#475569;font-style:italic;line-height:1.5;margin-top:4px;padding:6px 12px;background:#F8FAFC;border-radius:6px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:8px;padding-top:8px;border-top:1.5px solid #E2E8F0}
+.firma-img{height:100px;margin-bottom:6px}
+.f-name{font-weight:700;color:#1B2D5C;font-size:13px}
+.f-title{font-size:11px;color:#64748B}
+.f-contact{font-size:10px;color:#94A3B8;margin-top:2px}
+.footer{text-align:center;font-size:8px;color:#94A3B8;margin-top:8px;padding-top:6px;border-top:1px solid #E2E8F0;line-height:1.5}
 .footer strong{color:#64748B}
 `;
 
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
-<title>COTIZACIÓN ${d.numero}</title>
-<style>${style}</style></head><body>
+  const htmlContent = `
 <div class="page">
 
-<!-- HEADER -->
 <div class="header">
   <div class="h-left">
     ${e.logo_url ? `<img src="${e.logo_url}" class="h-logo" alt="Logo"/>` : `<div class="h-logo-fallback">T</div>`}
@@ -158,7 +180,6 @@ table.inv strong{font-size:13px;color:#00D4AA}
   </div>
 </div>
 
-<!-- CLIENTE -->
 <div class="section">
   <div class="client-name">${d.cliente}</div>
   <div class="client-meta">
@@ -167,19 +188,22 @@ table.inv strong{font-size:13px;color:#00D4AA}
   </div>
 </div>
 
-<!-- SALUDO -->
 ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
 
-<!-- DESCRIPCIÓN DEL SERVICIO + FOTO DEL VEHÍCULO -->
-${d.servicio ? `<div class="section">
-  <div class="st">Descripci&oacute;n del servicio</div>
-  ${fotoVehiculo ? `<div class="vehiculo-foto">
-    <img src="${fotoVehiculo}" alt="Vehículo"/>
-    <div class="servicio-line">${d.servicio}</div>
-  </div>` : `<div class="servicio-line">${d.servicio}</div>`}
+${fotoVehiculo ? `<div class="vehiculo-bloque">
+  <img src="${fotoVehiculo}" alt="Vehículo"/>
+  ${d.vehiculo ? `<div class="veh-nombre">${d.vehiculo}</div>` : ""}
 </div>` : ""}
 
-<!-- SERVICIOS INCLUIDOS -->
+<div class="section">
+  <div class="tipo-servicio">${tipoServicio}</div>
+</div>
+
+${d.servicio ? `<div class="section">
+  <div class="st">Descripci&oacute;n del servicio</div>
+  <div class="servicio-line">${d.servicio}</div>
+</div>` : ""}
+
 <div class="section">
   <div class="st">Servicios incluidos</div>
   <div class="inc-grid">
@@ -188,36 +212,35 @@ ${d.servicio ? `<div class="section">
     ${d.incl_peajes ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Peajes y casetas de cobro</span></div>` : ""}
     ${d.incl_hospedaje ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Hospedaje del piloto</span></div>` : ""}
     ${d.incl_alimentacion ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Alimentaci&oacute;n del piloto</span></div>` : ""}
-    ${d.incl_seguro !== false ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Seguro b&aacute;sico de viaje</span></div>` : ""}
+    ${d.incl_seguro !== false ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Seguro de viaje</span></div>` : ""}
     <div class="inc-item"><div class="inc-check">&#10003;</div><span>Veh&iacute;culo higienizado</span></div>
     <div class="inc-item"><div class="inc-check">&#10003;</div><span>Atenci&oacute;n personalizada</span></div>
   </div>
 </div>
 
-<!-- RESUMEN ECONÓMICO -->
 <div class="section">
   <div class="st">Resumen econ&oacute;mico</div>
   <table class="inv">
     <thead><tr><th>Concepto</th><th style="text-align:right">Monto (GTQ)</th></tr></thead>
     <tbody>
-      <tr><td>Subtotal</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
-      ${mostrarIVA ? `<tr style="color:#64748B;font-size:8px"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>` : ""}
+      <tr><td>Subtotal del servicio</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
+      ${mostrarIVA ? `<tr style="color:#64748B"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>` : ""}
       <tr class="tot-row"><td><strong>TOTAL</strong></td><td class="amt"><strong>Q ${fmt(d.total_ef)}</strong></td></tr>
     </tbody>
   </table>
 </div>
 
-<!-- FORMAS DE PAGO -->
 <div class="section">
   <div class="st">Formas de pago</div>
-  <div class="pago-valor efectivo">
-    <span class="pago-label">Transferencia, dep&oacute;sito o efectivo:</span>
-    <span class="pago-monto">Q ${fmt(d.total_ef)}</span>
+  <div class="pago-card efectivo">
+    <div class="pago-label">Transferencia, dep&oacute;sito o efectivo:</div>
+    <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
   </div>
-  <div class="pago-valor tarjeta">
-    <span class="pago-label">Pago con tarjeta de cr&eacute;dito o d&eacute;bito:</span>
-    <span class="pago-monto">Q ${fmt(totalTC)}</span>
+  <div class="pago-card tarjeta">
+    <div class="pago-label">Tarjeta de cr&eacute;dito o d&eacute;bito:</div>
+    <div class="pago-monto tarjeta-monto">Q ${fmt(totalTC)}</div>
   </div>
+  <div class="pago-nota">Las tarifas corresponden a las modalidades de pago disponibles para este servicio.</div>
   <div class="bancos">
     <div class="titular">A nombre de: Transportes Tz'unun</div>
     <div>&bull; ${e.banco1}</div>
@@ -225,7 +248,6 @@ ${d.servicio ? `<div class="section">
   </div>
 </div>
 
-<!-- TÉRMINOS Y CONDICIONES -->
 <div class="section">
   <div class="st">T&eacute;rminos y condiciones</div>
   <ol class="terms">
@@ -237,32 +259,57 @@ ${d.servicio ? `<div class="section">
   </ol>
 </div>
 
-<!-- CIERRE INSTITUCIONAL -->
 ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : ""}
 
-<!-- FIRMA -->
 <div class="firma-box">
-  <div class="firma-left">
-    ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" class="firma-img"/>` : ""}
-    <div class="f-name">${e.firmante}</div>
-    <div class="f-title">${e.cargo_firmante}</div>
-    <div class="f-contact">Cel. ${e.tel_firmante} &middot; ${e.email_contacto}</div>
-  </div>
+  ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" class="firma-img"/>` : ""}
+  <div class="f-name">${e.firmante}</div>
+  <div class="f-title">${e.cargo_firmante}</div>
+  <div class="f-contact">Cel. ${e.tel_firmante} &middot; ${e.email_contacto}</div>
 </div>
 
-<!-- FOOTER -->
 <div class="footer">
   <strong>${e.titulo_footer}</strong><br/>
   ${e.nombre} &middot; ${e.direccion} &middot; ${e.telefono} &middot; ${e.email}
 </div>
 
-</div>
-<script>window.onload=()=>{window.print();window.close();}</script>
-</body></html>`;
+</div>`;
 
-  const w = window.open("", "_blank");
-  if (!w) { alert("Permite ventanas emergentes para generar el PDF."); return; }
-  w.document.write(html); w.document.close();
+  // Construir DOM oculto para renderizar el PDF
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:750px;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.innerHTML = `<style>${css}</style>${htmlContent}`;
+  document.body.appendChild(wrapper);
+
+  // Esperar carga de imágenes
+  await Promise.all(
+    Array.from(wrapper.querySelectorAll("img"))
+      .filter(img => !img.complete)
+      .map(img => new Promise(r => { img.onload = r; img.onerror = r; }))
+  );
+  await new Promise(r => setTimeout(r, 300));
+
+  // Generar y descargar PDF
+  const sanitizar = s => (s || "").replace(/[^a-zA-Z0-9À-ÿ\-_ ]/g, "").trim().replace(/\s+/g, "_").slice(0, 40);
+  const filename = `${d.numero || "COT"}-${sanitizar(d.cliente)}.pdf`;
+
+  try {
+    await window.html2pdf()
+      .set({
+        margin: [8, 10, 8, 10],
+        filename,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: false, letterRendering: true },
+        jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+      })
+      .from(wrapper)
+      .save();
+  } catch (err) {
+    alert("Error al generar el PDF: " + (err.message || err));
+  }
+
+  document.body.removeChild(wrapper);
 }
 
 // Construye datos PDF desde registro guardado
