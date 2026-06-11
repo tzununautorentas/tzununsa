@@ -67,7 +67,9 @@ async function generarPDFPremium(d, empId) {
     titulo_footer: empData.titulo_footer  || "Conduciendo confianza, llegando más lejos.",
     cierre_corporativo: empData.cierre_corporativo || "",
     tarifa_limpieza: parseFloat(empData.tarifa_limpieza) || 75,
+    termino_pago_def: empData.termino_pago_def || "50% anticipo",
   };
+  const pctAnticipo = parseInt(e.termino_pago_def) || 50;
 
   // Cargar html2pdf.js si no está disponible
   if (typeof window.html2pdf === "undefined") {
@@ -94,15 +96,6 @@ async function generarPDFPremium(d, empId) {
   }
 
   const mostrarIVA = d.iva_pct > 0 && d.iva_amt > 0;
-  const totalTC = d.total_ef ? d.total_ef * 1.05 : 0;
-
-  // Determinar tipo de servicio
-  const tieneVehiculo = !!d.vehiculo;
-  const tienePiloto = d.incl_piloto;
-  const tipoServicio = !tieneVehiculo && !tienePiloto ? "Transporte corporativo"
-    : tieneVehiculo && tienePiloto ? "Servicio de transporte ejecutivo"
-    : tieneVehiculo ? "Alquiler de vehículo"
-    : "Servicio con piloto";
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
@@ -127,7 +120,6 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#1E293B;backgro
 .vehiculo-bloque{text-align:center;margin:6px 0}
 .vehiculo-bloque img{width:100%;max-width:340px;height:auto;border-radius:8px;border:1px solid #E2E8F0;object-fit:cover}
 .vehiculo-bloque .veh-nombre{font-size:12px;color:#1B2D5C;font-weight:700;margin-top:4px}
-.tipo-servicio{display:inline-block;background:#1B2D5C;color:#fff;padding:4px 16px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;margin-bottom:4px}
 .servicio-line{font-size:10.5px;color:#475569;line-height:1.6}
 .inc-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .inc-item{display:flex;align-items:center;gap:5px;padding:3px 10px;font-size:9.5px;color:#475569;background:#F8FAFC;border-radius:5px;border:1px solid #E2E8F0}
@@ -139,15 +131,11 @@ table.inv td{padding:4px 10px;border-bottom:1px solid #F1F5F9;font-size:10px}
 table.inv .amt{text-align:right;font-weight:600}
 table.inv .tot-row td{border-top:2.5px solid #00D4AA;border-bottom:none;font-weight:700;font-size:11px}
 table.inv strong{font-size:15px;color:#00D4AA}
-.pago-card{border-radius:8px;padding:10px 16px;margin-top:4px}
-.pago-card.efectivo{background:#F0FDF9;border:1.5px solid #00D4AA66}
-.pago-card.tarjeta{background:#FFF7ED;border:1.5px solid #F9731666;margin-top:3px}
-.pago-card .pago-label{font-size:9px;color:#64748B;font-weight:600}
-.pago-card .pago-monto{font-size:20px;font-weight:800;color:#1B2D5C;margin-top:2px}
-.pago-card .pago-monto.tarjeta-monto{font-size:17px}
-.pago-nota{font-size:8px;color:#94A3B8;margin-top:4px;font-style:italic}
+.pago-metodos{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;margin-bottom:5px}
+.pago-chip{padding:3px 10px;font-size:9px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:5px}
 .bancos{font-size:9px;color:#475569;line-height:1.6;margin-top:5px}
 .bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:3px;font-size:10px}
+.anticipo-line{font-size:9px;color:#64748B;margin-top:4px}
 .terms{font-size:9px;color:#475569;line-height:1.6;padding-left:16px;margin-top:3px}
 .terms li{margin-bottom:3px}
 .cierre{font-size:10px;color:#475569;font-style:italic;line-height:1.5;margin-top:4px;padding:6px 12px;background:#F8FAFC;border-radius:6px}
@@ -195,10 +183,6 @@ ${fotoVehiculo ? `<div class="vehiculo-bloque">
   ${d.vehiculo ? `<div class="veh-nombre">${d.vehiculo}</div>` : ""}
 </div>` : ""}
 
-<div class="section">
-  <div class="tipo-servicio">${tipoServicio}</div>
-</div>
-
 ${d.servicio ? `<div class="section">
   <div class="st">Descripci&oacute;n del servicio</div>
   <div class="servicio-line">${d.servicio}</div>
@@ -232,20 +216,18 @@ ${d.servicio ? `<div class="section">
 
 <div class="section">
   <div class="st">Formas de pago</div>
-  <div class="pago-card efectivo">
-    <div class="pago-label">Transferencia, dep&oacute;sito o efectivo:</div>
-    <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
+  <div class="pago-metodos">
+    <span class="pago-chip">Transferencia bancaria</span>
+    <span class="pago-chip">Dep&oacute;sito bancario</span>
+    <span class="pago-chip">Efectivo</span>
+    <span class="pago-chip">Tarjeta de cr&eacute;dito o d&eacute;bito</span>
   </div>
-  <div class="pago-card tarjeta">
-    <div class="pago-label">Tarjeta de cr&eacute;dito o d&eacute;bito:</div>
-    <div class="pago-monto tarjeta-monto">Q ${fmt(totalTC)}</div>
-  </div>
-  <div class="pago-nota">Las tarifas corresponden a las modalidades de pago disponibles para este servicio.</div>
   <div class="bancos">
     <div class="titular">A nombre de: Transportes Tz'unun</div>
     <div>&bull; ${e.banco1}</div>
     <div>&bull; ${e.banco2}</div>
   </div>
+  <div class="anticipo-line">Anticipo requerido para confirmar el servicio: <strong>${pctAnticipo}%</strong></div>
 </div>
 
 <div class="section">
