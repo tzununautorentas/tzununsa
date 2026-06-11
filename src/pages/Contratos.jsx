@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, Badge, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── API ──────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ function ChecklistVehiculo({ titulo, valor, onChange }) {
 // ═══════════════════════════════════════════════════════════════════
 // GENERADOR DE PDF — HTML profesional
 // ═══════════════════════════════════════════════════════════════════
-const generarPDF = (contrato) => {
+const generarPDFContrato = (contrato) => {
   const conductores = JSON.parse(contrato.conductores || '[]');
   const checkSal    = JSON.parse(contrato.checklist_salida  || '{}');
   const checkRet    = JSON.parse(contrato.checklist_retorno || '{}');
@@ -213,10 +213,7 @@ const generarPDF = (contrato) => {
   const checkRow = (item, val) =>
     `<tr><td>${item.label}</td><td style="text-align:center;font-weight:700;color:${val ? '#16A34A' : '#DC2626'}">${val ? 'OK' : '---'}</td></tr>`;
 
-  const html = `<!DOCTYPE html><html lang="es"><head>
-  <meta charset="UTF-8"/>
-  <title>Contrato ${contrato.numero}</title>
-  <style>
+  const css = `
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Arial',sans-serif;font-size:10.5px;color:#1E293B;background:#fff;padding:32px 40px}
     /* Header */
@@ -266,8 +263,8 @@ const generarPDF = (contrato) => {
     /* Footer */
     .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
     @media print{body{padding:20px 24px}.no-print{display:none}@page{size:A4;margin:15mm}}
-  </style></head><body>
-
+  `;
+  const html = `
   <!-- HEADER -->
   <div class="header">
     <div class="brand">
@@ -520,12 +517,9 @@ const generarPDF = (contrato) => {
     Contrato No. ${contrato.numero} | Guatemala, Centroamerica | ${new Date().toLocaleDateString('es-GT')}
   </div>
 
-  <script>window.onload = () => window.print()<\/script>
-  </body></html>`;
+  `;
 
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+  generarPDF({ html, css, filename: `Contrato_${contrato.numero}.pdf` });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -956,7 +950,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
               Vista previa del contrato
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => generarPDF(f)} style={{ ...S.btn('blue'), flex: 1 }}>
+              <button onClick={() => generarPDFContrato(f)} style={{ ...S.btn('blue'), flex: 1 }}>
                 Ver PDF completo
               </button>
               <button onClick={() => navigator.clipboard?.writeText(f.numero).then(() => showToast('Numero copiado'))}
@@ -1086,7 +1080,7 @@ export default function PageContratos({ showToast, empId }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
-                  <button onClick={() => generarPDF(r)}
+                  <button onClick={() => generarPDFContrato(r)}
                     style={{ ...S.btn("blue"), padding: "3px 7px", fontSize: 10 }}>
                     PDF
                   </button>

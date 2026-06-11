@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CAT_GASTO } from '../config.js';
-import { Spinner, Empty, Fld, Badge, CatBadge, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, CatBadge, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
@@ -632,19 +632,14 @@ function FormGasto({ initial, empId, proveedores, vehiculos, reservas, empleados
 // ═══════════════════════════════════════════════════════════════════
 const exportarPDF = (rows, filtros = '') => {
   const total = rows.reduce((s, r) => s + (parseFloat(r.total) || 0), 0);
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Gastos</title>
-  <style>body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;padding:20px}
-  h1{color:#1B2D5C;font-size:16px;margin-bottom:4px}.sub{font-size:9px;color:#64748B;margin-bottom:16px}
-  table{width:100%;border-collapse:collapse}th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left;font-size:10px}
-  td{padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px}.tot td{font-weight:700;background:#F1F5F9}
-  @media print{body{padding:10px}}</style></head><body>
-  <h1>TZ'UNUN AUTORENTAS — Reporte de Gastos</h1>
-  <div class="sub">${filtros} · ${new Date().toLocaleDateString('es-GT')} · ${rows.length} registros</div>
-  <table><thead><tr><th>Fecha</th><th>Descripcion</th><th>Categoria</th><th>Proveedor</th><th>Empleado</th><th>Vehiculo</th><th>Metodo</th><th>Estado</th><th>Total Q</th></tr></thead>
-  <tbody>${rows.map(r => `<tr><td>${r.fecha || ''}</td><td>${r.descripcion || ''}</td><td>${r.categoria || ''}</td><td>${r.proveedor || '—'}</td><td>${r.empleado_nombre || '—'}</td><td>${r.vehiculo_nombre || '—'}</td><td>${r.metodo_pago || ''}</td><td>${ESTADOS[r.estado]?.l || r.estado}</td><td style="text-align:right;font-weight:600">Q ${fmt(r.total)}</td></tr>`).join('')}
-  <tr class="tot"><td colspan="8">TOTAL</td><td style="text-align:right">Q ${fmt(total)}</td></tr></tbody></table>
-  <script>window.onload=()=>window.print()<\/script></body></html>`;
-  const w = window.open('', '_blank'); w.document.write(html); w.document.close();
+  const html = `<div style="padding:20px">
+  <h1 style="color:#1B2D5C;font-size:16px;margin-bottom:4px">TZ'UNUN AUTORENTAS — Reporte de Gastos</h1>
+  <div style="font-size:9px;color:#64748B;margin-bottom:16px">${filtros} · ${new Date().toLocaleDateString('es-GT')} · ${rows.length} registros</div>
+  <table style="width:100%;border-collapse:collapse"><thead><tr style="background:#1B2D5C;color:#fff">${['Fecha','Descripcion','Categoria','Proveedor','Empleado','Vehiculo','Metodo','Estado','Total Q'].map(h => `<th style="padding:6px 8px;text-align:left;font-size:10px">${h}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map(r => `<tr><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.fecha || ''}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.descripcion || ''}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.categoria || ''}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.proveedor || '—'}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.empleado_nombre || '—'}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.vehiculo_nombre || '—'}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${r.metodo_pago || ''}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px">${ESTADOS[r.estado]?.l || r.estado}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0;font-size:10px;text-align:right;font-weight:600">Q ${fmt(r.total)}</td></tr>`).join('')}
+  <tr style="font-weight:700;background:#F1F5F9"><td colspan="8" style="padding:5px 8px;font-size:10px">TOTAL</td><td style="padding:5px 8px;font-size:10px;text-align:right">Q ${fmt(total)}</td></tr></tbody></table></div>`;
+  const css = `body{font-family:Arial,sans-serif;font-size:11px;color:#1E293B;margin:0;padding:0}*{box-sizing:border-box}`;
+  generarPDF({ html, css, filename: `Gastos_${new Date().toISOString().slice(0, 10)}.pdf` });
 };
 
 const exportarExcel = (rows) => {

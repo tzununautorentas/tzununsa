@@ -5,6 +5,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { T, S, SB, H, dbIns, dbUpd } from "../config.js";
+import { generarPDF } from "../components/shared.jsx";
 
 // ─── API helper ───────────────────────────────────────────────────
 async function api(path, opts = {}) {
@@ -267,9 +268,7 @@ export default function PageContabilidad({ showToast, empId }) {
 
   // ─── Exportar PDF ─────────────────────────────────────────────
   const exportarPDF = (titulo, filas, columnas) => {
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-    <title>${titulo}</title>
-    <style>
+    const css = `
       body{font-family:Arial,sans-serif;padding:24px;font-size:11px;color:#1a1a1a}
       h2{color:#1B2D5C;margin-bottom:4px}p{color:#666;margin:0 0 16px}
       table{width:100%;border-collapse:collapse}
@@ -277,18 +276,14 @@ export default function PageContabilidad({ showToast, empId }) {
       td{padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px}
       tr:nth-child(even){background:#f8fafc}
       .total{font-weight:bold;background:#f1f5f9!important}
-      @media print{button{display:none}}
-    </style></head><body>
+    `;
+    const html = `
     <h2>Tz'unun AutoRentas — ${titulo}</h2>
     <p>Generado: ${new Date().toLocaleDateString("es-GT", { day: "2-digit", month: "long", year: "numeric" })}</p>
     <table><thead><tr>${columnas.map(c => `<th>${c.label}</th>`).join("")}</tr></thead>
     <tbody>${filas.map(f => `<tr>${columnas.map(c => `<td>${f[c.key] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody>
-    </table>
-    <script>window.onload=()=>{window.print()}<\/script>
-    </body></html>`;
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
+    </table>`;
+    generarPDF({ html, css, filename: `${titulo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf` });
   };
 
   // ─── Exportar Excel (CSV) ─────────────────────────────────────

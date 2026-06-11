@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import {
   IconEdit, IconDelete, IconSave, IconBack, IconPlus, IconSearch,
@@ -51,19 +51,14 @@ async function generarCodigo() {
 
 // ─── Exportar PDF ─────────────────────────────────────────────────
 const exportarPDF = (rows) => {
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Empleados</title>
-  <style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}
-  h2{color:#1B2D5C}table{width:100%;border-collapse:collapse}
-  th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left}
-  td{padding:5px 8px;border-bottom:1px solid #E2E8F0}
-  @media print{button{display:none}}</style></head><body>
-  <h2>Tz'unun AutoRentas — Empleados y Colaboradores</h2>
+  const html = `<div style="padding:20px;font-size:11px">
+  <h2 style="color:#1B2D5C">Tz'unun AutoRentas — Empleados y Colaboradores</h2>
   <p>Total: ${rows.length} empleados — ${new Date().toLocaleDateString("es-GT")}</p>
-  <table><thead><tr><th>Codigo</th><th>Nombre</th><th>Tipo</th><th>Puesto</th><th>Telefono</th><th>Estado</th><th>Salario/Dia</th></tr></thead>
-  <tbody>${rows.map(r => `<tr><td>${r.codigo||""}</td><td>${r.nombre}</td><td>${TIPOS[r.tipo]?.l||r.tipo}</td><td>${r.puesto||"—"}</td><td>${r.telefono||"—"}</td><td>${ESTADOS[r.estado]?.l||r.estado}</td><td>Q ${fmt(r.tipo==="por_dia"?r.pago_diario:r.salario)}</td></tr>`).join("")}
-  </tbody></table>
-  <script>window.onload=()=>window.print()<\/script></body></html>`;
-  const w = window.open("", "_blank"); w.document.write(html); w.document.close();
+  <table style="width:100%;border-collapse:collapse"><thead><tr style="background:#1B2D5C;color:#fff">${['Codigo','Nombre','Tipo','Puesto','Telefono','Estado','Salario/Dia'].map(h => `<th style="padding:6px 8px;text-align:left">${h}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map(r => `<tr><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">${r.codigo||""}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">${r.nombre}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">${TIPOS[r.tipo]?.l||r.tipo}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">${r.puesto||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">${r.telefono||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">${ESTADOS[r.estado]?.l||r.estado}</td><td style="padding:5px 8px;border-bottom:1px solid #E2E8F0">Q ${fmt(r.tipo==="por_dia"?r.pago_diario:r.salario)}</td></tr>`).join("")}
+  </tbody></table></div>`;
+  const css = `body{font-family:Arial,sans-serif;margin:0;padding:0}*{box-sizing:border-box}`;
+  generarPDF({ html, css, filename: `Empleados_${new Date().toISOString().slice(0, 10)}.pdf` });
 };
 
 const exportarExcel = (rows) => {

@@ -17,6 +17,53 @@ export class ErrBoundary extends Component {
   }
 }
 
+// --- PDF Helper (html2pdf) ---
+export function cargarScript(url) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = url; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+export async function generarPDF({ html, css, filename, margin, format, orientation, raw }) {
+  if (typeof window.html2pdf === "undefined") {
+    try {
+      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+    } catch {
+      alert("No se pudo cargar el generador de PDF. Verifica tu conexión.");
+      return;
+    }
+  }
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.innerHTML = raw ? html : `<style>${css}</style>${html}`;
+  document.body.appendChild(wrapper);
+  await Promise.all(
+    Array.from(wrapper.querySelectorAll("img"))
+      .filter(img => !img.complete)
+      .map(img => new Promise(r => { img.onload = r; img.onerror = r; }))
+  );
+  await new Promise(r => setTimeout(r, 400));
+  const isMobile = window.innerWidth < 768;
+  try {
+    await window.html2pdf()
+      .set({
+        margin: margin || [8, 10, 8, 10],
+        filename: filename || "documento.pdf",
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: isMobile ? 1.2 : 2, useCORS: true, allowTaint: false, letterRendering: true, logging: false },
+        jsPDF: { unit: "mm", format: format || "letter", orientation: orientation || "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+      })
+      .from(wrapper)
+      .save();
+  } catch (err) {
+    alert("Error al generar PDF: " + (err.message || err));
+  }
+  document.body.removeChild(wrapper);
+}
+
 // --- Toast ---
 export function Toast({ msg, type }) {
   if (!msg) return null;
@@ -83,19 +130,14 @@ export function ModalExportar({ titulo, datos, campos, onClose, extraEncabezado 
   const exportar = () => {
     if (formato === "pdf") {
       const tds = r => campos.map(c => `<td${c.cls ? ` class="${c.cls}"` : ""}>${c.render ? c.render(r) : (r[c.key] ?? "")}</td>`).join("");
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${titulo}</title>
-      <style>body{font-family:Arial,sans-serif;padding:20px;font-size:11px}h2{color:#1B2D5C}
-      table{width:100%;border-collapse:collapse}th{background:#1B2D5C;color:#fff;padding:6px 8px;text-align:left;white-space:nowrap}
-      td{padding:5px 8px;border-bottom:1px solid #E2E8F0;white-space:nowrap}
-      .der{text-align:right}.mono{font-family:'Courier New',monospace}.ene{font-size:10px;color:#666;margin-bottom:16px}
-      @media print{button{display:none}}</style>
-      </head><body>
-      <h2 style="margin-bottom:2px">Tz'unun AutoRentas - ${titulo}</h2>
-      ${extraEncabezado ? `<div class="ene">${extraEncabezado}</div>` : `<p style="margin-top:0">${filtered.length} registros - ${new Date().toLocaleDateString("es-GT")}</p>`}
-      <table><thead><tr>${campos.map(c => `<th${c.cls ? ` class="${c.cls}"` : ""}>${c.label}</th>`).join("")}</tr></thead>
+      const html = `<div style="padding:20px;font-size:11px">
+      <h2 style="margin-bottom:2px;color:#1B2D5C">Tz'unun AutoRentas - ${titulo}</h2>
+      ${extraEncabezado ? `<div style="font-size:10px;color:#666;margin-bottom:16px">${extraEncabezado}</div>` : `<p style="margin-top:0">${filtered.length} registros - ${new Date().toLocaleDateString("es-GT")}</p>`}
+      <table style="width:100%;border-collapse:collapse"><thead><tr style="background:#1B2D5C;color:#fff">${campos.map(c => `<th style="padding:6px 8px;text-align:left;white-space:nowrap">${c.label}</th>`).join("")}</tr></thead>
       <tbody>${filtered.map(r => `<tr>${tds(r)}</tr>`).join("")}</tbody>
-      </table><script>window.onload=()=>window.print();</script></body></html>`;
-      const w = window.open("", "_blank"); w.document.write(html); w.document.close();
+      </table></div>`;
+      const css = `body{font-family:Arial,sans-serif;margin:0;padding:0}td{padding:5px 8px;border-bottom:1px solid #E2E8F0;white-space:nowrap;font-size:11px}.der{text-align:right}.mono{font-family:'Courier New',monospace}`;
+      generarPDF({ html, css, filename: `${titulo}.pdf` });
     } else {
       const sep = formato === "csv" ? "," : "\t";
       const bom = "\uFEFF";

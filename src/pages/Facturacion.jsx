@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 
@@ -45,78 +45,72 @@ const EF = {
 
 // ─── Imprimir factura (ventana HTML) ─────────────────────────────
 const imprimirFactura = (r) => {
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-  <title>Factura ${r.numero_factura || ''}</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Arial',sans-serif;padding:32px;font-size:11px;color:#1E293B;background:#fff}
-    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #1B2D5C}
-    .logo-area h1{color:#1B2D5C;font-size:20px;font-weight:800;margin-bottom:4px}
-    .logo-area p{color:#64748B;font-size:10px}
-    .factura-info{text-align:right}
-    .factura-info .num{font-size:18px;font-weight:800;color:#1B2D5C}
-    .factura-info p{font-size:10px;color:#64748B;margin-top:2px}
-    .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700;background:#00D4AA22;color:#00D4AA;margin-top:4px}
-    .section{margin-bottom:20px}
-    .section-title{font-size:9px;font-weight:700;color:#94A3B8;letter-spacing:1.5px;margin-bottom:8px}
-    .client-box{background:#F8FAFC;border-radius:8px;padding:14px;border-left:3px solid #1B2D5C}
-    .client-box strong{font-size:13px;color:#1B2D5C}
-    table{width:100%;border-collapse:collapse;margin-bottom:20px}
-    thead tr{background:#1B2D5C}
-    th{color:#fff;padding:8px 12px;text-align:left;font-size:10px;font-weight:600}
-    td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
-    .amounts{margin-left:auto;width:280px}
-    .amount-row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569}
-    .amount-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1B2D5C;font-size:16px;font-weight:800;color:#1B2D5C}
-    .footer{margin-top:28px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
-    @media print{.no-print{display:none}}
-  </style></head><body>
-  <div class="header">
-    <div class="logo-area">
-      <h1>Tz'unun AutoRentas</h1>
-      <p>Servicios de Transporte y Renta de Vehiculos</p>
-      <p>Guatemala City, Guatemala</p>
-    </div>
-    <div class="factura-info">
-      <div class="num">FACTURA FEL</div>
-      <p>No. ${r.numero_factura || '—'}</p>
-      ${r.serie ? `<p>Serie: ${r.serie}</p>` : ''}
-      <p>Fecha: ${fmtD(r.fecha)}</p>
-      <div class="badge">${ESTADOS[r.estado]?.l || r.estado}</div>
-    </div>
+  const css = `
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Arial',sans-serif;padding:32px;font-size:11px;color:#1E293B;background:#fff}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #1B2D5C}
+.logo-area h1{color:#1B2D5C;font-size:20px;font-weight:800;margin-bottom:4px}
+.logo-area p{color:#64748B;font-size:10px}
+.factura-info{text-align:right}
+.factura-info .num{font-size:18px;font-weight:800;color:#1B2D5C}
+.factura-info p{font-size:10px;color:#64748B;margin-top:2px}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700;background:#00D4AA22;color:#00D4AA;margin-top:4px}
+.section{margin-bottom:20px}
+.section-title{font-size:9px;font-weight:700;color:#94A3B8;letter-spacing:1.5px;margin-bottom:8px}
+.client-box{background:#F8FAFC;border-radius:8px;padding:14px;border-left:3px solid #1B2D5C}
+.client-box strong{font-size:13px;color:#1B2D5C}
+table{width:100%;border-collapse:collapse;margin-bottom:20px}
+thead tr{background:#1B2D5C}
+th{color:#fff;padding:8px 12px;text-align:left;font-size:10px;font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
+.amounts{margin-left:auto;width:280px}
+.amount-row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569}
+.amount-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1B2D5C;font-size:16px;font-weight:800;color:#1B2D5C}
+.footer{margin-top:28px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
+`;
+  const html = `
+<div class="header">
+  <div class="logo-area">
+    <h1>Tz'unun AutoRentas</h1>
+    <p>Servicios de Transporte y Renta de Vehiculos</p>
+    <p>Guatemala City, Guatemala</p>
   </div>
-  <div class="section">
-    <div class="section-title">DATOS DEL CLIENTE</div>
-    <div class="client-box">
-      <strong>${r.cliente_nombre || 'Consumidor Final'}</strong>
-      <p style="margin-top:4px;color:#475569">NIT: ${r.cliente_nit || 'CF'}</p>
-    </div>
+  <div class="factura-info">
+    <div class="num">FACTURA FEL</div>
+    <p>No. ${r.numero_factura || '—'}</p>
+    ${r.serie ? `<p>Serie: ${r.serie}</p>` : ''}
+    <p>Fecha: ${fmtD(r.fecha)}</p>
+    <div class="badge">${ESTADOS[r.estado]?.l || r.estado}</div>
   </div>
-  <div class="section">
-    <div class="section-title">DETALLE DEL SERVICIO</div>
-    <table>
-      <thead><tr><th>Descripcion</th><th style="text-align:right">Monto Q</th></tr></thead>
-      <tbody>
-        <tr><td>${r.descripcion || 'Servicios de transporte y renta'}</td>
-        <td style="text-align:right;font-weight:600">Q ${fmt(r.subtotal)}</td></tr>
-      </tbody>
-    </table>
+</div>
+<div class="section">
+  <div class="section-title">DATOS DEL CLIENTE</div>
+  <div class="client-box">
+    <strong>${r.cliente_nombre || 'Consumidor Final'}</strong>
+    <p style="margin-top:4px;color:#475569">NIT: ${r.cliente_nit || 'CF'}</p>
   </div>
-  <div class="amounts">
-    <div class="amount-row"><span>Subtotal</span><span>Q ${fmt(r.subtotal)}</span></div>
-    <div class="amount-row"><span>IVA (${r.tasa_iva || 12}%)</span><span>Q ${fmt(r.impuestos)}</span></div>
-    <div class="amount-total"><span>TOTAL</span><span>Q ${fmt(r.total)}</span></div>
-  </div>
-  ${r.metodo_pago ? `<p style="margin-top:12px;font-size:10px;color:#64748B">Metodo de pago: ${r.metodo_pago}</p>` : ''}
-  <div class="footer">
-    Documento generado por Tz'unun AutoRentas &nbsp;|&nbsp;
-    ${new Date().toLocaleDateString('es-GT', { day:'2-digit', month:'long', year:'numeric' })}
-  </div>
-  <script>window.onload=()=>window.print()<\/script>
-  </body></html>`;
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+</div>
+<div class="section">
+  <div class="section-title">DETALLE DEL SERVICIO</div>
+  <table>
+    <thead><tr><th>Descripcion</th><th style="text-align:right">Monto Q</th></tr></thead>
+    <tbody>
+      <tr><td>${r.descripcion || 'Servicios de transporte y renta'}</td>
+      <td style="text-align:right;font-weight:600">Q ${fmt(r.subtotal)}</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="amounts">
+  <div class="amount-row"><span>Subtotal</span><span>Q ${fmt(r.subtotal)}</span></div>
+  <div class="amount-row"><span>IVA (${r.tasa_iva || 12}%)</span><span>Q ${fmt(r.impuestos)}</span></div>
+  <div class="amount-total"><span>TOTAL</span><span>Q ${fmt(r.total)}</span></div>
+</div>
+${r.metodo_pago ? `<p style="margin-top:12px;font-size:10px;color:#64748B">Metodo de pago: ${r.metodo_pago}</p>` : ''}
+<div class="footer">
+  Documento generado por Tz'unun AutoRentas &nbsp;|&nbsp;
+  ${new Date().toLocaleDateString('es-GT', { day:'2-digit', month:'long', year:'numeric' })}
+</div>`;
+  generarPDF({ html, css, filename: `FEL_${r.numero_factura || r.id || "factura"}.pdf` });
 };
 
 // ════════════════════════════════════════════════════════════════════
