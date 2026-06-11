@@ -52,21 +52,24 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 
 // Consulta OSRM para una ruta con múltiples puntos
 // points: [[lat,lng], ...]
-// Retorna { km, minutos, geometria } o null
-export async function consultarOSRM(points) {
+// alternativas: número de rutas alternativas a solicitar (0 = solo la principal)
+// Retorna { routes: [{ km, minutos, geometria, nombre }], selected: 0 } o null
+export async function consultarOSRM(points, alternativas = 0) {
   if (points.length < 2) return null;
   const coords = points.map(p => `${p[1]},${p[0]}`).join(";");
   try {
-    const r = await fetch(`${OSRM_BASE}/${coords}?overview=full&geometries=geojson`);
+    const altParam = alternativas > 0 ? `&alternatives=${Math.min(alternativas, 3)}` : "";
+    const r = await fetch(`${OSRM_BASE}/${coords}?overview=full&geometries=geojson${altParam}`);
     if (!r.ok) return null;
     const j = await r.json();
     if (!j.routes || j.routes.length === 0) return null;
-    const ruta = j.routes[0];
-    return {
+    const routes = j.routes.map((ruta, i) => ({
       km: Math.round(ruta.distance / 100) / 10,
       minutos: Math.round(ruta.duration / 60),
       geometria: ruta.geometry,
-    };
+      nombre: i === 0 ? "Principal" : `Alternativa ${i}`,
+    }));
+    return { routes, selected: 0 };
   } catch {
     return null;
   }

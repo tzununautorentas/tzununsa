@@ -57,76 +57,87 @@ async function generarPDFPremium(d, empId) {
     tel_firmante: empData.tel_firmante    || "+502 3122 1538",
     firma_digital: empData.firma_digital  || "",
     titulo_footer: empData.titulo_footer  || "Conduciendo confianza, llegando más lejos.",
-    cierre_corporativo: empData.cierre_corporativo || "En Tz'unun AutoRentas nos comprometemos a brindarle un servicio seguro, puntual y a la altura de sus requerimientos. Quedamos a su disposición para cualquier consulta o ajuste adicional.",
+    cierre_corporativo: empData.cierre_corporativo || "",
     tarifa_limpieza: parseFloat(empData.tarifa_limpieza) || 75,
     termino_pago_def: empData.termino_pago_def || "50% anticipo",
   };
-  const pctAnticipo = parseInt(e.termino_pago_def) || 50;
 
-  // Solo servicios incluidos (filtrados)
-  const Included = [
-    { l: "Piloto profesional",              v: d.incl_piloto },
-    { l: "Combustible seg&uacute;n recorrido", v: d.incl_combustible },
-    { l: "Peajes y casetas de cobro",        v: d.incl_peajes },
-    { l: "Hospedaje del piloto",             v: d.incl_hospedaje },
-    { l: "Alimentaci&oacute;n del piloto",   v: d.incl_alimentacion },
-    { l: "Seguro b&aacute;sico de viaje",    v: d.incl_seguro },
-    { l: "Veh&iacute;culo higienizado",       v: true },
-    { l: "Atenci&oacute;n personalizada",    v: true },
-  ].filter(s => s.v);
+  // Buscar foto del vehículo en la tabla vehiculos
+  let fotoVehiculo = "";
+  if (d.vehiculo) {
+    try {
+      const vehiculos = await dbGet("vehiculos", "&select=foto_url,marca,modelo&limit=20");
+      const match = vehiculos.find(v => {
+        const vn = `${v.marca || ""} ${v.modelo || ""}`.toLowerCase();
+        const dn = d.vehiculo.toLowerCase();
+        return vn.includes(dn) || dn.includes(vn) || dn.includes((v.marca || "").toLowerCase());
+      });
+      if (match && match.foto_url) fotoVehiculo = match.foto_url;
+    } catch {}
+  }
 
   const mostrarIVA = d.iva_pct > 0 && d.iva_amt > 0;
+  const totalTC = d.total_ef ? d.total_ef * 1.05 : 0;
+
+  const style = `
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#1E293B;background:#fff}
+@page{size:letter;margin:8mm 12mm}
+@media print{@page{size:letter;margin:8mm 12mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.page{max-width:100%}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:2px solid #1B2D5C;margin-bottom:6px}
+.h-left{display:flex;gap:10px;align-items:center}
+.h-logo{width:52px;height:52px;border-radius:6px;object-fit:contain}
+.h-logo-fallback{width:52px;height:52px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900}
+.h-info h1{font-size:14px;font-weight:800;color:#1B2D5C;letter-spacing:-0.3px}
+.h-info .slogan{font-size:8px;color:#64748B;margin-top:1px}
+.h-info .detail{font-size:7.5px;color:#94A3B8;margin-top:1px;line-height:1.5}
+.h-right{text-align:right}
+.h-right .doc-type{font-size:16px;font-weight:800;color:#00D4AA;letter-spacing:1px}
+.h-right .doc-num{font-size:11px;color:#1B2D5C;font-weight:700;margin-top:2px}
+.h-right .doc-date{font-size:7.5px;color:#94A3B8;margin-top:1px}
+.section{margin-bottom:5px}
+.st{font-size:7px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #E2E8F0;padding-bottom:2px;margin-bottom:3px}
+.saludo-box{background:#F0FDF9;border-left:3px solid #00D4AA;padding:5px 10px;font-size:9px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:5px}
+.client-name{font-size:12px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:8px;color:#64748B;margin-top:1px;line-height:1.5}
+.vehiculo-foto{display:flex;gap:10px;align-items:flex-start;margin-top:3px}
+.vehiculo-foto img{width:120px;height:80px;border-radius:6px;object-fit:cover;border:1px solid #E2E8F0;flex-shrink:0}
+.vehiculo-foto .servicio-line{flex:1;font-size:9px;color:#475569;line-height:1.6}
+.inc-grid{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.inc-item{display:flex;align-items:center;gap:4px;padding:2px 8px;font-size:8px;color:#475569;background:#F8FAFC;border-radius:4px;border:1px solid #E2E8F0}
+.inc-check{width:11px;height:11px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
+table.inv{width:100%;border-collapse:collapse;margin-top:2px}
+table.inv thead tr{background:#1B2D5C}
+table.inv th{color:#fff;padding:3px 7px;text-align:left;font-size:7.5px;font-weight:600;letter-spacing:0.5px}
+table.inv td{padding:3px 7px;border-bottom:1px solid #F1F5F9;font-size:8.5px}
+table.inv .amt{text-align:right;font-weight:600}
+table.inv .tot-row td{border-top:2px solid #00D4AA;border-bottom:none;font-weight:700;font-size:9px}
+table.inv strong{font-size:13px;color:#00D4AA}
+.pago-valor{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;border-radius:6px;margin-top:3px}
+.pago-valor.efectivo{background:#F0FDF9;border:1px solid #00D4AA55}
+.pago-valor.tarjeta{background:#FEF2F2;border:1px solid #F8717155;margin-top:2px}
+.pago-valor .pago-label{font-size:8px;color:#64748B}
+.pago-valor .pago-monto{font-size:14px;font-weight:800;color:#1B2D5C}
+.pago-valor.tarjeta .pago-monto{font-size:12px}
+.bancos{font-size:8px;color:#475569;line-height:1.6;margin-top:3px}
+.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:2px;font-size:8.5px}
+.terms{font-size:8px;color:#475569;line-height:1.6;padding-left:14px;margin-top:2px}
+.terms li{margin-bottom:2px}
+.cierre{font-size:8.5px;color:#475569;font-style:italic;line-height:1.5;margin-top:3px;padding:5px 9px;background:#F8FAFC;border-radius:4px}
+.firma-box{display:flex;justify-content:flex-start;align-items:flex-end;margin-top:6px;padding-top:6px;border-top:1px solid #E2E8F0}
+.firma-left{max-width:100%}
+.firma-left .firma-img{height:45px;margin-bottom:4px}
+.firma-left .f-name{font-weight:700;color:#1B2D5C;font-size:10px}
+.firma-left .f-title{font-size:8.5px;color:#64748B}
+.firma-left .f-contact{font-size:7.5px;color:#94A3B8;margin-top:1px}
+.footer{text-align:center;font-size:7px;color:#94A3B8;margin-top:6px;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.5}
+.footer strong{color:#64748B}
+`;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
 <title>COTIZACIÓN ${d.numero}</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#1E293B;background:#fff}
-@page{size:A4;margin:10mm 14mm}
-@media print{@page{size:A4;margin:10mm 14mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group}}
-.page{max-width:100%}
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2px solid #1B2D5C;margin-bottom:8px}
-.h-left{display:flex;gap:10px;align-items:center}
-.h-logo{width:48px;height:48px;border-radius:6px;object-fit:contain}
-.h-logo-fallback{width:48px;height:48px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900}
-.h-info h1{font-size:13px;font-weight:800;color:#1B2D5C;letter-spacing:-0.3px}
-.h-info .slogan{font-size:7.5px;color:#64748B;margin-top:1px}
-.h-info .detail{font-size:7px;color:#94A3B8;margin-top:1px;line-height:1.5}
-.h-right{text-align:right}
-.h-right .doc-type{font-size:15px;font-weight:800;color:#00D4AA;letter-spacing:1px}
-.h-right .doc-num{font-size:10px;color:#1B2D5C;font-weight:700;margin-top:2px}
-.h-right .doc-date{font-size:7px;color:#94A3B8;margin-top:1px}
-.section{margin-bottom:6px}
-.st{font-size:6.5px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid #E2E8F0;padding-bottom:2px;margin-bottom:4px}
-.saludo-box{background:#F0FDF9;border-left:3px solid #00D4AA;padding:6px 10px;font-size:8.5px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:6px}
-.client-name{font-size:11px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:7.5px;color:#64748B;margin-top:1px;line-height:1.5}
-.servicio-line{font-size:8.5px;color:#475569;line-height:1.6}
-.inc-grid{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
-.inc-item{display:flex;align-items:center;gap:4px;padding:2px 7px;font-size:7.5px;color:#475569;background:#F8FAFC;border-radius:4px;border:1px solid #E2E8F0}
-.inc-check{width:10px;height:10px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;flex-shrink:0;color:#fff;background:#00D4AA}
-table.inv{width:100%;border-collapse:collapse;margin-top:2px}
-table.inv thead tr{background:#1B2D5C}
-table.inv th{color:#fff;padding:2px 6px;text-align:left;font-size:7px;font-weight:600;letter-spacing:0.5px}
-table.inv td{padding:2px 6px;border-bottom:1px solid #F1F5F9;font-size:8px}
-table.inv .amt{text-align:right;font-weight:600}
-table.inv .tot-row td{border-top:2px solid #00D4AA;border-bottom:none;font-weight:700;font-size:8.5px}
-table.inv strong{font-size:12px;color:#00D4AA}
-.pago-metodos{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px;margin-bottom:4px}
-.pago-chip{padding:2px 8px;font-size:7.5px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:4px}
-.bancos{font-size:7.5px;color:#475569;line-height:1.6;margin-top:2px}
-.bancos .titular{font-weight:700;color:#1B2D5C;margin-bottom:2px;font-size:8px}
-.anticipo-line{font-size:7.5px;color:#64748B;margin-top:3px}
-.terms{font-size:7.5px;color:#475569;line-height:1.6;padding-left:12px;margin-top:2px}
-.terms li{margin-bottom:3px}
-.cierre{font-size:8px;color:#475569;font-style:italic;line-height:1.5;margin-top:4px;padding:5px 9px;background:#F8FAFC;border-radius:4px}
-.firma-box{display:flex;justify-content:space-between;align-items:flex-end;margin-top:5px;padding-top:5px;border-top:1px solid #E2E8F0}
-.firma-left .f-name{font-weight:700;color:#1B2D5C;font-size:8.5px}
-.firma-left .f-title{font-size:7.5px;color:#64748B}
-.firma-left .f-contact{font-size:7px;color:#94A3B8;margin-top:1px}
-.footer{text-align:center;font-size:6.5px;color:#94A3B8;margin-top:5px;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.5}
-.footer strong{color:#64748B}
-</style></head><body>
+<style>${style}</style></head><body>
 <div class="page">
 
 <!-- HEADER -->
@@ -147,7 +158,7 @@ table.inv strong{font-size:12px;color:#00D4AA}
   </div>
 </div>
 
-<!-- CLIENTE (sin título) -->
+<!-- CLIENTE -->
 <div class="section">
   <div class="client-name">${d.cliente}</div>
   <div class="client-meta">
@@ -156,25 +167,32 @@ table.inv strong{font-size:12px;color:#00D4AA}
   </div>
 </div>
 
-<!-- SALUDO (después de datos del cliente) -->
+<!-- SALUDO -->
 ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
 
-<!-- DESCRIPCIÓN DEL SERVICIO (solo texto del usuario) -->
+<!-- DESCRIPCIÓN DEL SERVICIO + FOTO DEL VEHÍCULO -->
 ${d.servicio ? `<div class="section">
   <div class="st">Descripci&oacute;n del servicio</div>
-  <div class="servicio-line">${d.servicio}</div>
+  ${fotoVehiculo ? `<div class="vehiculo-foto">
+    <img src="${fotoVehiculo}" alt="Vehículo"/>
+    <div class="servicio-line">${d.servicio}</div>
+  </div>` : `<div class="servicio-line">${d.servicio}</div>`}
 </div>` : ""}
 
-<!-- SERVICIOS INCLUIDOS (solo los activos) -->
-${Included.length > 0 ? `<div class="section">
+<!-- SERVICIOS INCLUIDOS -->
+<div class="section">
   <div class="st">Servicios incluidos</div>
   <div class="inc-grid">
-    ${Included.map(s => `<div class="inc-item">
-      <div class="inc-check">&#10003;</div>
-      <span>${s.l}</span>
-    </div>`).join("")}
+    ${d.incl_piloto ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Piloto profesional</span></div>` : ""}
+    ${d.incl_combustible ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Combustible seg&uacute;n recorrido</span></div>` : ""}
+    ${d.incl_peajes ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Peajes y casetas de cobro</span></div>` : ""}
+    ${d.incl_hospedaje ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Hospedaje del piloto</span></div>` : ""}
+    ${d.incl_alimentacion ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Alimentaci&oacute;n del piloto</span></div>` : ""}
+    ${d.incl_seguro !== false ? `<div class="inc-item"><div class="inc-check">&#10003;</div><span>Seguro b&aacute;sico de viaje</span></div>` : ""}
+    <div class="inc-item"><div class="inc-check">&#10003;</div><span>Veh&iacute;culo higienizado</span></div>
+    <div class="inc-item"><div class="inc-check">&#10003;</div><span>Atenci&oacute;n personalizada</span></div>
   </div>
-</div>` : ""}
+</div>
 
 <!-- RESUMEN ECONÓMICO -->
 <div class="section">
@@ -183,8 +201,8 @@ ${Included.length > 0 ? `<div class="section">
     <thead><tr><th>Concepto</th><th style="text-align:right">Monto (GTQ)</th></tr></thead>
     <tbody>
       <tr><td>Subtotal</td><td class="amt">Q ${fmt(d.sub)}</td></tr>
-      ${mostrarIVA ? `<tr style="color:#64748B;font-size:7.5px"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>` : ""}
-      <tr class="tot-row"><td><strong>TOTAL DEL SERVICIO</strong></td><td class="amt"><strong>Q ${fmt(d.total_ef)}</strong></td></tr>
+      ${mostrarIVA ? `<tr style="color:#64748B;font-size:8px"><td>IVA (${d.iva_pct}%)</td><td class="amt">Q ${fmt(d.iva_amt)}</td></tr>` : ""}
+      <tr class="tot-row"><td><strong>TOTAL</strong></td><td class="amt"><strong>Q ${fmt(d.total_ef)}</strong></td></tr>
     </tbody>
   </table>
 </div>
@@ -192,18 +210,19 @@ ${Included.length > 0 ? `<div class="section">
 <!-- FORMAS DE PAGO -->
 <div class="section">
   <div class="st">Formas de pago</div>
-  <div class="pago-metodos">
-    <span class="pago-chip">Transferencia bancaria</span>
-    <span class="pago-chip">Dep&oacute;sito bancario</span>
-    <span class="pago-chip">Efectivo</span>
-    <span class="pago-chip">Tarjeta de cr&eacute;dito o d&eacute;bito</span>
+  <div class="pago-valor efectivo">
+    <span class="pago-label">Transferencia, dep&oacute;sito o efectivo:</span>
+    <span class="pago-monto">Q ${fmt(d.total_ef)}</span>
+  </div>
+  <div class="pago-valor tarjeta">
+    <span class="pago-label">Pago con tarjeta de cr&eacute;dito o d&eacute;bito:</span>
+    <span class="pago-monto">Q ${fmt(totalTC)}</span>
   </div>
   <div class="bancos">
     <div class="titular">A nombre de: Transportes Tz'unun</div>
     <div>&bull; ${e.banco1}</div>
     <div>&bull; ${e.banco2}</div>
   </div>
-  <div class="anticipo-line">Anticipo requerido para confirmar el servicio: <strong>${pctAnticipo}%</strong></div>
 </div>
 
 <!-- TÉRMINOS Y CONDICIONES -->
@@ -212,23 +231,19 @@ ${Included.length > 0 ? `<div class="section">
   <ol class="terms">
     <li>La presente cotizaci&oacute;n tiene una vigencia de 15 d&iacute;as calendario a partir de su fecha de emisi&oacute;n.</li>
     <li>La reserva del servicio se confirma mediante el pago del anticipo acordado entre las partes.</li>
-    <li>Todos nuestros veh&iacute;culos son entregados limpios e higienizados antes de cada servicio. Cuando sea necesaria una limpieza al finalizar el servicio, se aplicar&aacute; la tarifa vigente de limpieza establecida por la empresa (Q ${fmt(e.tarifa_limpieza)}).</li>
-    <li>Cualquier servicio, recorrido o requerimiento adicional no contemplado en la presente cotizaci&oacute;n ser&aacute; cotizado por separado.</li>
-    <li>Se emitir&aacute; la correspondiente Factura Electr&oacute;nica en L&iacute;nea (FEL) por los servicios contratados.</li>
+    <li>El veh&iacute;culo se entrega limpio e higienizado. Cuando sea necesaria una limpieza al finalizar el servicio, se aplicar&aacute; la tarifa vigente (Q ${fmt(e.tarifa_limpieza)}).</li>
+    <li>Cualquier servicio o requerimiento adicional no contemplado ser&aacute; cotizado por separado.</li>
+    <li>Se emitir&aacute; la Factura Electr&oacute;nica en L&iacute;nea (FEL) por los servicios contratados.</li>
   </ol>
 </div>
 
 <!-- CIERRE INSTITUCIONAL -->
-${
-  e.cierre_corporativo && e.cierre_corporativo !== "En Tz'unun AutoRentas nos comprometemos a brindarle un servicio seguro, puntual y a la altura de sus requerimientos. Quedamos a su disposici\u00f3n para cualquier consulta o ajuste adicional."
-    ? `<div class="cierre">${e.cierre_corporativo}</div>`
-    : ""
-}
+${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : ""}
 
 <!-- FIRMA -->
 <div class="firma-box">
   <div class="firma-left">
-    ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" style="height:28px;margin-bottom:3px"/>` : ""}
+    ${e.firma_digital ? `<img src="${e.firma_digital}" alt="Firma" class="firma-img"/>` : ""}
     <div class="f-name">${e.firmante}</div>
     <div class="f-title">${e.cargo_firmante}</div>
     <div class="f-contact">Cel. ${e.tel_firmante} &middot; ${e.email_contacto}</div>
@@ -416,12 +431,12 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                       const pn = nom.trim().split(/\s+/)[0] || "";
                       const fem = pn.endsWith("a");
                       saludo = (fem ? "Estimada " : "Estimado ") + nom + ":";
-                    } else if (tipo === "empresa") {
-                      saludo = "Estimados señores:";
                     } else if (tipo === "gobierno") {
                       saludo = "Distinguidos señores:";
+                    } else if (["ong", "asociacion", "asociación", "cooperativa", "colectivo", "comite", "comité", "grupo", "social"].includes(tipo)) {
+                      saludo = "Reciban un cordial saludo las integrantes de " + nom + ":";
                     } else {
-                      saludo = "Reciban un cordial saludo integrantes de " + nom + ":";
+                      saludo = "Estimados señores:";
                     }
                     sf("saludo", saludo);
                   }}

@@ -345,6 +345,8 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
   const [modo, setModo] = useState(value?.modo || "auto");
   const [kpg, setKpg] = useState(value?.kpg || 27);
   const [pGalon, setPGalon] = useState(value?.pGalon || 48);
+  const [alternativas, setAlternativas] = useState(null);
+  const [rutaSel, setRutaSel] = useState(0);
 
   const actualizar = useCallback((idx, nuevoPunto) => {
     setPuntos(prev => {
@@ -389,16 +391,21 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
 
     let km, minutos, geometriaRuta;
     if (modo === "auto") {
-      const osrm = await consultarOSRM(coords);
-      if (osrm) {
-        km = osrm.km;
-        minutos = osrm.minutos;
-        geometriaRuta = osrm.geometria;
+      const osrm = await consultarOSRM(coords, 3);
+      if (osrm && osrm.routes.length > 0) {
+        setAlternativas(osrm.routes);
+        const idx = rutaSel < osrm.routes.length ? rutaSel : 0;
+        const ruta = osrm.routes[idx];
+        km = ruta.km;
+        minutos = ruta.minutos;
+        geometriaRuta = ruta.geometria;
       } else {
+        setAlternativas(null);
         km = distanciaHaversine(coords);
         minutos = Math.round(km * 1.5 * 60 / 50);
       }
     } else {
+      setAlternativas(null);
       km = parseFloat(manualKm) || distanciaHaversine(coords);
       minutos = Math.round(km * 1.5 * 60 / 50);
     }
@@ -427,7 +434,7 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
         destinoNombre: nomPunto(validos[validos.length - 1]),
       });
     }
-  }, [puntos, modo, manualKm, kpg, pGalon, onChange]);
+  }, [puntos, modo, manualKm, kpg, pGalon, onChange, rutaSel]);
 
   const validos = puntos.filter(p => {
     if (p.tipo === "municipio") return p.depto && p.muni;
@@ -509,6 +516,44 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
           geometria={geometria}
           style={{ border: `1px solid ${T.bord}`, boxShadow: `0 2px 12px rgba(0,0,0,.15)` }}
         />
+      )}
+
+      {/* Selector de ruta alternativa */}
+      {alternativas && alternativas.length > 1 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: T.mut }}>Ruta:</span>
+          {alternativas.map((r, i) => (
+            <button key={i}
+              onClick={async () => {
+                setRutaSel(i);
+                const coords = validos.map(obtenerCoords);
+                const ruta = alternativas[i];
+                const comb = calcularCombustible(ruta.km, kpg, pGalon);
+                const dias = estimarDias(ruta.km);
+                const res = { km: ruta.km, minutos: ruta.minutos, dias, ...comb };
+                setResultado(res);
+                setGeometria(ruta.geometria);
+                const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
+                if (onChange) {
+                  onChange({
+                    puntos: validos, resultado: res, modo, manualKm, kpg, pGalon,
+                    origen: validos[0], destino: validos[validos.length - 1],
+                    paradas: validos.slice(1, -1),
+                    origenNombre: nomPunto(validos[0]), destinoNombre: nomPunto(validos[validos.length - 1]),
+                  });
+                }
+              }}
+              style={{
+                ...S.btn(rutaSel === i ? "primary" : "ghost"),
+                fontSize: 10, padding: "4px 10px",
+                opacity: rutaSel === i ? 1 : 0.8,
+              }}>
+              {r.nombre} — {r.km} km · {r.minutos >= 60
+                ? `${Math.floor(r.minutos / 60)}h ${r.minutos % 60}m`
+                : `${r.minutos} min`}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Resultado */}

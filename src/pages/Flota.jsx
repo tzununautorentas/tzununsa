@@ -13,8 +13,10 @@ export default function PageFlota({ showToast, empId }) {
   const [f, setF] = useState({
     codigo: "", propietario: "propio", placa: "", marca: "", modelo: "",
     anio: new Date().getFullYear(), tipo: "SUV", estado: "disponible", km_actual: 0,
-    color: "", vin: "", poliza_seguro: "", vencimiento_seguro: "", tipo_deducible: "", monto_deducible: "", notas: ""
+    color: "", vin: "", poliza_seguro: "", vencimiento_seguro: "", tipo_deducible: "",
+    monto_deducible: "", notas: "", foto_url: ""
   });
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const TIPOS = ["Sedan", "SUV", "Pickup", "Van", "Microbus", "Bus"];
 
@@ -51,6 +53,17 @@ export default function PageFlota({ showToast, empId }) {
     return String(max + 1).padStart(3, "0") + sfx;
   };
 
+  const manejarFoto = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast("La foto no puede superar 2MB", "err"); return; }
+    setSubiendoFoto(true);
+    const reader = new FileReader();
+    reader.onload = ev => { sf("foto_url", ev.target.result); setSubiendoFoto(false); };
+    reader.onerror = () => { showToast("Error al leer la imagen", "err"); setSubiendoFoto(false); };
+    reader.readAsDataURL(file);
+  };
+
   const abrirEditar = v => {
     setF({
       codigo: v.codigo || '', propietario: v.propietario || 'propio',
@@ -59,7 +72,8 @@ export default function PageFlota({ showToast, empId }) {
       estado: v.estado || 'disponible', km_actual: v.km_actual || 0,
       color: v.color || '', vin: v.vin || '',
       poliza_seguro: v.poliza_seguro || '', vencimiento_seguro: v.vencimiento_seguro || '',
-      tipo_deducible: v.tipo_deducible || '', monto_deducible: v.monto_deducible || 0, notas: v.notas || ''
+      tipo_deducible: v.tipo_deducible || '', monto_deducible: v.monto_deducible || 0,
+      notas: v.notas || '', foto_url: v.foto_url || ''
     });
     setEditItem(v); setVista("form");
   };
@@ -67,14 +81,14 @@ export default function PageFlota({ showToast, empId }) {
   const abrirNuevo = () => {
     setF({ codigo: genCodigoVehiculo('propio'), propietario: 'propio', placa: '', marca: '', modelo: '',
       anio: new Date().getFullYear(), tipo: 'SUV', estado: 'disponible', km_actual: 0,
-      color: '', vin: '', poliza_seguro: '', vencimiento_seguro: '', notas: '' });
+      color: '', vin: '', poliza_seguro: '', vencimiento_seguro: '', notas: '', foto_url: '' });
     setEditItem(null); setVista("form");
   };
 
   const guardar = async () => {
     if (!f.placa.trim()) { showToast("Placa requerida", "err"); return; }
     setSaving(true);
-    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, tipo_deducible: f.tipo_deducible, monto_deducible: parseFloat(f.monto_deducible) || 0, notas: f.notas };
+    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, tipo_deducible: f.tipo_deducible, monto_deducible: parseFloat(f.monto_deducible) || 0, notas: f.notas, foto_url: f.foto_url || null };
     let res;
     if (editItem?.id) res = await dbUpd("vehiculos", editItem.id, payload);
     else res = await dbIns("vehiculos", payload);
@@ -200,6 +214,34 @@ export default function PageFlota({ showToast, empId }) {
           <Fld label="NOTAS">
             <input style={S.inp} value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." />
           </Fld>
+        </div>
+
+        <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ gridColumn: "span 2", fontSize: 11, fontWeight: 700, color: T.mut, letterSpacing: 1 }}>
+            FOTOGRAFIA PRINCIPAL
+          </div>
+          <div style={{ gridColumn: "span 2" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+              {f.foto_url ? (
+                <div style={{ position: "relative", width: 140, height: 105, borderRadius: 8, overflow: "hidden", border: `1px solid ${T.bord}` }}>
+                  <img src={f.foto_url} alt="Vehiculo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button onClick={() => sf("foto_url", "")}
+                    style={{ position: "absolute", top: 4, right: 4, ...S.btn("danger"), padding: "1px 6px", fontSize: 10, borderRadius: 4, cursor: "pointer", border: "none", opacity: 0.85 }}>X</button>
+                </div>
+              ) : (
+                <div style={{ width: 140, height: 105, borderRadius: 8, border: `2px dashed ${T.bord}`, display: "flex", alignItems: "center", justifyContent: "center", color: T.mut, fontSize: 11, textAlign: "center", padding: 4 }}>
+                  Sin foto
+                </div>
+              )}
+              <div>
+                <label style={{ cursor: "pointer", display: "inline-block", ...S.btn("primary"), fontSize: 11, padding: "6px 14px" }}>
+                  {subiendoFoto ? "Cargando..." : "Subir foto"}
+                  <input type="file" accept="image/*" onChange={manejarFoto} style={{ display: "none" }} />
+                </label>
+                <div style={{ fontSize: 10, color: T.mut, marginTop: 4 }}>M&aacute;ximo 2MB</div>
+              </div>
+            </div>
+          </div>
           <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
             <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary"), flex: 2 }}>
               {saving ? "Guardando..." : "Guardar vehiculo"}
@@ -266,6 +308,13 @@ export default function PageFlota({ showToast, empId }) {
             const pBadge = { propio: { c: T.acc, bg: T.accDim }, socio: { c: T.blue, bg: T.blueDim }, alquilado: { c: T.sec, bg: T.secDim } }[v.propietario] || { c: T.mut, bg: T.bg2 };
             return (
               <div key={v.id} style={S.card}>
+                <div style={{ display: "flex", gap: 14 }}>
+                  {v.foto_url && (
+                    <div style={{ width: 80, height: 60, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                      <img src={v.foto_url} alt={v.placa} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -310,6 +359,8 @@ export default function PageFlota({ showToast, empId }) {
                     <button onClick={() => del(v.id)} style={{ ...S.btn("danger"), padding: "3px 9px", fontSize: 11 }}>
                       Eliminar
                     </button>
+                  </div>
+                </div>
                   </div>
                 </div>
               </div>
