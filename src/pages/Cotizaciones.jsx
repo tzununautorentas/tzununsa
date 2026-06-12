@@ -296,6 +296,10 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
 
   const isMobile = window.innerWidth < 768;
   const canvasScale = isMobile ? 1.2 : 2;
+  // Subir opacidad a 1 justo antes de capturar (opacity baja produce canvas transparente → JPEG blanco)
+  wrapper.style.opacity = "1";
+  await new Promise(r => requestAnimationFrame(r));
+
   console.log("PDF wrapper listo — generando con scale=" + canvasScale);
 
   try {
@@ -316,6 +320,7 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
     alert("Error al generar el PDF: " + (err.message || err));
   }
 
+  wrapper.style.opacity = "0.01";
   document.body.removeChild(wrapper);
 }
 

@@ -68,6 +68,10 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
     console.log("PDF todas las imagenes cargadas");
   }
   await new Promise(r => setTimeout(r, 600));
+  // Subir opacidad a 1 justo antes de capturar
+  wrapper.style.opacity = "1";
+  await new Promise(r => requestAnimationFrame(r));
+
   const isMobile = window.innerWidth < 768;
   const scale = isMobile ? 1.5 : 2;
   console.log("PDF wrapper listo — generando con scale=" + scale);
@@ -88,6 +92,7 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
     console.error("PDF error:", err);
     alert("Error al generar PDF: " + (err.message || err));
   }
+  wrapper.style.opacity = "0.01";
   document.body.removeChild(wrapper);
 }
 
