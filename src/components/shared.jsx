@@ -17,7 +17,7 @@ export class ErrBoundary extends Component {
   }
 }
 
-// --- PDF Helper (html2pdf) ---
+// --- PDF Helper (html2canvas+jsPDF) ---
 export function cargarScript(url) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
@@ -27,9 +27,17 @@ export function cargarScript(url) {
 }
 
 export async function generarPDF({ html, css, filename, margin, format, orientation, raw }) {
-  if (typeof window.html2pdf === "undefined") {
+  if (typeof window.html2canvas === "undefined") {
     try {
-      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    } catch {
+      alert("No se pudo cargar el generador de PDF. Verifica tu conexión.");
+      return;
+    }
+  }
+  if (typeof window.jspdf === "undefined") {
+    try {
+      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
     } catch {
       alert("No se pudo cargar el generador de PDF. Verifica tu conexión.");
       return;
@@ -40,7 +48,7 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
     return;
   }
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
   wrapper.innerHTML = raw ? html : `<style>${css}</style>${html}`;
   document.body.appendChild(wrapper);
   console.log("PDF wrapper contenido:", wrapper.innerHTML.substring(0, 200) + "...");
@@ -64,17 +72,18 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
   const scale = isMobile ? 1.5 : 2;
   console.log("PDF wrapper listo — generando con scale=" + scale);
   try {
-    await window.html2pdf()
-      .set({
-        margin: margin || [8, 10, 8, 10],
-        filename: filename || "documento.pdf",
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale, useCORS: true, allowTaint: true, letterRendering: true, logging: true },
-        jsPDF: { unit: "mm", format: format || "letter", orientation: orientation || "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(wrapper)
-      .save();
+    const canvas = await window.html2canvas(wrapper, {
+      scale, useCORS: true, allowTaint: true, logging: true,
+      width: 750,
+    });
+    console.log("PDF canvas:", canvas.width + "x" + canvas.height);
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: format || "letter", orientation: orientation || "portrait" });
+    const pw = pdf.internal.pageSize.getWidth() - 16;
+    const ph = (canvas.height * pw) / canvas.width;
+    pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+    pdf.save(filename || "documento.pdf");
   } catch (err) {
     console.error("PDF error:", err);
     alert("Error al generar PDF: " + (err.message || err));

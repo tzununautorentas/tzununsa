@@ -71,10 +71,18 @@ async function generarPDFPremium(d, empId) {
   };
   const pctAnticipo = parseInt(e.termino_pago_def) || 50;
 
-  // Cargar html2pdf.js si no está disponible
-  if (typeof window.html2pdf === "undefined") {
+  // Cargar html2canvas y jsPDF por separado
+  if (typeof window.html2canvas === "undefined") {
     try {
-      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    } catch {
+      alert("Error al cargar el generador de PDF. Verifica tu conexión.");
+      return;
+    }
+  }
+  if (typeof window.jspdf === "undefined") {
+    try {
+      await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
     } catch {
       alert("Error al cargar el generador de PDF. Verifica tu conexión.");
       return;
@@ -291,17 +299,18 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
   console.log("PDF wrapper listo — generando con scale=" + canvasScale);
 
   try {
-    await window.html2pdf()
-      .set({
-        margin: [8, 10, 8, 10],
-        filename,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: canvasScale, useCORS: true, allowTaint: false, letterRendering: true, logging: false },
-        jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(wrapper)
-      .save();
+    const canvas = await window.html2canvas(wrapper, {
+      scale: canvasScale, useCORS: true, allowTaint: true, logging: true,
+      width: 750,
+    });
+    console.log("PDF canvas:", canvas.width + "x" + canvas.height);
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+    const pw = pdf.internal.pageSize.getWidth() - 16;
+    const ph = (canvas.height * pw) / canvas.width;
+    pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+    pdf.save(filename);
   } catch (err) {
     console.error("PDF error:", err);
     alert("Error al generar el PDF: " + (err.message || err));
