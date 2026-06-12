@@ -35,30 +35,48 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
       return;
     }
   }
+  if (!html || !html.trim()) {
+    alert("Error: no hay contenido para generar el PDF");
+    return;
+  }
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:750px;opacity:1;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
   wrapper.innerHTML = raw ? html : `<style>${css}</style>${html}`;
   document.body.appendChild(wrapper);
-  await Promise.all(
-    Array.from(wrapper.querySelectorAll("img"))
-      .filter(img => !img.complete)
-      .map(img => new Promise(r => { img.onload = r; img.onerror = r; }))
-  );
-  await new Promise(r => setTimeout(r, 400));
+  console.log("PDF wrapper contenido:", wrapper.innerHTML.substring(0, 200) + "...");
+  const imgs = Array.from(wrapper.querySelectorAll("img"));
+  if (imgs.length > 0) {
+    console.log("PDF esperando " + imgs.length + " imagenes...");
+    await Promise.all(
+      imgs.map(img => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        if (img.complete && img.naturalWidth === 0) {
+          img.src = img.src;
+          return new Promise(r => { img.onload = r; img.onerror = r; });
+        }
+        return new Promise(r => { img.onload = r; img.onerror = r; });
+      })
+    );
+    console.log("PDF todas las imagenes cargadas");
+  }
+  await new Promise(r => setTimeout(r, 600));
   const isMobile = window.innerWidth < 768;
+  const scale = isMobile ? 1.5 : 2;
+  console.log("PDF wrapper listo — generando con scale=" + scale);
   try {
     await window.html2pdf()
       .set({
         margin: margin || [8, 10, 8, 10],
         filename: filename || "documento.pdf",
         image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: isMobile ? 1.2 : 2, useCORS: true, allowTaint: false, letterRendering: true, logging: false },
+        html2canvas: { scale, useCORS: true, allowTaint: true, letterRendering: true, logging: true },
         jsPDF: { unit: "mm", format: format || "letter", orientation: orientation || "portrait" },
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
       .from(wrapper)
       .save();
   } catch (err) {
+    console.error("PDF error:", err);
     alert("Error al generar PDF: " + (err.message || err));
   }
   document.body.removeChild(wrapper);
