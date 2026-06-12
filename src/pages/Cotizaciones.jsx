@@ -259,7 +259,7 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
 
   // Construir DOM oculto para renderizar el PDF
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
   wrapper.innerHTML = `<style>${css}</style>${htmlContent}`;
   document.body.appendChild(wrapper);
   console.log("PDF wrapper contenido:", wrapper.innerHTML.substring(0, 200) + "...");
@@ -287,21 +287,21 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
   const filename = `${d.numero || "COT"}-${sanitizar(d.cliente)}.pdf`;
 
   const isMobile = window.innerWidth < 768;
-  const canvasScale = isMobile ? 1.5 : 2;
+  const canvasScale = isMobile ? 1.2 : 2;
   console.log("PDF wrapper listo — generando con scale=" + canvasScale);
 
   try {
-    // Usar html2canvas + jsPDF directamente (más control que html2pdf)
-    const canvas = await window.html2pdf.html2canvas(wrapper, {
-      scale: canvasScale, useCORS: true, allowTaint: true, logging: true,
-    });
-    console.log("PDF canvas size:", canvas.width + "x" + canvas.height);
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    const pdf = new window.html2pdf.jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
-    const pdfW = pdf.internal.pageSize.getWidth() - 16;
-    const pdfH = (canvas.height * pdfW) / canvas.width;
-    pdf.addImage(imgData, "JPEG", 8, 8, pdfW, pdfH, undefined, "FAST");
-    pdf.save(filename);
+    await window.html2pdf()
+      .set({
+        margin: [8, 10, 8, 10],
+        filename,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: canvasScale, useCORS: true, allowTaint: false, letterRendering: true, logging: false },
+        jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+      })
+      .from(wrapper)
+      .save();
   } catch (err) {
     console.error("PDF error:", err);
     alert("Error al generar el PDF: " + (err.message || err));
