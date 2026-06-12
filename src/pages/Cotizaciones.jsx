@@ -291,18 +291,19 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
   console.log("PDF wrapper listo — generando con scale=" + canvasScale);
 
   try {
-    await window.html2pdf()
-      .set({
-        margin: [8, 10, 8, 10],
-        filename,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: canvasScale, useCORS: true, allowTaint: true, letterRendering: true, logging: true },
-        jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(wrapper)
-      .save();
+    // Usar html2canvas + jsPDF directamente (más control que html2pdf)
+    const canvas = await window.html2pdf.html2canvas(wrapper, {
+      scale: canvasScale, useCORS: true, allowTaint: true, logging: true,
+    });
+    console.log("PDF canvas size:", canvas.width + "x" + canvas.height);
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new window.html2pdf.jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
+    const pdfW = pdf.internal.pageSize.getWidth() - 16;
+    const pdfH = (canvas.height * pdfW) / canvas.width;
+    pdf.addImage(imgData, "JPEG", 8, 8, pdfW, pdfH, undefined, "FAST");
+    pdf.save(filename);
   } catch (err) {
+    console.error("PDF error:", err);
     alert("Error al generar el PDF: " + (err.message || err));
   }
 
