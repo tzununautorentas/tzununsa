@@ -259,7 +259,7 @@ ${e.cierre_corporativo ? `<div class="cierre">${e.cierre_corporativo}</div>` : "
 
   // Construir DOM oculto para renderizar el PDF
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;width:750px;opacity:1;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
+  wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
   wrapper.innerHTML = `<style>${css}</style>${htmlContent}`;
   document.body.appendChild(wrapper);
   console.log("PDF wrapper contenido:", wrapper.innerHTML.substring(0, 200) + "...");
