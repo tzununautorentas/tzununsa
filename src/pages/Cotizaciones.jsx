@@ -462,14 +462,14 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
   const tarifaFn = (v, d) => { if (!v) return 0; if (d >= 30) return v.mes; if (d >= 8) return v.sem; return v.dia; };
   const vehObj = CATALOGO.find(v => v.nombre === f.vehiculo_nombre) || null;
   const dias = parseInt(f.dias) || 1;
-  const rate = parseFloat(f.precio_custom) > 0 ? parseFloat(f.precio_custom) : (vehObj ? tarifaFn(vehObj, dias) : 0);
+  const rate = parseFloat(f.precio_custom) > 0 ? parseFloat(f.precio_custom) : (vehObj ? tarifaFn(vehObj, dias) : parseFloat(initial?.costo_vehiculo) || 0);
   const sub_veh = dias * rate;
   const cp = parseFloat(f.costo_piloto) || 0;
   const ch = parseFloat(f.costo_hospedaje) || 0;
   const ca = parseFloat(f.costo_alimentacion) || 0;
-  const sub_piloto = f.incl_piloto ? dias * cp : 0;
-  const sub_hos = f.incl_hospedaje ? dias * ch : 0;
-  const sub_ali = f.incl_alimentacion ? dias * ca : 0;
+  const sub_piloto = f.incl_piloto ? cp : 0;
+  const sub_hos = f.incl_hospedaje ? ch : 0;
+  const sub_ali = f.incl_alimentacion ? ca : 0;
   const kmpg = parseFloat(f.km_por_galon) || 1;
   const pgal = parseFloat(f.precio_galon) || 0;
   const gals = f.incl_combustible ? (parseFloat(f.km_total) || 0) / kmpg : 0;
@@ -602,9 +602,9 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               ))}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
-              {f.incl_piloto && <Fld label="COSTO PILOTO / DIA (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_piloto} onChange={e => sf("costo_piloto", e.target.value)} placeholder="0.00" /></Fld>}
-              {f.incl_hospedaje && <Fld label="HOSPEDAJE / DIA (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_hospedaje} onChange={e => sf("costo_hospedaje", e.target.value)} placeholder="0.00" /></Fld>}
-              {f.incl_alimentacion && <Fld label="ALIMENTACION / DIA (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_alimentacion} onChange={e => sf("costo_alimentacion", e.target.value)} placeholder="0.00" /></Fld>}
+              {f.incl_piloto && <Fld label="COSTO PILOTO TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_piloto} onChange={e => sf("costo_piloto", e.target.value)} placeholder="0.00" /></Fld>}
+              {f.incl_hospedaje && <Fld label="HOSPEDAJE TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_hospedaje} onChange={e => sf("costo_hospedaje", e.target.value)} placeholder="0.00" /></Fld>}
+              {f.incl_alimentacion && <Fld label="ALIMENTACION TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_alimentacion} onChange={e => sf("costo_alimentacion", e.target.value)} placeholder="0.00" /></Fld>}
               {f.incl_combustible && <>
                 <Fld label="KM TOTALES"><input style={S.inp} type="number" value={f.km_total} onChange={e => sf("km_total", e.target.value)} placeholder="0" /></Fld>
                 <Fld label="KM POR GALON"><input style={S.inp} type="number" value={f.km_por_galon} onChange={e => sf("km_por_galon", e.target.value)} placeholder="27" /></Fld>
