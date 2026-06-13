@@ -11,14 +11,20 @@ const calcDias = (fi, ff) => {
   return Math.max(1, diff);
 };
 
-const generarSaludo = (tipo) => {
-  const base = "en Transportes Tz'unun, nos enfocamos en brindarle la mejor experiencia de viaje con servicios de alta calidad y tarifas competitivas, el mercado de renta de vehículos, viajes de turismo y traslado de personas a diferentes lugares de Guatemala y Centroamérica.";
+const generarSaludo = (tipo, nombre) => {
+  const nom = nombre || "";
   switch (tipo) {
-    case 'persona': return `Estimado(a) cliente, ${base}`;
-    case 'empresa': return `Estimados clientes, ${base}`;
-    case 'gobierno': return `Distinguidos señores, ${base}`;
-    case 'ong': return `Estimados miembros, ${base}`;
-    default: return `Estimado(a) cliente, ${base}`;
+    case 'persona':
+      const pn = nom.trim().split(/\s+/)[0] || "";
+      return (pn.endsWith("a") ? "Estimada " : "Estimado ") + nom + ", reciba un atento saludo. En Transportes Tz'unun nos ponemos a sus órdenes para brindarle el mejor servicio de movilidad.";
+    case 'empresa':
+      return "Estimados señores de " + nom + ": Por medio de la presente, nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
+    case 'gobierno':
+      return "Distinguidos representantes de " + nom + ": Por este medio, nos dirigimos a ustedes para presentar nuestra propuesta de servicios de transporte institucional.";
+    case 'ong':
+      return "Estimados representantes de " + nom + ": Reciban un cordial saludo de parte de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad.";
+    default:
+      return "Estimados señores de " + nom + ": Por medio de la presente, nos complace presentar nuestra propuesta de servicios de movilidad.";
   }
 };
 
@@ -29,6 +35,10 @@ export default function PageCalculadora({ showToast, empId }) {
   const [clienteDir, setClienteDir]   = useState("");
   const [clienteCodigo, setClienteCodigo] = useState("");
   const [saludo, setSaludo] = useState("");
+  const [clienteTipo, setClienteTipo] = useState("");
+  const [clienteContacto, setClienteContacto] = useState("");
+  const [clienteEmail, setClienteEmail] = useState("");
+  const [clienteTelefono, setClienteTelefono] = useState("");
   const [selVeh, setSelVeh] = useState(null);
   const [dias, setDias]     = useState(1);
   const [fechaInicio, setFechaInicio] = useState(today());
@@ -41,7 +51,9 @@ export default function PageCalculadora({ showToast, empId }) {
 
   const [tf, setTf] = useState({
     cliente: "", clienteNit: "", clienteDir: "", clienteCodigo: "",
-    dias: 1, veh: 0, pil: 0, hos: 0, ali: 0,
+    clienteTipo: "", clienteContacto: "", clienteEmail: "", clienteTelefono: "",
+    saludo: "",
+    dias: 1, veh: 0, vehiculoId: "", vehiculoNombre: "", pil: 0, hos: 0, ali: 0,
     galon: 48, kpg: 27, kmi: 0, kmr: 0, varios: 0,
     iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: ""
   });
@@ -53,7 +65,11 @@ export default function PageCalculadora({ showToast, empId }) {
     setClienteNit(c.nit || '');
     setClienteDir(c.direccion || '');
     setClienteCodigo(c.codigo || '');
-    setSaludo(generarSaludo(c.tipo));
+    setClienteTipo(c.tipo || '');
+    setClienteContacto(c.contacto || '');
+    setClienteEmail(c.email || '');
+    setClienteTelefono(c.telefono || '');
+    setSaludo(generarSaludo(c.tipo, c.nombre));
   };
 
   const seleccionarClienteTraslado = (c) => {
@@ -61,6 +77,11 @@ export default function PageCalculadora({ showToast, empId }) {
     stf("clienteNit", c.nit || '');
     stf("clienteDir", c.direccion || '');
     stf("clienteCodigo", c.codigo || '');
+    stf("clienteTipo", c.tipo || '');
+    stf("clienteContacto", c.contacto || '');
+    stf("clienteEmail", c.email || '');
+    stf("clienteTelefono", c.telefono || '');
+    stf("saludo", generarSaludo(c.tipo, c.nombre));
   };
 
   // ─ Renta ─────────────────────────────────────────────────────
@@ -108,7 +129,11 @@ export default function PageCalculadora({ showToast, empId }) {
       cliente_nit: tab === "renta" ? clienteNit : tf.clienteNit,
       cliente_dir: tab === "renta" ? clienteDir : tf.clienteDir,
       cliente_codigo: tab === "renta" ? clienteCodigo : tf.clienteCodigo,
-      saludo: tab === "renta" ? saludo : "",
+      cliente_tipo: tab === "renta" ? clienteTipo : tf.clienteTipo,
+      cliente_contacto: tab === "renta" ? clienteContacto : tf.clienteContacto,
+      cliente_email: tab === "renta" ? clienteEmail : tf.clienteEmail,
+      cliente_telefono: tab === "renta" ? clienteTelefono : tf.clienteTelefono,
+      saludo: tab === "renta" ? saludo : tf.saludo,
       numero: await siguienteNumero("COT-", "cotizaciones", empId),
       dias: tab === "renta" ? diasCalc : d2,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
@@ -119,7 +144,7 @@ export default function PageCalculadora({ showToast, empId }) {
       recargo_tarjeta: tab === "renta" ? recTC : ttcr,
       total_gtq: tab === "renta" ? tot : ttot,
       total_usd: (tab === "renta" ? tot : ttot) / (tab === "renta" ? exch : parseFloat(tf.exch) || 7.70),
-      vehiculo_nombre: selVeh?.nombre || "",
+      vehiculo_nombre: tab === "renta" ? (selVeh?.nombre || "") : tf.vehiculoNombre,
       estado,
       km_total: tkm,
       costo_vehiculo: tab === "renta" ? rate : (parseFloat(tf.veh) || 0),
@@ -254,7 +279,19 @@ export default function PageCalculadora({ showToast, empId }) {
                 }} />
               </Fld>
               <Fld label="DIAS"><input style={S.inp} type="number" value={tf.dias} onChange={e => stf("dias", e.target.value)} /></Fld>
+              <Fld label="TIPO VEHICULO" span2>
+                <select style={S.sel} value={tf.vehiculoId || ""} onChange={e => {
+                  const v = CATALOGO.find(x => x.id === e.target.value);
+                  stf("vehiculoId", e.target.value);
+                  stf("veh", v ? v.dia : 0);
+                  stf("vehiculoNombre", v ? v.nombre : "");
+                }}>
+                  <option value="">Seleccionar vehiculo...</option>
+                  {CATALOGO.map(v => <option key={v.id} value={v.id}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                </select>
+              </Fld>
               <Fld label="COSTO VEHICULO/DIA"><input style={S.inp} type="number" value={tf.veh} onChange={e => stf("veh", e.target.value)} placeholder="0.00" /></Fld>
+              <Fld label="SALUDO PERSONALIZADO" span2><input style={S.inp} value={tf.saludo} onChange={e => stf("saludo", e.target.value)} placeholder="Estimados..." /></Fld>
               <Fld label="COSTO PILOTO/DIA"><input style={S.inp} type="number" value={tf.pil} onChange={e => stf("pil", e.target.value)} placeholder="0.00" /></Fld>
               <Fld label="HOSPEDAJE/DIA"><input style={S.inp} type="number" value={tf.hos} onChange={e => stf("hos", e.target.value)} placeholder="0.00" /></Fld>
               <Fld label="ALIMENTACION/DIA"><input style={S.inp} type="number" value={tf.ali} onChange={e => stf("ali", e.target.value)} placeholder="0.00" /></Fld>

@@ -41,11 +41,12 @@ const EMPTY_R = {
   origen: "Guatemala", destino: "", departamento: "", municipio: "",
   anticipo: "", total_gtq: "", notas: "", tasa_iva: 5,
   metodo_pago: "efectivo", tasa_cambio: 7.70, estado: "pendiente",
+  saludo: "", cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
 };
 
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
-  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70 } : { ...EMPTY_R });
+  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70 } : { ...EMPTY_R });
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 

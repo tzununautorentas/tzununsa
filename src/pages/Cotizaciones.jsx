@@ -396,6 +396,7 @@ function makePDFData(r) {
     cliente: r.cliente_nombre, codigo: r.cliente_codigo,
     nit: r.cliente_nit, dir: r.cliente_dir, tipo: r.cliente_tipo || "",
     contacto: r.cliente_contacto || "",
+    email: r.cliente_email || "", telefono: r.cliente_telefono || "",
     saludo: r.saludo, servicio: r.descripcion_servicio,
     vehiculo: r.vehiculo_nombre, dias,
     incl_piloto: !!svc.piloto || parseFloat(r.costo_piloto) > 0,
@@ -414,7 +415,7 @@ function makePDFData(r) {
 // ─── Estado inicial formulario ────────────────────────────────────────────────
 const EMPTY_F = {
   cliente_nombre: "", cliente_nit: "", cliente_dir: "", cliente_codigo: "",
-  cliente_tipo: "", cliente_contacto: "",
+  cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
   saludo: "", descripcion_servicio: "",
   vehiculo_nombre: "", dias: 1, precio_custom: "",
   incl_piloto: false, incl_combustible: false, incl_peajes: false,
@@ -438,6 +439,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       cliente_nombre: initial.cliente_nombre || "", cliente_nit: initial.cliente_nit || "",
       cliente_dir: initial.cliente_dir || "", cliente_codigo: initial.cliente_codigo || "",
       cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "",
+      cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "",
       saludo: initial.saludo || "", descripcion_servicio: initial.descripcion_servicio || "",
       vehiculo_nombre: initial.vehiculo_nombre || "", dias: initial.dias || 1,
       precio_custom: initial.precio_personalizado || "",
@@ -491,6 +493,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
         tipo: "renta", cliente_tipo: f.cliente_tipo || "", cliente_contacto: f.cliente_contacto || "",
+        cliente_email: f.cliente_email || "", cliente_telefono: f.cliente_telefono || "",
         numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones", eId) : initial.numero,
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
@@ -544,19 +547,19 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                   onSelect={c => {
                     sf("cliente_nombre", c.nombre); sf("cliente_nit", c.nit || ""); sf("cliente_dir", c.direccion || ""); sf("cliente_codigo", c.codigo || "");
                     sf("cliente_tipo", c.tipo || ""); sf("cliente_contacto", c.contacto || "");
+                    sf("cliente_email", c.email || ""); sf("cliente_telefono", c.telefono || "");
                     const nom = c.nombre || "";
                     const tipo = c.tipo || "empresa";
                     let saludo = "";
                     if (tipo === "persona") {
                       const pn = nom.trim().split(/\s+/)[0] || "";
-                      const fem = pn.endsWith("a");
-                      saludo = (fem ? "Estimada " : "Estimado ") + nom + ":";
+                      saludo = (pn.endsWith("a") ? "Estimada " : "Estimado ") + nom + ", reciba un atento saludo. En Transportes Tz'unun nos ponemos a sus ordenes para brindarle el mejor servicio de movilidad.";
                     } else if (tipo === "gobierno") {
-                      saludo = "Distinguidos señores:";
+                      saludo = "Distinguidos representantes de " + nom + ": Por este medio, nos dirigimos a ustedes para presentar nuestra propuesta de servicios de transporte institucional.";
                     } else if (["ong", "asociacion", "asociación", "cooperativa", "colectivo", "comite", "comité", "grupo", "social"].includes(tipo)) {
-                      saludo = "Reciban un cordial saludo las integrantes de " + nom + ":";
+                      saludo = "Estimados representantes de " + nom + ": Reciban un cordial saludo de parte de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad.";
                     } else {
-                      saludo = "Estimados señores:";
+                      saludo = "Estimados senores de " + nom + ": Por medio de la presente, nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
                     }
                     sf("saludo", saludo);
                   }}
@@ -569,6 +572,8 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               )}
               <div><label style={S.lbl}>NIT</label><input style={S.inp} value={f.cliente_nit} onChange={e => sf("cliente_nit", e.target.value)} placeholder="CF o NIT" /></div>
               <div><label style={S.lbl}>DIRECCION</label><input style={S.inp} value={f.cliente_dir} onChange={e => sf("cliente_dir", e.target.value)} placeholder="Ciudad..." /></div>
+              <div><label style={S.lbl}>TELEFONO</label><input style={S.inp} value={f.cliente_telefono} onChange={e => sf("cliente_telefono", e.target.value)} placeholder="(502) 0000-0000" /></div>
+              <div><label style={S.lbl}>CORREO</label><input style={S.inp} type="email" value={f.cliente_email} onChange={e => sf("cliente_email", e.target.value)} placeholder="correo@empresa.com" /></div>
               <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>SALUDO PERSONALIZADO</label><input style={S.inp} value={f.saludo} onChange={e => sf("saludo", e.target.value)} placeholder="Estimados señores de..." /></div>
             </div>
           </div>
@@ -756,6 +761,11 @@ export default function PageCotizaciones({ showToast, empId }) {
       monto: parseFloat(cot.total_gtq) || 0,
       anticipo: 0,
       saldo: parseFloat(cot.total_gtq) || 0,
+      saludo: cot.saludo || "",
+      cliente_tipo: cot.cliente_tipo || "",
+      cliente_contacto: cot.cliente_contacto || "",
+      cliente_email: cot.cliente_email || "",
+      cliente_telefono: cot.cliente_telefono || "",
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });
