@@ -47,7 +47,7 @@ const cargarScript = (url) => new Promise((resolve, reject) => {
 });
 
 // ─── PDF Premium — Propuesta Comercial Corporativa ──────────────────────────────
-async function generarPDFPremium(d, empId) {
+async function generarPDFPremium(d, empId, mode = "download") {
   const empData = await dbGet("empresas", `&select=*&id=eq.${empId}`).then(dd => dd?.[0] || {});
   const e = {
     nombre:    empData.nombre             || "Tz'unun AutoRentas",
@@ -107,90 +107,91 @@ async function generarPDFPremium(d, empId) {
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.6}
-.page{width:100%;padding:0;min-height:1060px;display:flex;flex-direction:column}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.4}
+.page{width:100%;padding:0;min-height:900px;display:flex;flex-direction:column}
 
 /* ── HEADER ── */
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:4px solid #1B2D5C;margin-bottom:16px;position:relative}
-.header::after{content:"";position:absolute;bottom:-6px;left:0;right:70%;height:4px;background:#00D4AA}
-.h-left{display:flex;gap:20px;align-items:center}
-.h-logo{width:148px;height:148px;border-radius:12px;object-fit:contain;border:2px solid #E2E8F0;padding:6px}
-.h-logo-fallback{width:148px;height:148px;border-radius:12px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:44px;font-weight:900}
-.h-info h1{font-size:24px;font-weight:800;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:2px}
-.h-info .slogan{font-size:13px;color:#00D4AA;margin-top:2px;font-weight:600;font-style:italic}
-.h-info .detail{font-size:11px;color:#64748B;margin-top:5px;line-height:1.5}
-.h-right{text-align:right;padding-top:4px}
-.h-right .doc-type{font-size:24px;font-weight:800;color:#00D4AA;letter-spacing:3px;margin-bottom:2px}
-.h-right .doc-num{font-size:17px;color:#1B2D5C;font-weight:700;margin-top:4px}
-.h-right .doc-date{font-size:11px;color:#64748B;margin-top:2px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:4px solid #1B2D5C;margin-bottom:8px;position:relative}
+.header::after{content:"";position:absolute;bottom:-6px;left:0;right:70%;height:3px;background:#00D4AA}
+.h-left{display:flex;gap:14px;align-items:center}
+.h-logo{width:207px;height:207px;border-radius:10px;object-fit:contain;border:1px solid #E2E8F0;padding:4px}
+.h-logo-fallback{width:207px;height:207px;border-radius:10px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:900}
+.h-info h1{font-size:20px;font-weight:800;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:1px}
+.h-info .slogan{font-size:11px;color:#00D4AA;margin-top:1px;font-weight:600;font-style:italic}
+.h-info .detail{font-size:10px;color:#64748B;margin-top:3px;line-height:1.4}
+.h-right{text-align:right;padding-top:2px}
+.h-right .doc-type{font-size:20px;font-weight:800;color:#00D4AA;letter-spacing:3px;margin-bottom:1px}
+.h-right .doc-num{font-size:15px;color:#1B2D5C;font-weight:700;margin-top:3px}
+.h-right .doc-date{font-size:10px;color:#64748B;margin-top:1px}
 
 /* ── SECTION TITLES ── */
-.st{font-size:10px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #00D4AA55;padding-bottom:5px;margin-bottom:10px}
-.section{margin-bottom:14px}
+.st{font-size:9px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #00D4AA55;padding-bottom:4px;margin-bottom:7px}
+.section{margin-bottom:8px}
 
 /* ── FACTURAR A ── */
-.client-box{margin-bottom:6px}
-.client-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px}
-.client-name{font-size:18px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:13px;color:#475569;margin-top:4px;line-height:1.5}
+.client-box{margin-bottom:4px}
+.client-name{font-size:17px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:12px;color:#475569;margin-top:3px;line-height:1.4}
 
 /* ── SALUDO ── */
-.saludo-box{background:#F8FAFC;border-left:5px solid #00D4AA;padding:14px 20px;font-size:14px;color:#334155;font-style:italic;line-height:1.6;margin-bottom:16px;border-radius:0 8px 8px 0}
+.saludo-box{background:#F8FAFC;border-left:5px solid #00D4AA;padding:9px 16px;font-size:13px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:10px;border-radius:0 8px 8px 0}
 
-/* ── DESCRIPCIÓN DEL SERVICIO ── */
-.servicio-text{font-size:14px;color:#475569;line-height:1.7;margin-bottom:4px;padding:0 2px}
+/* ── DESCRIPCIÓN ── */
+.servicio-text{font-size:13px;color:#475569;line-height:1.5;margin-bottom:2px;padding:0 2px}
 
 /* ── TWO COLUMNS ── */
-.two-col{display:flex;gap:24px;margin-bottom:16px;align-items:flex-start}
+.two-col{display:flex;gap:14px;margin-bottom:8px;align-items:flex-start}
 .col-services{flex:3;min-width:0}
-.col-photo{flex:1;min-width:0}
-.vehiculo-card{border:2px solid #E2E8F0;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06);background:#fff}
+.col-photo{flex:2;min-width:0}
+.vehiculo-card{border:2px solid #E2E8F0;border-radius:10px;overflow:hidden;box-shadow:0 3px 8px rgba(0,0,0,0.05);background:#fff}
 .vehiculo-card img{width:100%;height:auto;display:block}
-.vehiculo-card .veh-nombre{padding:8px 10px;font-size:11px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
+.vehiculo-card .veh-nombre{padding:5px 8px;font-size:10px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
 
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:0}
-.inc-item{padding:6px 0;font-size:13.5px;color:#475569;display:flex;align-items:center;gap:10px}
-.inc-check{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+.inc-item{padding:4px 0;font-size:12.5px;color:#475569;display:flex;align-items:center;gap:8px}
+.inc-check{width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
 /* ── RESUMEN ECONÓMICO ── */
-.inv-box{background:#F8FAFC;border-radius:12px;padding:14px 20px;margin-bottom:14px;border:1px solid #E2E8F0}
-.inv-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:#475569}
-.inv-divider{border-top:3px solid #00D4AA;margin:8px 0}
-.inv-total{display:flex;justify-content:space-between;padding:8px 0 2px;font-size:20px;font-weight:800;color:#1B2D5C}
-.inv-total .amt{color:#00D4AA;font-size:22px}
+.inv-box{background:#F8FAFC;border-radius:10px;padding:8px 16px;margin-bottom:8px;border:1px solid #E2E8F0}
+.inv-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;color:#475569}
+.inv-divider{border-top:3px solid #00D4AA;margin:4px 0}
+.inv-total{display:flex;justify-content:space-between;padding:5px 0 2px;font-size:17px;font-weight:800;color:#1B2D5C}
+.inv-total .amt{color:#00D4AA;font-size:19px}
 
-/* ── FORMAS DE PAGO ── */
-.pago-grid{display:flex;gap:14px;margin-bottom:14px}
-.pago-card{flex:1;border-radius:12px;padding:16px 18px;border:2px solid #E2E8F0;background:#fff;transition:all 0.2s}
-.pago-card.op1{border-color:#00D4AA88;background:#F0FDF9}
-.pago-card.op2{border-color:#1B2D5C55;background:#F8FAFC}
-.pago-card .pago-label{font-size:11px;color:#64748B;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px}
-.pago-card .pago-monto{font-size:22px;font-weight:800;color:#1B2D5C}
-.pago-card .pago-meta{font-size:10px;color:#94A3B8;margin-top:5px}
+/* ── MODALIDADES DE PAGO ── */
+.pago-grid{display:flex;gap:10px;margin-bottom:8px}
+.pago-card{border-radius:10px;padding:10px 14px;border:2px solid #E2E8F0;background:#fff}
+.pago-card.principal{flex:1.15;border-color:#00D4AA;background:#F0FDF9}
+.pago-card.principal .pago-label{font-size:11px;color:#1B2D5C;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.6px}
+.pago-card.principal .pago-monto{font-size:20px;font-weight:800;color:#1B2D5C}
+.pago-card.secundaria{flex:1;border-color:#CBD5E1;background:#FAFBFC}
+.pago-card.secundaria .pago-label{font-size:9px;color:#94A3B8;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
+.pago-card.secundaria .pago-monto{font-size:15px;font-weight:700;color:#64748B}
+.badge-preferente{display:inline-block;background:#00D4AA;color:#fff;font-size:7.5px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
 
-/* ── INFORMACIÓN PARA PAGO ── */
-.bancos-box{font-size:12px;color:#475569;line-height:1.7;margin-bottom:14px;padding:10px 14px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
-.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:12px;margin-bottom:5px}
-.bancos-box .b-item{padding:2px 0}
+/* ── DATOS BANCARIOS ── */
+.bancos-box{font-size:10.5px;color:#475569;line-height:1.5;margin-bottom:8px;padding:6px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:10.5px;margin-bottom:2px}
+.bancos-box .b-item{padding:1px 0}
 
-/* ── TÉRMINOS Y CONDICIONES ── */
-.terms-list{list-style:none;padding:0;margin:0 0 12px 0}
-.terms-list li{font-size:12px;color:#475569;padding:4px 0 4px 18px;position:relative;line-height:1.5}
-.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:13px}
+/* ── TÉRMINOS ── */
+.terms-list{list-style:none;padding:0;margin:0 0 8px 0}
+.terms-list li{font-size:10px;color:#475569;padding:2px 0 2px 16px;position:relative;line-height:1.4}
+.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:11px}
 
 /* ── CIERRE ── */
-.cierre-box{font-size:13px;color:#475569;font-style:italic;line-height:1.6;margin:10px 0 14px;padding:14px 20px;background:#FAFBFC;border-radius:10px;border:1px solid #E2E8F0}
+.cierre-box{font-size:11.5px;color:#475569;font-style:italic;line-height:1.5;margin:4px 0 8px;padding:8px 14px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:16px;padding-top:16px;border-top:3px solid #1B2D5C;width:100%}
-.firma-img{height:140px;margin-bottom:10px;border:1px solid #E2E8F0;border-radius:6px;padding:4px;background:#fff}
-.f-name{font-weight:700;color:#1B2D5C;font-size:17px}
-.f-title{font-size:14px;color:#64748B;margin-top:2px}
-.f-contact{font-size:12px;color:#94A3B8;margin-top:4px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:8px;padding-top:8px;border-top:3px solid #1B2D5C;width:100%}
+.firma-img{height:110px;margin-bottom:4px;border:1px solid #E2E8F0;border-radius:5px;padding:3px;background:#fff}
+.f-name{font-weight:700;color:#1B2D5C;font-size:15px}
+.f-title{font-size:12px;color:#64748B;margin-top:1px}
+.f-contact{font-size:10.5px;color:#94A3B8;margin-top:2px}
 
 /* ── FOOTER ── */
-.footer{text-align:center;font-size:10px;color:#94A3B8;margin-top:auto;padding-top:12px;border-top:2px solid #E2E8F0;line-height:1.6;padding-bottom:8px}
+.footer{text-align:center;font-size:9px;color:#94A3B8;margin-top:auto;padding-top:6px;border-top:1px solid #E2E8F0;line-height:1.4;padding-bottom:4px}
 .footer strong{color:#64748B}
 `;
 
@@ -266,26 +267,27 @@ ${d.servicio ? `<div class="section">
     <div class="inv-row"><span>Servicio contratado</span><span>Q ${fmt(d.sub)}</span></div>
     ${mostrarIVA ? `<div class="inv-row" style="color:#64748B"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
-    <div class="inv-total"><span>TOTAL</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
+    <div class="inv-total"><span>INVERSI&Oacute;N TOTAL</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
   </div>
 </div>
 
-<!-- ═══ 7. FORMAS DE PAGO ═══ -->
+<!-- ═══ 7. MODALIDADES DE PAGO ═══ -->
 <div class="section">
-  <div class="st">FORMAS DE PAGO</div>
+  <div class="st">MODALIDADES DE PAGO</div>
   <div class="pago-grid">
-    <div class="pago-card op1">
+    <div class="pago-card secundaria">
+      <div class="pago-label">Tarjeta de cr&eacute;dito o d&eacute;bito</div>
+      <div class="pago-monto">Q ${fmt(totalTC)}</div>
+    </div>
+    <div class="pago-card principal">
+      <div class="badge-preferente">Pago preferente</div>
       <div class="pago-label">Transferencia, dep&oacute;sito o efectivo</div>
       <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
     </div>
-    <div class="pago-card op2">
-      <div class="pago-label">Pago con tarjeta</div>
-      <div class="pago-monto">Q ${fmt(totalTC)}</div>
-    </div>
   </div>
 </div>
 
-<!-- ═══ 8. DATOS BANCARIOS ═══ -->
+<!-- ═══ 8. INFORMACIÓN BANCARIA ═══ -->
 <div class="section">
   <div class="st">DATOS BANCARIOS</div>
   <div class="bancos-box">
@@ -372,11 +374,40 @@ ${d.servicio ? `<div class="section">
     });
     console.log("PDF canvas:", canvas.width + "x" + canvas.height);
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+    if (mode === "preview") {
+      wrapper.style.opacity = "0.01";
+      document.body.removeChild(wrapper);
+      return imgData;
+    }
+
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
     const pw = pdf.internal.pageSize.getWidth() - 16;
     const ph = (canvas.height * pw) / canvas.width;
-    pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+    const pageH = pdf.internal.pageSize.getHeight() - 16;
+    if (ph > pageH) {
+      let remainingH = ph;
+      let y = 0;
+      const sliceH = pageH * canvas.width / pw;
+      while (remainingH > 0) {
+        if (y > 0) pdf.addPage();
+        const srcY = y * canvasScale;
+        const snippetH = Math.min(sliceH, remainingH * canvas.width / pw);
+        const snippetCanvas = document.createElement("canvas");
+        snippetCanvas.width = canvas.width;
+        snippetCanvas.height = snippetH * canvasScale;
+        const ctx = snippetCanvas.getContext("2d");
+        ctx.drawImage(canvas, 0, srcY, canvas.width, snippetH * canvasScale, 0, 0, canvas.width, snippetH * canvasScale);
+        const snippetData = snippetCanvas.toDataURL("image/jpeg", 0.95);
+        const pagePh = (snippetCanvas.height * pw) / canvas.width;
+        pdf.addImage(snippetData, "JPEG", 8, 8, pw, pagePh, undefined, "FAST");
+        y += snippetH;
+        remainingH -= snippetH;
+      }
+    } else {
+      pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+    }
     pdf.save(filename);
   } catch (err) {
     console.error("PDF error:", err);
@@ -709,6 +740,7 @@ export default function PageCotizaciones({ showToast, empId }) {
   const [filtro, setFiltro] = useState("todas");
   const [busqueda, setBusqueda] = useState('');
   const [exportar, setExportar] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
 
   const query = filtro === 'todas' ? '' : (filtro === 'orden_venta' ? 'orden_venta=eq.true' : 'estado=eq.'+filtro);
 
@@ -839,7 +871,13 @@ export default function PageCotizaciones({ showToast, empId }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 5, paddingTop: 10, borderTop: `1px solid ${T.bord}22`, flexWrap: "wrap" }}>
-                  <button onClick={() => generarPDFPremium(makePDFData(r), empId)} style={{ ...S.btn("blue"), fontSize: 11, padding: "4px 9px" }}>Ver PDF</button>
+                  <button onClick={async () => {
+                    const d = makePDFData(r);
+                    const dataUrl = await generarPDFPremium(d, empId, "preview");
+                    const sanitizar = s => (s || "").replace(/[^a-zA-Z0-9À-ÿ\-_ ]/g, "").trim().replace(/\s+/g, "_").slice(0, 40);
+                    setPreviewData({ dataUrl, filename: `${r.numero || "COT"}-${sanitizar(r.cliente_nombre)}.pdf`, d, e: empId });
+                  }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Vista Previa</button>
+                  <button onClick={() => generarPDFPremium(makePDFData(r), empId, "download")} style={{ ...S.btn("blue"), fontSize: 11, padding: "4px 9px" }}>Descargar PDF</button>
                   <button onClick={() => { setEditItem({ ...r, __clon: true }); setVista("form"); }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Clonar</button>
                   <button onClick={() => { setEditItem(r); setVista("form"); }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Editar</button>
                   {r.estado === "enviada" && <button onClick={() => chEst(r.id, "aprobada")} style={{ ...S.btn("primary"), fontSize: 11, padding: "4px 9px" }}>Aprobar</button>}
@@ -856,6 +894,24 @@ export default function PageCotizaciones({ showToast, empId }) {
       )}
       {rows.length > 0 && (
         <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
+      )}
+
+      {previewData && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setPreviewData(null)}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 20, maxWidth: "92vw", maxHeight: "92vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#1B2D5C", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Vista previa de cotizaci&oacute;n</span>
+              <button onClick={() => setPreviewData(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#94A3B8", padding: "2px 8px", borderRadius: 6 }}>&times;</button>
+            </div>
+            <div style={{ flex: 1, overflow: "auto", textAlign: "center", background: "#F1F5F9", borderRadius: 8, padding: 8 }}>
+              <img src={previewData.dataUrl} style={{ maxWidth: "100%", maxHeight: "75vh", boxShadow: "0 2px 12px rgba(0,0,0,0.1)", borderRadius: 4 }} alt="Vista previa" />
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 12, justifyContent: "flex-end" }}>
+              <button onClick={() => setPreviewData(null)} style={{ ...S.btn("ghost"), fontSize: 12 }}>Cerrar</button>
+              <button onClick={() => { setPreviewData(null); generarPDFPremium(previewData.d, previewData.e, "download"); }} style={{ ...S.btn("primary"), fontSize: 12 }}>Descargar PDF</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
