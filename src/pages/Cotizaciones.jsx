@@ -384,29 +384,28 @@ ${d.servicio ? `<div class="section">
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
     const pw = pdf.internal.pageSize.getWidth() - 16;
-    const ph = (canvas.height * pw) / canvas.width;
     const pageH = pdf.internal.pageSize.getHeight() - 16;
-    if (ph > pageH) {
-      let remainingH = ph;
-      let y = 0;
-      const sliceH = pageH * canvas.width / pw;
-      while (remainingH > 0) {
-        if (y > 0) pdf.addPage();
-        const srcY = y * canvasScale;
-        const snippetH = Math.min(sliceH, remainingH * canvas.width / pw);
-        const snippetCanvas = document.createElement("canvas");
-        snippetCanvas.width = canvas.width;
-        snippetCanvas.height = snippetH * canvasScale;
-        const ctx = snippetCanvas.getContext("2d");
-        ctx.drawImage(canvas, 0, srcY, canvas.width, snippetH * canvasScale, 0, 0, canvas.width, snippetH * canvasScale);
-        const snippetData = snippetCanvas.toDataURL("image/jpeg", 0.95);
-        const pagePh = (snippetCanvas.height * pw) / canvas.width;
-        pdf.addImage(snippetData, "JPEG", 8, 8, pw, pagePh, undefined, "FAST");
-        y += snippetH;
-        remainingH -= snippetH;
-      }
+    const imgH = (canvas.height * pw) / canvas.width;
+    if (imgH <= pageH) {
+      pdf.addImage(imgData, "JPEG", 8, 8, pw, imgH, undefined, "FAST");
     } else {
-      pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+      const pxPerPage = Math.floor(pageH * canvas.width / pw);
+      let offset = 0;
+      let pageNum = 0;
+      while (offset < canvas.height) {
+        if (pageNum > 0) pdf.addPage();
+        const h = Math.min(pxPerPage, canvas.height - offset);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = h;
+        const ctx = sliceCanvas.getContext("2d");
+        ctx.drawImage(canvas, 0, offset, canvas.width, h, 0, 0, canvas.width, h);
+        const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+        const sliceH = (h * pw) / canvas.width;
+        pdf.addImage(sliceData, "JPEG", 8, 8, pw, sliceH, undefined, "FAST");
+        offset += h;
+        pageNum++;
+      }
     }
     pdf.save(filename);
   } catch (err) {
