@@ -107,91 +107,91 @@ async function generarPDFPremium(d, empId, mode = "download") {
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.4}
-.page{width:100%;padding:0;min-height:900px;display:flex;flex-direction:column}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.35}
+.page{width:100%;padding:0;min-height:880px;display:flex;flex-direction:column}
 
 /* ── HEADER ── */
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:4px solid #1B2D5C;margin-bottom:8px;position:relative}
-.header::after{content:"";position:absolute;bottom:-6px;left:0;right:70%;height:3px;background:#00D4AA}
-.h-left{display:flex;gap:14px;align-items:center}
-.h-logo{width:207px;height:207px;border-radius:10px;object-fit:contain;border:1px solid #E2E8F0;padding:4px}
-.h-logo-fallback{width:207px;height:207px;border-radius:10px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:900}
-.h-info h1{font-size:20px;font-weight:800;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:1px}
-.h-info .slogan{font-size:11px;color:#00D4AA;margin-top:1px;font-weight:600;font-style:italic}
-.h-info .detail{font-size:10px;color:#64748B;margin-top:3px;line-height:1.4}
-.h-right{text-align:right;padding-top:2px}
-.h-right .doc-type{font-size:20px;font-weight:800;color:#00D4AA;letter-spacing:3px;margin-bottom:1px}
-.h-right .doc-num{font-size:15px;color:#1B2D5C;font-weight:700;margin-top:3px}
-.h-right .doc-date{font-size:10px;color:#64748B;margin-top:1px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:3px solid #1B2D5C;margin-bottom:6px;position:relative}
+.header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:3px;background:#00D4AA}
+.h-left{display:flex;gap:12px;align-items:center}
+.h-logo{width:207px;height:150px;object-fit:contain}
+.h-logo-fallback{width:207px;height:150px;border-radius:8px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:40px;font-weight:900}
+.h-info h1{font-size:18px;font-weight:800;color:#1B2D5C;letter-spacing:-0.4px;margin-bottom:1px}
+.h-info .slogan{font-size:10px;color:#00D4AA;margin-top:0;font-weight:600;font-style:italic}
+.h-info .detail{font-size:9px;color:#64748B;margin-top:2px;line-height:1.3}
+.h-right{text-align:right;padding-top:0}
+.h-right .doc-type{font-size:18px;font-weight:800;color:#00D4AA;letter-spacing:2.5px;margin-bottom:0}
+.h-right .doc-num{font-size:14px;color:#1B2D5C;font-weight:700;margin-top:2px}
+.h-right .doc-date{font-size:9px;color:#64748B;margin-top:1px}
 
 /* ── SECTION TITLES ── */
-.st{font-size:9px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #00D4AA55;padding-bottom:4px;margin-bottom:7px}
-.section{margin-bottom:8px}
+.st{font-size:8.5px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #00D4AA55;padding-bottom:3px;margin-bottom:5px}
+.section{margin-bottom:6px}
 
 /* ── FACTURAR A ── */
-.client-box{margin-bottom:4px}
-.client-name{font-size:17px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:12px;color:#475569;margin-top:3px;line-height:1.4}
+.client-box{margin-bottom:3px}
+.client-name{font-size:16px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:11px;color:#475569;margin-top:2px;line-height:1.3}
 
 /* ── SALUDO ── */
-.saludo-box{background:#F8FAFC;border-left:5px solid #00D4AA;padding:9px 16px;font-size:13px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:10px;border-radius:0 8px 8px 0}
+.saludo-box{background:#F8FAFC;border-left:4px solid #00D4AA;padding:7px 14px;font-size:12px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:8px;border-radius:0 6px 6px 0}
 
 /* ── DESCRIPCIÓN ── */
-.servicio-text{font-size:13px;color:#475569;line-height:1.5;margin-bottom:2px;padding:0 2px}
+.servicio-text{font-size:12px;color:#475569;line-height:1.4;margin-bottom:1px;padding:0 2px}
 
 /* ── TWO COLUMNS ── */
-.two-col{display:flex;gap:14px;margin-bottom:8px;align-items:flex-start}
+.two-col{display:flex;gap:12px;margin-bottom:6px;align-items:flex-start}
 .col-services{flex:3;min-width:0}
 .col-photo{flex:2;min-width:0}
-.vehiculo-card{border:2px solid #E2E8F0;border-radius:10px;overflow:hidden;box-shadow:0 3px 8px rgba(0,0,0,0.05);background:#fff}
+.vehiculo-card{border:1.5px solid #E2E8F0;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.04);background:#fff}
 .vehiculo-card img{width:100%;height:auto;display:block}
-.vehiculo-card .veh-nombre{padding:5px 8px;font-size:10px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
+.vehiculo-card .veh-nombre{padding:4px 6px;font-size:9px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
 
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:0}
-.inc-item{padding:4px 0;font-size:12.5px;color:#475569;display:flex;align-items:center;gap:8px}
-.inc-check{width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+.inc-item{padding:3px 0;font-size:12px;color:#475569;display:flex;align-items:center;gap:7px}
+.inc-check{width:15px;height:15px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
 /* ── RESUMEN ECONÓMICO ── */
-.inv-box{background:#F8FAFC;border-radius:10px;padding:8px 16px;margin-bottom:8px;border:1px solid #E2E8F0}
-.inv-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;color:#475569}
-.inv-divider{border-top:3px solid #00D4AA;margin:4px 0}
-.inv-total{display:flex;justify-content:space-between;padding:5px 0 2px;font-size:17px;font-weight:800;color:#1B2D5C}
-.inv-total .amt{color:#00D4AA;font-size:19px}
+.inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:6px;border:1px solid #E2E8F0}
+.inv-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11.5px;color:#475569}
+.inv-divider{border-top:2.5px solid #00D4AA;margin:3px 0}
+.inv-total{display:flex;justify-content:space-between;padding:4px 0 1px;font-size:16px;font-weight:800;color:#1B2D5C}
+.inv-total .amt{color:#00D4AA;font-size:18px}
 
 /* ── MODALIDADES DE PAGO ── */
-.pago-grid{display:flex;gap:10px;margin-bottom:8px}
-.pago-card{border-radius:10px;padding:10px 14px;border:2px solid #E2E8F0;background:#fff}
-.pago-card.principal{flex:1.15;border-color:#00D4AA;background:#F0FDF9}
-.pago-card.principal .pago-label{font-size:11px;color:#1B2D5C;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.6px}
-.pago-card.principal .pago-monto{font-size:20px;font-weight:800;color:#1B2D5C}
+.pago-grid{display:flex;gap:8px;margin-bottom:6px}
+.pago-card{border-radius:8px;padding:8px 12px;border:2px solid #E2E8F0;background:#fff}
+.pago-card.principal{flex:1.12;border-color:#00D4AA;background:#F0FDF9}
+.pago-card.principal .pago-label{font-size:10px;color:#1B2D5C;font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px}
+.pago-card.principal .pago-monto{font-size:18px;font-weight:800;color:#1B2D5C}
 .pago-card.secundaria{flex:1;border-color:#CBD5E1;background:#FAFBFC}
-.pago-card.secundaria .pago-label{font-size:9px;color:#94A3B8;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.4px}
-.pago-card.secundaria .pago-monto{font-size:15px;font-weight:700;color:#64748B}
-.badge-preferente{display:inline-block;background:#00D4AA;color:#fff;font-size:7.5px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.pago-card.secundaria .pago-label{font-size:8.5px;color:#94A3B8;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px}
+.pago-card.secundaria .pago-monto{font-size:14px;font-weight:700;color:#64748B}
+.badge-preferente{display:inline-block;background:#00D4AA;color:#fff;font-size:7px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
 
 /* ── DATOS BANCARIOS ── */
-.bancos-box{font-size:10.5px;color:#475569;line-height:1.5;margin-bottom:8px;padding:6px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
-.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:10.5px;margin-bottom:2px}
+.bancos-box{font-size:10px;color:#475569;line-height:1.4;margin-bottom:6px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:10px;margin-bottom:1px}
 .bancos-box .b-item{padding:1px 0}
 
 /* ── TÉRMINOS ── */
-.terms-list{list-style:none;padding:0;margin:0 0 8px 0}
-.terms-list li{font-size:10px;color:#475569;padding:2px 0 2px 16px;position:relative;line-height:1.4}
-.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:11px}
+.terms-list{list-style:none;padding:0;margin:0 0 6px 0}
+.terms-list li{font-size:9.5px;color:#475569;padding:1.5px 0 1.5px 14px;position:relative;line-height:1.3}
+.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:10px}
 
 /* ── CIERRE ── */
-.cierre-box{font-size:11.5px;color:#475569;font-style:italic;line-height:1.5;margin:4px 0 8px;padding:8px 14px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
+.cierre-box{font-size:11px;color:#475569;font-style:italic;line-height:1.4;margin:2px 0 6px;padding:6px 12px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:8px;padding-top:8px;border-top:3px solid #1B2D5C;width:100%}
-.firma-img{height:110px;margin-bottom:4px;border:1px solid #E2E8F0;border-radius:5px;padding:3px;background:#fff}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:6px;padding-top:6px;border-top:3px solid #1B2D5C;width:100%}
+.firma-img{height:140px;margin-bottom:3px}
 .f-name{font-weight:700;color:#1B2D5C;font-size:15px}
 .f-title{font-size:12px;color:#64748B;margin-top:1px}
-.f-contact{font-size:10.5px;color:#94A3B8;margin-top:2px}
+.f-contact{font-size:10px;color:#94A3B8;margin-top:1px}
 
 /* ── FOOTER ── */
-.footer{text-align:center;font-size:9px;color:#94A3B8;margin-top:auto;padding-top:6px;border-top:1px solid #E2E8F0;line-height:1.4;padding-bottom:4px}
+.footer{text-align:center;font-size:8.5px;color:#94A3B8;margin-top:auto;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.3;padding-bottom:3px}
 .footer strong{color:#64748B}
 `;
 
@@ -384,29 +384,8 @@ ${d.servicio ? `<div class="section">
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
     const pw = pdf.internal.pageSize.getWidth() - 16;
-    const pageH = pdf.internal.pageSize.getHeight() - 16;
-    const imgH = (canvas.height * pw) / canvas.width;
-    if (imgH <= pageH) {
-      pdf.addImage(imgData, "JPEG", 8, 8, pw, imgH, undefined, "FAST");
-    } else {
-      const pxPerPage = Math.floor(pageH * canvas.width / pw);
-      let offset = 0;
-      let pageNum = 0;
-      while (offset < canvas.height) {
-        if (pageNum > 0) pdf.addPage();
-        const h = Math.min(pxPerPage, canvas.height - offset);
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = h;
-        const ctx = sliceCanvas.getContext("2d");
-        ctx.drawImage(canvas, 0, offset, canvas.width, h, 0, 0, canvas.width, h);
-        const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-        const sliceH = (h * pw) / canvas.width;
-        pdf.addImage(sliceData, "JPEG", 8, 8, pw, sliceH, undefined, "FAST");
-        offset += h;
-        pageNum++;
-      }
-    }
+    const ph = (canvas.height * pw) / canvas.width;
+    pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
     pdf.save(filename);
   } catch (err) {
     console.error("PDF error:", err);
