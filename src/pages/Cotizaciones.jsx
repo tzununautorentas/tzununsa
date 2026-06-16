@@ -267,7 +267,7 @@ ${d.servicio ? `<div class="section">
     <div class="inv-row"><span>Servicio contratado</span><span>Q ${fmt(d.sub)}</span></div>
     ${mostrarIVA ? `<div class="inv-row" style="color:#64748B"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
-    <div class="inv-total"><span>INVERSI&Oacute;N TOTAL</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
+    <div class="inv-total"><span>TOTAL DEL SERVICIO</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
   </div>
 </div>
 
