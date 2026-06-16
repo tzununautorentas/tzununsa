@@ -107,88 +107,90 @@ async function generarPDFPremium(d, empId) {
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#1E293B;background:#fff;line-height:1.5}
-.page{width:100%;padding:0;min-height:1050px;display:flex;flex-direction:column}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.6}
+.page{width:100%;padding:0;min-height:1060px;display:flex;flex-direction:column}
 
 /* ── HEADER ── */
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3.5px solid #00D4AA;margin-bottom:12px}
-.h-left{display:flex;gap:18px;align-items:center}
-.h-logo{width:98px;height:98px;border-radius:10px;object-fit:contain}
-.h-logo-fallback{width:98px;height:98px;border-radius:10px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;font-weight:900}
-.h-info h1{font-size:22px;font-weight:800;color:#1B2D5C;letter-spacing:-0.5px}
-.h-info .slogan{font-size:12px;color:#00D4AA;margin-top:3px;font-weight:600}
-.h-info .detail{font-size:10px;color:#64748B;margin-top:4px;line-height:1.5}
-.h-right{text-align:right}
-.h-right .doc-type{font-size:22px;font-weight:800;color:#00D4AA;letter-spacing:2.5px}
-.h-right .doc-num{font-size:16px;color:#1B2D5C;font-weight:700;margin-top:5px}
-.h-right .doc-date{font-size:10px;color:#64748B;margin-top:3px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:4px solid #1B2D5C;margin-bottom:16px;position:relative}
+.header::after{content:"";position:absolute;bottom:-6px;left:0;right:70%;height:4px;background:#00D4AA}
+.h-left{display:flex;gap:20px;align-items:center}
+.h-logo{width:148px;height:148px;border-radius:12px;object-fit:contain;border:2px solid #E2E8F0;padding:6px}
+.h-logo-fallback{width:148px;height:148px;border-radius:12px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:44px;font-weight:900}
+.h-info h1{font-size:24px;font-weight:800;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:2px}
+.h-info .slogan{font-size:13px;color:#00D4AA;margin-top:2px;font-weight:600;font-style:italic}
+.h-info .detail{font-size:11px;color:#64748B;margin-top:5px;line-height:1.5}
+.h-right{text-align:right;padding-top:4px}
+.h-right .doc-type{font-size:24px;font-weight:800;color:#00D4AA;letter-spacing:3px;margin-bottom:2px}
+.h-right .doc-num{font-size:17px;color:#1B2D5C;font-weight:700;margin-top:4px}
+.h-right .doc-date{font-size:11px;color:#64748B;margin-top:2px}
 
 /* ── SECTION TITLES ── */
-.st{font-size:9.5px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1.5px solid #00D4AA55;padding-bottom:4px;margin-bottom:8px}
-.section{margin-bottom:10px}
+.st{font-size:10px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #00D4AA55;padding-bottom:5px;margin-bottom:10px}
+.section{margin-bottom:14px}
 
-/* ── CLIENTE ── */
+/* ── FACTURAR A ── */
 .client-box{margin-bottom:6px}
-.client-name{font-size:17px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:11.5px;color:#475569;margin-top:3px;line-height:1.5}
+.client-label{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px}
+.client-name{font-size:18px;font-weight:700;color:#1B2D5C}
+.client-meta{font-size:13px;color:#475569;margin-top:4px;line-height:1.5}
 
 /* ── SALUDO ── */
-.saludo-box{background:linear-gradient(135deg,#F0FDF9,#E8F8F5);border-left:4.5px solid #00D4AA;padding:11px 18px;font-size:12.5px;color:#334155;font-style:italic;line-height:1.5;margin-bottom:12px;border-radius:0 6px 6px 0}
+.saludo-box{background:#F8FAFC;border-left:5px solid #00D4AA;padding:14px 20px;font-size:14px;color:#334155;font-style:italic;line-height:1.6;margin-bottom:16px;border-radius:0 8px 8px 0}
 
 /* ── DESCRIPCIÓN DEL SERVICIO ── */
-.servicio-text{font-size:12px;color:#475569;line-height:1.6;margin-bottom:4px}
+.servicio-text{font-size:14px;color:#475569;line-height:1.7;margin-bottom:4px;padding:0 2px}
 
 /* ── TWO COLUMNS ── */
-.two-col{display:flex;gap:20px;margin-bottom:12px}
-.col-left{flex:1;min-width:0}
-.col-right{flex:1;min-width:0}
-.vehiculo-card{border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.two-col{display:flex;gap:24px;margin-bottom:16px;align-items:flex-start}
+.col-services{flex:3;min-width:0}
+.col-photo{flex:1;min-width:0}
+.vehiculo-card{border:2px solid #E2E8F0;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06);background:#fff}
 .vehiculo-card img{width:100%;height:auto;display:block}
-.vehiculo-card .veh-nombre{padding:8px 12px;font-size:12px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
+.vehiculo-card .veh-nombre{padding:8px 10px;font-size:11px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
 
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:0}
-.inc-item{padding:5px 0;font-size:11.5px;color:#475569;display:flex;align-items:center;gap:9px}
-.inc-check{width:17px;height:17px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0}
+.inc-item{padding:6px 0;font-size:13.5px;color:#475569;display:flex;align-items:center;gap:10px}
+.inc-check{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
-/* ── INVERSIÓN DEL SERVICIO ── */
-.inv-box{background:#F8FAFC;border-radius:10px;padding:12px 18px;margin-bottom:10px}
-.inv-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#475569}
-.inv-divider{border-top:2.5px solid #00D4AA;margin:6px 0}
-.inv-total{display:flex;justify-content:space-between;padding:8px 0 4px;font-size:18px;font-weight:800;color:#1B2D5C}
-.inv-total .amt{color:#00D4AA}
+/* ── RESUMEN ECONÓMICO ── */
+.inv-box{background:#F8FAFC;border-radius:12px;padding:14px 20px;margin-bottom:14px;border:1px solid #E2E8F0}
+.inv-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:#475569}
+.inv-divider{border-top:3px solid #00D4AA;margin:8px 0}
+.inv-total{display:flex;justify-content:space-between;padding:8px 0 2px;font-size:20px;font-weight:800;color:#1B2D5C}
+.inv-total .amt{color:#00D4AA;font-size:22px}
 
-/* ── OPCIONES DE CONTRATACIÓN ── */
-.pago-grid{display:flex;gap:12px;margin-bottom:10px}
-.pago-card{flex:1;border-radius:10px;padding:14px 16px;border:1.5px solid #E2E8F0;background:#fff}
-.pago-card.op1{border-color:#00D4AA77;background:#F0FDF9}
-.pago-card.op2{border-color:#1B2D5C44;background:#F8FAFC}
-.pago-card .pago-label{font-size:10px;color:#64748B;font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
-.pago-card .pago-monto{font-size:20px;font-weight:800;color:#1B2D5C}
-.pago-card .pago-meta{font-size:9px;color:#94A3B8;margin-top:4px}
+/* ── FORMAS DE PAGO ── */
+.pago-grid{display:flex;gap:14px;margin-bottom:14px}
+.pago-card{flex:1;border-radius:12px;padding:16px 18px;border:2px solid #E2E8F0;background:#fff;transition:all 0.2s}
+.pago-card.op1{border-color:#00D4AA88;background:#F0FDF9}
+.pago-card.op2{border-color:#1B2D5C55;background:#F8FAFC}
+.pago-card .pago-label{font-size:11px;color:#64748B;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px}
+.pago-card .pago-monto{font-size:22px;font-weight:800;color:#1B2D5C}
+.pago-card .pago-meta{font-size:10px;color:#94A3B8;margin-top:5px}
 
 /* ── INFORMACIÓN PARA PAGO ── */
-.bancos-box{font-size:10.5px;color:#475569;line-height:1.6;margin-bottom:10px}
-.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:11px;margin-bottom:4px}
+.bancos-box{font-size:12px;color:#475569;line-height:1.7;margin-bottom:14px;padding:10px 14px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
+.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:12px;margin-bottom:5px}
 .bancos-box .b-item{padding:2px 0}
 
 /* ── TÉRMINOS Y CONDICIONES ── */
-.terms-list{list-style:none;padding:0;margin:0 0 10px 0}
-.terms-list li{font-size:10.5px;color:#475569;padding:3px 0 3px 16px;position:relative;line-height:1.5}
-.terms-list li::before{content:"\\2022";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:14px}
+.terms-list{list-style:none;padding:0;margin:0 0 12px 0}
+.terms-list li{font-size:12px;color:#475569;padding:4px 0 4px 18px;position:relative;line-height:1.5}
+.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:13px}
 
 /* ── CIERRE ── */
-.cierre-box{font-size:11.5px;color:#475569;font-style:italic;line-height:1.6;margin:8px 0 10px;padding:12px 18px;background:linear-gradient(135deg,#F8FAFC,#F0FDF9);border-radius:10px;border:1px solid #E2E8F0}
+.cierre-box{font-size:13px;color:#475569;font-style:italic;line-height:1.6;margin:10px 0 14px;padding:14px 20px;background:#FAFBFC;border-radius:10px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:12px;padding-top:12px;border-top:2.5px solid #1B2D5C}
-.firma-img{height:120px;margin-bottom:8px}
-.f-name{font-weight:700;color:#1B2D5C;font-size:15px}
-.f-title{font-size:12.5px;color:#64748B}
-.f-contact{font-size:11px;color:#94A3B8;margin-top:3px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:16px;padding-top:16px;border-top:3px solid #1B2D5C;width:100%}
+.firma-img{height:140px;margin-bottom:10px;border:1px solid #E2E8F0;border-radius:6px;padding:4px;background:#fff}
+.f-name{font-weight:700;color:#1B2D5C;font-size:17px}
+.f-title{font-size:14px;color:#64748B;margin-top:2px}
+.f-contact{font-size:12px;color:#94A3B8;margin-top:4px}
 
 /* ── FOOTER ── */
-.footer{text-align:center;font-size:9px;color:#94A3B8;margin-top:auto;padding-top:10px;border-top:1px solid #E2E8F0;line-height:1.5;padding-bottom:6px}
+.footer{text-align:center;font-size:10px;color:#94A3B8;margin-top:auto;padding-top:12px;border-top:2px solid #E2E8F0;line-height:1.6;padding-bottom:8px}
 .footer strong{color:#64748B}
 `;
 
@@ -203,7 +205,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;colo
       : `<div class="h-logo-fallback">T</div>`}
     <div class="h-info">
       <h1>${e.nombre}</h1>
-      <div class="slogan">${e.eslogan}</div>
+      <div class="slogan">${e.eslogan || "Transporte Ejecutivo"}</div>
       <div class="detail">${e.direccion}<br/>${e.telefono} | ${e.email} | ${e.web}</div>
     </div>
   </div>
@@ -215,14 +217,14 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;colo
   </div>
 </div>
 
-<!-- ═══ 2. CLIENTE ═══ -->
+<!-- ═══ 2. FACTURAR A ═══ -->
 <div class="section">
-  <div class="st">CLIENTE</div>
+  <div class="st">FACTURAR A</div>
   <div class="client-box">
     <div class="client-name">${d.cliente}</div>
     <div class="client-meta">
-      NIT: ${d.nit || "CF"}${d.dir ? "&ensp;|&ensp;" + d.dir : ""}
-      ${d.contacto ? "<br/>Contacto: " + d.contacto : ""}
+      <strong>NIT:</strong> ${d.nit || "CF"}${d.dir ? "<br/>" + d.dir : ""}
+      ${d.contacto ? "<br/><strong>Contacto:</strong> " + d.contacto : ""}
     </div>
   </div>
 </div>
@@ -236,15 +238,9 @@ ${d.servicio ? `<div class="section">
   <div class="servicio-text">${d.servicio}</div>
 </div>` : ""}
 
-<!-- ═══ 5. BLOQUE CENTRAL — DOS COLUMNAS ═══ -->
+<!-- ═══ 5. BLOQUE CENTRAL — SERVICIOS + FOTO ═══ -->
 <div class="two-col">
-  <div class="col-left">
-    ${fotoVehiculo ? `<div class="vehiculo-card">
-      <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-      ${d.vehiculo ? `<div class="veh-nombre">${d.vehiculo}</div>` : ""}
-    </div>` : `<div style="height:100%;min-height:140px;border:1.5px dashed #E2E8F0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#CBD5E1">Sin fotograf&iacute;a</div>`}
-  </div>
-  <div class="col-right">
+  <div class="col-services">
     <div class="st">SERVICIOS INCLUIDOS</div>
     <div class="inc-list">
       ${d.incl_piloto ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Piloto profesional</span></div>` : ""}
@@ -255,39 +251,45 @@ ${d.servicio ? `<div class="section">
       ${d.incl_seguro !== false ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Seguro de viaje</span></div>` : ""}
     </div>
   </div>
-</div>
-
-<!-- ═══ 6. INVERSIÓN DEL SERVICIO ═══ -->
-<div class="section">
-  <div class="st">INVERSI&Oacute;N DEL SERVICIO</div>
-  <div class="inv-box">
-    <div class="inv-row"><span>Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
-    ${mostrarIVA ? `<div class="inv-row" style="color:#64748B"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
-    <div class="inv-divider"></div>
-    <div class="inv-total"><span>TOTAL DEL SERVICIO</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
+  <div class="col-photo">
+    ${fotoVehiculo ? `<div class="vehiculo-card">
+      <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
+      ${d.vehiculo ? `<div class="veh-nombre">${d.vehiculo}</div>` : ""}
+    </div>` : `<div style="height:100%;min-height:140px;border:1.5px dashed #E2E8F0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#CBD5E1;text-align:center;padding:12px">Sin fotograf&iacute;a</div>`}
   </div>
 </div>
 
-<!-- ═══ 7. OPCIONES DE CONTRATACIÓN ═══ -->
+<!-- ═══ 6. RESUMEN ECONÓMICO ═══ -->
 <div class="section">
-  <div class="st">OPCIONES DE CONTRATACI&Oacute;N</div>
+  <div class="st">RESUMEN ECON&Oacute;MICO</div>
+  <div class="inv-box">
+    <div class="inv-row"><span>Servicio contratado</span><span>Q ${fmt(d.sub)}</span></div>
+    ${mostrarIVA ? `<div class="inv-row" style="color:#64748B"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
+    <div class="inv-divider"></div>
+    <div class="inv-total"><span>TOTAL</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
+  </div>
+</div>
+
+<!-- ═══ 7. FORMAS DE PAGO ═══ -->
+<div class="section">
+  <div class="st">FORMAS DE PAGO</div>
   <div class="pago-grid">
     <div class="pago-card op1">
-      <div class="pago-label">Transferencia bancaria, dep&oacute;sito o efectivo</div>
+      <div class="pago-label">Transferencia, dep&oacute;sito o efectivo</div>
       <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
     </div>
     <div class="pago-card op2">
-      <div class="pago-label">Pago electr&oacute;nico con tarjeta</div>
+      <div class="pago-label">Pago con tarjeta</div>
       <div class="pago-monto">Q ${fmt(totalTC)}</div>
     </div>
   </div>
 </div>
 
-<!-- ═══ 8. INFORMACIÓN PARA PAGO ═══ -->
+<!-- ═══ 8. DATOS BANCARIOS ═══ -->
 <div class="section">
-  <div class="st">INFORMACI&Oacute;N PARA PAGO</div>
+  <div class="st">DATOS BANCARIOS</div>
   <div class="bancos-box">
-    <div class="b-label">A nombre de: Transportes Tz'unun</div>
+    <div class="b-label">A nombre de: ${e.nombre}</div>
     <div class="b-item">&bull; ${e.banco1}</div>
     <div class="b-item">&bull; ${e.banco2}</div>
   </div>
