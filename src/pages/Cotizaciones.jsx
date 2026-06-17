@@ -143,7 +143,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── SALUDO ── */
 .saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:7px 14px 7px 20px;font-size:11.5px;color:#334155;font-style:italic;line-height:1.45;margin-bottom:6px;border-radius:0 6px 6px 0;position:relative}
-.saludo-box::before{content:"\201C";position:absolute;left:5px;top:3px;font-size:20px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
+.saludo-box::before{content:"\\201C";position:absolute;left:5px;top:3px;font-size:20px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
 
 /* ── TWO COLUMNS 60/40 ── */
 .two-col{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
