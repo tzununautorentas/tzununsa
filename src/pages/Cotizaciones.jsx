@@ -121,9 +121,9 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:3px solid #1B2D5C;margin-bottom:4px;position:relative}
 .header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:2.5px;background:#00D4AA}
 .h-left{display:flex;gap:12px;align-items:center}
-.h-logo{width:207px;height:150px;object-fit:contain}
-.h-logo-fallback{width:207px;height:150px;border-radius:8px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:40px;font-weight:900}
-.h-info h1{font-size:18px;font-weight:800;color:#1B2D5C;letter-spacing:-0.4px;margin-bottom:1px}
+.h-logo{width:160px;height:110px;object-fit:contain}
+.h-logo-fallback{width:160px;height:110px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900}
+.h-info h1{font-size:22px;font-weight:900;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:2px}
 .h-info .slogan{font-size:10px;color:#00D4AA;margin-top:0;font-weight:600;font-style:italic}
 .h-info .detail{font-size:9px;color:#64748B;margin-top:2px;line-height:1.3}
 .h-right{text-align:right;padding-top:0}
@@ -132,25 +132,24 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .h-right .doc-date{font-size:9px;color:#64748B;margin-top:1px}
 
 /* ── SECTION TITLES ── */
-.st{font-size:8.5px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #00D4AA55;padding-bottom:3px;margin-bottom:5px}
+.st{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:3px;margin-bottom:5px}
 .section{margin-bottom:4px}
 
-/* ── FACTURAR A ── */
+/* ── CLIENTE ── */
 .client-box{margin-bottom:3px}
-.client-name{font-size:16px;font-weight:700;color:#1B2D5C}
-.client-meta{font-size:11px;color:#475569;margin-top:2px;line-height:1.3}
+.client-label{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:3px}
+.client-name{font-size:17px;font-weight:700;color:#1B2D5C;line-height:1.2}
+.client-meta{font-size:10.5px;color:#475569;margin-top:3px;line-height:1.35}
 
 /* ── SALUDO ── */
-.saludo-box{background:#F8FAFC;border-left:4px solid #00D4AA;padding:6px 12px;font-size:11.5px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:6px;border-radius:0 6px 6px 0}
-
-/* ── DESCRIPCIÓN ── */
-.servicio-text{font-size:12px;color:#475569;line-height:1.4;margin-bottom:1px;padding:0 2px}
+.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:7px 14px 7px 20px;font-size:11.5px;color:#334155;font-style:italic;line-height:1.45;margin-bottom:6px;border-radius:0 6px 6px 0;position:relative}
+.saludo-box::before{content:"\201C";position:absolute;left:5px;top:3px;font-size:20px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
 
 /* ── TWO COLUMNS 60/40 ── */
 .two-col{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
 .col-left{flex:6;min-width:0}
 .col-right{flex:4;min-width:0}
-.col-right .photo-wrap{border-radius:8px;overflow:hidden;border:1.5px solid #E2E8F0;background:#fff;margin-bottom:5px}
+.col-right .photo-wrap{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:5px;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
 .col-right .photo-wrap img{width:100%;height:auto;display:block;max-height:160px;object-fit:cover}
 .col-right .specs{font-size:10px;color:#475569;line-height:1.35}
 .col-right .specs .spec-row{padding:1.5px 0;display:flex;gap:4px}
@@ -161,8 +160,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .inc-item{padding:2px 0;font-size:11.5px;color:#475569;display:flex;align-items:center;gap:6px}
 .inc-check{width:14px;height:14px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
-/* ── TIPO SERVICIO ── */
-.tipo-badge{display:inline-block;background:#1B2D5C;color:#fff;font-size:9px;font-weight:700;padding:2px 10px;border-radius:4px;margin:4px 0 6px;letter-spacing:0.3px}
+/* ── TIPO DE SERVICIO ── */
+.tipo-text{font-size:12px;color:#475569;line-height:1.45;padding:1px 0 3px}
 
 /* ── RESUMEN ECONÓMICO ── */
 .inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:6px;border:1px solid #E2E8F0}
@@ -180,7 +179,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .pago-card.secundaria{flex:1;border-color:#CBD5E1;background:#FAFBFC}
 .pago-card.secundaria .pago-label{font-size:8.5px;color:#94A3B8;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px}
 .pago-card.secundaria .pago-monto{font-size:14px;font-weight:700;color:#64748B}
-.badge-preferente{display:inline-block;background:#00D4AA;color:#fff;font-size:7px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.badge-preferente{display:inline-block;background:#E2E8F0;color:#64748B;font-size:7px;font-weight:600;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
 
 /* ── DATOS BANCARIOS ── */
 .bancos-box{font-size:10px;color:#475569;line-height:1.4;margin-bottom:6px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
@@ -230,13 +229,13 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
   </div>
 </div>
 
-<!-- ═══ 2. FACTURAR A ═══ -->
+<!-- ═══ 2. DATOS DEL CLIENTE ═══ -->
 <div class="section">
-  <div class="st">FACTURAR A</div>
   <div class="client-box">
+    <div class="client-label">Cliente</div>
     <div class="client-name">${d.cliente}</div>
     <div class="client-meta">
-      <strong>NIT:</strong> ${d.nit || "CF"}${d.dir ? "<br/>" + d.dir : ""}
+      <strong>NIT:</strong> ${d.nit || "CF"}${d.dir ? " &middot; " + d.dir : ""}
       ${d.contacto ? "<br/><strong>Contacto:</strong> " + d.contacto : ""}
     </div>
   </div>
@@ -248,9 +247,8 @@ ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
 <!-- ═══ 4-5. BLOQUE CENTRAL — GRID 60/40 ═══ -->
 <div class="two-col">
   <div class="col-left">
-    <div class="st">DESCRIPCI&Oacute;N DEL SERVICIO</div>
-    ${d.servicio ? `<div class="servicio-text">${d.servicio}</div>` : ""}
-    <div class="tipo-badge">${d.servicio_tipo === "traslado" ? "Servicio de traslado" : "Renta de veh&iacute;culo"}</div>
+    <div class="st">TIPO DE SERVICIO</div>
+    ${d.servicio ? `<div class="tipo-text">${d.servicio}</div>` : ""}
     <div class="st" style="margin-top:5px">SERVICIOS INCLUIDOS</div>
     <div class="inc-list">
       ${d.incl_piloto ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Piloto profesional</span></div>` : ""}
@@ -266,6 +264,7 @@ ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
       <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
     </div>` : `<div style="height:100%;min-height:160px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:6px">Sin fotograf&iacute;a</div>`}
     <div class="specs">
+      ${vehTipo ? `<div class="spec-row"><span class="spec-label">Tipo:</span><span>${vehTipo}</span></div>` : ""}
       ${d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo:</span><span>${d.vehiculo}</span></div>` : ""}
       ${vehSpecs.cap ? `<div class="spec-row"><span class="spec-label">Capacidad:</span><span>${vehSpecs.cap} pasajeros</span></div>` : ""}
       ${vehSpecs.aire ? `<div class="spec-row"><span class="spec-label">Aire acond.:</span><span>${vehSpecs.aire}</span></div>` : ""}
