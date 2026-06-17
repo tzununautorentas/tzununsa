@@ -196,15 +196,15 @@ export const newId = () => Date.now().toString().slice(-6);
 
 // --- CATALOGO DE VEHICULOS ---
 export const CATALOGO = [
-  { id:"c1", nombre:"Hyundai Verna (Sedan)",    tipo:"Sedan",    dia:300,  sem:275,  mes:250  },
-  { id:"c2", nombre:"Toyota RAV4 Hibrida",      tipo:"SUV",      dia:600,  sem:575,  mes:550  },
-  { id:"c3", nombre:"Suzuki XL7 3 filas",       tipo:"SUV",      dia:550,  sem:500,  mes:450  },
-  { id:"c4", nombre:"Suzuki Jimny 4x4",         tipo:"SUV",      dia:550,  sem:500,  mes:450  },
-  { id:"c5", nombre:"Mitsubishi L200 4x4",      tipo:"Pickup",   dia:550,  sem:500,  mes:450  },
-  { id:"c6", nombre:"Mahindra Pickup 4x4",      tipo:"Pickup",   dia:550,  sem:500,  mes:450  },
-  { id:"c7", nombre:"Nissan Urvan 16p",         tipo:"Microbus", dia:750,  sem:700,  mes:650  },
-  { id:"c8", nombre:"Bus tipo County",          tipo:"Bus",      dia:1000, sem:950,  mes:900  },
-  { id:"c9", nombre:"Bus Pullman",              tipo:"Bus",      dia:2000, sem:2000, mes:2000 },
+  { id:"c1", nombre:"Hyundai Verna (Sedan)",    tipo:"Sedan",    dia:300,  sem:275,  mes:250,  cap:5,  aire:true, trans:"Manual" },
+  { id:"c2", nombre:"Toyota RAV4 Hibrida",      tipo:"SUV",      dia:600,  sem:575,  mes:550,  cap:5,  aire:true, trans:"Automática" },
+  { id:"c3", nombre:"Suzuki XL7 3 filas",       tipo:"SUV",      dia:550,  sem:500,  mes:450,  cap:7,  aire:true, trans:"Automática" },
+  { id:"c4", nombre:"Suzuki Jimny 4x4",         tipo:"SUV",      dia:550,  sem:500,  mes:450,  cap:4,  aire:true, trans:"Manual" },
+  { id:"c5", nombre:"Mitsubishi L200 4x4",      tipo:"Pickup",   dia:550,  sem:500,  mes:450,  cap:5,  aire:true, trans:"Manual" },
+  { id:"c6", nombre:"Mahindra Pickup 4x4",      tipo:"Pickup",   dia:550,  sem:500,  mes:450,  cap:5,  aire:true, trans:"Manual" },
+  { id:"c7", nombre:"Nissan Urvan 16p",         tipo:"Microbus", dia:750,  sem:700,  mes:650,  cap:16, aire:true, trans:"Manual" },
+  { id:"c8", nombre:"Bus tipo County",          tipo:"Bus",      dia:1000, sem:950,  mes:900,  cap:30, aire:true, trans:"Manual" },
+  { id:"c9", nombre:"Bus Pullman",              tipo:"Bus",      dia:2000, sem:2000, mes:2000, cap:45, aire:true, trans:"Automática" },
 ];
 
 export const tarifaVeh = (v, dias) => {

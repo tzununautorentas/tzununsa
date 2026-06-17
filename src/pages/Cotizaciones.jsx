@@ -87,9 +87,16 @@ async function generarPDFPremium(d, empId, mode = "download") {
     }
   }
 
-  // Buscar foto del vehículo
+  // Buscar foto del vehículo y specs
   let fotoVehiculo = "";
+  let vehSpecs = { cap: "", aire: "", trans: "" };
+  let vehTipo = "";
   if (d.vehiculo) {
+    const catVeh = CATALOGO.find(v => v.nombre === d.vehiculo);
+    if (catVeh) {
+      vehTipo = catVeh.tipo || "";
+      vehSpecs = { cap: catVeh.cap || "", aire: catVeh.aire ? "Sí" : "No", trans: catVeh.trans || "" };
+    }
     try {
       const vehiculos = await dbGet("vehiculos", "&select=foto_url,marca,modelo&limit=20");
       const match = vehiculos.find(v => {
@@ -139,18 +146,23 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 /* ── DESCRIPCIÓN ── */
 .servicio-text{font-size:12px;color:#475569;line-height:1.4;margin-bottom:1px;padding:0 2px}
 
-/* ── TWO COLUMNS ── */
-.two-col{display:flex;gap:12px;margin-bottom:6px;align-items:flex-start}
-.col-services{flex:3;min-width:0}
-.col-photo{flex:2;min-width:0}
-.vehiculo-card{border:1.5px solid #E2E8F0;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.04);background:#fff}
-.vehiculo-card img{width:100%;height:auto;display:block}
-.vehiculo-card .veh-nombre{padding:4px 6px;font-size:9px;font-weight:700;color:#1B2D5C;background:#F8FAFC;text-align:center;border-top:1px solid #E2E8F0}
+/* ── TWO COLUMNS 60/40 ── */
+.two-col{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
+.col-left{flex:6;min-width:0}
+.col-right{flex:4;min-width:0}
+.col-right .photo-wrap{border-radius:8px;overflow:hidden;border:1.5px solid #E2E8F0;background:#fff;margin-bottom:6px}
+.col-right .photo-wrap img{width:100%;height:auto;display:block}
+.col-right .specs{font-size:10.5px;color:#475569;line-height:1.4}
+.col-right .specs .spec-row{padding:2px 0;display:flex;gap:4px}
+.col-right .specs .spec-label{font-weight:600;color:#1B2D5C;min-width:55px}
 
 /* ── SERVICIOS INCLUIDOS ── */
-.inc-list{list-style:none;padding:0;margin:0}
-.inc-item{padding:3px 0;font-size:12px;color:#475569;display:flex;align-items:center;gap:7px}
-.inc-check{width:15px;height:15px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+.inc-list{list-style:none;padding:0;margin:4px 0 0 0}
+.inc-item{padding:2px 0;font-size:11.5px;color:#475569;display:flex;align-items:center;gap:6px}
+.inc-check{width:14px;height:14px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+
+/* ── TIPO SERVICIO ── */
+.tipo-badge{display:inline-block;background:#1B2D5C;color:#fff;font-size:9px;font-weight:700;padding:2px 10px;border-radius:4px;margin:4px 0 6px;letter-spacing:0.3px}
 
 /* ── RESUMEN ECONÓMICO ── */
 .inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:6px;border:1px solid #E2E8F0}
@@ -233,16 +245,13 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 <!-- ═══ 3. SALUDO CORPORATIVO ═══ -->
 ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
 
-<!-- ═══ 4. DESCRIPCIÓN DEL SERVICIO ═══ -->
-${d.servicio ? `<div class="section">
-  <div class="st">DESCRIPCI&Oacute;N DEL SERVICIO</div>
-  <div class="servicio-text">${d.servicio}</div>
-</div>` : ""}
-
-<!-- ═══ 5. BLOQUE CENTRAL — SERVICIOS + FOTO ═══ -->
+<!-- ═══ 4-5. BLOQUE CENTRAL — GRID 60/40 ═══ -->
 <div class="two-col">
-  <div class="col-services">
-    <div class="st">SERVICIOS INCLUIDOS</div>
+  <div class="col-left">
+    <div class="st">DESCRIPCI&Oacute;N DEL SERVICIO</div>
+    ${d.servicio ? `<div class="servicio-text">${d.servicio}</div>` : ""}
+    <div class="tipo-badge">${d.servicio_tipo === "traslado" ? "Servicio de traslado" : "Renta de veh&iacute;culo"}</div>
+    <div class="st" style="margin-top:5px">SERVICIOS INCLUIDOS</div>
     <div class="inc-list">
       ${d.incl_piloto ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Piloto profesional</span></div>` : ""}
       ${d.incl_combustible ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Combustible seg&uacute;n recorrido</span></div>` : ""}
@@ -252,11 +261,16 @@ ${d.servicio ? `<div class="section">
       ${d.incl_seguro !== false ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Seguro de viaje</span></div>` : ""}
     </div>
   </div>
-  <div class="col-photo">
-    ${fotoVehiculo ? `<div class="vehiculo-card">
+  <div class="col-right">
+    ${fotoVehiculo ? `<div class="photo-wrap">
       <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-      ${d.vehiculo ? `<div class="veh-nombre">${d.vehiculo}</div>` : ""}
-    </div>` : `<div style="height:100%;min-height:140px;border:1.5px dashed #E2E8F0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#CBD5E1;text-align:center;padding:12px">Sin fotograf&iacute;a</div>`}
+    </div>` : `<div style="height:100%;min-height:160px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:6px">Sin fotograf&iacute;a</div>`}
+    <div class="specs">
+      ${d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo:</span><span>${d.vehiculo}</span></div>` : ""}
+      ${vehSpecs.cap ? `<div class="spec-row"><span class="spec-label">Capacidad:</span><span>${vehSpecs.cap} pasajeros</span></div>` : ""}
+      ${vehSpecs.aire ? `<div class="spec-row"><span class="spec-label">Aire acond.:</span><span>${vehSpecs.aire}</span></div>` : ""}
+      ${vehSpecs.trans ? `<div class="spec-row"><span class="spec-label">Transmisi&oacute;n:</span><span>${vehSpecs.trans}</span></div>` : ""}
+    </div>
   </div>
 </div>
 
@@ -420,6 +434,7 @@ function makePDFData(r) {
     iva_pct: parseFloat(r.tasa_iva) || 5,
     iva_amt: parseFloat(r.total_iva) || 0,
     total_ef,
+    servicio_tipo: r.tipo || "renta",
   };
 }
 
