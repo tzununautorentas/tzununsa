@@ -118,8 +118,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .page{width:100%;padding:0;min-height:880px;display:flex;flex-direction:column}
 
 /* ── HEADER ── */
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:3px solid #1B2D5C;margin-bottom:6px;position:relative}
-.header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:3px;background:#00D4AA}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:3px solid #1B2D5C;margin-bottom:4px;position:relative}
+.header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:2.5px;background:#00D4AA}
 .h-left{display:flex;gap:12px;align-items:center}
 .h-logo{width:207px;height:150px;object-fit:contain}
 .h-logo-fallback{width:207px;height:150px;border-radius:8px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:40px;font-weight:900}
@@ -133,7 +133,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── SECTION TITLES ── */
 .st{font-size:8.5px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #00D4AA55;padding-bottom:3px;margin-bottom:5px}
-.section{margin-bottom:6px}
+.section{margin-bottom:4px}
 
 /* ── FACTURAR A ── */
 .client-box{margin-bottom:3px}
@@ -141,7 +141,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .client-meta{font-size:11px;color:#475569;margin-top:2px;line-height:1.3}
 
 /* ── SALUDO ── */
-.saludo-box{background:#F8FAFC;border-left:4px solid #00D4AA;padding:7px 14px;font-size:12px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:8px;border-radius:0 6px 6px 0}
+.saludo-box{background:#F8FAFC;border-left:4px solid #00D4AA;padding:6px 12px;font-size:11.5px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:6px;border-radius:0 6px 6px 0}
 
 /* ── DESCRIPCIÓN ── */
 .servicio-text{font-size:12px;color:#475569;line-height:1.4;margin-bottom:1px;padding:0 2px}
@@ -150,11 +150,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .two-col{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
 .col-left{flex:6;min-width:0}
 .col-right{flex:4;min-width:0}
-.col-right .photo-wrap{border-radius:8px;overflow:hidden;border:1.5px solid #E2E8F0;background:#fff;margin-bottom:6px}
-.col-right .photo-wrap img{width:100%;height:auto;display:block}
-.col-right .specs{font-size:10.5px;color:#475569;line-height:1.4}
-.col-right .specs .spec-row{padding:2px 0;display:flex;gap:4px}
-.col-right .specs .spec-label{font-weight:600;color:#1B2D5C;min-width:55px}
+.col-right .photo-wrap{border-radius:8px;overflow:hidden;border:1.5px solid #E2E8F0;background:#fff;margin-bottom:5px}
+.col-right .photo-wrap img{width:100%;height:auto;display:block;max-height:160px;object-fit:cover}
+.col-right .specs{font-size:10px;color:#475569;line-height:1.35}
+.col-right .specs .spec-row{padding:1.5px 0;display:flex;gap:4px}
+.col-right .specs .spec-label{font-weight:600;color:#1B2D5C;min-width:52px}
 
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:4px 0 0 0}
@@ -196,11 +196,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .cierre-box{font-size:11px;color:#475569;font-style:italic;line-height:1.4;margin:2px 0 6px;padding:6px 12px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:6px;padding-top:6px;border-top:3px solid #1B2D5C;width:100%}
-.firma-img{height:140px;margin-bottom:3px}
-.f-name{font-weight:700;color:#1B2D5C;font-size:15px}
-.f-title{font-size:12px;color:#64748B;margin-top:1px}
-.f-contact{font-size:10px;color:#94A3B8;margin-top:1px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:4px;padding-top:5px;border-top:2.5px solid #1B2D5C;width:100%}
+.firma-img{height:120px;margin-bottom:3px}
+.f-name{font-weight:700;color:#1B2D5C;font-size:14px}
+.f-title{font-size:11.5px;color:#64748B;margin-top:1px}
+.f-contact{font-size:9.5px;color:#94A3B8;margin-top:1px}
 
 /* ── FOOTER ── */
 .footer{text-align:center;font-size:8.5px;color:#94A3B8;margin-top:auto;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.3;padding-bottom:3px}
@@ -398,8 +398,13 @@ ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "letter", orientation: "portrait" });
     const pw = pdf.internal.pageSize.getWidth() - 16;
+    const pageH = pdf.internal.pageSize.getHeight() - 16;
     const ph = (canvas.height * pw) / canvas.width;
-    pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+    const fitScale = ph > pageH ? pageH / ph : 1;
+    const finalW = pw * fitScale;
+    const finalH = ph * fitScale;
+    const xOff = (pw - finalW) / 2 + 8;
+    pdf.addImage(imgData, "JPEG", xOff, 8, finalW, finalH, undefined, "FAST");
     pdf.save(filename);
   } catch (err) {
     console.error("PDF error:", err);
