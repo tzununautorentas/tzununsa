@@ -121,7 +121,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:3px solid #1B2D5C;margin-bottom:4px;position:relative}
 .header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:2.5px;background:#00D4AA}
 .h-left{display:flex;gap:12px;align-items:center}
-.h-logo{width:160px;height:110px;object-fit:contain}
+.h-logo{max-width:160px;max-height:110px;width:auto;height:auto;object-fit:contain;display:block}
 .h-logo-fallback{width:160px;height:110px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900}
 .h-info h1{font-size:22px;font-weight:900;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:2px}
 .h-info .slogan{font-size:10px;color:#00D4AA;margin-top:0;font-weight:600;font-style:italic}
@@ -135,33 +135,40 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .st{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:3px;margin-bottom:5px}
 .section{margin-bottom:4px}
 
-/* ── CLIENTE ── */
-.client-box{margin-bottom:3px}
-.client-label{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:3px}
-.client-name{font-size:17px;font-weight:700;color:#1B2D5C;line-height:1.2}
-.client-meta{font-size:10.5px;color:#475569;margin-top:3px;line-height:1.35}
-
-/* ── SALUDO ── */
-.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:7px 14px 7px 20px;font-size:11.5px;color:#334155;font-style:italic;line-height:1.45;margin-bottom:6px;border-radius:0 6px 6px 0;position:relative}
-.saludo-box::before{content:"\\201C";position:absolute;left:5px;top:3px;font-size:20px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
-
-/* ── TWO COLUMNS 60/40 ── */
+/* ── TWO COLUMNS ── */
 .two-col{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
-.col-left{flex:6;min-width:0}
-.col-right{flex:4;min-width:0}
-.col-right .photo-wrap{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:5px;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
-.col-right .photo-wrap img{width:100%;height:auto;display:block;max-height:160px;object-fit:cover}
-.col-right .specs{font-size:10px;color:#475569;line-height:1.35}
-.col-right .specs .spec-row{padding:1.5px 0;display:flex;gap:4px}
-.col-right .specs .spec-label{font-weight:600;color:#1B2D5C;min-width:52px}
+.col-left{flex:5.5;min-width:0}
+.col-right{flex:4.5;min-width:0}
 
-/* ── SERVICIOS INCLUIDOS ── */
-.inc-list{list-style:none;padding:0;margin:4px 0 0 0}
-.inc-item{padding:2px 0;font-size:11.5px;color:#475569;display:flex;align-items:center;gap:6px}
-.inc-check{width:14px;height:14px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+/* ── CLIENTE (inside left col) ── */
+.client-box{margin-bottom:4px}
+.client-label{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:2px}
+.client-name{font-size:17px;font-weight:700;color:#1B2D5C;line-height:1.2}
+.client-meta{font-size:10.5px;color:#475569;margin-top:2px;line-height:1.3}
+
+/* ── SALUDO (inside left col) ── */
+.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:6px 12px 6px 18px;font-size:11px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:5px;border-radius:0 6px 6px 0;position:relative}
+.saludo-box::before{content:"\\201C";position:absolute;left:4px;top:2px;font-size:18px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
 
 /* ── TIPO DE SERVICIO ── */
-.tipo-text{font-size:12px;color:#475569;line-height:1.45;padding:1px 0 3px}
+.tipo-text{font-size:11.5px;color:#475569;line-height:1.4;padding:1px 0 2px}
+.tipo-info{font-size:10px;color:#64748B;line-height:1.35;padding:1px 0 3px}
+
+/* ── SERVICIOS INCLUIDOS ── */
+.inc-list{list-style:none;padding:0;margin:3px 0 0 0}
+.inc-item{padding:1.5px 0;font-size:11px;color:#475569;display:flex;align-items:center;gap:6px}
+.inc-check{width:13px;height:13px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+
+/* ── PHOTO (right col) ── */
+.col-right .photo-wrap{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:5px;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
+.col-right .photo-wrap img{width:100%;height:auto;display:block;object-fit:cover}
+
+/* ── VEHICLE SPECS (right col) ── */
+.specs-box{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:5px 8px;margin-bottom:4px}
+.specs-box .spec-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #E2E8F055;font-size:10px;color:#475569}
+.specs-box .spec-row:last-child{border-bottom:none}
+.specs-box .spec-label{font-weight:600;color:#1B2D5C}
+.specs-box .spec-value{font-weight:500;color:#334155;text-align:right}
 
 /* ── RESUMEN ECONÓMICO ── */
 .inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:6px;border:1px solid #E2E8F0}
@@ -172,14 +179,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── MODALIDADES DE PAGO ── */
 .pago-grid{display:flex;gap:8px;margin-bottom:6px}
-.pago-card{border-radius:8px;padding:8px 12px;border:2px solid #E2E8F0;background:#fff}
-.pago-card.principal{flex:1.12;border-color:#00D4AA;background:#F0FDF9}
-.pago-card.principal .pago-label{font-size:10px;color:#1B2D5C;font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px}
-.pago-card.principal .pago-monto{font-size:18px;font-weight:800;color:#1B2D5C}
-.pago-card.secundaria{flex:1;border-color:#CBD5E1;background:#FAFBFC}
-.pago-card.secundaria .pago-label{font-size:8.5px;color:#94A3B8;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px}
-.pago-card.secundaria .pago-monto{font-size:14px;font-weight:700;color:#64748B}
-.badge-preferente{display:inline-block;background:#E2E8F0;color:#64748B;font-size:7px;font-weight:600;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px}
+.pago-card{border-radius:8px;padding:8px 12px;border:2px solid #E2E8F0;background:#fff;flex:1}
+.pago-card .pago-label{font-size:9px;color:#64748B;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px}
+.pago-card .pago-monto{font-size:16px;font-weight:800;color:#1B2D5C}
+.pago-card.destacado{border-color:#00D4AA;background:#F0FDF9}
+.pago-card.destacado .pago-label{color:#1B2D5C}
 
 /* ── DATOS BANCARIOS ── */
 .bancos-box{font-size:10px;color:#475569;line-height:1.4;margin-bottom:6px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
@@ -223,32 +227,36 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
   </div>
   <div class="h-right">
     <div class="doc-type">COTIZACI&Oacute;N</div>
-    <div class="doc-num"># ${d.numero}</div>
+    <div class="doc-num"># ${d.numero}${d.version ? `<span style="font-size:10px;color:#94A3B8;font-weight:400"> v${d.version}</span>` : ""}</div>
     <div class="doc-date">Emisi&oacute;n: ${d.fecha}</div>
     <div class="doc-date">Vigencia: ${d.fecha_vence || "15 d&iacute;as"}</div>
   </div>
 </div>
 
-<!-- ═══ 2. DATOS DEL CLIENTE ═══ -->
-<div class="section">
-  <div class="client-box">
-    <div class="client-label">Cliente</div>
-    <div class="client-name">${d.cliente}</div>
-    <div class="client-meta">
-      <strong>NIT:</strong> ${d.nit || "CF"}${d.dir ? " &middot; " + d.dir : ""}
-      ${d.contacto ? "<br/><strong>Contacto:</strong> " + d.contacto : ""}
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 3. SALUDO CORPORATIVO ═══ -->
-${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
-
-<!-- ═══ 4-5. BLOQUE CENTRAL — GRID 60/40 ═══ -->
+<!-- ═══ 2-3. BLOQUE CENTRAL — GRID 55/45 ═══ -->
 <div class="two-col">
   <div class="col-left">
+
+    <!-- CLIENTE -->
+    <div class="client-box">
+      <div class="client-label">Cliente</div>
+      <div class="client-name">${d.cliente}</div>
+      <div class="client-meta">
+        <strong>NIT:</strong> ${d.nit || "CF"}${d.dir ? " &middot; " + d.dir : ""}
+        ${d.contacto ? "<br/><strong>Contacto:</strong> " + d.contacto : ""}
+      </div>
+    </div>
+
+    <!-- SALUDO -->
+    ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
+
+    <!-- TIPO DE SERVICIO -->
     <div class="st">TIPO DE SERVICIO</div>
     ${d.servicio ? `<div class="tipo-text">${d.servicio}</div>` : ""}
+    ${(d.fecha_inicio || d.fecha_fin) ? `<div class="tipo-info"><strong>Fechas:</strong> ${d.fecha_inicio || "—"} al ${d.fecha_fin || "—"}</div>` : ""}
+    ${(d.origen || d.destino) ? `<div class="tipo-info"><strong>Ruta:</strong> ${d.origen || "—"} → ${d.destino || "—"}${d.ruta ? " (" + d.ruta + ")" : ""}</div>` : ""}
+
+    <!-- SERVICIOS INCLUIDOS -->
     <div class="st" style="margin-top:5px">SERVICIOS INCLUIDOS</div>
     <div class="inc-list">
       ${d.incl_piloto ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Piloto profesional</span></div>` : ""}
@@ -259,16 +267,19 @@ ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
       ${d.incl_seguro !== false ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Seguro de viaje</span></div>` : ""}
     </div>
   </div>
+
   <div class="col-right">
+    <!-- FOTO -->
     ${fotoVehiculo ? `<div class="photo-wrap">
       <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-    </div>` : `<div style="height:100%;min-height:160px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:6px">Sin fotograf&iacute;a</div>`}
-    <div class="specs">
-      ${vehTipo ? `<div class="spec-row"><span class="spec-label">Tipo:</span><span>${vehTipo}</span></div>` : ""}
-      ${d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo:</span><span>${d.vehiculo}</span></div>` : ""}
-      ${vehSpecs.cap ? `<div class="spec-row"><span class="spec-label">Capacidad:</span><span>${vehSpecs.cap} pasajeros</span></div>` : ""}
-      ${vehSpecs.aire ? `<div class="spec-row"><span class="spec-label">Aire acond.:</span><span>${vehSpecs.aire}</span></div>` : ""}
-      ${vehSpecs.trans ? `<div class="spec-row"><span class="spec-label">Transmisi&oacute;n:</span><span>${vehSpecs.trans}</span></div>` : ""}
+    </div>` : `<div style="height:100%;min-height:180px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:6px">Sin fotograf&iacute;a</div>`}
+    <!-- SPECS VEHICULO -->
+    <div class="specs-box">
+      ${vehTipo ? `<div class="spec-row"><span class="spec-label">Tipo</span><span class="spec-value">${vehTipo}</span></div>` : ""}
+      ${d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo</span><span class="spec-value">${d.vehiculo}</span></div>` : ""}
+      ${vehSpecs.cap ? `<div class="spec-row"><span class="spec-label">Capacidad</span><span class="spec-value">${vehSpecs.cap} pasajeros</span></div>` : ""}
+      ${vehSpecs.aire ? `<div class="spec-row"><span class="spec-label">Aire acond.</span><span class="spec-value">${vehSpecs.aire}</span></div>` : ""}
+      ${vehSpecs.trans ? `<div class="spec-row"><span class="spec-label">Transmisi&oacute;n</span><span class="spec-value">${vehSpecs.trans}</span></div>` : ""}
     </div>
   </div>
 </div>
@@ -288,12 +299,11 @@ ${d.saludo ? `<div class="saludo-box">${d.saludo}</div>` : ""}
 <div class="section">
   <div class="st">MODALIDADES DE PAGO</div>
   <div class="pago-grid">
-    <div class="pago-card secundaria">
+    <div class="pago-card">
       <div class="pago-label">Tarjeta de cr&eacute;dito o d&eacute;bito</div>
       <div class="pago-monto">Q ${fmt(totalTC)}</div>
     </div>
-    <div class="pago-card principal">
-      <div class="badge-preferente">Pago preferente</div>
+    <div class="pago-card destacado">
       <div class="pago-label">Transferencia, dep&oacute;sito o efectivo</div>
       <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
     </div>
@@ -439,6 +449,11 @@ function makePDFData(r) {
     iva_amt: parseFloat(r.total_iva) || 0,
     total_ef,
     servicio_tipo: r.tipo || "renta",
+    fecha_inicio: r.fecha_inicio || "",
+    fecha_fin: r.fecha_fin || "",
+    origen: r.origen || "", destino: r.destino || "",
+    ruta: r.ruta || "", observaciones_ruta: r.observaciones_ruta || "",
+    version: parseInt(r.version) || 1,
   };
 }
 
@@ -455,6 +470,8 @@ const EMPTY_F = {
   peajes: "", extras: "",
   iva_pct: 5, pago: "efectivo", exch: 7.70,
   fecha_emision: today(), fecha_vence: "", estado: "borrador", notas: "",
+  fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
+  observaciones_ruta: "", version: 1,
 };
 
 // ─── Formulario de cotización ─────────────────────────────────────────────────
@@ -483,6 +500,10 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       costo_alimentacion: initial.costo_alimentacion || "", km_total: initial.km_total || "",
       km_por_galon: initial.km_por_galon || 27, precio_galon: initial.precio_galon || 48,
       peajes: initial.peajes || "", extras: initial.extras || "",
+      fecha_inicio: initial.fecha_inicio || "", fecha_fin: initial.fecha_fin || "",
+      origen: initial.origen || "", destino: initial.destino || "",
+      ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "",
+      version: parseInt(initial.version) || 1,
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
       estado: "borrador", notas: initial.notas || "",
@@ -519,6 +540,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
     setSaving(true);
     try {
       const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
+      const nextVersion = (parseInt(f.version) || 1) + 1;
       const payload = {
         empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
@@ -535,6 +557,10 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         tasa_iva: f.iva_pct, metodo_pago: f.pago || "efectivo", tasa_cambio: exch,
         subtotal: sub, total_iva: iva_amt, recargo_tarjeta: total_tc - total_ef,
         total_gtq: total_ef, total_usd: total_ef / exch,
+        fecha_inicio: f.fecha_inicio || null, fecha_fin: f.fecha_fin || null,
+        origen: f.origen || "", destino: f.destino || "", ruta: f.ruta || "",
+        observaciones_ruta: f.observaciones_ruta || "",
+        version: initial?.id && !isClone ? nextVersion : 1,
         estado: estado === "orden_venta" ? "aprobada" : estado,
         orden_venta: estado === "orden_venta",
         fecha_emision: f.fecha_emision || today(), fecha_vence: f.fecha_vence || "", notas: f.notas || "",
@@ -543,6 +569,27 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       if (initial?.id && !isClone) result = await dbUpd("cotizaciones", initial.id, payload);
       else result = await dbIns("cotizaciones", payload);
       if (result?.error) { showToast("Error: " + result.error, "err"); setSaving(false); return; }
+
+      // Sincronizar reserva vinculada si existe
+      if (initial?.reserva_id && initial.id && !isClone) {
+        const rPayload = {
+          cliente_nombre: f.cliente_nombre,
+          vehiculo_nombre: f.vehiculo_nombre || "",
+          dias, fecha_inicio: f.fecha_inicio || null, fecha_fin: f.fecha_fin || null,
+          origen: f.origen || "", destino: f.destino || "",
+          saludo: f.saludo || "",
+          descripcion_servicio: f.descripcion_servicio || "",
+          servicios_incluidos: payload.servicios_incluidos,
+          subtotal: sub, total_iva: iva_amt, total_gtq: total_ef,
+          tasa_iva: f.iva_pct, metodo_pago: f.pago || "efectivo", tasa_cambio: exch,
+          costo_vehiculo: rate, costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
+          km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
+          extras: sub_extras, peajes: sub_peajes, recargo_tarjeta: total_tc - total_ef,
+          version: nextVersion,
+        };
+        await dbUpd("reservas", initial.reserva_id, rPayload);
+      }
+
       showToast("Cotizacion guardada");
       setSaving(false); onSave(estado);
     } catch (e) { showToast("Error: " + e.message, "err"); setSaving(false); }
@@ -621,6 +668,10 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               </div>
               <div><label style={S.lbl}>DIAS</label><input style={S.inp} type="number" min="1" value={f.dias} onChange={e => sf("dias", parseInt(e.target.value) || 1)} /></div>
               <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e => sf("precio_custom", e.target.value)} placeholder="Vacio = catalogo" /></div>
+              <div><label style={S.lbl}>FECHA INICIO</label><input style={S.inp} type="date" value={f.fecha_inicio} onChange={e => sf("fecha_inicio", e.target.value)} /></div>
+              <div><label style={S.lbl}>FECHA FIN</label><input style={S.inp} type="date" value={f.fecha_fin} onChange={e => sf("fecha_fin", e.target.value)} /></div>
+              <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>ORIGEN</label><input style={S.inp} value={f.origen} onChange={e => sf("origen", e.target.value)} placeholder="Ciudad de origen" /></div>
+              <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>DESTINO</label><input style={S.inp} value={f.destino} onChange={e => sf("destino", e.target.value)} placeholder="Ciudad de destino" /></div>
               <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>DESCRIPCION DEL SERVICIO</label><textarea style={{ ...S.inp, minHeight: 56, resize: "vertical" }} value={f.descripcion_servicio} onChange={e => sf("descripcion_servicio", e.target.value)} placeholder="Traslado desde Guatemala hacia..." /></div>
             </div>
           </div>
@@ -769,6 +820,8 @@ export default function PageCotizaciones({ showToast, empId }) {
     const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
     const numero = await siguienteNumero("RES-", "reservas", eId);
 
+    let svc = {};
+    try { svc = JSON.parse(cot.servicios_incluidos || "{}"); } catch {}
     const r = await dbIns("reservas", {
       empresa_id: eId,
       cliente_nombre: cot.cliente_nombre,
@@ -781,6 +834,13 @@ export default function PageCotizaciones({ showToast, empId }) {
       conductor_nombre: "",
       fecha_inicio: cot.fecha_inicio || null,
       fecha_fin: cot.fecha_fin || null,
+      origen: cot.origen || "",
+      destino: cot.destino || "",
+      ruta: cot.ruta || "",
+      observaciones_ruta: cot.observaciones_ruta || "",
+      descripcion_servicio: cot.descripcion_servicio || "",
+      servicios_incluidos: cot.servicios_incluidos || "{}",
+      version: parseInt(cot.version) || 1,
       dias: parseInt(cot.dias) || 0,
       tarifa: parseFloat(cot.precio_personalizado) || parseFloat(cot.costo_vehiculo) || 0,
       subtotal: parseFloat(cot.subtotal) || 0,
@@ -797,6 +857,22 @@ export default function PageCotizaciones({ showToast, empId }) {
       cliente_contacto: cot.cliente_contacto || "",
       cliente_email: cot.cliente_email || "",
       cliente_telefono: cot.cliente_telefono || "",
+      costo_vehiculo: parseFloat(cot.costo_vehiculo) || 0,
+      costo_piloto: parseFloat(cot.costo_piloto) || 0,
+      costo_hospedaje: parseFloat(cot.costo_hospedaje) || 0,
+      costo_alimentacion: parseFloat(cot.costo_alimentacion) || 0,
+      precio_galon: parseFloat(cot.precio_galon) || 0,
+      km_por_galon: parseFloat(cot.km_por_galon) || 0,
+      km_total: parseFloat(cot.km_total) || 0,
+      extras: parseFloat(cot.extras) || 0,
+      peajes: parseFloat(cot.peajes) || 0,
+      recargo_tarjeta: parseFloat(cot.recargo_tarjeta) || 0,
+      incl_piloto: svc.piloto || false,
+      incl_combustible: svc.combustible || false,
+      incl_peajes: svc.peajes || false,
+      incl_hospedaje: svc.hospedaje || false,
+      incl_alimentacion: svc.alimentacion || false,
+      incl_seguro: svc.seguro !== false,
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });
@@ -856,7 +932,7 @@ export default function PageCotizaciones({ showToast, empId }) {
               <div key={r.id} style={S.card}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontFamily: "monospace", fontSize: 11, color: T.acc }}>{r.numero}</div>
+                    <div style={{ fontFamily: "monospace", fontSize: 11, color: T.acc }}>{r.numero}{r.version ? <span style={{color:T.sub,fontSize:9}}> v{r.version}</span> : ""}</div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{r.cliente_nombre}</div>
                     {r.cliente_codigo && <div style={{ fontSize: 11, color: T.acc }}>Cod: {r.cliente_codigo}</div>}
                     <div style={{ fontSize: 12, color: T.sub }}>{r.dias}d{r.vehiculo_nombre ? " · " + r.vehiculo_nombre : ""}</div>

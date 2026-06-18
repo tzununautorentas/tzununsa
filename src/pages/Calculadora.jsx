@@ -47,6 +47,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const [pago, setPago]     = useState("efectivo");
   const [conTC, setConTC]   = useState(false);
   const [exch, setExch]     = useState(7.70);
+  const [origenRenta, setOrigenRenta] = useState("");
+  const [destinoRenta, setDestinoRenta] = useState("");
   const [saving, setSaving] = useState(false);
 
   const [tf, setTf] = useState({
@@ -55,7 +57,9 @@ export default function PageCalculadora({ showToast, empId }) {
     saludo: "",
     dias: 1, veh: 0, vehiculoId: "", vehiculoNombre: "", pil: 0, hos: 0, ali: 0,
     galon: 48, kpg: 27, kmi: 0, kmr: 0, varios: 0,
-    iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: ""
+    iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: "",
+    fechaInicio: today(), fechaFin: today(),
+    origen: "", destino: "", observaciones_ruta: ""
   });
   const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
@@ -124,6 +128,18 @@ export default function PageCalculadora({ showToast, empId }) {
     setSaving(true);
     const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
     if (!eId) { showToast("Error: no se encontro empresa", "err"); setSaving(false); return; }
+    const fi = tab === "renta" ? fechaInicio : tf.fechaInicio;
+    const ff = tab === "renta" ? fechaFin : tf.fechaFin;
+    const orig = tab === "renta" ? origenRenta : tf.origen;
+    const dest = tab === "renta" ? destinoRenta : tf.destino;
+    const vehName = tab === "renta" ? (selVeh?.nombre || "") : tf.vehiculoNombre;
+    const fmtDate = s => { try { return new Date(s + "T12:00:00").toLocaleDateString("es-GT", { day:"numeric", month:"long", year:"numeric" }); } catch { return s; } };
+    let descripcion_servicio = "";
+    if (tab === "renta") {
+      descripcion_servicio = `Servicio de alquiler de vehículo${vehName ? " " + vehName : ""} para las fechas del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}.`;
+    } else {
+      descripcion_servicio = `Servicio de transporte desde ${orig || "—"} hacia ${dest || "—"} los días ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}.`;
+    }
     const p = {
       empresa_id: eId, tipo: tab, cliente_nombre: cn,
       cliente_nit: tab === "renta" ? clienteNit : tf.clienteNit,
@@ -134,6 +150,11 @@ export default function PageCalculadora({ showToast, empId }) {
       cliente_email: tab === "renta" ? clienteEmail : tf.clienteEmail,
       cliente_telefono: tab === "renta" ? clienteTelefono : tf.clienteTelefono,
       saludo: tab === "renta" ? saludo : tf.saludo,
+      descripcion_servicio,
+      fecha_inicio: fi, fecha_fin: ff,
+      origen: orig, destino: dest, ruta: tab === "renta" ? "" : tf.ruta,
+      observaciones_ruta: tab === "renta" ? "" : tf.observaciones_ruta,
+      version: 1,
       numero: await siguienteNumero("COT-", "cotizaciones", empId),
       dias: tab === "renta" ? diasCalc : d2,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
@@ -144,17 +165,14 @@ export default function PageCalculadora({ showToast, empId }) {
       recargo_tarjeta: tab === "renta" ? recTC : ttcr,
       total_gtq: tab === "renta" ? tot : ttot,
       total_usd: (tab === "renta" ? tot : ttot) / (tab === "renta" ? exch : parseFloat(tf.exch) || 7.70),
-      vehiculo_nombre: tab === "renta" ? (selVeh?.nombre || "") : tf.vehiculoNombre,
+      vehiculo_nombre: vehName,
       estado,
       km_total: tkm,
       costo_vehiculo: tab === "renta" ? rate : (parseFloat(tf.veh) || 0),
-      costo_piloto: pT,
-      costo_hospedaje: hT,
-      costo_alimentacion: aT,
+      costo_piloto: pT, costo_hospedaje: hT, costo_alimentacion: aT,
       precio_galon: parseFloat(tf.galon) || 0,
       km_por_galon: parseFloat(tf.kpg) || 0,
-      extras: misc,
-      peajes: 0,
+      extras: misc, peajes: 0,
     };
     const r = await dbIns("cotizaciones", p);
     if (r && !r.error) showToast(estado === "enviada" ? "Cotizacion guardada" : "Borrador guardado");
@@ -205,6 +223,12 @@ export default function PageCalculadora({ showToast, empId }) {
               <Fld label="SALUDO PERSONALIZADO">
                 <textarea style={{ ...S.inp, minHeight: 60, fontSize: 12 }} value={saludo}
                   onChange={e => setSaludo(e.target.value)} placeholder="Ej: Estimado cliente..." />
+              </Fld>
+              <Fld label="ORIGEN">
+                <input style={S.inp} value={origenRenta} onChange={e => setOrigenRenta(e.target.value)} placeholder="Ciudad de origen" />
+              </Fld>
+              <Fld label="DESTINO">
+                <input style={S.inp} value={destinoRenta} onChange={e => setDestinoRenta(e.target.value)} placeholder="Ciudad de destino" />
               </Fld>
               <Fld label="FECHA INICIO">
                 <input style={S.inp} type="date" value={fechaInicio}
@@ -278,6 +302,10 @@ export default function PageCalculadora({ showToast, empId }) {
                   }
                 }} />
               </Fld>
+              <Fld label="ORIGEN"><input style={S.inp} value={tf.origen} onChange={e => stf("origen", e.target.value)} placeholder="Ciudad de origen" /></Fld>
+              <Fld label="DESTINO"><input style={S.inp} value={tf.destino} onChange={e => stf("destino", e.target.value)} placeholder="Ciudad de destino" /></Fld>
+              <Fld label="FECHA INICIO"><input style={S.inp} type="date" value={tf.fechaInicio} onChange={e => stf("fechaInicio", e.target.value)} /></Fld>
+              <Fld label="FECHA FIN"><input style={S.inp} type="date" value={tf.fechaFin} onChange={e => stf("fechaFin", e.target.value)} /></Fld>
               <Fld label="DIAS"><input style={S.inp} type="number" value={tf.dias} onChange={e => stf("dias", e.target.value)} /></Fld>
               <Fld label="TIPO VEHICULO" span2>
                 <select style={S.sel} value={tf.vehiculoId || ""} onChange={e => {

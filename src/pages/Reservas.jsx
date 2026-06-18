@@ -38,15 +38,17 @@ const calcDias = (fi, ff) => {
 const EMPTY_R = {
   cliente_nombre: "", tipo: "renta", vehiculo_nombre: "", conductor_nombre: "",
   fecha_inicio: "", fecha_fin: "", hora_recogida: "08:00",
-  origen: "Guatemala", destino: "", departamento: "", municipio: "",
+  origen: "", destino: "", departamento: "", municipio: "",
   anticipo: "", total_gtq: "", notas: "", tasa_iva: 5,
   metodo_pago: "efectivo", tasa_cambio: 7.70, estado: "pendiente",
   saludo: "", cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
+  descripcion_servicio: "", servicios_incluidos: "{}",
+  ruta: "", observaciones_ruta: "", version: 1,
 };
 
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
-  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70 } : { ...EMPTY_R });
+  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1 } : { ...EMPTY_R });
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
@@ -66,12 +68,14 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
     }
     setSaving(true);
     const numero = initial?.numero || await siguienteNumero("RES-", "reservas", empId);
+    const nextVersion = (parseInt(f.version) || 1) + 1;
     const payload = {
       ...f, empresa_id: empId,
       numero,
       dias, tarifa, subtotal: sub, total_iva: iva, total_gtq: tot,
       tasa_iva: f.tasa_iva, tasa_cambio: f.tasa_cambio,
       metodo_pago: f.metodo_pago,
+      version: initial?.id ? nextVersion : 1,
     };
     const result = initial?.id
       ? await dbUpd("reservas", initial.id, payload)
@@ -160,6 +164,9 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
               </Fld>
               <Fld label="DESTINO">
                 <input style={S.inp} value={f.destino} onChange={e => sf("destino", e.target.value)} placeholder="Ciudad de destino" />
+              </Fld>
+              <Fld label="RUTA / OBSERVACIONES">
+                <input style={S.inp} value={f.ruta} onChange={e => sf("ruta", e.target.value)} placeholder="Via Cobán, ruta alternativa..." />
               </Fld>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
                 <Fld label="DEPARTAMENTO">
@@ -351,7 +358,7 @@ export default function PageReservas({ showToast, empId }) {
               <div key={r.id} style={S.card}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontFamily: "monospace", fontSize: 11, color: T.acc }}>{r.numero}</div>
+                    <div style={{ fontFamily: "monospace", fontSize: 11, color: T.acc }}>{r.numero}{r.version ? <span style={{color:T.sub,fontSize:9}}> v{r.version}</span> : ""}</div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{r.cliente_nombre}</div>
                     <div style={{ fontSize: 12, color: T.sub }}>
                       {r.tipo === "renta" ? "Renta por dias" : "Traslado"}
