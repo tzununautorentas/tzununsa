@@ -14,7 +14,10 @@ export default function PageFlota({ showToast, empId }) {
     codigo: "", propietario: "propio", placa: "", marca: "", modelo: "",
     anio: new Date().getFullYear(), tipo: "SUV", estado: "disponible", km_actual: 0,
     color: "", vin: "", poliza_seguro: "", vencimiento_seguro: "", tipo_deducible: "",
-    monto_deducible: "", notas: "", foto_url: ""
+    monto_deducible: "", notas: "", foto_url: "",
+    capacidad: 4, transmision: "Automática", aire_acondicionado: true,
+    combustible: "Gasolina", capacidad_equipaje: "2 maletas", traccion: "4x2",
+    tarifa_dia: "", tarifa_semana: "", tarifa_mes: ""
   });
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
@@ -73,7 +76,11 @@ export default function PageFlota({ showToast, empId }) {
       color: v.color || '', vin: v.vin || '',
       poliza_seguro: v.poliza_seguro || '', vencimiento_seguro: v.vencimiento_seguro || '',
       tipo_deducible: v.tipo_deducible || '', monto_deducible: v.monto_deducible || 0,
-      notas: v.notas || '', foto_url: v.foto_url || ''
+      notas: v.notas || '', foto_url: v.foto_url || '',
+      capacidad: v.capacidad || 4, transmision: v.transmision || 'Automática',
+      aire_acondicionado: v.aire_acondicionado ?? true, combustible: v.combustible || 'Gasolina',
+      capacidad_equipaje: v.capacidad_equipaje || '2 maletas', traccion: v.traccion || '4x2',
+      tarifa_dia: v.tarifa_dia || '', tarifa_semana: v.tarifa_semana || '', tarifa_mes: v.tarifa_mes || ''
     });
     setEditItem(v); setVista("form");
   };
@@ -81,14 +88,16 @@ export default function PageFlota({ showToast, empId }) {
   const abrirNuevo = () => {
     setF({ codigo: genCodigoVehiculo('propio'), propietario: 'propio', placa: '', marca: '', modelo: '',
       anio: new Date().getFullYear(), tipo: 'SUV', estado: 'disponible', km_actual: 0,
-      color: '', vin: '', poliza_seguro: '', vencimiento_seguro: '', notas: '', foto_url: '' });
+      color: '', vin: '', poliza_seguro: '', vencimiento_seguro: '', notas: '', foto_url: '',
+      capacidad: 4, transmision: 'Automática', aire_acondicionado: true, combustible: 'Gasolina',
+      capacidad_equipaje: '2 maletas', traccion: '4x2', tarifa_dia: '', tarifa_semana: '', tarifa_mes: '' });
     setEditItem(null); setVista("form");
   };
 
   const guardar = async () => {
     if (!f.placa.trim()) { showToast("Placa requerida", "err"); return; }
     setSaving(true);
-    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, tipo_deducible: f.tipo_deducible, monto_deducible: parseFloat(f.monto_deducible) || 0, notas: f.notas, foto_url: f.foto_url || null };
+    const payload = { empresa_id: empId, codigo: f.codigo, propietario: f.propietario, placa: f.placa, marca: f.marca, modelo: f.modelo, tipo: f.tipo, color: f.color, estado: f.estado, anio: parseInt(f.anio) || new Date().getFullYear(), km_actual: parseInt(f.km_actual) || 0, vin: f.vin, poliza_seguro: f.poliza_seguro, vencimiento_seguro: f.vencimiento_seguro || null, tipo_deducible: f.tipo_deducible, monto_deducible: parseFloat(f.monto_deducible) || 0, notas: f.notas, foto_url: f.foto_url || null, capacidad: parseInt(f.capacidad) || 4, transmision: f.transmision, aire_acondicionado: !!f.aire_acondicionado, combustible: f.combustible, capacidad_equipaje: f.capacidad_equipaje, traccion: f.traccion, tarifa_dia: parseFloat(f.tarifa_dia) || 0, tarifa_semana: parseFloat(f.tarifa_semana) || 0, tarifa_mes: parseFloat(f.tarifa_mes) || 0 };
     let res;
     if (editItem?.id) res = await dbUpd("vehiculos", editItem.id, payload);
     else res = await dbIns("vehiculos", payload);
@@ -242,7 +251,70 @@ export default function PageFlota({ showToast, empId }) {
               </div>
             </div>
           </div>
-          <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
+        </div>
+
+        <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ gridColumn: "span 2", fontSize: 11, fontWeight: 700, color: T.mut, letterSpacing: 1 }}>
+            CARACTERISTICAS TECNICAS
+          </div>
+          <Fld label="CAPACIDAD (PASAJEROS)">
+            <input style={S.inp} type="number" min="1" max="60" value={f.capacidad}
+              onChange={e => sf("capacidad", e.target.value)} placeholder="4" />
+          </Fld>
+          <Fld label="TRANSMISION">
+            <select style={S.sel} value={f.transmision} onChange={e => sf("transmision", e.target.value)}>
+              <option value="Automática">Automática</option>
+              <option value="Manual">Manual</option>
+              <option value="Automática / Manual">Automática / Manual</option>
+            </select>
+          </Fld>
+          <Fld label="AIRE ACONDICIONADO">
+            <select style={S.sel} value={f.aire_acondicionado ? "si" : "no"} onChange={e => sf("aire_acondicionado", e.target.value === "si")}>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </Fld>
+          <Fld label="COMBUSTIBLE">
+            <select style={S.sel} value={f.combustible} onChange={e => sf("combustible", e.target.value)}>
+              <option value="Gasolina">Gasolina</option>
+              <option value="Diesel">Diesel</option>
+              <option value="Híbrido">Híbrido</option>
+              <option value="Eléctrico">Eléctrico</option>
+              <option value="Gasolina / Gas">Gasolina / Gas</option>
+            </select>
+          </Fld>
+          <Fld label="CAPACIDAD EQUIPAJE">
+            <input style={S.inp} value={f.capacidad_equipaje}
+              onChange={e => sf("capacidad_equipaje", e.target.value)} placeholder="2 maletas" />
+          </Fld>
+          <Fld label="TRACCION">
+            <select style={S.sel} value={f.traccion} onChange={e => sf("traccion", e.target.value)}>
+              <option value="4x2">4x2</option>
+              <option value="4x4">4x4</option>
+              <option value="AWD">AWD</option>
+            </select>
+          </Fld>
+        </div>
+
+        <div style={{ ...S.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ gridColumn: "span 2", fontSize: 11, fontWeight: 700, color: T.mut, letterSpacing: 1 }}>
+            INFORMACION COMERCIAL
+          </div>
+          <Fld label="TARIFA DIA (Q)">
+            <input style={S.inp} type="number" step="0.01" value={f.tarifa_dia}
+              onChange={e => sf("tarifa_dia", e.target.value)} placeholder="0.00" />
+          </Fld>
+          <Fld label="TARIFA SEMANA (Q)">
+            <input style={S.inp} type="number" step="0.01" value={f.tarifa_semana}
+              onChange={e => sf("tarifa_semana", e.target.value)} placeholder="0.00" />
+          </Fld>
+          <Fld label="TARIFA MES (Q)">
+            <input style={S.inp} type="number" step="0.01" value={f.tarifa_mes}
+              onChange={e => sf("tarifa_mes", e.target.value)} placeholder="0.00" />
+          </Fld>
+        </div>
+
+        <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
             <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary"), flex: 2 }}>
               {saving ? "Guardando..." : "Guardar vehiculo"}
             </button>
@@ -331,6 +403,9 @@ export default function PageFlota({ showToast, empId }) {
                     <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 11, color: T.mut }}>
                         {v.tipo} · {(v.km_actual || 0).toLocaleString()} km
+                        {v.capacidad ? ` · ${v.capacidad} pasajeros` : ''}
+                        {v.transmision ? ` · ${v.transmision}` : ''}
+                        {v.aire_acondicionado ? ' · A/C' : ''}
                       </span>
                     </div>
                   </div>
@@ -387,6 +462,15 @@ export default function PageFlota({ showToast, empId }) {
           { key: 'poliza_seguro', label: 'Póliza' },
           { key: 'vencimiento_seguro', label: 'Venc. Seguro' },
           { key: 'notas', label: 'Notas' },
+          { key: 'capacidad', label: 'Capacidad' },
+          { key: 'transmision', label: 'Transmisión' },
+          { key: 'aire_acondicionado', label: 'Aire' },
+          { key: 'combustible', label: 'Combustible' },
+          { key: 'capacidad_equipaje', label: 'Equipaje' },
+          { key: 'traccion', label: 'Tracción' },
+          { key: 'tarifa_dia', label: 'Tarifa Día' },
+          { key: 'tarifa_semana', label: 'Tarifa Semana' },
+          { key: 'tarifa_mes', label: 'Tarifa Mes' },
         ]} onClose={() => setExportar(false)} />
       )}
     </div>

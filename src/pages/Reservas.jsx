@@ -49,14 +49,26 @@ const EMPTY_R = {
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
   const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1 } : { ...EMPTY_R });
+  const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dbGet("vehiculos", "&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes&estado=eq.disponible&limit=100");
+        if (res) setFlotaVehiculos(res);
+      } catch {}
+    })();
+  }, []);
 
   const fromCotizacion = f.cotizacion_id && parseFloat(f.subtotal) > 0;
 
   // Si la reserva viene de una cotizacion, usar valores heredados (no recalcular)
   const dias = fromCotizacion ? f.dias : calcDias(f.fecha_inicio, f.fecha_fin);
-  const veh  = CATALOGO.find(v => v.nombre === f.vehiculo_nombre);
+  const vehCat  = CATALOGO.find(v => v.nombre === f.vehiculo_nombre);
+  const vehFlota = flotaVehiculos.find(v => `${v.marca||""} ${v.modelo||""}`.trim() === f.vehiculo_nombre);
+  const veh = vehCat || (vehFlota && parseFloat(vehFlota.tarifa_dia) > 0 ? { ...vehFlota, dia: parseFloat(vehFlota.tarifa_dia), sem: parseFloat(vehFlota.tarifa_semana)||parseFloat(vehFlota.tarifa_dia), mes: parseFloat(vehFlota.tarifa_mes)||parseFloat(vehFlota.tarifa_dia) } : null);
   const tarifa = fromCotizacion ? (f.dias > 0 ? f.subtotal / f.dias : 0) : (veh ? (dias >= 30 ? veh.mes : dias >= 8 ? veh.sem : veh.dia) : 0);
   const sub  = fromCotizacion ? f.subtotal : dias * tarifa;
   const iva  = fromCotizacion ? f.total_iva : Math.round(sub * (f.tasa_iva / 100) * 100) / 100;
@@ -127,7 +139,19 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
               <Fld label="VEHICULO">
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e => sf("vehiculo_nombre", e.target.value)}>
                   <option value="">Sin asignar</option>
-                  {CATALOGO.map(v => <option key={v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  <optgroup label="Catalogo">
+                    {CATALOGO.map(v => <option key={"cat_"+v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  </optgroup>
+                  {flotaVehiculos.length > 0 && (
+                    <optgroup label="Flota">
+                      {flotaVehiculos.map(v => {
+                        const nom = `${v.marca||""} ${v.modelo||""}`.trim();
+                        if (!nom) return null;
+                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
+                        return <option key={"fl_"+nom} value={nom}>{nom}{p}</option>;
+                      })}
+                    </optgroup>
+                  )}
                 </select>
               </Fld>
               <Fld label="CONDUCTOR / PILOTO">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { T, S, fmt, dbIns, dbGet, today, CATALOGO, siguienteNumero } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
 import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
@@ -39,7 +39,7 @@ export default function PageCalculadora({ showToast, empId }) {
   const [clienteContacto, setClienteContacto] = useState("");
   const [clienteEmail, setClienteEmail] = useState("");
   const [clienteTelefono, setClienteTelefono] = useState("");
-  const [selVeh, setSelVeh] = useState(null);
+  const [selVeh, setSelVeh] = useState("");
   const [dias, setDias]     = useState(1);
   const [fechaInicio, setFechaInicio] = useState(today());
   const [fechaFin, setFechaFin]       = useState("");
@@ -49,7 +49,17 @@ export default function PageCalculadora({ showToast, empId }) {
   const [exch, setExch]     = useState(7.70);
   const [origenRenta, setOrigenRenta] = useState("");
   const [destinoRenta, setDestinoRenta] = useState("");
+  const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dbGet("vehiculos", "&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion,foto_url&estado=eq.disponible&limit=100");
+        if (res) setFlotaVehiculos(res);
+      } catch {}
+    })();
+  }, []);
 
   const [tf, setTf] = useState({
     cliente: "", clienteNit: "", clienteDir: "", clienteCodigo: "",
@@ -96,7 +106,15 @@ export default function PageCalculadora({ showToast, empId }) {
     if (d >= 8)  return v.sem;
     return v.dia;
   };
-  const rate    = selVeh ? tarifaFn(selVeh, diasCalc) : 0;
+  const vehSeleccionado = (() => {
+    if (!selVeh) return null;
+    const c = CATALOGO.find(v => v.nombre === selVeh);
+    if (c) return c;
+    const f = flotaVehiculos.find(v => `${v.marca||""} ${v.modelo||""}`.trim() === selVeh);
+    if (f && parseFloat(f.tarifa_dia) > 0) return { ...f, dia: parseFloat(f.tarifa_dia), sem: parseFloat(f.tarifa_semana)||parseFloat(f.tarifa_dia), mes: parseFloat(f.tarifa_mes)||parseFloat(f.tarifa_dia) };
+    return null;
+  })();
+  const rate    = vehSeleccionado ? tarifaFn(vehSeleccionado, diasCalc) : 0;
   const sub     = diasCalc * rate;
   const ivaAmt  = Math.round(sub * iva / 100 * 100) / 100;
   const base    = sub + ivaAmt;
@@ -132,7 +150,7 @@ export default function PageCalculadora({ showToast, empId }) {
     const ff = tab === "renta" ? fechaFin : tf.fechaFin;
     const orig = tab === "renta" ? origenRenta : tf.origen;
     const dest = tab === "renta" ? destinoRenta : tf.destino;
-    const vehName = tab === "renta" ? (selVeh?.nombre || "") : tf.vehiculoNombre;
+    const vehName = tab === "renta" ? (selVeh || "") : tf.vehiculoNombre;
     const fmtDate = s => { try { return new Date(s + "T12:00:00").toLocaleDateString("es-GT", { day:"numeric", month:"long", year:"numeric" }); } catch { return s; } };
     let descripcion_servicio = "";
     if (tab === "renta") {
@@ -244,9 +262,21 @@ export default function PageCalculadora({ showToast, empId }) {
                 </div>
               </Fld>
               <Fld label="VEHICULO">
-                <select style={S.sel} value={selVeh?.id || ""} onChange={e => setSelVeh(CATALOGO.find(v => v.id === e.target.value) || null)}>
+                <select style={S.sel} value={selVeh} onChange={e => setSelVeh(e.target.value)}>
                   <option value="">Seleccionar...</option>
-                  {CATALOGO.map(v => <option key={v.id} value={v.id}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  <optgroup label="Catalogo">
+                    {CATALOGO.map(v => <option key={"cat_"+v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  </optgroup>
+                  {flotaVehiculos.length > 0 && (
+                    <optgroup label="Flota">
+                      {flotaVehiculos.map(v => {
+                        const nom = `${v.marca||""} ${v.modelo||""}`.trim();
+                        if (!nom) return null;
+                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
+                        return <option key={"fl_"+nom} value={nom}>{nom}{p}</option>;
+                      })}
+                    </optgroup>
+                  )}
                 </select>
               </Fld>
               <Fld label="IVA">
@@ -308,14 +338,29 @@ export default function PageCalculadora({ showToast, empId }) {
               <Fld label="FECHA FIN"><input style={S.inp} type="date" value={tf.fechaFin} onChange={e => stf("fechaFin", e.target.value)} /></Fld>
               <Fld label="DIAS"><input style={S.inp} type="number" value={tf.dias} onChange={e => stf("dias", e.target.value)} /></Fld>
               <Fld label="TIPO VEHICULO" span2>
-                <select style={S.sel} value={tf.vehiculoId || ""} onChange={e => {
-                  const v = CATALOGO.find(x => x.id === e.target.value);
-                  stf("vehiculoId", e.target.value);
-                  stf("veh", v ? v.dia : 0);
-                  stf("vehiculoNombre", v ? v.nombre : "");
+                <select style={S.sel} value={tf.vehiculoNombre || ""} onChange={e => {
+                  const nom = e.target.value;
+                  const c = CATALOGO.find(x => x.nombre === nom);
+                  const f = flotaVehiculos.find(x => `${x.marca||""} ${x.modelo||""}`.trim() === nom);
+                  const rate = c ? c.dia : (f && parseFloat(f.tarifa_dia) > 0 ? parseFloat(f.tarifa_dia) : 0);
+                  stf("vehiculoId", c ? c.id : nom);
+                  stf("veh", rate);
+                  stf("vehiculoNombre", nom);
                 }}>
                   <option value="">Seleccionar vehiculo...</option>
-                  {CATALOGO.map(v => <option key={v.id} value={v.id}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  <optgroup label="Catalogo">
+                    {CATALOGO.map(v => <option key={"cat_"+v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  </optgroup>
+                  {flotaVehiculos.length > 0 && (
+                    <optgroup label="Flota">
+                      {flotaVehiculos.map(v => {
+                        const nom = `${v.marca||""} ${v.modelo||""}`.trim();
+                        if (!nom) return null;
+                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
+                        return <option key={"fl_"+nom} value={nom}>{nom}{p}</option>;
+                      })}
+                    </optgroup>
+                  )}
                 </select>
               </Fld>
               <Fld label="COSTO VEHICULO/DIA"><input style={S.inp} type="number" value={tf.veh} onChange={e => stf("veh", e.target.value)} placeholder="0.00" /></Fld>

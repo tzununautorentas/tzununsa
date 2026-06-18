@@ -87,25 +87,45 @@ async function generarPDFPremium(d, empId, mode = "download") {
     }
   }
 
-  // Buscar foto del vehículo y specs
+  // Buscar desde vehiculos (fuente maestra) con fallback a CATALOGO
   let fotoVehiculo = "";
-  let vehSpecs = { cap: "", aire: "", trans: "" };
+  let vehSpecs = { cap: "", aire: "", trans: "", combustible: "", equipaje: "", traccion: "" };
   let vehTipo = "";
+  let vehNombreMatch = "";
   if (d.vehiculo) {
-    const catVeh = CATALOGO.find(v => v.nombre === d.vehiculo);
-    if (catVeh) {
-      vehTipo = catVeh.tipo || "";
-      vehSpecs = { cap: catVeh.cap || "", aire: catVeh.aire ? "Sí" : "No", trans: catVeh.trans || "" };
-    }
     try {
-      const vehiculos = await dbGet("vehiculos", "&select=foto_url,marca,modelo&limit=20");
+      const vehiculos = await dbGet("vehiculos", "&select=foto_url,marca,modelo,tipo,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion");
       const match = vehiculos.find(v => {
         const vn = `${v.marca || ""} ${v.modelo || ""}`.toLowerCase();
         const dn = d.vehiculo.toLowerCase();
         return vn.includes(dn) || dn.includes(vn) || dn.includes((v.marca || "").toLowerCase());
       });
-      if (match && match.foto_url) fotoVehiculo = match.foto_url;
+      if (match) {
+        vehTipo = match.tipo || "";
+        vehNombreMatch = `${match.marca || ""} ${match.modelo || ""}`.trim();
+        fotoVehiculo = match.foto_url || "";
+        vehSpecs = {
+          cap: match.capacidad ? `${match.capacidad}` : "",
+          aire: match.aire_acondicionado ? "Sí" : "No",
+          trans: match.transmision || "",
+          combustible: match.combustible || "",
+          equipaje: match.capacidad_equipaje || "",
+          traccion: match.traccion || ""
+        };
+      }
     } catch {}
+    if (!vehTipo) {
+      const catVeh = CATALOGO.find(v => v.nombre === d.vehiculo);
+      if (catVeh) {
+        vehTipo = catVeh.tipo || "";
+        vehSpecs = {
+          cap: catVeh.cap || "",
+          aire: catVeh.aire ? "Sí" : "No",
+          trans: catVeh.trans || "",
+          combustible: "", equipaje: "", traccion: ""
+        };
+      }
+    }
   }
 
   const mostrarIVA = d.iva_pct > 0 && d.iva_amt > 0;
@@ -276,10 +296,13 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
     <!-- SPECS VEHICULO -->
     <div class="specs-box">
       ${vehTipo ? `<div class="spec-row"><span class="spec-label">Tipo</span><span class="spec-value">${vehTipo}</span></div>` : ""}
-      ${d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo</span><span class="spec-value">${d.vehiculo}</span></div>` : ""}
+      ${vehNombreMatch ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo</span><span class="spec-value">${vehNombreMatch}</span></div>` : d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo</span><span class="spec-value">${d.vehiculo}</span></div>` : ""}
       ${vehSpecs.cap ? `<div class="spec-row"><span class="spec-label">Capacidad</span><span class="spec-value">${vehSpecs.cap} pasajeros</span></div>` : ""}
       ${vehSpecs.aire ? `<div class="spec-row"><span class="spec-label">Aire acond.</span><span class="spec-value">${vehSpecs.aire}</span></div>` : ""}
       ${vehSpecs.trans ? `<div class="spec-row"><span class="spec-label">Transmisi&oacute;n</span><span class="spec-value">${vehSpecs.trans}</span></div>` : ""}
+      ${vehSpecs.combustible ? `<div class="spec-row"><span class="spec-label">Combustible</span><span class="spec-value">${vehSpecs.combustible}</span></div>` : ""}
+      ${vehSpecs.equipaje ? `<div class="spec-row"><span class="spec-label">Equipaje</span><span class="spec-value">${vehSpecs.equipaje}</span></div>` : ""}
+      ${vehSpecs.traccion ? `<div class="spec-row"><span class="spec-label">Tracci&oacute;n</span><span class="spec-value">${vehSpecs.traccion}</span></div>` : ""}
     </div>
   </div>
 </div>
@@ -510,12 +533,26 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
     };
   });
   const [saving, setSaving] = useState(false);
+  const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dbGet("vehiculos", "&select=marca,modelo,tipo,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion,tarifa_dia,tarifa_semana,tarifa_mes,foto_url&estado=eq.disponible&limit=100");
+        if (res) setFlotaVehiculos(res);
+      } catch {}
+    })();
+  }, []);
+
   const tarifaFn = (v, d) => { if (!v) return 0; if (d >= 30) return v.mes; if (d >= 8) return v.sem; return v.dia; };
-  const vehObj = CATALOGO.find(v => v.nombre === f.vehiculo_nombre) || null;
+  const vehCat = CATALOGO.find(v => v.nombre === f.vehiculo_nombre) || null;
+  const vehFlota = flotaVehiculos.find(v => `${v.marca||""} ${v.modelo||""}`.trim() === f.vehiculo_nombre) || null;
   const dias = parseInt(f.dias) || 1;
-  const rate = parseFloat(f.precio_custom) > 0 ? parseFloat(f.precio_custom) : (vehObj ? tarifaFn(vehObj, dias) : parseFloat(initial?.costo_vehiculo) || 0);
+  const rate = parseFloat(f.precio_custom) > 0 ? parseFloat(f.precio_custom)
+    : (vehFlota && parseFloat(vehFlota.tarifa_dia) > 0 ? tarifaFn({dia:vehFlota.tarifa_dia,sem:vehFlota.tarifa_semana||vehFlota.tarifa_dia,mes:vehFlota.tarifa_mes||vehFlota.tarifa_dia}, dias)
+    : vehCat ? tarifaFn(vehCat, dias)
+    : parseFloat(initial?.costo_vehiculo) || 0);
   const sub_veh = dias * rate;
   const cp = parseFloat(f.costo_piloto) || 0;
   const ch = parseFloat(f.costo_hospedaje) || 0;
@@ -663,7 +700,19 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                 <label style={S.lbl}>VEHICULO</label>
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e => sf("vehiculo_nombre", e.target.value)}>
                   <option value="">Seleccionar...</option>
-                  {CATALOGO.map(v => <option key={v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  <optgroup label="Catalogo">
+                    {CATALOGO.map(v => <option key={"cat_"+v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  </optgroup>
+                  {flotaVehiculos.length > 0 && (
+                    <optgroup label="Flota">
+                      {flotaVehiculos.map(v => {
+                        const nom = `${v.marca || ""} ${v.modelo || ""}`.trim();
+                        if (!nom) return null;
+                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
+                        return <option key={"fl_"+nom} value={nom}>{nom}{p}</option>;
+                      })}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div><label style={S.lbl}>DIAS</label><input style={S.inp} type="number" min="1" value={f.dias} onChange={e => sf("dias", parseInt(e.target.value) || 1)} /></div>
