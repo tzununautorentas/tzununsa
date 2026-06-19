@@ -314,7 +314,7 @@ export default function PageFlota({ showToast, empId }) {
           </Fld>
         </div>
 
-        <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
+          <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
             <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary"), flex: 2 }}>
               {saving ? "Guardando..." : "Guardar vehiculo"}
             </button>
@@ -322,7 +322,6 @@ export default function PageFlota({ showToast, empId }) {
               Cancelar
             </button>
           </div>
-        </div>
       </div>
     </div>
   );
