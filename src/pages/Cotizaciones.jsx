@@ -134,99 +134,97 @@ async function generarPDFPremium(d, empId, mode = "download") {
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.35}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.3}
 .page{width:100%;padding:0;min-height:880px;display:flex;flex-direction:column}
 
 /* ── HEADER ── */
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:3px solid #1B2D5C;margin-bottom:4px;position:relative}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:5px;border-bottom:3px solid #1B2D5C;margin-bottom:3px;position:relative}
 .header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:2.5px;background:#00D4AA}
-.h-left{display:flex;gap:12px;align-items:center}
-.h-logo{max-width:160px;max-height:110px;width:auto;height:auto;object-fit:contain;display:block}
-.h-logo-fallback{width:160px;height:110px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900}
-.h-info h1{font-size:22px;font-weight:900;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:2px}
+.h-left{display:flex;gap:10px;align-items:center}
+.h-logo{max-width:150px;max-height:100px;width:auto;height:auto;object-fit:contain;display:block}
+.h-logo-fallback{width:150px;height:100px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900}
+.h-info h1{font-size:24px;font-weight:900;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:1px}
 .h-info .slogan{font-size:10px;color:#00D4AA;margin-top:0;font-weight:600;font-style:italic}
-.h-info .detail{font-size:9px;color:#64748B;margin-top:2px;line-height:1.3}
+.h-info .detail{font-size:8.5px;color:#64748B;margin-top:1px;line-height:1.3}
 .h-right{text-align:right;padding-top:0}
 .h-right .doc-type{font-size:18px;font-weight:800;color:#00D4AA;letter-spacing:2.5px;margin-bottom:0}
 .h-right .doc-num{font-size:14px;color:#1B2D5C;font-weight:700;margin-top:2px}
-.h-right .doc-date{font-size:9px;color:#64748B;margin-top:1px}
+.h-right .doc-date{font-size:8.5px;color:#64748B;margin-top:1px}
 
 /* ── SECTION TITLES ── */
-.st{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:3px;margin-bottom:5px}
-.section{margin-bottom:4px}
+.st{font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:2px;margin-bottom:4px}
+.section{margin-bottom:3px}
 
 /* ── TWO COLUMNS ── */
-.two-col{display:flex;gap:14px;margin-bottom:6px;align-items:flex-start}
-.col-left{flex:5.5;min-width:0}
-.col-right{flex:4.5;min-width:0}
+.two-col{display:flex;gap:12px;margin-bottom:4px;align-items:flex-start}
+.col-left{flex:5;min-width:0}
+.col-right{flex:5;min-width:0}
 
 /* ── CLIENTE (inside left col) ── */
-.client-box{margin-bottom:4px}
-.client-label{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:2px}
-.client-name{font-size:17px;font-weight:700;color:#1B2D5C;line-height:1.2}
-.client-meta{font-size:10.5px;color:#475569;margin-top:2px;line-height:1.3}
+.client-box{margin-bottom:3px}
+.client-label{font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:1px}
+.client-name{font-size:18px;font-weight:800;color:#1B2D5C;line-height:1.15}
+.client-meta{font-size:10px;color:#475569;margin-top:1px;line-height:1.35}
 
 /* ── SALUDO (inside left col) ── */
-.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:6px 12px 6px 18px;font-size:11px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:5px;border-radius:0 6px 6px 0;position:relative}
-.saludo-box::before{content:"\\201C";position:absolute;left:4px;top:2px;font-size:18px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
+.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:5px 10px 5px 16px;font-size:10.5px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:4px;border-radius:0 6px 6px 0;position:relative}
+.saludo-box::before{content:"\\201C";position:absolute;left:3px;top:2px;font-size:16px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
 
 /* ── TIPO DE SERVICIO ── */
-.tipo-text{font-size:11.5px;color:#475569;line-height:1.4;padding:1px 0 2px}
-.tipo-info{font-size:10px;color:#64748B;line-height:1.35;padding:1px 0 3px}
+.tipo-text{font-size:11px;color:#1B2D5C;font-weight:600;line-height:1.35;padding:1px 0 2px}
+.tipo-info{font-size:9.5px;color:#64748B;line-height:1.35;padding:1px 0 2px}
 
 /* ── SERVICIOS INCLUIDOS ── */
-.inc-list{list-style:none;padding:0;margin:3px 0 0 0}
-.inc-item{padding:1.5px 0;font-size:11px;color:#475569;display:flex;align-items:center;gap:6px}
-.inc-check{width:13px;height:13px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+.inc-list{list-style:none;padding:0;margin:2px 0 0 0}
+.inc-item{padding:1px 0;font-size:10.5px;color:#475569;display:flex;align-items:center;gap:6px}
+.inc-check{width:12px;height:12px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
 /* ── PHOTO (right col) ── */
-.col-right .photo-wrap{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:5px;box-shadow:0 2px 8px rgba(0,0,0,0.07)}
+.col-right .photo-wrap{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:4px;box-shadow:0 3px 10px rgba(0,0,0,0.1)}
 .col-right .photo-wrap img{width:100%;height:auto;display:block;object-fit:cover}
 
 /* ── VEHICLE SPECS (right col) ── */
-.specs-box{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:5px 8px;margin-bottom:4px}
-.specs-box .spec-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #E2E8F055;font-size:10px;color:#475569}
-.specs-box .spec-row:last-child{border-bottom:none}
-.specs-box .spec-label{font-weight:600;color:#1B2D5C}
-.specs-box .spec-value{font-weight:500;color:#334155;text-align:right}
+.veh-card{background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:3px;border:1.5px solid #E2E8F0}
+.veh-name{font-size:15px;font-weight:800;color:#1B2D5C;margin-bottom:0;line-height:1.2}
+.veh-subtitle{font-size:10px;color:#64748B;margin-bottom:4px;line-height:1.3}
+.veh-check{color:#00D4AA;font-weight:700;margin-right:4px;font-size:11px}
+.veh-spec{font-size:10px;color:#475569;padding:1.5px 0;line-height:1.35}
 
 /* ── RESUMEN ECONÓMICO ── */
-.inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:6px;border:1px solid #E2E8F0}
-.inv-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11.5px;color:#475569}
+.inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:4px;border:1px solid #E2E8F0}
+.inv-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11px;color:#475569}
 .inv-divider{border-top:2.5px solid #00D4AA;margin:3px 0}
-.inv-total{display:flex;justify-content:space-between;padding:4px 0 1px;font-size:16px;font-weight:800;color:#1B2D5C}
-.inv-total .amt{color:#00D4AA;font-size:18px}
+.inv-total{display:flex;justify-content:space-between;padding:4px 0 2px;font-size:18px;font-weight:900;color:#1B2D5C}
+.inv-total .amt{color:#00D4AA;font-size:22px}
 
 /* ── MODALIDADES DE PAGO ── */
-.pago-grid{display:flex;gap:8px;margin-bottom:6px}
-.pago-card{border-radius:8px;padding:8px 12px;border:2px solid #E2E8F0;background:#fff;flex:1}
-.pago-card .pago-label{font-size:9px;color:#64748B;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px}
-.pago-card .pago-monto{font-size:16px;font-weight:800;color:#1B2D5C}
-.pago-card.destacado{border-color:#00D4AA;background:#F0FDF9}
-.pago-card.destacado .pago-label{color:#1B2D5C}
+.pago-grid{display:flex;gap:8px;margin-bottom:4px}
+.pago-card{border-radius:8px;padding:7px 12px;border:2px solid #E2E8F0;background:#fff;flex:1}
+.pago-card .pago-label{font-size:8.5px;color:#64748B;font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
+.pago-card .pago-monto{font-size:15px;font-weight:800;color:#1B2D5C}
 
 /* ── DATOS BANCARIOS ── */
-.bancos-box{font-size:10px;color:#475569;line-height:1.4;margin-bottom:6px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
-.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:10px;margin-bottom:1px}
-.bancos-box .b-item{padding:1px 0}
+.bancos-box{font-size:8.5px;color:#64748B;line-height:1.4;margin-bottom:3px;padding:4px 8px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:8.5px;margin-bottom:1px}
+.bancos-box .b-item{padding:0;line-height:1.4}
 
 /* ── TÉRMINOS ── */
-.terms-list{list-style:none;padding:0;margin:0 0 6px 0}
-.terms-list li{font-size:9.5px;color:#475569;padding:1.5px 0 1.5px 14px;position:relative;line-height:1.3}
-.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA;font-weight:700;font-size:10px}
+.terms-list{list-style:none;padding:0;margin:0 0 4px 0}
+.terms-list li{font-size:8.5px;color:#64748B;padding:1px 0 1px 12px;position:relative;line-height:1.35}
+.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA88;font-weight:700;font-size:9px}
 
 /* ── CIERRE ── */
-.cierre-box{font-size:11px;color:#475569;font-style:italic;line-height:1.4;margin:2px 0 6px;padding:6px 12px;background:#FAFBFC;border-radius:8px;border:1px solid #E2E8F0}
+.cierre-box{font-size:10.5px;color:#475569;font-style:italic;line-height:1.4;margin:1px 0 4px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:4px;padding-top:5px;border-top:2.5px solid #1B2D5C;width:100%}
-.firma-img{height:120px;margin-bottom:3px}
-.f-name{font-weight:700;color:#1B2D5C;font-size:14px}
-.f-title{font-size:11.5px;color:#64748B;margin-top:1px}
-.f-contact{font-size:9.5px;color:#94A3B8;margin-top:1px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:3px;padding-top:4px;border-top:2.5px solid #1B2D5C;width:100%}
+.firma-img{height:110px;margin-bottom:2px}
+.f-name{font-weight:700;color:#1B2D5C;font-size:13px}
+.f-title{font-size:10.5px;color:#64748B;margin-top:1px}
+.f-contact{font-size:9px;color:#94A3B8;margin-top:1px}
 
 /* ── FOOTER ── */
-.footer{text-align:center;font-size:8.5px;color:#94A3B8;margin-top:auto;padding-top:4px;border-top:1px solid #E2E8F0;line-height:1.3;padding-bottom:3px}
+.footer{text-align:center;font-size:8px;color:#94A3B8;margin-top:auto;padding-top:3px;border-top:1px solid #E2E8F0;line-height:1.3;padding-bottom:2px}
 .footer strong{color:#64748B}
 `;
 
@@ -292,17 +290,16 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
     <!-- FOTO -->
     ${fotoVehiculo ? `<div class="photo-wrap">
       <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-    </div>` : `<div style="height:100%;min-height:180px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:6px">Sin fotograf&iacute;a</div>`}
-    <!-- SPECS VEHICULO -->
-    <div class="specs-box">
-      ${vehTipo ? `<div class="spec-row"><span class="spec-label">Tipo</span><span class="spec-value">${vehTipo}</span></div>` : ""}
-      ${vehNombreMatch ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo</span><span class="spec-value">${vehNombreMatch}</span></div>` : d.vehiculo ? `<div class="spec-row"><span class="spec-label">Veh&iacute;culo</span><span class="spec-value">${d.vehiculo}</span></div>` : ""}
-      ${vehSpecs.cap ? `<div class="spec-row"><span class="spec-label">Capacidad</span><span class="spec-value">${vehSpecs.cap} pasajeros</span></div>` : ""}
-      ${vehSpecs.aire ? `<div class="spec-row"><span class="spec-label">Aire acond.</span><span class="spec-value">${vehSpecs.aire}</span></div>` : ""}
-      ${vehSpecs.trans ? `<div class="spec-row"><span class="spec-label">Transmisi&oacute;n</span><span class="spec-value">${vehSpecs.trans}</span></div>` : ""}
-      ${vehSpecs.combustible ? `<div class="spec-row"><span class="spec-label">Combustible</span><span class="spec-value">${vehSpecs.combustible}</span></div>` : ""}
-      ${vehSpecs.equipaje ? `<div class="spec-row"><span class="spec-label">Equipaje</span><span class="spec-value">${vehSpecs.equipaje}</span></div>` : ""}
-      ${vehSpecs.traccion ? `<div class="spec-row"><span class="spec-label">Tracci&oacute;n</span><span class="spec-value">${vehSpecs.traccion}</span></div>` : ""}
+    </div>` : `<div style="height:100%;min-height:140px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:4px">Sin fotograf&iacute;a</div>`}
+    <!-- FICHA VEHICULO -->
+    <div class="veh-card">
+      <div class="veh-name">${vehNombreMatch || d.vehiculo || "Veh&iacute;culo"}</div>
+      <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" · ") || ""}</div>
+      ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
+      ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
+      ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
+      ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
+      ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
     </div>
   </div>
 </div>
@@ -326,7 +323,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       <div class="pago-label">Tarjeta de cr&eacute;dito o d&eacute;bito</div>
       <div class="pago-monto">Q ${fmt(totalTC)}</div>
     </div>
-    <div class="pago-card destacado">
+    <div class="pago-card">
       <div class="pago-label">Transferencia, dep&oacute;sito o efectivo</div>
       <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
     </div>
