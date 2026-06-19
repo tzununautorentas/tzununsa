@@ -357,7 +357,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 <!-- ═══ 10. CIERRE CORPORATIVO ═══ -->
 <div class="cierre-box">
-  ${e.cierre_corporativo || "Agradecemos la oportunidad de presentar esta propuesta de movilidad. Quedamos atentos para coordinar la ejecuci&oacute;n del servicio y resolver cualquier consulta adicional."}
+  ${e.cierre_corporativo || "Agradecemos la oportunidad de presentar esta propuesta de servicio. Quedamos atentos para coordinar los detalles de ejecuci&oacute;n y atender cualquier consulta adicional."}
 </div>
 
 <!-- ═══ 11. FIRMA ═══ -->
@@ -667,13 +667,13 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                     let saludo = "";
                     if (tipo === "persona") {
                       const pn = nom.trim().split(/\s+/)[0] || "";
-                      saludo = (pn.endsWith("a") ? "Estimada " : "Estimado ") + nom + ", reciba un atento saludo. En Transportes Tz'unun nos ponemos a sus ordenes para brindarle el mejor servicio de movilidad.";
+                      saludo = (pn.endsWith("a") ? "Estimada " : "Estimado ") + nom + ": Agradecemos su confianza en Transportes Tz'unun. Nos complace presentar la siguiente propuesta de servicio elaborada conforme a su requerimiento.";
                     } else if (tipo === "gobierno") {
-                      saludo = "Distinguidos representantes de " + nom + ": Por este medio, nos dirigimos a ustedes para presentar nuestra propuesta de servicios de transporte institucional.";
+                      saludo = "Distinguidos representantes de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de servicios de transporte institucional.";
                     } else if (["ong", "asociacion", "asociación", "cooperativa", "colectivo", "comite", "comité", "grupo", "social"].includes(tipo)) {
-                      saludo = "Estimados representantes de " + nom + ": Reciban un cordial saludo de parte de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad.";
+                      saludo = "Estimados representantes de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad y logística para el servicio solicitado.";
                     } else {
-                      saludo = "Estimados senores de " + nom + ": Por medio de la presente, nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
+                      saludo = "Estimados señores de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
                     }
                     sf("saludo", saludo);
                   }}

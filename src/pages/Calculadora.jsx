@@ -16,15 +16,15 @@ const generarSaludo = (tipo, nombre) => {
   switch (tipo) {
     case 'persona':
       const pn = nom.trim().split(/\s+/)[0] || "";
-      return (pn.endsWith("a") ? "Estimada " : "Estimado ") + nom + ", reciba un atento saludo. En Transportes Tz'unun nos ponemos a sus órdenes para brindarle el mejor servicio de movilidad.";
+      return (pn.endsWith("a") ? "Estimada " : "Estimado ") + nom + ": Agradecemos su confianza en Transportes Tz'unun. Nos complace presentar la siguiente propuesta de servicio elaborada conforme a su requerimiento.";
     case 'empresa':
-      return "Estimados señores de " + nom + ": Por medio de la presente, nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
+      return "Estimados representantes de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad y log\u00edstica para el servicio solicitado.";
     case 'gobierno':
-      return "Distinguidos representantes de " + nom + ": Por este medio, nos dirigimos a ustedes para presentar nuestra propuesta de servicios de transporte institucional.";
+      return "Distinguidos representantes de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de servicios de transporte institucional.";
     case 'ong':
-      return "Estimados representantes de " + nom + ": Reciban un cordial saludo de parte de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad.";
+      return "Estimados representantes de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad y log\u00edstica para el servicio solicitado.";
     default:
-      return "Estimados señores de " + nom + ": Por medio de la presente, nos complace presentar nuestra propuesta de servicios de movilidad.";
+      return "Estimados se\u00f1ores de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
   }
 };
 
@@ -154,9 +154,9 @@ export default function PageCalculadora({ showToast, empId }) {
     const fmtDate = s => { try { return new Date(s + "T12:00:00").toLocaleDateString("es-GT", { day:"numeric", month:"long", year:"numeric" }); } catch { return s; } };
     let descripcion_servicio = "";
     if (tab === "renta") {
-      descripcion_servicio = `Servicio de alquiler de vehículo${vehName ? " " + vehName : ""} para las fechas del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}.`;
+      descripcion_servicio = `Renta de vehículo${vehName ? " " + vehName : ""} por el período comprendido del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}, por un total de ${diasCalc} día(s) de servicio.`;
     } else {
-      descripcion_servicio = `Servicio de transporte desde ${orig || "—"} hacia ${dest || "—"} los días ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}.`;
+      descripcion_servicio = `Traslado desde ${orig || "—"} hacia ${dest || "—"}, programado del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"} por ${d2} día(s) de servicio.`;
     }
     const p = {
       empresa_id: eId, tipo: tab, cliente_nombre: cn,
