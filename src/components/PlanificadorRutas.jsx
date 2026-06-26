@@ -51,7 +51,7 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
   const buscarDireccion = async (q) => {
     if (!q?.trim()) { setSugs(null); return; }
     setBuscando(true);
-    const r = await geocodificar(q + ", Guatemala");
+    const r = await geocodificar(q);
     setSugs(r);
     setShowSugs(true);
     setBuscando(false);

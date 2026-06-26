@@ -298,6 +298,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       ${d.incl_hospedaje ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Hospedaje del piloto</span></div>` : ""}
       ${d.incl_alimentacion ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Alimentaci&oacute;n del piloto</span></div>` : ""}
       ${d.incl_seguro !== false ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Seguro de viaje</span></div>` : ""}
+      ${d.carta_poder ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Carta Poder (viaje internacional)</span></div>` : ""}
     </div>
   </div>
 
@@ -491,6 +492,7 @@ function makePDFData(r) {
     origen: r.origen || "", destino: r.destino || "",
     ruta: r.ruta || "", observaciones_ruta: r.observaciones_ruta || "",
     version: parseInt(r.version) || 1,
+    carta_poder: !!r.carta_poder,
   };
 }
 
@@ -508,7 +510,7 @@ const EMPTY_F = {
   iva_pct: 5, pago: "efectivo", exch: 7.70,
   fecha_emision: today(), fecha_vence: "", estado: "borrador", notas: "",
   fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
-  observaciones_ruta: "", version: 1,
+  observaciones_ruta: "", version: 1, carta_poder: false,
 };
 
 // ─── Formulario de cotización ─────────────────────────────────────────────────
@@ -541,6 +543,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       origen: initial.origen || "", destino: initial.destino || "",
       ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "",
       version: parseInt(initial.version) || 1,
+      carta_poder: initial.carta_poder || false,
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
       estado: "borrador", notas: initial.notas || "",
@@ -601,6 +604,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
+        carta_poder: f.carta_poder,
         servicios_incluidos: JSON.stringify({ piloto: f.incl_piloto, combustible: f.incl_combustible, peajes: f.incl_peajes, hospedaje: f.incl_hospedaje, alimentacion: f.incl_alimentacion, seguro: f.incl_seguro }),
         costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
         km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
@@ -636,6 +640,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           costo_vehiculo: rate, costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
           km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
           extras: sub_extras, peajes: sub_peajes, recargo_tarjeta: total_tc - total_ef,
+          carta_poder: f.carta_poder,
           version: nextVersion,
         };
         await dbUpd("reservas", initial.reserva_id, rPayload);
@@ -650,6 +655,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
     { k: "incl_piloto", l: "Piloto" }, { k: "incl_combustible", l: "Combustible" },
     { k: "incl_peajes", l: "Peajes" }, { k: "incl_hospedaje", l: "Hospedaje piloto" },
     { k: "incl_alimentacion", l: "Alimentacion" }, { k: "incl_seguro", l: "Seguro viaje" },
+    { k: "carta_poder", l: "Carta Poder (internacional)" },
   ];
 
   return (
@@ -936,6 +942,7 @@ export default function PageCotizaciones({ showToast, empId }) {
       incl_hospedaje: svc.hospedaje || false,
       incl_alimentacion: svc.alimentacion || false,
       incl_seguro: svc.seguro !== false,
+      carta_poder: !!cot.carta_poder,
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });

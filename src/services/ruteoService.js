@@ -22,7 +22,7 @@ export async function geocodificar(query) {
   if (ahora - ultimaGeo < 1100) await new Promise(r => setTimeout(r, 1100 - (ahora - ultimaGeo)));
   ultimaGeo = Date.now();
   try {
-    const r = await fetch(`${NOMINATIM_BASE}?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=gt`, {
+    const r = await fetch(`${NOMINATIM_BASE}?q=${encodeURIComponent(query)}&format=json&limit=5`, {
       headers: { "User-Agent": "TzununAutoRentas/1.0" },
     });
     if (!r.ok) return null;

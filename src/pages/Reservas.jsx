@@ -43,12 +43,12 @@ const EMPTY_R = {
   metodo_pago: "efectivo", tasa_cambio: 7.70, estado: "pendiente",
   saludo: "", cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
   descripcion_servicio: "", servicios_incluidos: "{}",
-  ruta: "", observaciones_ruta: "", version: 1,
+  ruta: "", observaciones_ruta: "", version: 1, carta_poder: false,
 };
 
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
-  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1 } : { ...EMPTY_R });
+  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false } : { ...EMPTY_R });
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
@@ -192,6 +192,13 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
               <Fld label="RUTA / OBSERVACIONES">
                 <input style={S.inp} value={f.ruta} onChange={e => sf("ruta", e.target.value)} placeholder="Via Cobán, ruta alternativa..." />
               </Fld>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                <input type="checkbox" id="cartaPoderRes" checked={f.carta_poder} onChange={e => sf("carta_poder", e.target.checked)}
+                  style={{ width: 18, height: 18, cursor: "pointer" }} />
+                <label htmlFor="cartaPoderRes" style={{ fontSize: 12, color: T.sub, cursor: "pointer" }}>
+                  Requiere Carta Poder (viaje internacional)
+                </label>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
                 <Fld label="DEPARTAMENTO">
                   <select style={S.sel} value={f.departamento} onChange={e => { sf("departamento", e.target.value); sf("municipio", ""); }}>

@@ -69,7 +69,8 @@ export default function PageCalculadora({ showToast, empId }) {
     galon: 48, kpg: 27, kmi: 0, kmr: 0, varios: 0,
     iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: "",
     fechaInicio: today(), fechaFin: today(),
-    origen: "", destino: "", observaciones_ruta: ""
+    origen: "", destino: "", observaciones_ruta: "",
+    carta_poder: false
   });
   const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
@@ -191,6 +192,7 @@ export default function PageCalculadora({ showToast, empId }) {
       precio_galon: parseFloat(tf.galon) || 0,
       km_por_galon: parseFloat(tf.kpg) || 0,
       extras: misc, peajes: 0,
+      carta_poder: tab === "renta" ? false : tf.carta_poder,
     };
     const r = await dbIns("cotizaciones", p);
     if (r && !r.error) showToast(estado === "enviada" ? "Cotizacion guardada" : "Borrador guardado");
@@ -307,6 +309,13 @@ export default function PageCalculadora({ showToast, empId }) {
                   Incluir opcion pago con tarjeta (+5%)
                 </label>
               </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                <input type="checkbox" id="cartaPoderR" checked={false} disabled
+                  style={{ width: 18, height: 18, cursor: "not-allowed", opacity: 0.5 }} />
+                <label htmlFor="cartaPoderR" style={{ fontSize: 13, color: T.mut, cursor: "not-allowed" }}>
+                  Requiere Carta Poder (solo traslados)
+                </label>
+              </div>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -394,6 +403,13 @@ export default function PageCalculadora({ showToast, empId }) {
                   style={{ width: 18, height: 18, cursor: "pointer" }} />
                 <label htmlFor="conTC2" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
                   Incluir opcion pago con tarjeta (+5%)
+                </label>
+              </div>
+              <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                <input type="checkbox" id="cartaPoderT" checked={tf.carta_poder} onChange={e => stf("carta_poder", e.target.checked)}
+                  style={{ width: 18, height: 18, cursor: "pointer" }} />
+                <label htmlFor="cartaPoderT" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
+                  Requiere Carta Poder (viaje internacional)
                 </label>
               </div>
             </div>
