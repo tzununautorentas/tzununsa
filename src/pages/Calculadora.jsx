@@ -70,7 +70,7 @@ export default function PageCalculadora({ showToast, empId }) {
     iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: "",
     fechaInicio: today(), fechaFin: today(),
     origen: "", destino: "", observaciones_ruta: "",
-    carta_poder: false
+    carta_poder: false, carta_poder_costo: 0
   });
   const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
@@ -135,7 +135,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const hT   = d2 * (parseFloat(tf.hos) || 0);
   const aT   = d2 * (parseFloat(tf.ali) || 0);
   const misc = parseFloat(tf.varios) || 0;
-  const tsub = vT + pT + hT + aT + fuel + misc;
+  const cpCost = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
+  const tsub = vT + pT + hT + aT + fuel + misc + cpCost;
   const tiva = tsub * (parseFloat(tf.iva) || 0) / 100;
   const tbase = tsub + tiva;
   const ttcr  = tf.conTC ? tbase * 0.05 : 0;
@@ -193,6 +194,7 @@ export default function PageCalculadora({ showToast, empId }) {
       km_por_galon: parseFloat(tf.kpg) || 0,
       extras: misc, peajes: 0,
       carta_poder: tab === "renta" ? false : tf.carta_poder,
+      carta_poder_costo: tab === "renta" ? 0 : cpCost,
     };
     const r = await dbIns("cotizaciones", p);
     if (r && !r.error) showToast(estado === "enviada" ? "Cotizacion guardada" : "Borrador guardado");
@@ -405,12 +407,17 @@ export default function PageCalculadora({ showToast, empId }) {
                   Incluir opcion pago con tarjeta (+5%)
                 </label>
               </div>
-              <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+              <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10, padding: "8px 0", flexWrap: "wrap" }}>
                 <input type="checkbox" id="cartaPoderT" checked={tf.carta_poder} onChange={e => stf("carta_poder", e.target.checked)}
                   style={{ width: 18, height: 18, cursor: "pointer" }} />
                 <label htmlFor="cartaPoderT" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
                   Requiere Carta Poder (viaje internacional)
                 </label>
+                {tf.carta_poder && (
+                  <input style={{ ...S.inp, width: 130, marginLeft: 8, fontSize: 11 }} type="number" step="0.01"
+                    value={tf.carta_poder_costo} onChange={e => stf("carta_poder_costo", e.target.value)}
+                    placeholder="Costo Q" />
+                )}
               </div>
             </div>
           )}
@@ -447,6 +454,7 @@ export default function PageCalculadora({ showToast, empId }) {
                   <Row l={`Hospedaje (x${d2}d)`} v={"Q " + fmt(hT)} />
                   <Row l={`Aliment. (x${d2}d)`} v={"Q " + fmt(aT)} />
                   <Row l={`Combustible (${fmt(gals)} gal)`} v={"Q " + fmt(fuel)} />
+                  {tf.carta_poder && <Row l="Carta Poder" v={"Q " + fmt(cpCost)} />}
                   <Row l="Varios" v={"Q " + fmt(misc)} />
                   <div style={{ borderTop: `1px solid ${T.bord}`, margin: "8px 0" }} />
                   <Row l="Subtotal" v={"Q " + fmt(tsub)} />

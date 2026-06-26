@@ -493,6 +493,7 @@ function makePDFData(r) {
     ruta: r.ruta || "", observaciones_ruta: r.observaciones_ruta || "",
     version: parseInt(r.version) || 1,
     carta_poder: !!r.carta_poder,
+    carta_poder_costo: parseFloat(r.carta_poder_costo) || 0,
   };
 }
 
@@ -510,7 +511,7 @@ const EMPTY_F = {
   iva_pct: 5, pago: "efectivo", exch: 7.70,
   fecha_emision: today(), fecha_vence: "", estado: "borrador", notas: "",
   fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
-  observaciones_ruta: "", version: 1, carta_poder: false,
+  observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0,
 };
 
 // ─── Formulario de cotización ─────────────────────────────────────────────────
@@ -544,6 +545,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "",
       version: parseInt(initial.version) || 1,
       carta_poder: initial.carta_poder || false,
+      carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0,
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
       estado: "borrador", notas: initial.notas || "",
@@ -583,7 +585,8 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
   const sub_comb = gals * pgal;
   const sub_peajes = f.incl_peajes ? (parseFloat(f.peajes) || 0) : 0;
   const sub_extras = parseFloat(f.extras) || 0;
-  const sub = sub_veh + sub_piloto + sub_hos + sub_ali + sub_comb + sub_peajes + sub_extras;
+  const sub_cp = f.carta_poder ? (parseFloat(f.carta_poder_costo) || 0) : 0;
+  const sub = sub_veh + sub_piloto + sub_hos + sub_ali + sub_comb + sub_peajes + sub_extras + sub_cp;
   const iva_amt = sub * f.iva_pct / 100;
   const total_ef = sub + iva_amt;
   const total_tc = total_ef * 1.05;
@@ -605,6 +608,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
         carta_poder: f.carta_poder,
+        carta_poder_costo: parseFloat(f.carta_poder_costo) || 0,
         servicios_incluidos: JSON.stringify({ piloto: f.incl_piloto, combustible: f.incl_combustible, peajes: f.incl_peajes, hospedaje: f.incl_hospedaje, alimentacion: f.incl_alimentacion, seguro: f.incl_seguro }),
         costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
         km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
@@ -641,6 +645,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
           extras: sub_extras, peajes: sub_peajes, recargo_tarjeta: total_tc - total_ef,
           carta_poder: f.carta_poder,
+          carta_poder_costo: parseFloat(f.carta_poder_costo) || 0,
           version: nextVersion,
         };
         await dbUpd("reservas", initial.reserva_id, rPayload);
@@ -760,6 +765,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               {f.incl_piloto && <Fld label="COSTO PILOTO TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_piloto} onChange={e => sf("costo_piloto", e.target.value)} placeholder="0.00" /></Fld>}
               {f.incl_hospedaje && <Fld label="HOSPEDAJE TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_hospedaje} onChange={e => sf("costo_hospedaje", e.target.value)} placeholder="0.00" /></Fld>}
               {f.incl_alimentacion && <Fld label="ALIMENTACION TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.costo_alimentacion} onChange={e => sf("costo_alimentacion", e.target.value)} placeholder="0.00" /></Fld>}
+              {f.carta_poder && <Fld label="CARTA PODER (Q)"><input style={S.inp} type="number" step="0.01" value={f.carta_poder_costo} onChange={e => sf("carta_poder_costo", e.target.value)} placeholder="0.00" /></Fld>}
               {f.incl_combustible && <>
                 <Fld label="KM TOTALES"><input style={S.inp} type="number" value={f.km_total} onChange={e => sf("km_total", e.target.value)} placeholder="0" /></Fld>
                 <Fld label="KM POR GALON"><input style={S.inp} type="number" value={f.km_por_galon} onChange={e => sf("km_por_galon", e.target.value)} placeholder="27" /></Fld>
@@ -819,6 +825,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                 {f.incl_combustible && sub_comb > 0 && <div style={S.srow(false)}><span>Combustible ({fmt(gals)} gal)</span><span>Q {fmt(sub_comb)}</span></div>}
                 {f.incl_peajes && sub_peajes > 0 && <div style={S.srow(false)}><span>Peajes</span><span>Q {fmt(sub_peajes)}</span></div>}
                 {sub_extras > 0 && <div style={S.srow(false)}><span>Extras</span><span>Q {fmt(sub_extras)}</span></div>}
+                {f.carta_poder && sub_cp > 0 && <div style={S.srow(false)}><span>Carta Poder</span><span>Q {fmt(sub_cp)}</span></div>}
                 <div style={{ borderTop: `1px solid ${T.bord}`, margin: "6px 0" }} />
                 <div style={S.srow(false)}><span>Subtotal</span><span>Q {fmt(sub)}</span></div>
                 <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>Q {fmt(iva_amt)}</span></div>
@@ -943,6 +950,7 @@ export default function PageCotizaciones({ showToast, empId }) {
       incl_alimentacion: svc.alimentacion || false,
       incl_seguro: svc.seguro !== false,
       carta_poder: !!cot.carta_poder,
+      carta_poder_costo: parseFloat(cot.carta_poder_costo) || 0,
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });
