@@ -132,99 +132,114 @@ async function generarPDFPremium(d, empId, mode = "download") {
 
   const totalTC = d.total_ef * 1.05;
 
+  // Parsear datos bancarios
+  const parseBanco = (str) => {
+    if (!str || str === "-") return null;
+    let parts = str.split("\n").filter(Boolean);
+    if (parts.length < 2) parts = str.split(" - ").filter(Boolean);
+    return parts.length >= 2 ? { banco: parts[0], detalle: parts.slice(1).join(" - ") } : { banco: str, detalle: "" };
+  };
+  const b1 = parseBanco(e.banco1);
+  const b2 = parseBanco(e.banco2);
+  const hayBancos = b1 || b2;
+
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.3}
-.page{width:100%;padding:0;min-height:880px;display:flex;flex-direction:column}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#1E293B;background:#fff;line-height:1.25}
+.page{width:100%;padding:0;min-height:860px;display:flex;flex-direction:column}
 
 /* ── HEADER ── */
-.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:5px;border-bottom:3px solid #1B2D5C;margin-bottom:3px;position:relative}
-.header::after{content:"";position:absolute;bottom:-5px;left:0;right:70%;height:2.5px;background:#00D4AA}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:4px;border-bottom:3px solid #1B2D5C;margin-bottom:3px;position:relative}
+.header::after{content:"";position:absolute;bottom:-5px;left:0;right:72%;height:2.5px;background:#00D4AA}
 .h-left{display:flex;gap:10px;align-items:center}
-.h-logo{max-width:150px;max-height:100px;width:auto;height:auto;object-fit:contain;display:block}
-.h-logo-fallback{width:150px;height:100px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900}
-.h-info h1{font-size:24px;font-weight:900;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:1px}
+.h-logo{max-width:140px;max-height:95px;width:auto;height:auto;object-fit:contain;display:block}
+.h-logo-fallback{width:140px;height:95px;border-radius:6px;background:#1B2D5C;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:900}
+.h-info h1{font-size:26px;font-weight:900;color:#1B2D5C;letter-spacing:-0.5px;margin-bottom:0;line-height:1.1}
 .h-info .slogan{font-size:10px;color:#00D4AA;margin-top:0;font-weight:600;font-style:italic}
-.h-info .detail{font-size:8.5px;color:#64748B;margin-top:1px;line-height:1.3}
+.h-info .detail{font-size:8px;color:#64748B;margin-top:0;line-height:1.3}
 .h-right{text-align:right;padding-top:0}
 .h-right .doc-type{font-size:18px;font-weight:800;color:#00D4AA;letter-spacing:2.5px;margin-bottom:0}
-.h-right .doc-num{font-size:14px;color:#1B2D5C;font-weight:700;margin-top:2px}
-.h-right .doc-date{font-size:8.5px;color:#64748B;margin-top:1px}
+.h-right .doc-num{font-size:13px;color:#1B2D5C;font-weight:700;margin-top:2px}
+.h-right .doc-date{font-size:8px;color:#64748B;margin-top:0}
 
 /* ── SECTION TITLES ── */
-.st{font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:2px;margin-bottom:4px}
-.section{margin-bottom:3px}
+.st{font-size:7.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:2px;margin-bottom:3px}
+.section{margin-bottom:2px}
 
 /* ── TWO COLUMNS ── */
-.two-col{display:flex;gap:12px;margin-bottom:4px;align-items:flex-start}
-.col-left{flex:5;min-width:0}
-.col-right{flex:5;min-width:0}
+.two-col{display:flex;gap:12px;margin-bottom:3px;align-items:flex-start}
+.col-left{flex:5.2;min-width:0}
+.col-right{flex:4.8;min-width:0}
 
-/* ── CLIENTE (inside left col) ── */
+/* ── CLIENTE ── */
 .client-box{margin-bottom:3px}
-.client-label{font-size:8px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:1px}
+.client-label{font-size:7.5px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:1px}
 .client-name{font-size:18px;font-weight:800;color:#1B2D5C;line-height:1.15}
-.client-meta{font-size:10px;color:#475569;margin-top:1px;line-height:1.35}
+.client-meta{font-size:10px;color:#475569;margin-top:0;line-height:1.35}
 
-/* ── SALUDO (inside left col) ── */
-.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:5px 10px 5px 16px;font-size:10.5px;color:#334155;font-style:italic;line-height:1.4;margin-bottom:4px;border-radius:0 6px 6px 0;position:relative}
-.saludo-box::before{content:"\\201C";position:absolute;left:3px;top:2px;font-size:16px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
+/* ── SALUDO ── */
+.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:4px 10px 4px 16px;font-size:10px;color:#334155;font-style:italic;line-height:1.35;margin-bottom:3px;border-radius:0 6px 6px 0;position:relative}
+.saludo-box::before{content:"\\201C";position:absolute;left:3px;top:1px;font-size:15px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
 
 /* ── TIPO DE SERVICIO ── */
-.tipo-text{font-size:11px;color:#1B2D5C;font-weight:600;line-height:1.35;padding:1px 0 2px}
-.tipo-info{font-size:9.5px;color:#64748B;line-height:1.35;padding:1px 0 2px}
+.tipo-text{font-size:12px;color:#1B2D5C;font-weight:700;line-height:1.3;padding:0 0 2px}
+.tipo-label{font-weight:600;color:#475569}
+.tipo-info{font-size:9.5px;color:#64748B;line-height:1.35;padding:1px 0}
 
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:2px 0 0 0}
-.inc-item{padding:1px 0;font-size:10.5px;color:#475569;display:flex;align-items:center;gap:6px}
-.inc-check{width:12px;height:12px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+.inc-item{padding:1px 0;font-size:10px;color:#475569;display:flex;align-items:center;gap:5px}
+.inc-check{width:11px;height:11px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
-/* ── PHOTO (right col) ── */
-.col-right .photo-wrap{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:4px;box-shadow:0 3px 10px rgba(0,0,0,0.1)}
-.col-right .photo-wrap img{width:100%;height:auto;display:block;object-fit:cover}
-
-/* ── VEHICLE SPECS (right col) ── */
-.veh-card{background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:3px;border:1.5px solid #E2E8F0}
+/* ── VEHICLE CARD (foto + ficha integrados) ── */
+.veh-card{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:3px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #E2E8F0}
+.veh-photo-wrap{width:100%;max-height:190px;overflow:hidden;background:#F8FAFC}
+.veh-photo-wrap img{width:100%;height:auto;display:block;object-fit:cover}
+.veh-photo-placeholder{height:130px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;background:#F8FAFC;margin-bottom:0}
+.veh-body{padding:7px 10px 9px}
 .veh-name{font-size:15px;font-weight:800;color:#1B2D5C;margin-bottom:0;line-height:1.2}
-.veh-subtitle{font-size:10px;color:#64748B;margin-bottom:4px;line-height:1.3}
-.veh-check{color:#00D4AA;font-weight:700;margin-right:4px;font-size:11px}
-.veh-spec{font-size:10px;color:#475569;padding:1.5px 0;line-height:1.35}
+.veh-subtitle{font-size:9.5px;color:#64748B;margin-bottom:2px;line-height:1.3}
+.veh-divider{height:1px;background:#E2E8F0;margin:2px 0 3px}
+.veh-check{color:#00D4AA;font-weight:700;margin-right:4px;font-size:10px}
+.veh-spec{font-size:9.5px;color:#475569;padding:1px 0;line-height:1.3}
 
 /* ── RESUMEN ECONÓMICO ── */
-.inv-box{background:#F8FAFC;border-radius:8px;padding:6px 14px;margin-bottom:4px;border:1px solid #E2E8F0}
-.inv-row{display:flex;justify-content:space-between;padding:2px 0;font-size:11px;color:#475569}
-.inv-divider{border-top:2.5px solid #00D4AA;margin:3px 0}
-.inv-total{display:flex;justify-content:space-between;padding:4px 0 2px;font-size:18px;font-weight:900;color:#1B2D5C}
-.inv-total .amt{color:#00D4AA;font-size:22px}
+.inv-box{background:#F8FAFC;border-radius:8px;padding:5px 14px;margin-bottom:3px;border:1px solid #E2E8F0}
+.inv-row{display:flex;justify-content:space-between;padding:1.5px 0;font-size:11px;color:#475569}
+.inv-row.iva{font-size:10px;color:#94A3B8}
+.inv-divider{border-top:2.5px solid #00D4AA;margin:2px 0}
+.inv-total{display:flex;justify-content:space-between;padding:3px 0 1px;font-size:19px;font-weight:900;color:#1B2D5C}
+.inv-total .amt{color:#00D4AA;font-size:23px}
 
 /* ── MODALIDADES DE PAGO ── */
-.pago-grid{display:flex;gap:8px;margin-bottom:4px}
-.pago-card{border-radius:8px;padding:7px 12px;border:2px solid #E2E8F0;background:#fff;flex:1}
-.pago-card .pago-label{font-size:8.5px;color:#64748B;font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
+.pago-grid{display:flex;gap:8px;margin-bottom:3px}
+.pago-card{border-radius:8px;padding:6px 12px;border:2px solid #E2E8F0;background:#fff;flex:1}
+.pago-card .pago-label{font-size:8px;color:#64748B;font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
 .pago-card .pago-monto{font-size:15px;font-weight:800;color:#1B2D5C}
 
 /* ── DATOS BANCARIOS ── */
-.bancos-box{font-size:8.5px;color:#64748B;line-height:1.4;margin-bottom:3px;padding:4px 8px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
-.bancos-box .b-label{font-weight:700;color:#1B2D5C;font-size:8.5px;margin-bottom:1px}
-.bancos-box .b-item{padding:0;line-height:1.4}
+.bancos-box{font-size:8.5px;color:#475569;line-height:1.4;margin-bottom:3px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.bancos-box .b-item{padding:1px 0}
+.bancos-box .b-item strong{color:#1B2D5C}
+.bancos-box .b-titular{font-weight:700;color:#1B2D5C;margin-top:2px;padding-top:2px;border-top:1px solid #E2E8F0;font-size:8px}
 
 /* ── TÉRMINOS ── */
-.terms-list{list-style:none;padding:0;margin:0 0 4px 0}
-.terms-list li{font-size:8.5px;color:#64748B;padding:1px 0 1px 12px;position:relative;line-height:1.35}
-.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA88;font-weight:700;font-size:9px}
+.terms-list{list-style:none;padding:0;margin:0 0 3px 0}
+.terms-list li{font-size:8px;color:#64748B;padding:1px 0 1px 12px;position:relative;line-height:1.3}
+.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA88;font-weight:700;font-size:8px}
 
 /* ── CIERRE ── */
-.cierre-box{font-size:10.5px;color:#475569;font-style:italic;line-height:1.4;margin:1px 0 4px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.cierre-box{font-size:10px;color:#475569;font-style:italic;line-height:1.35;margin:1px 0 3px;padding:4px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:3px;padding-top:4px;border-top:2.5px solid #1B2D5C;width:100%}
-.firma-img{height:110px;margin-bottom:2px}
-.f-name{font-weight:700;color:#1B2D5C;font-size:13px}
-.f-title{font-size:10.5px;color:#64748B;margin-top:1px}
-.f-contact{font-size:9px;color:#94A3B8;margin-top:1px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:2px;padding-top:3px;border-top:2.5px solid #1B2D5C;width:100%}
+.firma-img{height:150px;margin-bottom:2px}
+.f-name{font-weight:700;color:#1B2D5C;font-size:16px}
+.f-title{font-size:12px;color:#64748B;margin-top:1px}
+.f-contact{font-size:10px;color:#94A3B8;margin-top:1px}
 
 /* ── FOOTER ── */
-.footer{text-align:center;font-size:8px;color:#94A3B8;margin-top:auto;padding-top:3px;border-top:1px solid #E2E8F0;line-height:1.3;padding-bottom:2px}
+.footer{text-align:center;font-size:7.5px;color:#94A3B8;margin-top:auto;padding-top:2px;border-top:1px solid #E2E8F0;line-height:1.2;padding-bottom:2px}
 .footer strong{color:#64748B}
 `;
 
@@ -245,13 +260,13 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
   </div>
   <div class="h-right">
     <div class="doc-type">COTIZACI&Oacute;N</div>
-    <div class="doc-num"># ${d.numero}${d.version ? `<span style="font-size:10px;color:#94A3B8;font-weight:400"> v${d.version}</span>` : ""}</div>
+    <div class="doc-num"># ${d.numero}${d.version ? `<span style="font-size:9px;color:#94A3B8;font-weight:400"> v${d.version}</span>` : ""}</div>
     <div class="doc-date">Emisi&oacute;n: ${d.fecha}</div>
     <div class="doc-date">Vigencia: ${d.fecha_vence || "15 d&iacute;as"}</div>
   </div>
 </div>
 
-<!-- ═══ 2-3. BLOQUE CENTRAL — GRID 55/45 ═══ -->
+<!-- ═══ 2-3. BLOQUE CENTRAL — GRID ═══ -->
 <div class="two-col">
   <div class="col-left">
 
@@ -271,11 +286,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
     <!-- TIPO DE SERVICIO -->
     <div class="st">TIPO DE SERVICIO</div>
     ${d.servicio ? `<div class="tipo-text">${d.servicio}</div>` : ""}
-    ${(d.fecha_inicio || d.fecha_fin) ? `<div class="tipo-info"><strong>Fechas:</strong> ${d.fecha_inicio || "—"} al ${d.fecha_fin || "—"}</div>` : ""}
-    ${(d.origen || d.destino) ? `<div class="tipo-info"><strong>Ruta:</strong> ${d.origen || "—"} → ${d.destino || "—"}${d.ruta ? " (" + d.ruta + ")" : ""}</div>` : ""}
+    ${(d.fecha_inicio || d.fecha_fin) ? `<div class="tipo-info"><span class="tipo-label">Per\u00edodo:</span> ${d.fecha_inicio || "—"} al ${d.fecha_fin || "—"}</div>` : ""}
+    ${(d.origen || d.destino) ? `<div class="tipo-info"><span class="tipo-label">Ruta:</span> ${d.origen || "—"} → ${d.destino || "—"}${d.ruta ? " (" + d.ruta + ")" : ""}</div>` : ""}
 
     <!-- SERVICIOS INCLUIDOS -->
-    <div class="st" style="margin-top:5px">SERVICIOS INCLUIDOS</div>
+    <div class="st" style="margin-top:4px">SERVICIOS INCLUIDOS</div>
     <div class="inc-list">
       ${d.incl_piloto ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Piloto profesional</span></div>` : ""}
       ${d.incl_combustible ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Combustible seg&uacute;n recorrido</span></div>` : ""}
@@ -287,19 +302,21 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
   </div>
 
   <div class="col-right">
-    <!-- FOTO -->
-    ${fotoVehiculo ? `<div class="photo-wrap">
-      <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-    </div>` : `<div style="height:100%;min-height:140px;border:1.5px dashed #E2E8F0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;text-align:center;padding:10px;margin-bottom:4px">Sin fotograf&iacute;a</div>`}
-    <!-- FICHA VEHICULO -->
+    <!-- FICHA VEHICULO (foto + specs integrados) -->
     <div class="veh-card">
-      <div class="veh-name">${vehNombreMatch || d.vehiculo || "Veh&iacute;culo"}</div>
-      <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" · ") || ""}</div>
-      ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
-      ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
-      ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
-      ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
-      ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
+      ${fotoVehiculo ? `<div class="veh-photo-wrap">
+        <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
+      </div>` : `<div class="veh-photo-placeholder">Sin fotograf&iacute;a</div>`}
+      <div class="veh-body">
+        <div class="veh-name">${vehNombreMatch || d.vehiculo || ""}</div>
+        <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" \u00b7 ")}</div>
+        <div class="veh-divider"></div>
+        ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
+        ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
+        ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
+        ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
+        ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
+      </div>
     </div>
   </div>
 </div>
@@ -308,8 +325,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 <div class="section">
   <div class="st">RESUMEN ECON&Oacute;MICO</div>
   <div class="inv-box">
-    <div class="inv-row"><span>Servicio contratado</span><span>Q ${fmt(d.sub)}</span></div>
-    ${mostrarIVA ? `<div class="inv-row" style="color:#64748B"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
+    <div class="inv-row"><span style="font-weight:600;color:#1B2D5C">Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
+    ${mostrarIVA ? `<div class="inv-row iva"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
     <div class="inv-total"><span>TOTAL DEL SERVICIO</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
   </div>
@@ -332,11 +349,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 <!-- ═══ 8. INFORMACIÓN BANCARIA ═══ -->
 <div class="section">
-  <div class="st">DATOS BANCARIOS</div>
+  <div class="st">DATOS PARA PAGO</div>
   <div class="bancos-box">
-    <div class="b-label">A nombre de: ${e.nombre}</div>
-    <div class="b-item">&bull; ${e.banco1}</div>
-    <div class="b-item">&bull; ${e.banco2}</div>
+    ${b1 ? `<div class="b-item"><strong>${b1.banco}</strong>${b1.detalle ? "<br/>" + b1.detalle : ""}</div>` : ""}
+    ${b2 ? `<div class="b-item"><strong>${b2.banco}</strong>${b2.detalle ? "<br/>" + b2.detalle : ""}</div>` : ""}
+    ${hayBancos ? `<div class="b-titular">Titular: ${e.nombre}</div>` : ""}
   </div>
 </div>
 
