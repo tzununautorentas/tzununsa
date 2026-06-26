@@ -814,7 +814,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               {f.cliente_nit && <div style={{ fontSize: 11, color: T.sub }}>NIT: {f.cliente_nit}</div>}
             </div>
           )}
-          {vehObj && <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{vehObj.nombre} · {dias} dia{dias !== 1 ? "s" : ""}</div>}
+          {f.vehiculo_nombre && <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{f.vehiculo_nombre} · {dias} dia{dias !== 1 ? "s" : ""}</div>}
           {sub > 0 ? (
             <>
               <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10, fontSize: 12 }}>
