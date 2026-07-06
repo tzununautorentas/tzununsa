@@ -43,12 +43,12 @@ const EMPTY_R = {
   metodo_pago: "efectivo", tasa_cambio: 7.70, estado: "pendiente",
   saludo: "", cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
   descripcion_servicio: "", servicios_incluidos: "{}",
-  ruta: "", observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0,
+  ruta: "", observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0, itinerario: "",
 };
 
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
-  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0 } : { ...EMPTY_R });
+  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0, itinerario: initial.itinerario || "" } : { ...EMPTY_R });
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));

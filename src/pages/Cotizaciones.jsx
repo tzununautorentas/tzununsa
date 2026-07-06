@@ -494,6 +494,7 @@ function makePDFData(r) {
     version: parseInt(r.version) || 1,
     carta_poder: !!r.carta_poder,
     carta_poder_costo: parseFloat(r.carta_poder_costo) || 0,
+    itinerario: r.itinerario || "",
   };
 }
 
@@ -546,6 +547,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       version: parseInt(initial.version) || 1,
       carta_poder: initial.carta_poder || false,
       carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0,
+      itinerario: initial.itinerario || "",
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
       estado: "borrador", notas: initial.notas || "",
@@ -608,7 +610,8 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
         carta_poder: f.carta_poder,
-        carta_poder_costo: parseFloat(f.carta_poder_costo) || 0,
+      carta_poder_costo: parseFloat(f.carta_poder_costo) || 0,
+      itinerario: f.itinerario || "",
         servicios_incluidos: JSON.stringify({ piloto: f.incl_piloto, combustible: f.incl_combustible, peajes: f.incl_peajes, hospedaje: f.incl_hospedaje, alimentacion: f.incl_alimentacion, seguro: f.incl_seguro }),
         costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
         km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
@@ -646,6 +649,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           extras: sub_extras, peajes: sub_peajes, recargo_tarjeta: total_tc - total_ef,
           carta_poder: f.carta_poder,
           carta_poder_costo: parseFloat(f.carta_poder_costo) || 0,
+          itinerario: f.itinerario || "",
           version: nextVersion,
         };
         await dbUpd("reservas", initial.reserva_id, rPayload);
@@ -951,6 +955,7 @@ export default function PageCotizaciones({ showToast, empId }) {
       incl_seguro: svc.seguro !== false,
       carta_poder: !!cot.carta_poder,
       carta_poder_costo: parseFloat(cot.carta_poder_costo) || 0,
+      itinerario: cot.itinerario || "",
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });

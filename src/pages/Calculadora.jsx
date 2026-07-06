@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, dbIns, dbGet, today, CATALOGO, siguienteNumero } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
-import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
+import ItinerarioServicio, { generarDescripcionDesdeItinerario, calcularTotalesItinerario, itinerarioToFlat } from '../components/ItinerarioServicio.jsx';
 
 const calcDias = (fi, ff) => {
   if (!fi || !ff) return 1;
@@ -70,9 +70,10 @@ export default function PageCalculadora({ showToast, empId }) {
     iva: 5, pago: "efectivo", conTC: false, exch: 7.70, ruta: "",
     fechaInicio: today(), fechaFin: today(),
     origen: "", destino: "", observaciones_ruta: "",
-    carta_poder: false, carta_poder_costo: 0
+    carta_poder: false, carta_poder_costo: 0,
+    itinerario: { vehiculos: [] },
+    descripcion_servicio: "",
   });
-  const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
 
   const seleccionarClienteRenta = (c) => {
@@ -158,7 +159,7 @@ export default function PageCalculadora({ showToast, empId }) {
     if (tab === "renta") {
       descripcion_servicio = `Renta de vehículo${vehName ? " " + vehName : ""} por el período comprendido del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}, por un total de ${diasCalc} día(s) de servicio.`;
     } else {
-      descripcion_servicio = `Traslado desde ${orig || "—"} hacia ${dest || "—"}, programado del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"} por ${d2} día(s) de servicio.`;
+      descripcion_servicio = tf.descripcion_servicio || generarDescripcionDesdeItinerario(tf.itinerario) || `Traslado desde ${orig || "—"} hacia ${dest || "—"}, programado del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"} por ${d2} día(s) de servicio.`;
     }
     const p = {
       empresa_id: eId, tipo: tab, cliente_nombre: cn,
@@ -195,6 +196,7 @@ export default function PageCalculadora({ showToast, empId }) {
       extras: misc, peajes: 0,
       carta_poder: tab === "renta" ? false : tf.carta_poder,
       carta_poder_costo: tab === "renta" ? 0 : cpCost,
+      itinerario: tab === "renta" ? "" : JSON.stringify(tf.itinerario),
     };
     const r = await dbIns("cotizaciones", p);
     if (r && !r.error) showToast(estado === "enviada" ? "Cotizacion guardada" : "Borrador guardado");
@@ -320,104 +322,84 @@ export default function PageCalculadora({ showToast, empId }) {
               </div>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Fld label="CLIENTE" span2>
-                <BuscadorCliente value={tf.cliente} onChange={v => stf("cliente", v)} onSelect={seleccionarClienteTraslado} empId={empId} />
-              </Fld>
-              {tf.clienteCodigo && <Fld label="CODIGO" span2>
-                <div style={{ ...S.inp, background: T.card }}>{tf.clienteCodigo}</div>
-              </Fld>}
-              <Fld label="NIT" span2>
-                <input style={S.inp} value={tf.clienteNit} onChange={e => stf("clienteNit", e.target.value)} placeholder="NIT del cliente" />
-              </Fld>
-              <Fld label="RUTA" span2>
-                <PlanificadorRutas value={rutaCalc} empId={empId} onChange={data => {
-                  setRutaCalc(data);
-                  if (data?.resultado) {
-                    stf("dias", data.resultado.dias);
-                    stf("kmi", data.resultado.km);
-                    stf("kmr", data.resultado.km);
-                    stf("kpg", data.kpg || 27);
-                    stf("galon", data.pGalon || 48);
-                    stf("ruta", `${data.origenNombre || "?"} → ${data.destinoNombre || "?"}`);
-                  }
-                }} />
-              </Fld>
-              <Fld label="ORIGEN"><input style={S.inp} value={tf.origen} onChange={e => stf("origen", e.target.value)} placeholder="Ciudad de origen" /></Fld>
-              <Fld label="DESTINO"><input style={S.inp} value={tf.destino} onChange={e => stf("destino", e.target.value)} placeholder="Ciudad de destino" /></Fld>
-              <Fld label="FECHA INICIO"><input style={S.inp} type="date" value={tf.fechaInicio} onChange={e => stf("fechaInicio", e.target.value)} /></Fld>
-              <Fld label="FECHA FIN"><input style={S.inp} type="date" value={tf.fechaFin} onChange={e => stf("fechaFin", e.target.value)} /></Fld>
-              <Fld label="DIAS"><input style={S.inp} type="number" value={tf.dias} onChange={e => stf("dias", e.target.value)} /></Fld>
-              <Fld label="TIPO VEHICULO" span2>
-                <select style={S.sel} value={tf.vehiculoNombre || ""} onChange={e => {
-                  const nom = e.target.value;
-                  const c = CATALOGO.find(x => x.nombre === nom);
-                  const f = flotaVehiculos.find(x => `${x.marca||""} ${x.modelo||""}`.trim() === nom);
-                  const rate = c ? c.dia : (f && parseFloat(f.tarifa_dia) > 0 ? parseFloat(f.tarifa_dia) : 0);
-                  stf("vehiculoId", c ? c.id : nom);
-                  stf("veh", rate);
-                  stf("vehiculoNombre", nom);
-                }}>
-                  <option value="">Seleccionar vehiculo...</option>
-                  <optgroup label="Catalogo">
-                    {CATALOGO.map(v => <option key={"cat_"+v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
-                  </optgroup>
-                  {flotaVehiculos.length > 0 && (
-                    <optgroup label="Flota">
-                      {flotaVehiculos.map(v => {
-                        const nom = `${v.marca||""} ${v.modelo||""}`.trim();
-                        if (!nom) return null;
-                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
-                        return <option key={"fl_"+nom} value={nom}>{nom}{p}</option>;
-                      })}
-                    </optgroup>
-                  )}
-                </select>
-              </Fld>
-              <Fld label="COSTO VEHICULO/DIA"><input style={S.inp} type="number" value={tf.veh} onChange={e => stf("veh", e.target.value)} placeholder="0.00" /></Fld>
-              <Fld label="SALUDO PERSONALIZADO" span2><input style={S.inp} value={tf.saludo} onChange={e => stf("saludo", e.target.value)} placeholder="Estimados..." /></Fld>
-              <Fld label="COSTO PILOTO/DIA"><input style={S.inp} type="number" value={tf.pil} onChange={e => stf("pil", e.target.value)} placeholder="0.00" /></Fld>
-              <Fld label="HOSPEDAJE/DIA"><input style={S.inp} type="number" value={tf.hos} onChange={e => stf("hos", e.target.value)} placeholder="0.00" /></Fld>
-              <Fld label="ALIMENTACION/DIA"><input style={S.inp} type="number" value={tf.ali} onChange={e => stf("ali", e.target.value)} placeholder="0.00" /></Fld>
-              <Fld label="PRECIO GALON (Q)"><input style={S.inp} type="number" value={tf.galon} onChange={e => stf("galon", e.target.value)} placeholder="48" /></Fld>
-              <Fld label="KM POR GALON"><input style={S.inp} type="number" value={tf.kpg} onChange={e => stf("kpg", e.target.value)} placeholder="27" /></Fld>
-              <Fld label="KM IDA"><input style={S.inp} type="number" value={tf.kmi} onChange={e => stf("kmi", e.target.value)} placeholder="0" /></Fld>
-              <Fld label="KM REGRESO"><input style={S.inp} type="number" value={tf.kmr} onChange={e => stf("kmr", e.target.value)} placeholder="0" /></Fld>
-              <Fld label="GASTOS VARIOS"><input style={S.inp} type="number" value={tf.varios} onChange={e => stf("varios", e.target.value)} placeholder="0.00" /></Fld>
-              <Fld label="IVA">
-                <select style={S.sel} value={tf.iva} onChange={e => stf("iva", e.target.value)}>
-                  <option value="12">12%</option>
-                  <option value="5">5%</option>
-                  <option value="0">Sin IVA</option>
-                </select>
-              </Fld>
-              <Fld label="TASA CAMBIO">
-                <input style={S.inp} type="number" step="0.01" value={tf.exch} onChange={e => stf("exch", e.target.value)} />
-              </Fld>
-              <Fld label="METODO DE PAGO" span2>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => stf("pago", "efectivo")} style={{ ...S.btn(tf.pago === "efectivo" ? "primary" : "ghost"), flex: 1 }}>Efectivo</button>
-                  <button onClick={() => stf("pago", "transferencia")} style={{ ...S.btn(tf.pago === "transferencia" ? "primary" : "ghost"), flex: 1 }}>Transferencia</button>
-                </div>
-              </Fld>
-              <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
-                <input type="checkbox" id="conTC2" checked={tf.conTC} onChange={e => stf("conTC", e.target.checked)}
-                  style={{ width: 18, height: 18, cursor: "pointer" }} />
-                <label htmlFor="conTC2" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
-                  Incluir opcion pago con tarjeta (+5%)
-                </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Fld label="CLIENTE" span2>
+                  <BuscadorCliente value={tf.cliente} onChange={v => stf("cliente", v)} onSelect={seleccionarClienteTraslado} empId={empId} />
+                </Fld>
+                {tf.clienteCodigo && <Fld label="CODIGO" span2>
+                  <div style={{ ...S.inp, background: T.card }}>{tf.clienteCodigo}</div>
+                </Fld>}
+                <Fld label="NIT" span2>
+                  <input style={S.inp} value={tf.clienteNit} onChange={e => stf("clienteNit", e.target.value)} placeholder="NIT del cliente" />
+                </Fld>
+                <Fld label="SALUDO PERSONALIZADO" span2>
+                  <input style={S.inp} value={tf.saludo} onChange={e => stf("saludo", e.target.value)} placeholder="Estimados..." />
+                </Fld>
               </div>
-              <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10, padding: "8px 0", flexWrap: "wrap" }}>
-                <input type="checkbox" id="cartaPoderT" checked={tf.carta_poder} onChange={e => stf("carta_poder", e.target.checked)}
-                  style={{ width: 18, height: 18, cursor: "pointer" }} />
-                <label htmlFor="cartaPoderT" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
-                  Requiere Carta Poder (viaje internacional)
-                </label>
-                {tf.carta_poder && (
-                  <input style={{ ...S.inp, width: 130, marginLeft: 8, fontSize: 11 }} type="number" step="0.01"
-                    value={tf.carta_poder_costo} onChange={e => stf("carta_poder_costo", e.target.value)}
-                    placeholder="Costo Q" />
-                )}
+
+              <div style={{ background: T.surf, borderRadius: 10, padding: 12, border: `1px solid ${T.bord}44` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 10, letterSpacing: 0.5 }}>VEHÍCULOS E ITINERARIO</div>
+                <ItinerarioServicio value={tf.itinerario} flotaVehiculos={flotaVehiculos} onChange={it => {
+                  stf("itinerario", it);
+                  const flat = itinerarioToFlat(it);
+                  if (flat.dias) stf("dias", flat.dias);
+                  if (flat.vehiculo_nombre) stf("vehiculoNombre", flat.vehiculo_nombre);
+                  if (flat.fecha_inicio) stf("fechaInicio", flat.fecha_inicio);
+                  if (flat.fecha_fin) stf("fechaFin", flat.fecha_fin);
+                  if (flat.origen) stf("origen", flat.origen);
+                  if (flat.destino) stf("destino", flat.destino);
+                  stf("kmi", flat.km_total || 0);
+                  stf("kmr", flat.km_total || 0);
+                  stf("veh", flat.costo_vehiculo || 0);
+                  stf("pil", flat.costo_piloto || 0);
+                  stf("hos", flat.costo_hospedaje || 0);
+                  stf("ali", flat.costo_alimentacion || 0);
+                  const desc = generarDescripcionDesdeItinerario(it);
+                  if (desc) stf("descripcion_servicio", desc);
+                }} />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Fld label="DESCRIPCIÓN DEL SERVICIO" span2>
+                  <textarea style={{ ...S.inp, minHeight: 50, fontSize: 11, resize: "vertical" }} value={tf.descripcion_servicio}
+                    onChange={e => stf("descripcion_servicio", e.target.value)} placeholder="Se generará automáticamente..." />
+                </Fld>
+                <Fld label="IVA">
+                  <select style={S.sel} value={tf.iva} onChange={e => stf("iva", e.target.value)}>
+                    <option value="12">12%</option>
+                    <option value="5">5%</option>
+                    <option value="0">Sin IVA</option>
+                  </select>
+                </Fld>
+                <Fld label="TASA CAMBIO">
+                  <input style={S.inp} type="number" step="0.01" value={tf.exch} onChange={e => stf("exch", e.target.value)} />
+                </Fld>
+                <Fld label="MÉTODO DE PAGO" span2>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => stf("pago", "efectivo")} style={{ ...S.btn(tf.pago === "efectivo" ? "primary" : "ghost"), flex: 1 }}>Efectivo</button>
+                    <button onClick={() => stf("pago", "transferencia")} style={{ ...S.btn(tf.pago === "transferencia" ? "primary" : "ghost"), flex: 1 }}>Transferencia</button>
+                  </div>
+                </Fld>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                  <input type="checkbox" id="conTC2" checked={tf.conTC} onChange={e => stf("conTC", e.target.checked)}
+                    style={{ width: 18, height: 18, cursor: "pointer" }} />
+                  <label htmlFor="conTC2" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
+                    Incluir opcion pago con tarjeta (+5%)
+                  </label>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", flexWrap: "wrap" }}>
+                  <input type="checkbox" id="cartaPoderT" checked={tf.carta_poder} onChange={e => stf("carta_poder", e.target.checked)}
+                    style={{ width: 18, height: 18, cursor: "pointer" }} />
+                  <label htmlFor="cartaPoderT" style={{ fontSize: 13, color: T.sub, cursor: "pointer" }}>
+                    Requiere Carta Poder (viaje internacional)
+                  </label>
+                  {tf.carta_poder && (
+                    <input style={{ ...S.inp, width: 130, marginLeft: 8, fontSize: 11 }} type="number" step="0.01"
+                      value={tf.carta_poder_costo} onChange={e => stf("carta_poder_costo", e.target.value)}
+                      placeholder="Costo Q" />
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -447,26 +429,51 @@ export default function PageCalculadora({ showToast, empId }) {
               </>
             ) : (
               <>
-                {tf.ruta && <div style={{ fontSize: 12, color: T.acc, marginBottom: 8 }}>{tf.ruta} · {Math.round(tkm)} km totales</div>}
-                <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-                  <Row l={`Vehiculo (x${d2}d)`} v={"Q " + fmt(vT)} />
-                  <Row l={`Piloto (x${d2}d)`} v={"Q " + fmt(pT)} />
-                  <Row l={`Hospedaje (x${d2}d)`} v={"Q " + fmt(hT)} />
-                  <Row l={`Aliment. (x${d2}d)`} v={"Q " + fmt(aT)} />
-                  <Row l={`Combustible (${fmt(gals)} gal)`} v={"Q " + fmt(fuel)} />
-                  {tf.carta_poder && <Row l="Carta Poder" v={"Q " + fmt(cpCost)} />}
-                  <Row l="Varios" v={"Q " + fmt(misc)} />
-                  <div style={{ borderTop: `1px solid ${T.bord}`, margin: "8px 0" }} />
-                  <Row l="Subtotal" v={"Q " + fmt(tsub)} />
-                  <Row l={`IVA ${tf.iva}%`} v={"Q " + fmt(tiva)} />
-                  {tf.conTC && <Row l="Recargo tarjeta (5%)" v={"Q " + fmt(ttcr)} color={T.sec} />}
-                </div>
-                <div style={{ background: T.accDim, border: `1px solid ${T.acc}55`, borderRadius: 10, padding: "12px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, fontWeight: 800, color: T.acc }}>
-                    <span>TOTAL</span><span>Q {fmt(ttot)}</span>
-                  </div>
-                  {tf.conTC && <div style={{ fontSize: 12, color: T.sub }}>Sin tarjeta: Q {fmt(tbase)}</div>}
-                </div>
+                {(() => {
+                  const tot = calcularTotalesItinerario(tf.itinerario, parseFloat(tf.iva) || 5);
+                  const tieneItin = tot.vehiculosResumen.length > 0;
+                  return (
+                    <>
+                      {tieneItin ? (
+                        <>
+                          {tot.vehiculosResumen.map((vr, i) => (
+                            <div key={i} style={{ fontSize: 11, color: T.acc, marginBottom: 4, fontWeight: 600 }}>
+                              {vr.nombre}{vr.piloto ? ` (piloto: ${vr.piloto})` : ""} — {vr.dias}d · {fmt(vr.km)} km · Q{fmt(vr.sub)}
+                            </div>
+                          ))}
+                          <div style={{ fontSize: 10, color: T.mut, marginBottom: 8 }}>{Math.round(tot.totalKm)} km totales</div>
+                        </>
+                      ) : (
+                        tf.ruta && <div style={{ fontSize: 12, color: T.acc, marginBottom: 8 }}>{tf.ruta} · {Math.round(tkm)} km totales</div>
+                      )}
+                      <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                        {tieneItin ? tot.items.map((item, i) => (
+                          <Row key={i} l={item.label} v={"Q " + fmt(item.value)} />
+                        )) : (
+                          <>
+                            <Row l={`Vehiculo (x${d2}d)`} v={"Q " + fmt(vT)} />
+                            <Row l={`Piloto (x${d2}d)`} v={"Q " + fmt(pT)} />
+                            <Row l={`Hospedaje (x${d2}d)`} v={"Q " + fmt(hT)} />
+                            <Row l={`Aliment. (x${d2}d)`} v={"Q " + fmt(aT)} />
+                            <Row l={`Combustible (${fmt(gals)} gal)`} v={"Q " + fmt(fuel)} />
+                          </>
+                        )}
+                        {tf.carta_poder && <Row l="Carta Poder" v={"Q " + fmt(cpCost)} />}
+                        <Row l="Varios" v={"Q " + fmt(misc)} />
+                        <div style={{ borderTop: `1px solid ${T.bord}`, margin: "8px 0" }} />
+                        <Row l="Subtotal" v={"Q " + fmt(tsub)} bold />
+                        <Row l={`IVA ${tf.iva}%`} v={"Q " + fmt(tiva)} />
+                        {tf.conTC && <Row l="Recargo tarjeta (5%)" v={"Q " + fmt(ttcr)} color={T.sec} />}
+                      </div>
+                      <div style={{ background: T.accDim, border: `1px solid ${T.acc}55`, borderRadius: 10, padding: "12px 16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, fontWeight: 800, color: T.acc }}>
+                          <span>TOTAL</span><span>Q {fmt(ttot)}</span>
+                        </div>
+                        {tf.conTC && <div style={{ fontSize: 12, color: T.sub }}>Sin tarjeta: Q {fmt(tbase)}</div>}
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             )}
           </div>
