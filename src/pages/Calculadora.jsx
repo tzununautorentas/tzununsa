@@ -347,8 +347,8 @@ export default function PageCalculadora({ showToast, empId }) {
                   if (r?.puntos?.length >= 2) {
                     const primerOri = r.puntos[0];
                     const ultimoDest = r.puntos[r.puntos.length - 1];
-                    const kmTotal = r.distanciaTotal || 0;
-                    const diasEst = r.diasEstimados || 1;
+                    const kmTotal = r.resultado?.km || 0;
+                    const diasEst = r.resultado?.dias || 1;
                     stf("origen", primerOri?.nombre || "");
                     stf("destino", ultimoDest?.nombre || "");
                     stf("kmi", kmTotal);

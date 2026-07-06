@@ -385,7 +385,9 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
 
     setCalculando(true);
     setGeometria(null);
-
+    setAlternativas(null);
+    setRutaSel(0);
+    let localRutaSel = 0;
     const coords = validos.map(obtenerCoords);
     if (coords.some(c => !c)) { setCalculando(false); return; }
 
@@ -394,7 +396,7 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
       const osrm = await consultarOSRM(coords, 3);
       if (osrm && osrm.routes.length > 0) {
         setAlternativas(osrm.routes);
-        const idx = rutaSel < osrm.routes.length ? rutaSel : 0;
+        const idx = localRutaSel < osrm.routes.length ? localRutaSel : 0;
         const ruta = osrm.routes[idx];
         km = ruta.km;
         minutos = ruta.minutos;
@@ -432,9 +434,11 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
         paradas: validos.slice(1, -1),
         origenNombre: nomPunto(validos[0]),
         destinoNombre: nomPunto(validos[validos.length - 1]),
+        distanciaTotal: km,
+        diasEstimados: dias,
       });
     }
-  }, [puntos, modo, manualKm, kpg, pGalon, onChange, rutaSel]);
+  }, [puntos, modo, manualKm, kpg, pGalon, onChange]);
 
   const validos = puntos.filter(p => {
     if (p.tipo === "municipio") return p.depto && p.muni;
@@ -509,6 +513,56 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
         </label>
       </div>
 
+      {/* Selector de ruta alternativa — antes del mapa */}
+      {alternativas && alternativas.length > 1 && (
+        <div style={{ background: T.card, borderRadius: 10, padding: 10, border: `1px solid ${T.acc}33` }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: T.mut, marginBottom: 8, letterSpacing: 0.5 }}>RUTAS DISPONIBLES — selecciona la que prefieras:</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {alternativas.map((r, i) => {
+              const sel = rutaSel === i;
+              return (
+                <button key={i}
+                  onClick={async () => {
+                    setRutaSel(i);
+                    const coords = validos.map(obtenerCoords);
+                    const ruta = alternativas[i];
+                    const comb = calcularCombustible(ruta.km, kpg, pGalon);
+                    const dias = estimarDias(ruta.km);
+                    const res = { km: ruta.km, minutos: ruta.minutos, dias, ...comb };
+                    setResultado(res);
+                    setGeometria(ruta.geometria);
+                    const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
+                    if (onChange) {
+                      onChange({
+                        puntos: validos, resultado: res, modo, manualKm, kpg, pGalon,
+                        origen: validos[0], destino: validos[validos.length - 1],
+                        paradas: validos.slice(1, -1),
+                        origenNombre: nomPunto(validos[0]), destinoNombre: nomPunto(validos[validos.length - 1]),
+                        distanciaTotal: ruta.km,
+                        diasEstimados: dias,
+                      });
+                    }
+                  }}
+                  style={{
+                    flex: "1 1 auto", minWidth: 160,
+                    ...S.btn(sel ? "primary" : "ghost"),
+                    fontSize: 10, padding: "8px 12px", textAlign: "left",
+                    border: sel ? `2px solid ${T.acc}` : `1px solid ${T.bord}`,
+                    opacity: sel ? 1 : 0.75,
+                  }}>
+                  <div style={{ fontWeight: 700, fontSize: 11 }}>
+                    {r.km} km
+                  </div>
+                  <div style={{ fontSize: 9, color: T.sub }}>
+                    {r.minutos >= 60 ? `${Math.floor(r.minutos / 60)}h ${r.minutos % 60}m` : `${r.minutos} min`}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Mapa */}
       {resultado && puntos.length >= 2 && (
         <MapaRuta
@@ -516,44 +570,6 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
           geometria={geometria}
           style={{ border: `1px solid ${T.bord}`, boxShadow: `0 2px 12px rgba(0,0,0,.15)` }}
         />
-      )}
-
-      {/* Selector de ruta alternativa */}
-      {alternativas && alternativas.length > 1 && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: T.mut }}>Ruta:</span>
-          {alternativas.map((r, i) => (
-            <button key={i}
-              onClick={async () => {
-                setRutaSel(i);
-                const coords = validos.map(obtenerCoords);
-                const ruta = alternativas[i];
-                const comb = calcularCombustible(ruta.km, kpg, pGalon);
-                const dias = estimarDias(ruta.km);
-                const res = { km: ruta.km, minutos: ruta.minutos, dias, ...comb };
-                setResultado(res);
-                setGeometria(ruta.geometria);
-                const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
-                if (onChange) {
-                  onChange({
-                    puntos: validos, resultado: res, modo, manualKm, kpg, pGalon,
-                    origen: validos[0], destino: validos[validos.length - 1],
-                    paradas: validos.slice(1, -1),
-                    origenNombre: nomPunto(validos[0]), destinoNombre: nomPunto(validos[validos.length - 1]),
-                  });
-                }
-              }}
-              style={{
-                ...S.btn(rutaSel === i ? "primary" : "ghost"),
-                fontSize: 10, padding: "4px 10px",
-                opacity: rutaSel === i ? 1 : 0.8,
-              }}>
-              {r.nombre} — {r.km} km · {r.minutos >= 60
-                ? `${Math.floor(r.minutos / 60)}h ${r.minutos % 60}m`
-                : `${r.minutos} min`}
-            </button>
-          ))}
-        </div>
       )}
 
       {/* Resultado */}
