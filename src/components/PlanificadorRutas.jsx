@@ -379,7 +379,65 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
   };
 
   const calcularRuta = useCallback(async () => {
+    const validos = puntos.filter(p => {
+      if (p.tipo === "municipio") return p.depto && p.muni;
+      if (p.tipo === "direccion") return p.lat && p.lng;
+      if (p.tipo === "mi_ubicacion") return p.lat && p.lng;
+      return false;
+    });
+    if (validos.length < 2) return;
+    setCalculando(true);
+    setGeometria(null);
+    setAlternativas(null);
+    setRutaSel(0);
+    let localRutaSel = 0;
+    const coords = validos.map(obtenerCoords);
+    if (coords.some(c => !c)) { setCalculando(false); return; }
+    let km, minutos, geometriaRuta;
+    if (modo === "auto") {
+      const osrm = await consultarOSRM(coords, 3);
+      if (osrm && osrm.routes.length > 0) {
+        setAlternativas(osrm.routes);
+        const idx = localRutaSel < osrm.routes.length ? localRutaSel : 0;
+        const ruta = osrm.routes[idx];
+        km = ruta.km;
+        minutos = ruta.minutos;
+        geometriaRuta = ruta.geometria;
+      } else {
+        setAlternativas(null);
+        km = distanciaHaversine(coords);
+        minutos = Math.round(km * 1.5 * 60 / 50);
+      }
+    } else {
+      setAlternativas(null);
+      km = parseFloat(manualKm) || distanciaHaversine(coords);
+      minutos = Math.round(km * 1.5 * 60 / 50);
+    }
+    const comb = calcularCombustible(km, kpg, pGalon);
+    const dias = estimarDias(km);
+    const res = { km, minutos, dias, ...comb };
+    setResultado(res);
+    if (geometriaRuta) setGeometria(geometriaRuta);
+    setCalculando(false);
+    const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
+    if (onChange) {
+      onChange({
+        puntos: validos, resultado: res, modo, manualKm, kpg, pGalon,
+        origen: validos[0], destino: validos[validos.length - 1],
+        paradas: validos.slice(1, -1),
+        origenNombre: nomPunto(validos[0]), destinoNombre: nomPunto(validos[validos.length - 1]),
+        distanciaTotal: km, diasEstimados: dias,
+      });
+    }
+  }, [puntos, modo, manualKm, kpg, pGalon, onChange]);
+
   const calcularVia = useCallback(async () => {
+    const validos = puntos.filter(p => {
+      if (p.tipo === "municipio") return p.depto && p.muni;
+      if (p.tipo === "direccion") return p.lat && p.lng;
+      if (p.tipo === "mi_ubicacion") return p.lat && p.lng;
+      return false;
+    });
     if (!viaQuery.trim() || validos.length < 2) return;
     setViaBuscando(true);
     const geo = await geocodificar(viaQuery.trim());
@@ -404,15 +462,14 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
     setResultado(res);
     if (geometriaRuta) setGeometria(geometriaRuta);
     const rutaLabel = `Vía ${nombre}`;
-    setViaRoutes(prev => {
-      const exist = prev.findIndex(r => r.via === nombre);
-      const entry = { via: nombre, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel };
-      if (exist >= 0) {
-        const upd = [...prev]; upd[exist] = entry; return upd;
-      }
-      return [...prev, entry];
-    });
-    setViaSel(viaRoutes.findIndex(r => r.via === nombre));
+    const existIdx = viaRoutes.findIndex(r => r.via === nombre);
+    if (existIdx >= 0) {
+      const upd = [...viaRoutes]; upd[existIdx] = { via: nombre, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel };
+      setViaRoutes(upd);
+    } else {
+      setViaRoutes([...viaRoutes, { via: nombre, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel }]);
+    }
+    setViaSel(existIdx >= 0 ? existIdx : viaRoutes.length);
     const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
     if (onChange) {
       onChange({
@@ -423,7 +480,7 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
         distanciaTotal: km, diasEstimados: dias,
       });
     }
-  }, [viaQuery, validos, puntos, kpg, pGalon, modo, manualKm, onChange, viaRoutes]);
+  }, [viaQuery, puntos, kpg, pGalon, modo, manualKm, onChange, viaRoutes]);
 
   const seleccionarViaRoute = useCallback((idx) => {
     const vr = viaRoutes[idx];
@@ -448,71 +505,6 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
     setViaRoutes([]);
     setViaSel(-1);
   }, []);
-
-  const validos = puntos.filter(p => {
-      if (p.tipo === "municipio") return p.depto && p.muni;
-      if (p.tipo === "direccion") return p.lat && p.lng;
-      if (p.tipo === "mi_ubicacion") return p.lat && p.lng;
-      return false;
-    });
-    if (validos.length < 2) return;
-
-    setCalculando(true);
-    setGeometria(null);
-    setAlternativas(null);
-    setRutaSel(0);
-    let localRutaSel = 0;
-    const coords = validos.map(obtenerCoords);
-    if (coords.some(c => !c)) { setCalculando(false); return; }
-
-    let km, minutos, geometriaRuta;
-    if (modo === "auto") {
-      const osrm = await consultarOSRM(coords, 3);
-      if (osrm && osrm.routes.length > 0) {
-        setAlternativas(osrm.routes);
-        const idx = localRutaSel < osrm.routes.length ? localRutaSel : 0;
-        const ruta = osrm.routes[idx];
-        km = ruta.km;
-        minutos = ruta.minutos;
-        geometriaRuta = ruta.geometria;
-      } else {
-        setAlternativas(null);
-        km = distanciaHaversine(coords);
-        minutos = Math.round(km * 1.5 * 60 / 50);
-      }
-    } else {
-      setAlternativas(null);
-      km = parseFloat(manualKm) || distanciaHaversine(coords);
-      minutos = Math.round(km * 1.5 * 60 / 50);
-    }
-
-    const comb = calcularCombustible(km, kpg, pGalon);
-    const dias = estimarDias(km);
-
-    const res = { km, minutos, dias, ...comb };
-    setResultado(res);
-    if (geometriaRuta) setGeometria(geometriaRuta);
-    setCalculando(false);
-
-    const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
-    if (onChange) {
-      onChange({
-        puntos: validos,
-        resultado: res,
-        modo,
-        manualKm,
-        kpg,
-        pGalon,
-        origen: validos[0],
-        destino: validos[validos.length - 1],
-        paradas: validos.slice(1, -1),
-        origenNombre: nomPunto(validos[0]),
-        destinoNombre: nomPunto(validos[validos.length - 1]),
-        distanciaTotal: km,
-        diasEstimados: dias,
-      });
-    }
-  }, [puntos, modo, manualKm, kpg, pGalon, onChange]);
 
   const validos = puntos.filter(p => {
     if (p.tipo === "municipio") return p.depto && p.muni;
