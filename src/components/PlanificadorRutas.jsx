@@ -347,6 +347,10 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
   const [pGalon, setPGalon] = useState(value?.pGalon || 48);
   const [alternativas, setAlternativas] = useState(null);
   const [rutaSel, setRutaSel] = useState(0);
+  const [viaQuery, setViaQuery] = useState("");
+  const [viaBuscando, setViaBuscando] = useState(false);
+  const [viaRoutes, setViaRoutes] = useState([]);
+  const [viaSel, setViaSel] = useState(-1);
 
   const actualizar = useCallback((idx, nuevoPunto) => {
     setPuntos(prev => {
@@ -375,7 +379,77 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
   };
 
   const calcularRuta = useCallback(async () => {
-    const validos = puntos.filter(p => {
+  const calcularVia = useCallback(async () => {
+    if (!viaQuery.trim() || validos.length < 2) return;
+    setViaBuscando(true);
+    const geo = await geocodificar(viaQuery.trim());
+    if (!geo || geo.length === 0) { setViaBuscando(false); return; }
+    const { lat, lng, nombre } = geo[0];
+    const viaPunto = { tipo: "direccion", direccion: nombre, nombre, lat, lng };
+    const nuevosPuntos = [puntos[0], viaPunto, ...puntos.slice(1)];
+    setPuntos(nuevosPuntos);
+    setViaQuery("");
+    setViaBuscando(false);
+    setAlternativas(null);
+    setRutaSel(0);
+    const coords = [obtenerCoords(nuevosPuntos[0]), obtenerCoords(viaPunto), obtenerCoords(nuevosPuntos[nuevosPuntos.length - 1])].filter(Boolean);
+    if (coords.length < 2) return;
+    const osrm = await consultarOSRM(coords);
+    const km = osrm ? osrm.routes[0].km : distanciaHaversine(coords);
+    const minutos = osrm ? osrm.routes[0].minutos : Math.round(km * 1.5 * 60 / 50);
+    const geometriaRuta = osrm ? osrm.routes[0].geometria : null;
+    const comb = calcularCombustible(km, kpg, pGalon);
+    const dias = estimarDias(km);
+    const res = { km, minutos, dias, ...comb, via: nombre };
+    setResultado(res);
+    if (geometriaRuta) setGeometria(geometriaRuta);
+    const rutaLabel = `Vía ${nombre}`;
+    setViaRoutes(prev => {
+      const exist = prev.findIndex(r => r.via === nombre);
+      const entry = { via: nombre, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel };
+      if (exist >= 0) {
+        const upd = [...prev]; upd[exist] = entry; return upd;
+      }
+      return [...prev, entry];
+    });
+    setViaSel(viaRoutes.findIndex(r => r.via === nombre));
+    const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
+    if (onChange) {
+      onChange({
+        puntos: nuevosPuntos, resultado: res, modo, manualKm, kpg, pGalon,
+        origen: nuevosPuntos[0], destino: nuevosPuntos[nuevosPuntos.length - 1],
+        paradas: nuevosPuntos.slice(1, -1),
+        origenNombre: nomPunto(nuevosPuntos[0]), destinoNombre: nomPunto(nuevosPuntos[nuevosPuntos.length - 1]),
+        distanciaTotal: km, diasEstimados: dias,
+      });
+    }
+  }, [viaQuery, validos, puntos, kpg, pGalon, modo, manualKm, onChange, viaRoutes]);
+
+  const seleccionarViaRoute = useCallback((idx) => {
+    const vr = viaRoutes[idx];
+    if (!vr) return;
+    setViaSel(idx);
+    setResultado(vr.resultado);
+    setGeometria(vr.geometria);
+    setPuntos(vr.puntos);
+    if (onChange) {
+      const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
+      onChange({
+        puntos: vr.puntos, resultado: vr.resultado, modo, manualKm, kpg, pGalon,
+        origen: vr.puntos[0], destino: vr.puntos[vr.puntos.length - 1],
+        paradas: vr.puntos.slice(1, -1),
+        origenNombre: nomPunto(vr.puntos[0]), destinoNombre: nomPunto(vr.puntos[vr.puntos.length - 1]),
+        distanciaTotal: vr.resultado.km, diasEstimados: vr.resultado.dias,
+      });
+    }
+  }, [viaRoutes, modo, manualKm, kpg, pGalon, onChange]);
+
+  const limpiarViaRoutes = useCallback(() => {
+    setViaRoutes([]);
+    setViaSel(-1);
+  }, []);
+
+  const validos = puntos.filter(p => {
       if (p.tipo === "municipio") return p.depto && p.muni;
       if (p.tipo === "direccion") return p.lat && p.lng;
       if (p.tipo === "mi_ubicacion") return p.lat && p.lng;
@@ -478,6 +552,44 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
           {calculando ? "Calculando..." : "Calcular ruta"}
         </button>
       </div>
+
+      {/* Calcular vía — ruta alternativa forzada por un pueblo */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", background: T.card, borderRadius: 8, padding: "8px 10px", border: `1px solid ${T.bord}44` }}>
+        <span style={{ fontSize: 11, color: T.mut, fontWeight: 600 }}>Ruta vía:</span>
+        <input style={{ ...S.inp, width: 180, fontSize: 11, padding: "4px 8px" }}
+          value={viaQuery} onChange={e => setViaQuery(e.target.value)}
+          placeholder="Ciudad o pueblo (ej: Patzicía)" />
+        <button onClick={calcularVia} disabled={viaBuscando || !viaQuery.trim() || validos.length < 2}
+          style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 10px" }}>
+          {viaBuscando ? "..." : "Calcular vía"}
+        </button>
+        {viaRoutes.length > 0 && (
+          <button onClick={limpiarViaRoutes}
+            style={{ ...S.btn("ghost"), fontSize: 9, padding: "2px 8px", color: T.red }}>Limpiar</button>
+        )}
+      </div>
+
+      {/* Rutas creadas vía */}
+      {viaRoutes.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: T.mut }}>Tus rutas vía:</span>
+          <button key="no-via"
+            onClick={() => {
+              setViaSel(-1);
+              calcularRuta();
+            }}
+            style={{ ...S.btn(viaSel === -1 ? "primary" : "ghost"), fontSize: 10, padding: "4px 10px" }}>
+            Sin vía
+          </button>
+          {viaRoutes.map((vr, i) => (
+            <button key={vr.via}
+              onClick={() => seleccionarViaRoute(i)}
+              style={{ ...S.btn(viaSel === i ? "primary" : "ghost"), fontSize: 10, padding: "4px 10px" }}>
+              {vr.label} — {vr.resultado.km} km
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Modo cálculo */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
