@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { T, S, fmt, dbIns, dbGet, today, CATALOGO, siguienteNumero } from '../config.js';
 import { Fld, BuscadorCliente } from '../components/shared.jsx';
+import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
 import ItinerarioServicio, { generarDescripcionDesdeItinerario, calcularTotalesItinerario, itinerarioToFlat } from '../components/ItinerarioServicio.jsx';
 
 const calcDias = (fi, ff) => {
@@ -74,6 +75,7 @@ export default function PageCalculadora({ showToast, empId }) {
     itinerario: { vehiculos: [] },
     descripcion_servicio: "",
   });
+  const [rutaCalc, setRutaCalc] = useState(null);
   const stf = (k, v) => setTf(p => ({ ...p, [k]: v }));
 
   const seleccionarClienteRenta = (c) => {
@@ -336,6 +338,36 @@ export default function PageCalculadora({ showToast, empId }) {
                 <Fld label="SALUDO PERSONALIZADO" span2>
                   <input style={S.inp} value={tf.saludo} onChange={e => stf("saludo", e.target.value)} placeholder="Estimados..." />
                 </Fld>
+              </div>
+
+              <div style={{ background: T.surf, borderRadius: 10, padding: 12, border: `1px solid ${T.bord}44` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 10, letterSpacing: 0.5 }}>PLANIFICADOR DE RUTAS</div>
+                <PlanificadorRutas value={rutaCalc} empId={empId} onChange={r => {
+                  setRutaCalc(r);
+                  if (r?.puntos?.length >= 2) {
+                    const primerOri = r.puntos[0];
+                    const ultimoDest = r.puntos[r.puntos.length - 1];
+                    const kmTotal = r.distanciaTotal || 0;
+                    const diasEst = r.diasEstimados || 1;
+                    stf("origen", primerOri?.nombre || "");
+                    stf("destino", ultimoDest?.nombre || "");
+                    stf("kmi", kmTotal);
+                    stf("kmr", kmTotal);
+                    if (diasEst > 1) stf("dias", diasEst);
+                    const it = tf.itinerario?.vehiculos?.length > 0 ? { ...tf.itinerario } : { vehiculos: [] };
+                    if (it.vehiculos.length === 0) {
+                      it.vehiculos.push({
+                        _id: 0, vehiculo: "", piloto: "", costo_vehiculo: 0, costo_piloto: 0,
+                        costo_hospedaje: 0, costo_alimentacion: 0, km_ida: kmTotal, km_regreso: kmTotal,
+                        km_por_galon: 1, precio_galon: 0, trayectos: [],
+                      });
+                    } else {
+                      it.vehiculos[0].km_ida = kmTotal;
+                      it.vehiculos[0].km_regreso = kmTotal;
+                    }
+                    stf("itinerario", it);
+                  }
+                }} />
               </div>
 
               <div style={{ background: T.surf, borderRadius: 10, padding: 12, border: `1px solid ${T.bord}44` }}>
