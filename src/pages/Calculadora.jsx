@@ -392,6 +392,39 @@ export default function PageCalculadora({ showToast, empId }) {
                 }} />
               </div>
 
+              <div style={{ background: T.surf, borderRadius: 10, padding: 12, border: `1px solid ${T.bord}44` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 10, letterSpacing: 0.5 }}>DESGLOSE DE COSTOS</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  <Fld label="Vehículo (Q/día)">
+                    <input style={S.inp} type="number" step="0.01" value={tf.veh} onChange={e => stf("veh", e.target.value)} placeholder="0.00" />
+                  </Fld>
+                  <Fld label="Piloto (Q/día)">
+                    <input style={S.inp} type="number" step="0.01" value={tf.pil} onChange={e => stf("pil", e.target.value)} placeholder="0.00" />
+                  </Fld>
+                  <Fld label="Hospedaje (Q/día)">
+                    <input style={S.inp} type="number" step="0.01" value={tf.hos} onChange={e => stf("hos", e.target.value)} placeholder="0.00" />
+                  </Fld>
+                  <Fld label="Alimentación (Q/día)">
+                    <input style={S.inp} type="number" step="0.01" value={tf.ali} onChange={e => stf("ali", e.target.value)} placeholder="0.00" />
+                  </Fld>
+                  <Fld label="Varios (Q)">
+                    <input style={S.inp} type="number" step="0.01" value={tf.varios} onChange={e => stf("varios", e.target.value)} placeholder="0.00" />
+                  </Fld>
+                  <Fld label="Combustible — Km/Galón">
+                    <input style={S.inp} type="number" step="0.1" value={tf.kpg} onChange={e => stf("kpg", e.target.value)} placeholder="27" />
+                  </Fld>
+                  <Fld label="Precio Galón (Q)">
+                    <input style={S.inp} type="number" step="0.01" value={tf.galon} onChange={e => stf("galon", e.target.value)} placeholder="48" />
+                  </Fld>
+                  <Fld label="Km Ida">
+                    <input style={S.inp} type="number" step="0.1" value={tf.kmi} onChange={e => stf("kmi", e.target.value)} placeholder="0" />
+                  </Fld>
+                  <Fld label="Km Regreso">
+                    <input style={S.inp} type="number" step="0.1" value={tf.kmr} onChange={e => stf("kmr", e.target.value)} placeholder="0" />
+                  </Fld>
+                </div>
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Fld label="DESCRIPCIÓN DEL SERVICIO" span2>
                   <textarea style={{ ...S.inp, minHeight: 50, fontSize: 11, resize: "vertical" }} value={tf.descripcion_servicio}
