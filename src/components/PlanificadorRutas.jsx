@@ -444,13 +444,14 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
     if (!geo || geo.length === 0) { setViaBuscando(false); return; }
     const { lat, lng, nombre } = geo[0];
     const viaPunto = { tipo: "direccion", direccion: nombre, nombre, lat, lng };
-    const nuevosPuntos = [puntos[0], viaPunto, ...puntos.slice(1)];
+    // Agrega el punto ANTES del destino (se acumulan en orden)
+    const nuevosPuntos = [...puntos.slice(0, -1), viaPunto, puntos[puntos.length - 1]];
     setPuntos(nuevosPuntos);
     setViaQuery("");
     setViaBuscando(false);
     setAlternativas(null);
     setRutaSel(0);
-    const coords = [obtenerCoords(nuevosPuntos[0]), obtenerCoords(viaPunto), obtenerCoords(nuevosPuntos[nuevosPuntos.length - 1])].filter(Boolean);
+    const coords = nuevosPuntos.map(obtenerCoords).filter(Boolean);
     if (coords.length < 2) return;
     const osrm = await consultarOSRM(coords);
     const km = osrm ? osrm.routes[0].km : distanciaHaversine(coords);
@@ -461,13 +462,15 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
     const res = { km, minutos, dias, ...comb, via: nombre };
     setResultado(res);
     if (geometriaRuta) setGeometria(geometriaRuta);
-    const rutaLabel = `Vía ${nombre}`;
-    const existIdx = viaRoutes.findIndex(r => r.via === nombre);
+    // Guarda la ruta completa con todos los puntos acumulados
+    const puntosLabel = nuevosPuntos.slice(1, -1).map(p => p.nombre || p.direccion?.slice(0, 20)).join(" → ");
+    const rutaLabel = `Vía ${puntosLabel}`;
+    const existIdx = viaRoutes.findIndex(r => r.label === rutaLabel);
     if (existIdx >= 0) {
-      const upd = [...viaRoutes]; upd[existIdx] = { via: nombre, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel };
+      const upd = [...viaRoutes]; upd[existIdx] = { via: rutaLabel, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel };
       setViaRoutes(upd);
     } else {
-      setViaRoutes([...viaRoutes, { via: nombre, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel }]);
+      setViaRoutes([...viaRoutes, { via: rutaLabel, resultado: res, geometria: geometriaRuta, puntos: nuevosPuntos, label: rutaLabel }]);
     }
     setViaSel(existIdx >= 0 ? existIdx : viaRoutes.length);
     const nomPunto = (p) => p.nombre || p.direccion?.slice(0, 30) || "?";
@@ -545,33 +548,38 @@ export default function PlanificadorRutas({ value, onChange, empId }) {
         </button>
       </div>
 
-      {/* Calcular vía — ruta alternativa forzada por un pueblo */}
+      {/* Calcular vía — agregar punto intermedio en orden */}
       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", background: T.card, borderRadius: 8, padding: "8px 10px", border: `1px solid ${T.bord}44` }}>
-        <span style={{ fontSize: 11, color: T.mut, fontWeight: 600 }}>Ruta vía:</span>
-        <input style={{ ...S.inp, width: 180, fontSize: 11, padding: "4px 8px" }}
+        <span style={{ fontSize: 11, color: T.mut, fontWeight: 600 }}>+ Punto de paso:</span>
+        <input style={{ ...S.inp, width: 200, fontSize: 11, padding: "4px 8px" }}
           value={viaQuery} onChange={e => setViaQuery(e.target.value)}
-          placeholder="Ciudad o pueblo (ej: Patzicía)" />
+          placeholder="Ej: Chimaltenango, luego Los Encuentros..." />
         <button onClick={calcularVia} disabled={viaBuscando || !viaQuery.trim() || validos.length < 2}
           style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 10px" }}>
-          {viaBuscando ? "..." : "Calcular vía"}
+          {viaBuscando ? "..." : "Agregar y calcular"}
         </button>
         {viaRoutes.length > 0 && (
           <button onClick={limpiarViaRoutes}
-            style={{ ...S.btn("ghost"), fontSize: 9, padding: "2px 8px", color: T.red }}>Limpiar</button>
+            style={{ ...S.btn("ghost"), fontSize: 9, padding: "2px 8px", color: T.red }}>Limpiar todo</button>
         )}
       </div>
 
-      {/* Rutas creadas vía */}
+      {/* Rutas creadas vía (ruta completa con todos los puntos acumulados) */}
       {viaRoutes.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: T.mut }}>Tus rutas vía:</span>
+          <span style={{ fontSize: 11, color: T.mut }}>Rutas guardadas:</span>
           <button key="no-via"
             onClick={() => {
               setViaSel(-1);
-              calcularRuta();
+              setViaRoutes([]);
+              const resetPuntos = [puntos[0], puntos[puntos.length - 1]];
+              setPuntos(resetPuntos);
+              setResultado(null);
+              setGeometria(null);
+              if (onChange) onChange({ puntos: resetPuntos, resultado: null, modo, manualKm, kpg, pGalon });
             }}
             style={{ ...S.btn(viaSel === -1 ? "primary" : "ghost"), fontSize: 10, padding: "4px 10px" }}>
-            Sin vía
+            Sin escala
           </button>
           {viaRoutes.map((vr, i) => (
             <button key={vr.via}
