@@ -286,8 +286,6 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
     <!-- TIPO DE SERVICIO -->
     <div class="st">TIPO DE SERVICIO</div>
     ${d.servicio ? `<div class="tipo-text">${d.servicio}</div>` : ""}
-    ${(d.fecha_inicio || d.fecha_fin) ? `<div class="tipo-info"><span class="tipo-label">Per\u00edodo:</span> ${d.fecha_inicio || "—"} al ${d.fecha_fin || "—"}</div>` : ""}
-    ${(d.origen || d.destino) ? `<div class="tipo-info"><span class="tipo-label">Ruta:</span> ${d.origen || "—"} → ${d.destino || "—"}${d.ruta ? " (" + d.ruta + ")" : ""}</div>` : ""}
 
     <!-- SERVICIOS INCLUIDOS -->
     <div class="st" style="margin-top:4px">SERVICIOS INCLUIDOS</div>
