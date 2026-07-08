@@ -163,8 +163,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .h-right .doc-date{font-size:8px;color:#64748B;margin-top:0}
 
 /* ── SECTION TITLES ── */
-.st{font-size:7.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:2px;margin-bottom:3px}
-.section{margin-bottom:2px}
+.st{font-size:8.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.8px;border-bottom:1.5px solid #CBD5E1;padding-bottom:2px;margin-bottom:4px}
+.section{margin-bottom:4px}
 
 /* ── TWO COLUMNS ── */
 .two-col{display:flex;gap:12px;margin-bottom:3px;align-items:flex-start}
@@ -172,24 +172,22 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .col-right{flex:4.8;min-width:0}
 
 /* ── CLIENTE ── */
-.client-box{margin-bottom:3px}
-.client-label{font-size:7.5px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:1px}
+.client-box{margin-bottom:5px}
+.client-label{font-size:8.5px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:2px}
 .client-name{font-size:18px;font-weight:800;color:#1B2D5C;line-height:1.15}
 .client-meta{font-size:10px;color:#475569;margin-top:0;line-height:1.35}
 
 /* ── SALUDO ── */
-.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:4px 10px 4px 16px;font-size:10px;color:#334155;font-style:italic;line-height:1.35;margin-bottom:3px;border-radius:0 6px 6px 0;position:relative}
+.saludo-box{background:#EEF2FF;border-left:4px solid #1B2D5C;padding:6px 12px 6px 18px;font-size:12px;color:#334155;font-style:italic;line-height:1.45;margin-bottom:4px;border-radius:0 6px 6px 0;position:relative}
 .saludo-box::before{content:"\\201C";position:absolute;left:3px;top:1px;font-size:15px;color:#1B2D5C22;font-style:normal;font-family:Georgia,serif}
 
 /* ── TIPO DE SERVICIO ── */
-.tipo-text{font-size:12px;color:#1B2D5C;font-weight:700;line-height:1.3;padding:0 0 2px}
-.tipo-label{font-weight:600;color:#475569}
-.tipo-info{font-size:9.5px;color:#64748B;line-height:1.35;padding:1px 0}
+.tipo-text{font-size:13px;color:#1B2D5C;font-weight:700;line-height:1.4;padding:0 0 3px}
 
 /* ── SERVICIOS INCLUIDOS ── */
-.inc-list{list-style:none;padding:0;margin:2px 0 0 0}
-.inc-item{padding:1px 0;font-size:10px;color:#475569;display:flex;align-items:center;gap:5px}
-.inc-check{width:11px;height:11px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
+.inc-list{list-style:none;padding:0;margin:3px 0 0 0}
+.inc-item{padding:2px 0;font-size:11px;color:#475569;display:flex;align-items:center;gap:6px}
+.inc-check{width:13px;height:13px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:700;color:#fff;background:#00D4AA;flex-shrink:0;line-height:1}
 
 /* ── VEHICLE CARD (foto + ficha integrados) ── */
 .veh-card{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:3px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #E2E8F0}
@@ -198,15 +196,15 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .veh-photo-placeholder{height:130px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;background:#F8FAFC;margin-bottom:0}
 .veh-body{padding:7px 10px 9px}
 .veh-name{font-size:15px;font-weight:800;color:#1B2D5C;margin-bottom:0;line-height:1.2}
-.veh-subtitle{font-size:9.5px;color:#64748B;margin-bottom:2px;line-height:1.3}
-.veh-divider{height:1px;background:#E2E8F0;margin:2px 0 3px}
-.veh-check{color:#00D4AA;font-weight:700;margin-right:4px;font-size:10px}
-.veh-spec{font-size:9.5px;color:#475569;padding:1px 0;line-height:1.3}
+.veh-subtitle{font-size:10.5px;color:#64748B;margin-bottom:3px;line-height:1.35}
+.veh-divider{height:1px;background:#E2E8F0;margin:3px 0 4px}
+.veh-check{color:#00D4AA;font-weight:700;margin-right:4px;font-size:11px}
+.veh-spec{font-size:10.5px;color:#475569;padding:2px 0;line-height:1.35}
 
 /* ── RESUMEN ECONÓMICO ── */
 .inv-box{background:#F8FAFC;border-radius:8px;padding:5px 14px;margin-bottom:3px;border:1px solid #E2E8F0}
-.inv-row{display:flex;justify-content:space-between;padding:1.5px 0;font-size:11px;color:#475569}
-.inv-row.iva{font-size:10px;color:#94A3B8}
+.inv-row{display:flex;justify-content:space-between;padding:2px 0;font-size:12px;color:#475569}
+.inv-row.iva{font-size:11px;color:#94A3B8}
 .inv-divider{border-top:2.5px solid #00D4AA;margin:2px 0}
 .inv-total{display:flex;justify-content:space-between;padding:3px 0 1px;font-size:19px;font-weight:900;color:#1B2D5C}
 .inv-total .amt{color:#00D4AA;font-size:23px}
@@ -214,32 +212,32 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 /* ── MODALIDADES DE PAGO ── */
 .pago-grid{display:flex;gap:8px;margin-bottom:3px}
 .pago-card{border-radius:8px;padding:6px 12px;border:2px solid #E2E8F0;background:#fff;flex:1}
-.pago-card .pago-label{font-size:8px;color:#64748B;font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
+.pago-card .pago-label{font-size:9px;color:#64748B;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px}
 .pago-card .pago-monto{font-size:15px;font-weight:800;color:#1B2D5C}
 
 /* ── DATOS BANCARIOS ── */
-.bancos-box{font-size:8.5px;color:#475569;line-height:1.4;margin-bottom:3px;padding:5px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
-.bancos-box .b-item{padding:1px 0}
+.bancos-box{font-size:10px;color:#475569;line-height:1.45;margin-bottom:4px;padding:6px 12px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.bancos-box .b-item{padding:2px 0}
 .bancos-box .b-item strong{color:#1B2D5C}
-.bancos-box .b-titular{font-weight:700;color:#1B2D5C;margin-top:2px;padding-top:2px;border-top:1px solid #E2E8F0;font-size:8px}
+.bancos-box .b-titular{font-weight:700;color:#1B2D5C;margin-top:3px;padding-top:3px;border-top:1px solid #E2E8F0;font-size:9.5px}
 
 /* ── TÉRMINOS ── */
-.terms-list{list-style:none;padding:0;margin:0 0 3px 0}
-.terms-list li{font-size:8px;color:#64748B;padding:1px 0 1px 12px;position:relative;line-height:1.3}
-.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA88;font-weight:700;font-size:8px}
+.terms-list{list-style:none;padding:0;margin:0 0 4px 0}
+.terms-list li{font-size:9px;color:#64748B;padding:2px 0 2px 14px;position:relative;line-height:1.4}
+.terms-list li::before{content:"\\2713";position:absolute;left:0;color:#00D4AA88;font-weight:700;font-size:9px}
 
 /* ── CIERRE ── */
-.cierre-box{font-size:10px;color:#475569;font-style:italic;line-height:1.35;margin:1px 0 3px;padding:4px 10px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.cierre-box{font-size:11px;color:#475569;font-style:italic;line-height:1.45;margin:2px 0 4px;padding:6px 12px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
 
 /* ── FIRMA ── */
-.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:2px;padding-top:3px;border-top:2.5px solid #1B2D5C;width:100%}
-.firma-img{height:150px;margin-bottom:2px}
+.firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:4px;padding-top:4px;border-top:2.5px solid #1B2D5C;width:100%}
+.firma-img{height:200px;margin-bottom:3px}
 .f-name{font-weight:700;color:#1B2D5C;font-size:16px}
 .f-title{font-size:12px;color:#64748B;margin-top:1px}
 .f-contact{font-size:10px;color:#94A3B8;margin-top:1px}
 
 /* ── FOOTER ── */
-.footer{text-align:center;font-size:7.5px;color:#94A3B8;margin-top:auto;padding-top:2px;border-top:1px solid #E2E8F0;line-height:1.2;padding-bottom:2px}
+.footer{text-align:center;font-size:9px;color:#94A3B8;margin-top:auto;padding-top:3px;border-top:1px solid #E2E8F0;line-height:1.35;padding-bottom:3px}
 .footer strong{color:#64748B}
 `;
 
