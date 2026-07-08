@@ -231,7 +231,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── FIRMA ── */
 .firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:4px;padding-top:4px;border-top:2.5px solid #1B2D5C;width:100%}
-.firma-img{height:200px;margin-bottom:3px}
+.firma-img{width:100%;height:200px;object-fit:contain;margin-bottom:3px}
 .f-name{font-weight:700;color:#1B2D5C;font-size:16px}
 .f-title{font-size:12px;color:#64748B;margin-top:1px}
 .f-contact{font-size:10px;color:#94A3B8;margin-top:1px}
