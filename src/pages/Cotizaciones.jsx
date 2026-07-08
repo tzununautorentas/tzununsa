@@ -191,8 +191,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── VEHICLE CARD (foto + ficha integrados) ── */
 .veh-card{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:3px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #E2E8F0}
-.veh-photo-wrap{width:100%;max-height:190px;overflow:hidden;background:#F8FAFC}
-.veh-photo-wrap img{width:100%;height:auto;display:block;object-fit:cover}
+.veh-photo-wrap{width:100%;background:#F8FAFC;text-align:center}
+.veh-photo-wrap img{max-width:100%;max-height:240px;display:inline-block}
 .veh-photo-placeholder{height:130px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;background:#F8FAFC;margin-bottom:0}
 .veh-body{padding:7px 10px 9px}
 .veh-name{font-size:15px;font-weight:800;color:#1B2D5C;margin-bottom:0;line-height:1.2}
@@ -231,7 +231,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── FIRMA ── */
 .firma-box{display:flex;flex-direction:column;align-items:flex-start;margin-top:4px;padding-top:4px;border-top:2.5px solid #1B2D5C;width:100%}
-.firma-img{width:100%;height:200px;object-fit:contain;margin-bottom:3px}
+.firma-img{height:150px;margin-bottom:3px}
 .f-name{font-weight:700;color:#1B2D5C;font-size:16px}
 .f-title{font-size:12px;color:#64748B;margin-top:1px}
 .f-contact{font-size:10px;color:#94A3B8;margin-top:1px}
