@@ -184,7 +184,7 @@ export const fmtK = (n) => {
 export const fmtD = (s) => {
   if (!s || s === "null" || s === "Invalid Date") return "\u2014";
   try {
-    const d = s.includes("T") ? new Date(s) : new Date(s + "T12:00:00");
+    const d = new Date((s.includes("T") ? s.split("T")[0] : s) + "T12:00:00");
     return isNaN(d.getTime())
       ? "\u2014"
       : d.toLocaleDateString("es-GT", { day: "2-digit", month: "short", year: "numeric" });
