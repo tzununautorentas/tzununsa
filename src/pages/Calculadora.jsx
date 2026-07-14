@@ -52,6 +52,14 @@ export default function PageCalculadora({ showToast, empId }) {
   const [destinoRenta, setDestinoRenta] = useState("");
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [selVeh2, setSelVeh2] = useState("");
+  const [inclPiloto, setInclPiloto] = useState(false);
+  const [inclHospedaje, setInclHospedaje] = useState(false);
+  const [inclAlimentacion, setInclAlimentacion] = useState(false);
+  const [costoPiloto, setCostoPiloto] = useState(0);
+  const [costoHospedaje, setCostoHospedaje] = useState(0);
+  const [costoAlimentacion, setCostoAlimentacion] = useState(0);
+  const [variosRenta, setVariosRenta] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -125,6 +133,24 @@ export default function PageCalculadora({ showToast, empId }) {
   const recTC   = conTC ? Math.round(base * 0.05 * 100) / 100 : 0;
   const tot     = base + recTC;
 
+  // ─ Renta: segundo vehículo ─
+  const vehSeleccionado2 = (() => {
+    if (!selVeh2) return null;
+    const c = CATALOGO.find(v => v.nombre === selVeh2);
+    if (c) return c;
+    const f = flotaVehiculos.find(v => `${v.marca||""} ${v.modelo||""}`.trim() === selVeh2);
+    if (f && parseFloat(f.tarifa_dia) > 0) return { ...f, dia: parseFloat(f.tarifa_dia), sem: parseFloat(f.tarifa_semana)||parseFloat(f.tarifa_dia), mes: parseFloat(f.tarifa_mes)||parseFloat(f.tarifa_dia) };
+    return null;
+  })();
+  const rate2   = vehSeleccionado2 ? tarifaFn(vehSeleccionado2, diasCalc) : 0;
+  const sub2    = diasCalc * rate2;
+  const extrasTotal = (inclPiloto ? diasCalc * (costoPiloto || 0) : 0) + (inclHospedaje ? diasCalc * (costoHospedaje || 0) : 0) + (inclAlimentacion ? diasCalc * (costoAlimentacion || 0) : 0) + (parseFloat(variosRenta) || 0);
+  const subTotalRenta   = sub + sub2 + extrasTotal;
+  const ivaAmtRenta     = Math.round(subTotalRenta * iva / 100 * 100) / 100;
+  const baseRenta       = subTotalRenta + ivaAmtRenta;
+  const recTCRenta      = conTC ? Math.round(baseRenta * 0.05 * 100) / 100 : 0;
+  const totRenta        = baseRenta + recTCRenta;
+
   // ─ Traslado ───────────────────────────────────────────────────
   const d2   = parseFloat(tf.dias) || 0;
   const kmi  = parseFloat(tf.kmi) || 0;
@@ -159,7 +185,9 @@ export default function PageCalculadora({ showToast, empId }) {
     const fmtDate = s => { try { return new Date(s + "T12:00:00").toLocaleDateString("es-GT", { day:"numeric", month:"long", year:"numeric" }); } catch { return s; } };
     let descripcion_servicio = "";
     if (tab === "renta") {
-      descripcion_servicio = `Renta de vehículo${vehName ? " " + vehName : ""} por el período comprendido del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}, por un total de ${diasCalc} día(s) de servicio.`;
+      const vehs = [vehName, selVeh2].filter(Boolean);
+      const extras = [inclPiloto && "piloto", inclHospedaje && "hospedaje", inclAlimentacion && "alimentación"].filter(Boolean);
+      descripcion_servicio = `Renta de${vehs.length > 0 ? " " + vehs.join(" y ") : " vehículo(s)"} por el período comprendido del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}, por un total de ${diasCalc} día(s) de servicio.${extras.length > 0 ? " Incluye " + extras.join(", ") + "." : ""}`;
     } else {
       descripcion_servicio = tf.descripcion_servicio || generarDescripcionDesdeItinerario(tf.itinerario) || `Traslado desde ${orig || "—"} hacia ${dest || "—"}, programado del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"} por ${d2} día(s) de servicio.`;
     }
@@ -183,12 +211,21 @@ export default function PageCalculadora({ showToast, empId }) {
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
       metodo_pago: tab === "renta" ? pago : tf.pago,
       tasa_cambio: tab === "renta" ? exch : parseFloat(tf.exch) || 7.70,
-      subtotal: tab === "renta" ? sub : tsub,
-      total_iva: tab === "renta" ? ivaAmt : tiva,
-      recargo_tarjeta: tab === "renta" ? recTC : ttcr,
-      total_gtq: tab === "renta" ? tot : ttot,
-      total_usd: (tab === "renta" ? tot : ttot) / (tab === "renta" ? exch : parseFloat(tf.exch) || 7.70),
+      subtotal: tab === "renta" ? subTotalRenta : tsub,
+      total_iva: tab === "renta" ? ivaAmtRenta : tiva,
+      recargo_tarjeta: tab === "renta" ? recTCRenta : ttcr,
+      total_gtq: tab === "renta" ? totRenta : ttot,
+      total_usd: (tab === "renta" ? totRenta : ttot) / (tab === "renta" ? exch : parseFloat(tf.exch) || 7.70),
       vehiculo_nombre: vehName,
+      vehiculo_nombre2: tab === "renta" ? (selVeh2 || "") : "",
+      incluye_piloto: tab === "renta" ? inclPiloto : false,
+      incluye_hospedaje: tab === "renta" ? inclHospedaje : false,
+      incluye_alimentacion: tab === "renta" ? inclAlimentacion : false,
+      costo_piloto_dia: tab === "renta" ? (costoPiloto || 0) : 0,
+      costo_hospedaje_dia: tab === "renta" ? (costoHospedaje || 0) : 0,
+      costo_alimentacion_dia: tab === "renta" ? (costoAlimentacion || 0) : 0,
+      extras_renta: tab === "renta" ? (variosRenta || 0) : 0,
+      costo_segundo_vehiculo: tab === "renta" ? rate2 : 0,
       estado,
       km_total: tkm,
       costo_vehiculo: tab === "renta" ? rate : (parseFloat(tf.veh) || 0),
@@ -269,7 +306,7 @@ export default function PageCalculadora({ showToast, empId }) {
                   {diasCalc} dia{diasCalc !== 1 ? "s" : ""}
                 </div>
               </Fld>
-              <Fld label="VEHICULO">
+              <Fld label="VEHÍCULO 1">
                 <select style={S.sel} value={selVeh} onChange={e => setSelVeh(e.target.value)}>
                   <option value="">Seleccionar...</option>
                   <optgroup label="Catalogo">
@@ -287,6 +324,67 @@ export default function PageCalculadora({ showToast, empId }) {
                   )}
                 </select>
               </Fld>
+              <Fld label="VEHÍCULO 2 (opcional)">
+                <select style={S.sel} value={selVeh2} onChange={e => setSelVeh2(e.target.value)}>
+                  <option value="">No usar</option>
+                  <optgroup label="Catalogo">
+                    {CATALOGO.map(v => <option key={"cat2_"+v.id} value={v.nombre}>{v.nombre} — Q{fmt(v.dia)}/dia</option>)}
+                  </optgroup>
+                  {flotaVehiculos.length > 0 && (
+                    <optgroup label="Flota">
+                      {flotaVehiculos.map(v => {
+                        const nom = `${v.marca||""} ${v.modelo||""}`.trim();
+                        if (!nom) return null;
+                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
+                        return <option key={"fl2_"+nom} value={nom}>{nom}{p}</option>;
+                      })}
+                    </optgroup>
+                  )}
+                </select>
+              </Fld>
+
+              <div style={{ background: T.surf, borderRadius: 10, padding: "10px 12px", border: `1px solid ${T.bord}44` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 8, letterSpacing: 0.5 }}>EXTRAS</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input type="checkbox" id="inclPiloto" checked={inclPiloto} onChange={e => setInclPiloto(e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: "pointer" }} />
+                    <label htmlFor="inclPiloto" style={{ fontSize: 13, color: T.sub, cursor: "pointer", minWidth: 80 }}>Piloto</label>
+                    {inclPiloto && (
+                      <input style={{ ...S.inp, width: 120, fontSize: 12 }} type="number" step="0.01"
+                        value={costoPiloto} onChange={e => setCostoPiloto(parseFloat(e.target.value) || 0)}
+                        placeholder="Q/día" />
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input type="checkbox" id="inclHospedaje" checked={inclHospedaje} onChange={e => setInclHospedaje(e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: "pointer" }} />
+                    <label htmlFor="inclHospedaje" style={{ fontSize: 13, color: T.sub, cursor: "pointer", minWidth: 80 }}>Hospedaje</label>
+                    {inclHospedaje && (
+                      <input style={{ ...S.inp, width: 120, fontSize: 12 }} type="number" step="0.01"
+                        value={costoHospedaje} onChange={e => setCostoHospedaje(parseFloat(e.target.value) || 0)}
+                        placeholder="Q/día" />
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <input type="checkbox" id="inclAlimentacion" checked={inclAlimentacion} onChange={e => setInclAlimentacion(e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: "pointer" }} />
+                    <label htmlFor="inclAlimentacion" style={{ fontSize: 13, color: T.sub, cursor: "pointer", minWidth: 80 }}>Alimentación</label>
+                    {inclAlimentacion && (
+                      <input style={{ ...S.inp, width: 120, fontSize: 12 }} type="number" step="0.01"
+                        value={costoAlimentacion} onChange={e => setCostoAlimentacion(parseFloat(e.target.value) || 0)}
+                        placeholder="Q/día" />
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <label style={{ fontSize: 13, color: T.sub, minWidth: 92 }}>Varios (Q)</label>
+                    <input style={{ ...S.inp, width: 120, fontSize: 12 }} type="number" step="0.01"
+                      value={variosRenta} onChange={e => setVariosRenta(parseFloat(e.target.value) || 0)}
+                      placeholder="Monto Q" />
+                  </div>
+                </div>
+              </div>
+
               <Fld label="IVA">
                 <select style={S.sel} value={iva} onChange={e => setIva(parseInt(e.target.value))}>
                   <option value={12}>12% Regimen General</option>
@@ -476,20 +574,26 @@ export default function PageCalculadora({ showToast, empId }) {
             <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Resumen del presupuesto</div>
             {tab === "renta" ? (
               <>
-                {selVeh && <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{selVeh.nombre} · {diasCalc} dia{diasCalc !== 1 ? "s" : ""}</div>}
+                {selVeh && <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>{selVeh}{selVeh2 ? " + " + selVeh2 : ""} · {diasCalc} dia{diasCalc !== 1 ? "s" : ""}</div>}
                 <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-                  <Row l="Tarifa" v={"Q " + fmt(rate) + "/dia"} />
-                  <Row l="Subtotal" v={"Q " + fmt(sub)} />
-                  <Row l={`IVA ${iva}%`} v={"Q " + fmt(ivaAmt)} />
-                  {conTC && <Row l="Recargo tarjeta (5%)" v={"Q " + fmt(recTC)} color={T.sec} />}
+                  {selVeh && <Row l={`${selVeh}` + (rate ? ` (Q${fmt(rate)}/día)` : "")} v={"Q " + fmt(sub)} />}
+                  {selVeh2 && <Row l={`${selVeh2}` + (rate2 ? ` (Q${fmt(rate2)}/día)` : "")} v={"Q " + fmt(sub2)} />}
+                  {inclPiloto && <Row l={`Piloto (x${diasCalc} día${diasCalc !== 1 ? "s" : ""})`} v={"Q " + fmt(diasCalc * (costoPiloto || 0))} />}
+                  {inclHospedaje && <Row l={`Hospedaje (x${diasCalc} día${diasCalc !== 1 ? "s" : ""})`} v={"Q " + fmt(diasCalc * (costoHospedaje || 0))} />}
+                  {inclAlimentacion && <Row l={`Alimentación (x${diasCalc} día${diasCalc !== 1 ? "s" : ""})`} v={"Q " + fmt(diasCalc * (costoAlimentacion || 0))} />}
+                  {parseFloat(variosRenta) > 0 && <Row l="Varios" v={"Q " + fmt(variosRenta)} />}
+                  <div style={{ borderTop: `1px solid ${T.bord}`, margin: "6px 0" }} />
+                  <Row l="Subtotal" v={"Q " + fmt(subTotalRenta)} bold />
+                  <Row l={`IVA ${iva}%`} v={"Q " + fmt(ivaAmtRenta)} />
+                  {conTC && <Row l="Recargo tarjeta (5%)" v={"Q " + fmt(recTCRenta)} color={T.sec} />}
                 </div>
                 <div style={{ background: T.accDim, border: `1px solid ${T.acc}55`, borderRadius: 10, padding: "12px 16px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, fontWeight: 800, color: T.acc }}>
                     <span>{conTC ? "Con tarjeta" : "TOTAL"}</span>
-                    <span>Q {fmt(tot)}</span>
+                    <span>Q {fmt(totRenta)}</span>
                   </div>
-                  {conTC && <div style={{ fontSize: 12, color: T.sub }}>Efectivo: Q {fmt(base)}</div>}
-                  <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>$ {fmt(exch > 0 ? tot / exch : 0)} USD</div>
+                  {conTC && <div style={{ fontSize: 12, color: T.sub }}>Efectivo: Q {fmt(baseRenta)}</div>}
+                  <div style={{ fontSize: 12, color: T.sub, marginTop: 3 }}>$ {fmt(exch > 0 ? totRenta / exch : 0)} USD</div>
                 </div>
               </>
             ) : (
