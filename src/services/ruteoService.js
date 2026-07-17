@@ -39,6 +39,43 @@ export async function geocodificar(query) {
   }
 }
 
+// Reverse geocoding: coordenadas → dirección (Nominatim /reverse)
+export async function reverseGeocode(lat, lng) {
+  if (lat == null || lng == null) return null;
+  const ahora = Date.now();
+  if (ahora - ultimaGeo < 1100) await new Promise(r => setTimeout(r, 1100 - (ahora - ultimaGeo)));
+  ultimaGeo = Date.now();
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+      headers: { "User-Agent": "TzununAutoRentas/1.0" },
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || j.error) return null;
+    const nombre = j.name || j.address?.road || j.address?.town || j.address?.city || j.display_name?.split(",")[0]?.trim() || `${lat}, ${lng}`;
+    return {
+      nombre,
+      direccion: j.display_name || nombre,
+      lat: parseFloat(j.lat) || lat,
+      lng: parseFloat(j.lon) || lng,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Detecta si un texto parece coordenadas (ej: "14.6328, -90.5069" o "14.6328 -90.5069")
+const RE_COORDS = /^\s*([+-]?\d+\.?\d*)\s*[,;\s]+\s*([+-]?\d+\.?\d*)\s*$/;
+export function esCoordenadas(texto) {
+  if (!texto?.trim()) return null;
+  const m = texto.trim().match(RE_COORDS);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
 // Haversine ≈ km entre dos coordenadas (para fallback)
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;

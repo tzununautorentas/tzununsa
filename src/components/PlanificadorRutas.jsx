@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { T, S, fmt } from '../config.js';
 import { DEPARTAMENTOS, munisByDepto, getMuni } from '../data/municipios.js';
-import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar } from '../services/ruteoService.js';
+import { consultarOSRM, distanciaHaversine, calcularCombustible, estimarDias, geocodificar, reverseGeocode, esCoordenadas } from '../services/ruteoService.js';
 import { listarUbicaciones, guardarUbicacion, eliminarUbicacion } from '../services/ubicacionesService.js';
 import MapaRuta from './MapaRuta.jsx';
 
@@ -51,7 +51,14 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
   const buscarDireccion = async (q) => {
     if (!q?.trim()) { setSugs(null); return; }
     setBuscando(true);
-    const r = await geocodificar(q);
+    const coords = esCoordenadas(q);
+    let r;
+    if (coords) {
+      const resultado = await reverseGeocode(coords.lat, coords.lng);
+      r = resultado ? [resultado] : [];
+    } else {
+      r = await geocodificar(q);
+    }
     setSugs(r);
     setShowSugs(true);
     setBuscando(false);
@@ -204,7 +211,18 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
                 type="number" step="any" value={punto._lngManual || ""}
                 onChange={e => cambiar("_lngManual", e.target.value)} placeholder="Lng. manual" />
               {punto._latManual && punto._lngManual && (
-                <button type="button" onClick={() => { cambiar("lat", parseFloat(punto._latManual)); cambiar("lng", parseFloat(punto._lngManual)); }}
+                <button type="button" onClick={async () => {
+                  const lat = parseFloat(punto._latManual);
+                  const lng = parseFloat(punto._lngManual);
+                  if (isNaN(lat) || isNaN(lng)) return;
+                  cambiar("lat", lat);
+                  cambiar("lng", lng);
+                  const res = await reverseGeocode(lat, lng);
+                  if (res) {
+                    cambiar("nombre", res.nombre);
+                    cambiar("direccion", res.direccion);
+                  }
+                }}
                   style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Fijar</button>
               )}
             </div>
