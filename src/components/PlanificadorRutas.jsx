@@ -55,12 +55,18 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
     let r;
     if (coords) {
       const resultado = await reverseGeocode(coords.lat, coords.lng);
-      r = resultado ? [resultado] : [];
+      if (resultado) {
+        onChange(idx, { ...punto, tipo: "direccion", direccion: resultado.direccion, nombre: resultado.nombre, lat: resultado.lat, lng: resultado.lng });
+      } else {
+        onChange(idx, { ...punto, tipo: "direccion", direccion: `${coords.lat}, ${coords.lng}`, nombre: `${coords.lat}, ${coords.lng}`, lat: coords.lat, lng: coords.lng });
+      }
+      setSugs(null);
+      setShowSugs(false);
     } else {
       r = await geocodificar(q);
+      setSugs(r);
+      setShowSugs(true);
     }
-    setSugs(r);
-    setShowSugs(true);
     setBuscando(false);
   };
 
@@ -177,6 +183,15 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
             <input style={inpBase} value={punto.direccion || ""}
               onChange={e => { setSugs(null); onChange(idx, { ...punto, direccion: e.target.value, nombre: e.target.value, lat: null, lng: null }); }}
               onFocus={() => { if (sugs && sugs.length > 0) setShowSugs(true); }}
+              onBlur={e => {
+                const q = e.target.value?.trim();
+                if (q && esCoordenadas(q) && !punto.lat) {
+                  const c = esCoordenadas(q);
+                  reverseGeocode(c.lat, c.lng).then(res => {
+                    if (res) onChange(idx, { ...punto, tipo: "direccion", direccion: res.direccion, nombre: res.nombre, lat: res.lat, lng: res.lng });
+                  });
+                }
+              }}
               placeholder="Hotel, oficina, dirección..." />
             <button type="button" onClick={() => buscarDireccion(punto.direccion)}
               disabled={buscando || !punto.direccion?.trim()}
@@ -202,31 +217,28 @@ const PuntoSelector = memo(function PuntoSelector({ idx, punto, onChange, onRemo
           {showSugs && sugs && sugs.length === 0 && punto.direccion?.trim() && (
             <div style={{ padding: "8px 12px", fontSize: 11, color: T.mut }}>Sin resultados. Usa coordenadas o cambia a modo manual.</div>
           )}
-          {punto.direccion && !punto.lat && (
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <input style={{ ...inpBase, width: "50%", fontSize: 10, padding: "4px 8px" }}
-                type="number" step="any" value={punto._latManual || ""}
-                onChange={e => cambiar("_latManual", e.target.value)} placeholder="Lat. manual" />
-              <input style={{ ...inpBase, width: "50%", fontSize: 10, padding: "4px 8px" }}
-                type="number" step="any" value={punto._lngManual || ""}
-                onChange={e => cambiar("_lngManual", e.target.value)} placeholder="Lng. manual" />
-              {punto._latManual && punto._lngManual && (
-                <button type="button" onClick={async () => {
-                  const lat = parseFloat(punto._latManual);
-                  const lng = parseFloat(punto._lngManual);
-                  if (isNaN(lat) || isNaN(lng)) return;
-                  cambiar("lat", lat);
-                  cambiar("lng", lng);
-                  const res = await reverseGeocode(lat, lng);
-                  if (res) {
-                    cambiar("nombre", res.nombre);
-                    cambiar("direccion", res.direccion);
-                  }
-                }}
-                  style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Fijar</button>
-              )}
-            </div>
-          )}
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <input style={{ ...inpBase, width: "50%", fontSize: 10, padding: "4px 8px" }}
+              type="number" step="any" value={punto._latManual || ""}
+              onChange={e => cambiar("_latManual", e.target.value)} placeholder="Latitud" />
+            <input style={{ ...inpBase, width: "50%", fontSize: 10, padding: "4px 8px" }}
+              type="number" step="any" value={punto._lngManual || ""}
+              onChange={e => cambiar("_lngManual", e.target.value)} placeholder="Longitud" />
+            {punto._latManual && punto._lngManual && (
+              <button type="button" onClick={async () => {
+                const lat = parseFloat(punto._latManual);
+                const lng = parseFloat(punto._lngManual);
+                if (isNaN(lat) || isNaN(lng)) return;
+                const res = await reverseGeocode(lat, lng);
+                if (res) {
+                  onChange(idx, { ...punto, tipo: "direccion", lat, lng, nombre: res.nombre, direccion: res.direccion });
+                } else {
+                  onChange(idx, { ...punto, tipo: "direccion", lat, lng, nombre: `${lat}, ${lng}`, direccion: `${lat}, ${lng}` });
+                }
+              }}
+                style={{ ...S.btn("primary"), fontSize: 10, padding: "4px 8px", pointerEvents: "auto" }}>Fijar</button>
+            )}
+          </div>
           {/* Guardar ubicación */}
           {empId && punto.lat && punto.lng && (
             <div style={{ marginTop: 6 }}>
