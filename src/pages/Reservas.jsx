@@ -1,6 +1,6 @@
 // src/pages/Reservas.jsx
 import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES, siguienteNumero } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES, siguienteNumero } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -50,6 +50,7 @@ const EMPTY_R = {
 function FormReserva({ initial, onSave, onCancel, empId }) {
   const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0, itinerario: initial.itinerario || "" } : { ...EMPTY_R });
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
+  const [empleados, setEmpleados] = useState([]);
   const [saving, setSaving] = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
@@ -58,6 +59,15 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       try {
         const res = await dbGet("vehiculos", "&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes&estado=eq.disponible&limit=100");
         if (res) setFlotaVehiculos(res);
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dbGet("empleados", "&select=id,nombre,puesto,estado&estado=eq.activo&order=nombre.asc&limit=200");
+        if (res) setEmpleados(res);
       } catch {}
     })();
   }, []);
@@ -155,7 +165,14 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
                 </select>
               </Fld>
               <Fld label="CONDUCTOR / PILOTO">
-                <input style={S.inp} value={f.conductor_nombre} onChange={e => sf("conductor_nombre", e.target.value)} placeholder="Nombre del conductor" />
+                <select style={S.sel} value={f.conductor_nombre} onChange={e => sf("conductor_nombre", e.target.value)}>
+                  <option value="">— Sin asignar —</option>
+                  {empleados.map(emp => (
+                    <option key={emp.id} value={emp.nombre}>
+                      {emp.nombre}{emp.puesto ? ` (${emp.puesto})` : ""}
+                    </option>
+                  ))}
+                </select>
               </Fld>
             </div>
           </div>

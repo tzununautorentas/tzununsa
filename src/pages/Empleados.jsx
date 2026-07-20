@@ -80,7 +80,7 @@ export default function PageEmpleados({ showToast, empId }) {
   const [busqueda, setBusqueda] = useState("");
   const [filtroTipo, setFiltroTipo]   = useState("todos");
   const [filtroEst,  setFiltroEst]    = useState("todos");
-  const [historial,  setHistorial]    = useState({ gastos: [], pagos: [] });
+  const [historial,  setHistorial]    = useState({ gastos: [], pagos: [], asignaciones: [] });
   const [loadHist,   setLoadHist]     = useState(false);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
@@ -103,12 +103,13 @@ export default function PageEmpleados({ showToast, empId }) {
   const cargarHistorial = async (nombre) => {
     setLoadHist(true);
     try {
-      const [g, p] = await Promise.all([
+      const [g, p, r] = await Promise.all([
         api(`/gastos?empleado_nombre=eq.${encodeURIComponent(nombre)}&order=fecha.desc&limit=30`).catch(() => []),
         api(`/pagos?cliente_nombre=eq.${encodeURIComponent(nombre)}&order=fecha.desc&limit=30`).catch(() => []),
+        api(`/reservas?conductor_nombre=eq.${encodeURIComponent(nombre)}&order=created_at.desc&limit=50`).catch(() => []),
       ]);
-      setHistorial({ gastos: g || [], pagos: p || [] });
-    } catch { setHistorial({ gastos: [], pagos: [] }); }
+      setHistorial({ gastos: g || [], pagos: p || [], asignaciones: r || [] });
+    } catch { setHistorial({ gastos: [], pagos: [], asignaciones: [] }); }
     finally { setLoadHist(false); }
   };
 
@@ -324,9 +325,9 @@ export default function PageEmpleados({ showToast, empId }) {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
           {[
-            { l: "Gastos registrados", v: historial.gastos.length, c: T.red  },
-            { l: "Total gastos",       v: `Q ${fmt(totalGastos)}`, c: T.red  },
-            { l: "Fecha ingreso",      v: fmtD(e.fecha_ingreso),   c: T.acc  },
+            { l: "Asignaciones",       v: historial.asignaciones.length, c: T.blue },
+            { l: "Gastos registrados", v: historial.gastos.length,       c: T.red  },
+            { l: "Fecha ingreso",      v: fmtD(e.fecha_ingreso),         c: T.acc  },
           ].map((s, i) => (
             <div key={i} style={{ ...S.card, textAlign: "center", padding: 14 }}>
               <div style={{ fontSize: 10, color: T.mut, marginBottom: 4 }}>{s.l}</div>
@@ -352,6 +353,34 @@ export default function PageEmpleados({ showToast, empId }) {
             </div>
           ))}
         </div>
+
+        {/* Asignaciones (reservas como piloto) */}
+        {historial.asignaciones.length > 0 && (
+          <div style={{ ...S.card, marginTop: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>
+              ASIGNACIONES · SERVICIOS ASIGNADOS ({historial.asignaciones.length})
+            </div>
+            {loadHist ? <Spinner /> : historial.asignaciones.map(r => (
+              <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${T.bord}` }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>
+                    #{r.numero} — {r.cliente_nombre}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.sub }}>
+                    {fmtD(r.fecha_inicio)}{r.fecha_fin ? ` → ${fmtD(r.fecha_fin)}` : ""}
+                    {r.origen || r.destino ? ` · ${r.origen || ""} → ${r.destino || ""}` : ""}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: T.mut, textAlign: "right" }}>
+                  {r.vehiculo_nombre && <div>{r.vehiculo_nombre}</div>}
+                  <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 600, background: T.surf, color: T.sub }}>
+                    {r.estado}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Historial gastos */}
         {historial.gastos.length > 0 && (
