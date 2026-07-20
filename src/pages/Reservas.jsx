@@ -16,9 +16,10 @@ const abrirGoogleCalendar = (r) => {
   const inicio = toGCal(r.fecha_inicio, "080000");
   const fin    = toGCal(r.fecha_fin || r.fecha_inicio, "180000");
   if (!inicio) { alert("La reserva no tiene fecha de inicio"); return; }
-  const title = encodeURIComponent(`Reserva Tz'unun — ${r.cliente_nombre}`);
+  const tipoLabel = r.tipo === "traslado" ? "Traslado" : "Renta de vehículo";
+  const title = encodeURIComponent(`${tipoLabel} — ${r.cliente_nombre}${r.vehiculo_nombre ? ` — ${r.vehiculo_nombre}` : ""}`);
   const det   = encodeURIComponent(
-    `Vehiculo: ${r.vehiculo_nombre || "—"}\nCliente: ${r.cliente_nombre}\nTotal: Q ${fmt(r.total_gtq || 0)}\nEstado: ${r.estado}`
+    `Cliente: ${r.cliente_nombre}\nVehiculo: ${r.vehiculo_nombre || "—"}\nTotal: Q ${fmt(r.total_gtq || 0)}\nEstado: ${r.estado}`
   );
   const loc = encodeURIComponent("Guatemala City, Guatemala");
   window.open(
