@@ -233,7 +233,7 @@ export function generarDescripcionDesdeItinerario(itinerario) {
   }
   fechas.sort();
   const periodo = fechas.length >= 2 ? `del ${fmt(fechas[0])} al ${fmt(fechas[fechas.length - 1])}` : fechas.length === 1 ? `el ${fmt(fechas[0])}` : "";
-  return `Servicio de transporte corporativo con ${itinerario.vehiculos.length} vehículo(s): ${partes.join("; ")}${periodo ? ", programado " + periodo : ""}.`;
+  return `Servicio de transporte con ${itinerario.vehiculos.length} vehículo(s): ${partes.join("; ")}${periodo ? ", programado " + periodo : ""}.`;
 }
 
 export function calcularTotalesItinerario(itinerario, ivaPct = 5) {

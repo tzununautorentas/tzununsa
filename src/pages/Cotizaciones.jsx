@@ -51,7 +51,7 @@ async function generarPDFPremium(d, empId, mode = "download") {
   const empData = await dbGet("empresas", `&select=*&id=eq.${empId}`).then(dd => dd?.[0] || {});
   const e = {
     nombre:    empData.nombre             || "Tz'unun AutoRentas",
-    eslogan:   empData.eslogan            || "Servicios de Movilidad Corporativa",
+    eslogan:   empData.eslogan            || "Servicios de Movilidad",
     direccion: empData.direccion          || "2da. Av. 0-68 Apto. A, Col. Bran, Zona 3, Guatemala",
     telefono:  empData.telefono           || "502-31221538",
     email:     empData.email              || "tzununautorentas@gmail.com",
@@ -61,7 +61,7 @@ async function generarPDFPremium(d, empId, mode = "download") {
     banco1:    empData.banco1             || "Banco Industrial — Cta. Monetaria No. 853-000016-8",
     banco2:    empData.banco2             || "Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475",
     firmante:  empData.firmante           || "Oscar Gálvez",
-    cargo_firmante: empData.cargo_firmante || "Coordinador de Servicios Corporativos",
+    cargo_firmante: empData.cargo_firmante || "Coordinador de Servicios",
     tel_firmante: empData.tel_firmante    || "+502 3122 1538",
     firma_digital: empData.firma_digital  || "",
     titulo_footer: empData.titulo_footer  || "Conduciendo confianza, llegando más lejos.",
@@ -322,6 +322,10 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 <div class="section">
   <div class="st">RESUMEN ECON&Oacute;MICO</div>
   <div class="inv-box">
+    ${Array.isArray(d.partidas) && d.partidas.length > 0 ? d.partidas.filter(p => p.descripcion && p.descripcion.trim()).map(p => {
+      const total = (parseInt(p.cantidad)||0) * (parseFloat(p.precio)||0);
+      return total > 0 ? `<div class="inv-row"><span>${p.descripcion}</span><span>Q ${fmt(total)}</span></div>` : "";
+    }).join("") : d.vehiculo ? `<div class="inv-row"><span>${d.vehiculo}</span><span></span></div>` : ""}
     <div class="inv-row"><span style="font-weight:600;color:#1B2D5C">Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
     ${mostrarIVA ? `<div class="inv-row iva"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
@@ -464,6 +468,8 @@ function makePDFData(r) {
   const total_ef = parseFloat(r.total_gtq) || 0;
   let svc = {};
   try { svc = JSON.parse(r.servicios_incluidos || "{}"); } catch {}
+  let partidas = [];
+  try { partidas = svc.partidas || JSON.parse(r.partidas || "[]"); } catch {}
   return {
     numero: r.numero, fecha: r.fecha_emision || today(), fecha_vence: r.fecha_vence,
     cliente: r.cliente_nombre, codigo: r.cliente_codigo,
@@ -491,6 +497,7 @@ function makePDFData(r) {
     carta_poder: !!r.carta_poder,
     carta_poder_costo: parseFloat(r.carta_poder_costo) || 0,
     itinerario: r.itinerario || "",
+    partidas,
   };
 }
 

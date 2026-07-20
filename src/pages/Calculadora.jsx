@@ -25,7 +25,7 @@ const generarSaludo = (tipo, nombre) => {
     case 'ong':
       return "Estimados representantes de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Agradecemos la oportunidad de presentar nuestra propuesta de movilidad y log\u00edstica para el servicio solicitado.";
     default:
-      return "Estimados se\u00f1ores de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Nos complace presentar nuestra propuesta de servicios de movilidad corporativa.";
+      return "Estimados se\u00f1ores de " + nom + ": Reciban un cordial saludo de Transportes Tz'unun. Nos complace presentar nuestra propuesta de servicios de movilidad.";
   }
 };
 
@@ -60,6 +60,11 @@ export default function PageCalculadora({ showToast, empId }) {
   const [costoHospedaje, setCostoHospedaje] = useState(0);
   const [costoAlimentacion, setCostoAlimentacion] = useState(0);
   const [variosRenta, setVariosRenta] = useState(0);
+  const [partidasRenta, setPartidasRenta] = useState([]);
+
+  const agregarPartida = () => setPartidasRenta(p => [...p, { _id: Date.now() + Math.random(), descripcion: "", cantidad: 1, precio: 0 }]);
+  const editarPartida = (id, campo, val) => setPartidasRenta(p => p.map(i => i._id === id ? { ...i, [campo]: val } : i));
+  const eliminarPartida = (id) => setPartidasRenta(p => p.filter(i => i._id !== id));
 
   useEffect(() => {
     (async () => {
@@ -144,8 +149,9 @@ export default function PageCalculadora({ showToast, empId }) {
   })();
   const rate2   = vehSeleccionado2 ? tarifaFn(vehSeleccionado2, diasCalc) : 0;
   const sub2    = diasCalc * rate2;
+  const totalPartidas = partidasRenta.reduce((s, i) => s + ((parseInt(i.cantidad) || 0) * (parseFloat(i.precio) || 0)), 0);
   const extrasTotal = (inclPiloto ? diasCalc * (costoPiloto || 0) : 0) + (inclHospedaje ? diasCalc * (costoHospedaje || 0) : 0) + (inclAlimentacion ? diasCalc * (costoAlimentacion || 0) : 0) + (parseFloat(variosRenta) || 0);
-  const subTotalRenta   = sub + sub2 + extrasTotal;
+  const subTotalRenta   = sub + sub2 + extrasTotal + totalPartidas;
   const ivaAmtRenta     = Math.round(subTotalRenta * iva / 100 * 100) / 100;
   const baseRenta       = subTotalRenta + ivaAmtRenta;
   const recTCRenta      = conTC ? Math.round(baseRenta * 0.05 * 100) / 100 : 0;
@@ -236,6 +242,19 @@ export default function PageCalculadora({ showToast, empId }) {
       carta_poder: tab === "renta" ? false : tf.carta_poder,
       carta_poder_costo: tab === "renta" ? 0 : cpCost,
       itinerario: tab === "renta" ? "" : JSON.stringify(tf.itinerario),
+      servicios_incluidos: JSON.stringify({
+        partidas: tab === "renta"
+          ? [
+              ...(selVeh && rate > 0 ? [{ descripcion: `${selVeh} (${diasCalc} día${diasCalc !== 1 ? "s" : ""} x Q${fmt(rate)}/día)`, cantidad: diasCalc, precio: rate }] : []),
+              ...(selVeh2 && rate2 > 0 ? [{ descripcion: `${selVeh2} (${diasCalc} día${diasCalc !== 1 ? "s" : ""} x Q${fmt(rate2)}/día)`, cantidad: diasCalc, precio: rate2 }] : []),
+              ...(inclPiloto && costoPiloto > 0 ? [{ descripcion: "Servicio de piloto", cantidad: diasCalc, precio: costoPiloto }] : []),
+              ...(inclHospedaje && costoHospedaje > 0 ? [{ descripcion: "Hospedaje", cantidad: diasCalc, precio: costoHospedaje }] : []),
+              ...(inclAlimentacion && costoAlimentacion > 0 ? [{ descripcion: "Alimentación", cantidad: diasCalc, precio: costoAlimentacion }] : []),
+              ...(variosRenta > 0 ? [{ descripcion: "Varios", cantidad: 1, precio: variosRenta }] : []),
+              ...partidasRenta,
+            ]
+          : [],
+      }),
     };
     const r = await dbIns("cotizaciones", p);
     if (r && !r.error) showToast(estado === "enviada" ? "Cotizacion guardada" : "Borrador guardado");
@@ -383,6 +402,34 @@ export default function PageCalculadora({ showToast, empId }) {
                       placeholder="Monto Q" />
                   </div>
                 </div>
+              </div>
+
+              <div style={{ background: T.surf, borderRadius: 10, padding: "10px 12px", border: `1px solid ${T.bord}44` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.acc, marginBottom: 8, letterSpacing: 0.5 }}>PARTIDAS / CONCEPTOS</div>
+                {partidasRenta.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 6 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 50px 70px 70px 30px", gap: 4, fontSize: 9, fontWeight: 600, color: T.mut, padding: "2px 4px" }}>
+                      <span>Descripción</span><span style={{ textAlign: "center" }}>Días</span><span style={{ textAlign: "right" }}>Q/día</span><span style={{ textAlign: "right" }}>Total</span><span></span>
+                    </div>
+                    {partidasRenta.map(p => (
+                      <div key={p._id} style={{ display: "grid", gridTemplateColumns: "1fr 50px 70px 70px 30px", gap: 4, alignItems: "center" }}>
+                        <input style={{ ...S.inp, fontSize: 11, padding: "3px 6px" }} value={p.descripcion}
+                          onChange={e => editarPartida(p._id, "descripcion", e.target.value)} placeholder="Concepto..." />
+                        <input style={{ ...S.inp, fontSize: 11, padding: "3px 6px", textAlign: "center" }} type="number" min="0" value={p.cantidad}
+                          onChange={e => editarPartida(p._id, "cantidad", e.target.value)} />
+                        <input style={{ ...S.inp, fontSize: 11, padding: "3px 6px", textAlign: "right" }} type="number" step="0.01" min="0" value={p.precio}
+                          onChange={e => editarPartida(p._id, "precio", e.target.value)} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: T.acc, textAlign: "right" }}>
+                          Q{fmt((parseInt(p.cantidad)||0) * (parseFloat(p.precio)||0))}
+                        </span>
+                        <button onClick={() => eliminarPartida(p._id)} style={{ ...S.btn("danger"), padding: "2px 5px", fontSize: 9, pointerEvents: "auto" }}>X</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={agregarPartida} style={{ ...S.btn("primary"), fontSize: 10, padding: "3px 10px", pointerEvents: "auto" }}>
+                  + Agregar concepto
+                </button>
               </div>
 
               <Fld label="IVA">
@@ -582,6 +629,10 @@ export default function PageCalculadora({ showToast, empId }) {
                   {inclHospedaje && <Row l={`Hospedaje (x${diasCalc} día${diasCalc !== 1 ? "s" : ""})`} v={"Q " + fmt(diasCalc * (costoHospedaje || 0))} />}
                   {inclAlimentacion && <Row l={`Alimentación (x${diasCalc} día${diasCalc !== 1 ? "s" : ""})`} v={"Q " + fmt(diasCalc * (costoAlimentacion || 0))} />}
                   {parseFloat(variosRenta) > 0 && <Row l="Varios" v={"Q " + fmt(variosRenta)} />}
+                  {partidasRenta.map(p => {
+                    const tot = (parseInt(p.cantidad)||0) * (parseFloat(p.precio)||0);
+                    return tot > 0 ? <Row key={p._id} l={p.descripcion || "Concepto"} v={"Q " + fmt(tot)} /> : null;
+                  })}
                   <div style={{ borderTop: `1px solid ${T.bord}`, margin: "6px 0" }} />
                   <Row l="Subtotal" v={"Q " + fmt(subTotalRenta)} bold />
                   <Row l={`IVA ${iva}%`} v={"Q " + fmt(ivaAmtRenta)} />
@@ -607,7 +658,7 @@ export default function PageCalculadora({ showToast, empId }) {
                         <>
                           {tot.vehiculosResumen.map((vr, i) => (
                             <div key={i} style={{ fontSize: 11, color: T.acc, marginBottom: 4, fontWeight: 600 }}>
-                              {vr.nombre}{vr.piloto ? ` (piloto: ${vr.piloto})` : ""} — {vr.dias}d · {fmt(vr.km)} km · Q{fmt(vr.sub)}
+                              {vr.nombre}{vr.piloto ? ` (${vr.piloto})` : ""} — {vr.dias}d · {fmt(vr.km)} km · Q{fmt(vr.sub)}
                             </div>
                           ))}
                           <div style={{ fontSize: 10, color: T.mut, marginBottom: 8 }}>{Math.round(tot.totalKm)} km totales</div>
