@@ -29,16 +29,17 @@ const abrirGoogleCalendar = (r) => {
 };
 
 // ─── Estados ─────────────────────────────────────────────────────
-const calcDias = (fi, ff) => {
+const calcDias = (fi, ff, hi = "09:00", hf = "09:00") => {
   if (!fi) return 0;
-  const d1 = new Date(fi + "T12:00:00");
-  const d2 = ff ? new Date(ff + "T12:00:00") : d1;
-  return Math.max(1, Math.ceil((d2 - d1) / 86400000));
+  const d1 = new Date(fi + "T" + hi + ":00");
+  const d2 = ff ? new Date(ff + "T" + hf + ":00") : d1;
+  const diff = Math.ceil(Math.max(0, d2 - d1) / 86400000);
+  return Math.max(1, diff);
 };
 
 const EMPTY_R = {
   cliente_nombre: "", tipo: "renta", vehiculo_nombre: "", conductor_nombre: "",
-  fecha_inicio: "", fecha_fin: "", hora_recogida: "08:00",
+  fecha_inicio: "", fecha_fin: "", hora_recogida: "09:00", hora_entrega: "09:00", hora_regreso: "09:00",
   origen: "", destino: "", departamento: "", municipio: "",
   anticipo: "", total_gtq: "", notas: "", tasa_iva: 5,
   metodo_pago: "efectivo", tasa_cambio: 7.70, estado: "pendiente",
@@ -49,7 +50,7 @@ const EMPTY_R = {
 
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
-  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0, itinerario: initial.itinerario || "" } : { ...EMPTY_R });
+  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0, itinerario: initial.itinerario || "", hora_entrega: initial.hora_entrega || "09:00", hora_regreso: initial.hora_regreso || "09:00" } : { ...EMPTY_R });
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -76,7 +77,7 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
   const fromCotizacion = f.cotizacion_id && parseFloat(f.subtotal) > 0;
 
   // Si la reserva viene de una cotizacion, usar valores heredados (no recalcular)
-  const dias = fromCotizacion ? f.dias : calcDias(f.fecha_inicio, f.fecha_fin);
+  const dias = fromCotizacion ? f.dias : calcDias(f.fecha_inicio, f.fecha_fin, f.hora_entrega, f.hora_regreso);
   const vehCat  = CATALOGO.find(v => v.nombre === f.vehiculo_nombre);
   const vehFlota = flotaVehiculos.find(v => `${v.marca||""} ${v.modelo||""}`.trim() === f.vehiculo_nombre);
   const veh = vehCat || (vehFlota && parseFloat(vehFlota.tarifa_dia) > 0 ? { ...vehFlota, dia: parseFloat(vehFlota.tarifa_dia), sem: parseFloat(vehFlota.tarifa_semana)||parseFloat(vehFlota.tarifa_dia), mes: parseFloat(vehFlota.tarifa_mes)||parseFloat(vehFlota.tarifa_dia) } : null);
@@ -187,12 +188,24 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
               <Fld label="FECHA FIN">
                 <input style={S.inp} type="date" value={f.fecha_fin} onChange={e => sf("fecha_fin", e.target.value)} />
               </Fld>
-              <Fld label="HORA RECOGIDA">
-                <input style={S.inp} type="time" value={f.hora_recogida} onChange={e => sf("hora_recogida", e.target.value)} />
-              </Fld>
+              {f.tipo === "renta" ? (
+                <>
+                  <Fld label="HORA ENTREGA">
+                    <input style={S.inp} type="time" value={f.hora_entrega} onChange={e => sf("hora_entrega", e.target.value)} />
+                  </Fld>
+                  <Fld label="HORA REGRESO">
+                    <input style={S.inp} type="time" value={f.hora_regreso} onChange={e => sf("hora_regreso", e.target.value)} />
+                  </Fld>
+                </>
+              ) : (
+                <Fld label="HORA RECOGIDA">
+                  <input style={S.inp} type="time" value={f.hora_recogida} onChange={e => sf("hora_recogida", e.target.value)} />
+                </Fld>
+              )}
               <Fld label="DIAS">
-                <div style={{ ...S.inp, background: T.card, display: "flex", alignItems: "center", fontWeight: 700, color: T.acc }}>
+                <div style={{ ...S.inp, background: T.card, display: "flex", alignItems: "center", fontWeight: 700, color: T.acc, gap: 6 }}>
                   {dias} dia{dias !== 1 ? "s" : ""}
+                  {f.tipo === "renta" && <span style={{ fontSize: 10, color: T.mut }}>({f.hora_entrega} → {f.hora_regreso})</span>}
                 </div>
               </Fld>
             </div>

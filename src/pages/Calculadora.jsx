@@ -4,11 +4,11 @@ import { Fld, BuscadorCliente } from '../components/shared.jsx';
 import PlanificadorRutas from '../components/PlanificadorRutas.jsx';
 import ItinerarioServicio, { generarDescripcionDesdeItinerario, calcularTotalesItinerario, itinerarioToFlat } from '../components/ItinerarioServicio.jsx';
 
-const calcDias = (fi, ff) => {
+const calcDias = (fi, ff, hi = "09:00", hf = "09:00") => {
   if (!fi || !ff) return 1;
-  const d1 = new Date(fi + "T12:00:00");
-  const d2 = new Date(ff + "T12:00:00");
-  const diff = Math.floor((d2 - d1) / 86400000) + 1;
+  const d1 = new Date(fi + "T" + hi + ":00");
+  const d2 = new Date(ff + "T" + hf + ":00");
+  const diff = Math.ceil(Math.max(0, d2 - d1) / 86400000);
   return Math.max(1, diff);
 };
 
@@ -61,6 +61,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const [costoAlimentacion, setCostoAlimentacion] = useState(0);
   const [variosRenta, setVariosRenta] = useState(0);
   const [partidasRenta, setPartidasRenta] = useState([]);
+  const [horaEntrega, setHoraEntrega] = useState("09:00");
+  const [horaRegreso, setHoraRegreso] = useState("09:00");
 
   const agregarPartida = () => setPartidasRenta(p => [...p, { _id: Date.now() + Math.random(), descripcion: "", cantidad: 1, precio: 0 }]);
   const editarPartida = (id, campo, val) => setPartidasRenta(p => p.map(i => i._id === id ? { ...i, [campo]: val } : i));
@@ -116,7 +118,7 @@ export default function PageCalculadora({ showToast, empId }) {
   };
 
   // ─ Renta ─────────────────────────────────────────────────────
-  const diasCalc = fechaInicio && fechaFin ? calcDias(fechaInicio, fechaFin) : dias;
+  const diasCalc = fechaInicio && fechaFin ? calcDias(fechaInicio, fechaFin, horaEntrega, horaRegreso) : dias;
   const tarifaFn = (v, d) => {
     if (!v || d === 0) return 0;
     if (d >= 30) return v.mes;
@@ -194,7 +196,7 @@ export default function PageCalculadora({ showToast, empId }) {
     if (tab === "renta") {
       const vehs = [vehName, selVeh2].filter(Boolean);
       const extras = [inclPiloto && "piloto", inclHospedaje && "hospedaje", inclAlimentacion && "alimentación"].filter(Boolean);
-      descripcion_servicio = `Renta de${vehs.length > 0 ? " " + vehs.join(" y ") : " vehículo(s)"} por el período comprendido del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"}, por un total de ${diasCalc} día(s) de servicio.${extras.length > 0 ? " Incluye " + extras.join(", ") + "." : ""}`;
+      descripcion_servicio = `Renta de${vehs.length > 0 ? " " + vehs.join(" y ") : " vehículo(s)"} del ${fi ? fmtDate(fi) : "—"} a las ${horaEntrega} al ${ff ? fmtDate(ff) : "—"} a las ${horaRegreso}, por ${diasCalc} día(s) de servicio.${extras.length > 0 ? " Incluye " + extras.join(", ") + "." : ""}`;
     } else {
       descripcion_servicio = tf.descripcion_servicio || generarDescripcionDesdeItinerario(tf.itinerario) || `Traslado desde ${orig || "—"} hacia ${dest || "—"}, programado del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"} por ${d2} día(s) de servicio.`;
     }
@@ -244,6 +246,8 @@ export default function PageCalculadora({ showToast, empId }) {
       carta_poder_costo: cpCost,
       itinerario: tab === "renta" ? "" : JSON.stringify(tf.itinerario),
       servicios_incluidos: JSON.stringify({
+        hora_entrega: horaEntrega,
+        hora_regreso: horaRegreso,
         partidas: tab === "renta"
           ? [
               ...(selVeh && rate > 0 ? [{ descripcion: `${selVeh} (${diasCalc} día${diasCalc !== 1 ? "s" : ""} x Q${fmt(rate)}/día)`, cantidad: diasCalc, precio: rate }] : []),
@@ -317,13 +321,21 @@ export default function PageCalculadora({ showToast, empId }) {
                 <input style={S.inp} type="date" value={fechaInicio}
                   onChange={e => setFechaInicio(e.target.value)} />
               </Fld>
+              <Fld label="HORA ENTREGA">
+                <input style={S.inp} type="time" value={horaEntrega}
+                  onChange={e => setHoraEntrega(e.target.value)} />
+              </Fld>
               <Fld label="FECHA FIN">
                 <input style={S.inp} type="date" value={fechaFin}
                   onChange={e => setFechaFin(e.target.value)} />
               </Fld>
+              <Fld label="HORA REGRESO">
+                <input style={S.inp} type="time" value={horaRegreso}
+                  onChange={e => setHoraRegreso(e.target.value)} />
+              </Fld>
               <Fld label="DIAS">
                 <div style={{ ...S.inp, background: T.card, display: "flex", alignItems: "center", fontWeight: 700, color: T.acc }}>
-                  {diasCalc} dia{diasCalc !== 1 ? "s" : ""}
+                  {diasCalc} dia{diasCalc !== 1 ? "s" : ""} ({horaEntrega} → {horaRegreso})
                 </div>
               </Fld>
               <Fld label="VEHÍCULO 1">
