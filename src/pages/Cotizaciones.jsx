@@ -326,6 +326,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       const total = (parseInt(p.cantidad)||0) * (parseFloat(p.precio)||0);
       return total > 0 ? `<div class="inv-row"><span>${p.descripcion}</span><span>Q ${fmt(total)}</span></div>` : "";
     }).join("") : d.vehiculo ? `<div class="inv-row"><span>${d.vehiculo}</span><span></span></div>` : ""}
+    ${d.carta_poder && d.carta_poder_costo > 0 ? `<div class="inv-row"><span>Carta Poder (viaje internacional)</span><span>Q ${fmt(d.carta_poder_costo)}</span></div>` : ""}
     <div class="inv-row"><span style="font-weight:600;color:#1B2D5C">Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
     ${mostrarIVA ? `<div class="inv-row iva"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
@@ -1022,6 +1023,7 @@ export default function PageCotizaciones({ showToast, empId }) {
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{r.cliente_nombre}</div>
                     {r.cliente_codigo && <div style={{ fontSize: 11, color: T.acc }}>Cod: {r.cliente_codigo}</div>}
                     <div style={{ fontSize: 12, color: T.sub }}>{r.dias}d{r.vehiculo_nombre ? " · " + r.vehiculo_nombre : ""}</div>
+                    {r.fecha_inicio && <div style={{ fontSize: 11, color: T.mut, marginTop: 2 }}>{fmtD(r.fecha_inicio)}{r.fecha_fin ? ` → ${fmtD(r.fecha_fin)}` : ""}</div>}
                     {r.reserva_id && <div style={{ fontSize: 11, color: T.green, marginTop: 2 }}>Reserva vinculada</div>}
                   </div>
                   <div style={{ textAlign: "right" }}>

@@ -256,6 +256,7 @@ export default function PageCalculadora({ showToast, empId }) {
               ...(inclHospedaje && costoHospedaje > 0 ? [{ descripcion: "Hospedaje", cantidad: diasCalc, precio: costoHospedaje }] : []),
               ...(inclAlimentacion && costoAlimentacion > 0 ? [{ descripcion: "Alimentación", cantidad: diasCalc, precio: costoAlimentacion }] : []),
               ...(variosRenta > 0 ? [{ descripcion: "Varios", cantidad: 1, precio: variosRenta }] : []),
+              ...(tf.carta_poder && cpCostRenta > 0 ? [{ descripcion: "Carta Poder (viaje internacional)", cantidad: 1, precio: cpCostRenta }] : []),
               ...partidasRenta,
             ]
           : [],
