@@ -94,13 +94,29 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
     const numero = initial?.numero || await siguienteNumero("RES-", "reservas", empId);
     const nextVersion = (parseInt(f.version) || 1) + 1;
     const payload = {
-      ...f, empresa_id: empId,
+      empresa_id: empId,
       numero,
+      cliente_nombre: f.cliente_nombre,
+      tipo: f.tipo || "renta",
+      vehiculo_nombre: f.vehiculo_nombre || "",
+      conductor_nombre: f.conductor_nombre || "",
+      fecha_inicio: f.fecha_inicio,
+      fecha_fin: f.fecha_fin || "",
+      hora_recogida: f.hora_recogida || "08:00",
+      origen: f.origen || "Guatemala",
+      destino: f.destino || "",
+      departamento: f.departamento || "",
+      municipio: f.municipio || "",
+      anticipo: parseFloat(f.anticipo) || 0,
+      notas: f.notas || "",
+      estado: f.estado || "pendiente",
+      metodo_pago: f.metodo_pago || "efectivo",
+      tasa_iva: f.tasa_iva || 5,
+      tasa_cambio: f.tasa_cambio || 7.70,
       dias, tarifa, subtotal: sub, total_iva: iva, total_gtq: tot,
-      tasa_iva: f.tasa_iva, tasa_cambio: f.tasa_cambio,
-      metodo_pago: f.metodo_pago,
       version: initial?.id ? nextVersion : 1,
     };
+    if (f.cotizacion_id) payload.cotizacion_id = f.cotizacion_id;
     const result = initial?.id
       ? await dbUpd("reservas", initial.id, payload)
       : await dbIns("reservas", payload);
