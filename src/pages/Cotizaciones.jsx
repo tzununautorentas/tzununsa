@@ -95,11 +95,23 @@ async function generarPDFPremium(d, empId, mode = "download") {
   if (d.vehiculo) {
     try {
       const vehiculos = await dbGet("vehiculos", "&select=foto_url,marca,modelo,tipo,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion");
-      const match = vehiculos.find(v => {
-        const vn = `${v.marca || ""} ${v.modelo || ""}`.toLowerCase();
-        const dn = d.vehiculo.toLowerCase();
-        return vn.includes(dn) || dn.includes(vn) || dn.includes((v.marca || "").toLowerCase());
-      });
+      const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+      const dn = norm(d.vehiculo);
+      const match = vehiculos
+        .map(v => {
+          const vn = norm(`${v.marca || ""} ${v.modelo || ""}`);
+          const modelo = norm(v.modelo || "");
+          const marca = norm(v.marca || "");
+          let score = 0;
+          if (dn && vn && dn === vn) score = 100;
+          else if (dn && vn && (dn.includes(vn) || vn.includes(dn))) score = 80;
+          else if (dn && modelo && dn.includes(modelo)) score = 60;
+          else if (dn && marca && dn.includes(marca) && vn && vn.includes(dn)) score = 40;
+          else if (dn && marca && dn.includes(marca)) score = 25;
+          return { v, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score || (b.v.foto_url ? 1 : 0) - (a.v.foto_url ? 1 : 0))[0]?.v;
       if (match) {
         vehTipo = match.tipo || "";
         vehNombreMatch = `${match.marca || ""} ${match.modelo || ""}`.trim();
