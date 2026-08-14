@@ -86,6 +86,8 @@ const EF = {
   foto_dpi: '', foto_licencia: '',
   // Extras
   danos_previos: '', observaciones: '',
+  // Ruta (traslados / servicios)
+  origen: '', destino: '', ruta: '', itinerario: '', descripcion_servicio: '',
   reserva_id: '', cotizacion_id: '',
 };
 
@@ -264,16 +266,28 @@ const generarPDFContrato = (contrato) => {
     .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
     @media print{body{padding:20px 24px}.no-print{display:none}@page{size:A4;margin:15mm}}
   `;
+  const esServicio = ['traslado', 'corporativo', 'logistica'].includes(contrato.tipo);
+  const tituloDoc = {
+    renta:       'CONTRATO DE ARRENDAMIENTO DE VEHICULO',
+    traslado:    'CONTRATO DE SERVICIO DE TRASLADO / VIAJE',
+    corporativo: 'CONTRATO DE SERVICIO CORPORATIVO',
+    logistica:   'CONTRATO DE SERVICIO DE LOGISTICA / CARGA',
+  }[contrato.tipo] || 'CONTRATO DE SERVICIO';
+  const logoURL = window.location.origin + '/icons/Logo_Tzunun_Transp.png';
+
   const html = `
   <!-- HEADER -->
   <div class="header">
-    <div class="brand">
-      <h1>Tz'unun AutoRentas</h1>
-      <p>Servicios de Movilidad · Transporte Corporativo · Logistica</p>
-      <p>Guatemala, Centroamerica</p>
+    <div class="brand" style="display:flex;align-items:center;gap:12px">
+      <img src="${logoURL}" alt="Tz'unun AutoRentas" style="height:50px;width:auto;object-fit:contain" />
+      <div>
+        <h1>Tz'unun AutoRentas</h1>
+        <p>Servicios de Movilidad · Transporte Corporativo · Logistica</p>
+        <p>Guatemala, Centroamerica</p>
+      </div>
     </div>
     <div class="doc-info">
-      <div class="num">CONTRATO DE ARRENDAMIENTO</div>
+      <div class="num">${tituloDoc}</div>
       <p>No. ${contrato.numero || '—'}</p>
       <p>Fecha: ${fmtD(contrato.fecha)}</p>
       <p>Tipo: ${TIPOS.find(t=>t.v===contrato.tipo)?.l || contrato.tipo}</p>
@@ -324,7 +338,7 @@ const generarPDFContrato = (contrato) => {
 
   <!-- III. PLAZO -->
   <div class="section">
-    <div class="section-title">III. Plazo del arrendamiento</div>
+    <div class="section-title">${esServicio ? 'III. Plazo y horarios del servicio' : 'III. Plazo del arrendamiento'}</div>
     <div class="data-box">
       <div class="data-grid">
         <div class="data-item"><label>Fecha y hora de salida</label><span>${fmtD(contrato.fecha_salida)} a las ${contrato.hora_salida || '08:00'} hrs</span></div>
@@ -332,10 +346,28 @@ const generarPDFContrato = (contrato) => {
       </div>
     </div>
     <p style="font-size:10px;color:#64748B;margin-top:8px">
-      Cualquier prorroga debera ser autorizada previamente por EL ARRENDADOR. El incumplimiento en la devolucion
-      generara cargos adicionales y responsabilidades legales aplicables.
+      ${esServicio
+        ? 'El servicio se presta con piloto de EL ARRENDADOR. Cualquier cambio de horario o itinerario debera acordarse previamente y por escrito.'
+        : 'Cualquier prorroga debera ser autorizada previamente por EL ARRENDADOR. El incumplimiento en la devolucion generara cargos adicionales y responsabilidades legales aplicables.'}
     </p>
   </div>
+
+  <!-- III-B. RUTA E ITINERARIO (traslados / servicios) -->
+  ${esServicio ? `
+  <div class="section">
+    <div class="section-title">Ruta e itinerario del servicio</div>
+    <div class="data-box">
+      <div class="data-grid">
+        <div class="data-item"><label>Origen</label><span>${contrato.origen || '—'}</span></div>
+        <div class="data-item"><label>Destino</label><span>${contrato.destino || '—'}</span></div>
+        <div class="data-item"><label>Salida</label><span>${fmtD(contrato.fecha_salida)} a las ${contrato.hora_salida || '08:00'} hrs</span></div>
+        <div class="data-item"><label>Retorno</label><span>${contrato.fecha_retorno ? fmtD(contrato.fecha_retorno) + ' a las ' + (contrato.hora_retorno||'18:00') + ' hrs' : 'Por confirmar'}</span></div>
+        ${contrato.ruta ? `<div class="data-item full"><label>Ruta</label><span>${contrato.ruta}</span></div>` : ''}
+        ${contrato.itinerario ? `<div class="data-item full"><label>Itinerario</label><span>${contrato.itinerario}</span></div>` : ''}
+        ${contrato.descripcion_servicio ? `<div class="data-item full"><label>Descripcion del servicio</label><span>${contrato.descripcion_servicio}</span></div>` : ''}
+      </div>
+    </div>
+  </div>` : ''}
 
   <!-- IV. PAGO -->
   <div class="section">

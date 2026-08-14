@@ -51,10 +51,8 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
   wrapper.style.cssText = "position:fixed;left:0;top:0;width:750px;opacity:0.01;z-index:-1;pointer-events:none;background:#fff;font-family:Arial,Helvetica,sans-serif;";
   wrapper.innerHTML = raw ? html : `<style>${css}</style>${html}`;
   document.body.appendChild(wrapper);
-  console.log("PDF wrapper contenido:", wrapper.innerHTML.substring(0, 200) + "...");
   const imgs = Array.from(wrapper.querySelectorAll("img"));
   if (imgs.length > 0) {
-    console.log("PDF esperando " + imgs.length + " imagenes...");
     await Promise.all(
       imgs.map(img => {
         if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -65,7 +63,6 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
         return new Promise(r => { img.onload = r; img.onerror = r; });
       })
     );
-    console.log("PDF todas las imagenes cargadas");
   }
   await new Promise(r => setTimeout(r, 600));
   // Subir opacidad a 1 justo antes de capturar
@@ -74,19 +71,27 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
 
   const isMobile = window.innerWidth < 768;
   const scale = isMobile ? 1.5 : 2;
-  console.log("PDF wrapper listo — generando con scale=" + scale);
   try {
     const canvas = await window.html2canvas(wrapper, {
-      scale, useCORS: true, allowTaint: true, logging: true,
+      scale, useCORS: true, allowTaint: true, logging: false,
       width: 750,
     });
-    console.log("PDF canvas:", canvas.width + "x" + canvas.height);
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: format || "letter", orientation: orientation || "portrait" });
     const pw = pdf.internal.pageSize.getWidth() - 16;
-    const ph = (canvas.height * pw) / canvas.width;
-    pdf.addImage(imgData, "JPEG", 8, 8, pw, ph, undefined, "FAST");
+    const ph = pdf.internal.pageSize.getHeight() - 16;
+    const cw = canvas.width;
+    const ch = canvas.height;
+    const pxPerMm = cw / pw;
+    const pagePxH = Math.floor(ph * pxPerMm);
+    for (let y0 = 0; y0 < ch; y0 += pagePxH) {
+      if (y0 > 0) pdf.addPage();
+      const cropH = Math.min(pagePxH, ch - y0);
+      const tmp = document.createElement("canvas");
+      tmp.width = cw; tmp.height = cropH;
+      tmp.getContext("2d").drawImage(canvas, 0, y0, cw, cropH, 0, 0, cw, cropH);
+      pdf.addImage(tmp.toDataURL("image/jpeg", 0.92), "JPEG", 8, 8, pw, (cropH * pw) / cw, undefined, "FAST");
+    }
     pdf.save(filename || "documento.pdf");
   } catch (err) {
     console.error("PDF error:", err);
