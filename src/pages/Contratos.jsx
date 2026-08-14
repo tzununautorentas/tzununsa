@@ -40,6 +40,190 @@ const TIPOS = [
 
 const COMBUSTIBLE = ['Lleno', '3/4', '1/2', '1/4', 'Reserva'];
 
+// ─── Arquitectura por tipo de servicio ────────────────────────────
+const SERVICIOS_INC_FLAGS = [
+  { k: 'piloto',       l: 'Conductor / piloto profesional' },
+  { k: 'combustible',  l: 'Combustible correspondiente al servicio' },
+  { k: 'peajes',       l: 'Peajes y casetas de cobro' },
+  { k: 'hospedaje',    l: 'Hospedaje del piloto' },
+  { k: 'alimentacion', l: 'Alimentacion del piloto' },
+  { k: 'seguro',       l: 'Seguro del vehiculo' },
+  { k: 'carta_poder',  l: 'Carta poder' },
+];
+
+function getContractType(serviceType) {
+  const m = { renta: 'renta', traslado: 'traslado', corporativo: 'corporativo', logistica: 'logistica' };
+  return m[serviceType] || 'renta';
+}
+
+function getContractTitle(tipo) {
+  return {
+    renta:       'CONTRATO DE ARRENDAMIENTO DE VEHICULO',
+    traslado:    'CONTRATO DE PRESTACION DE SERVICIOS DE TRANSPORTE DE PASAJEROS',
+    corporativo: 'CONTRATO DE PRESTACION DE SERVICIOS DE TRANSPORTE CORPORATIVO',
+    logistica:   'CONTRATO DE PRESTACION DE SERVICIOS DE TRANSPORTE Y LOGISTICA',
+  }[getContractType(tipo)] || 'CONTRATO DE SERVICIO';
+}
+
+const esServicioTipo = (tipo) => ['traslado', 'corporativo', 'logistica'].includes(getContractType(tipo));
+
+// Cláusulas configurables por tipo de servicio (revisables con asesoría legal)
+const CLAUSULAS = {
+  renta: {
+    tituloPartes:      'Responsabilidades del arrendatario',
+    rolArrendador:     'EL ARRENDADOR',
+    rolArrendatario:   'EL ARRENDATARIO',
+    introProveedor:    '',
+    obligacionesProveedor: [],
+    introCliente:      'EL ARRENDATARIO se compromete a:',
+    obligacionesCliente: [
+      'Utilizar el vehiculo unicamente para fines licitos.',
+      'No conducir bajo efectos de alcohol, drogas o sustancias prohibidas.',
+      'Respetar las leyes de transito vigentes de la Republica de Guatemala.',
+      'No subarrendar ni ceder el vehiculo a terceros no autorizados.',
+      'No sacar el vehiculo del pais sin autorizacion escrita de EL ARRENDADOR.',
+      'No sobrecargar el vehiculo mas alla de su capacidad.',
+      'Devolver el vehiculo en las mismas condiciones en que lo recibe.',
+    ],
+    responsablePor: ['Danos al vehiculo, danos a terceros, multas de transito', 'Perdida de documentos, robo por negligencia, uso indebido'],
+    restricciones: [
+      'Conducir bajo efectos de alcohol, drogas o sustancias prohibidas',
+      'Utilizar el vehiculo para actos ilicitos o transporte de mercancia prohibida',
+      'Fumar dentro del vehiculo',
+      'Cruzar fronteras internacionales sin autorizacion escrita',
+      'Sobrecargar el vehiculo o participar en competencias',
+      'Realizar modificaciones al vehiculo sin autorizacion',
+    ],
+    muestraDeducibles: true,
+    terminacion: ['Incumplimiento de cualquier clausula contractual', 'Uso indebido o actos ilicitos con el vehiculo', 'Falsedad de informacion proporcionada', 'Riesgo inminente para el vehiculo o terceros'],
+  },
+  traslado: {
+    tituloPartes:    'Obligaciones de las partes',
+    rolArrendador:   'EL PRESTADOR DEL SERVICIO',
+    rolArrendatario: 'EL CLIENTE',
+    introProveedor:  "EL PRESTADOR DEL SERVICIO (Tz'unun AutoRentas) se compromete a:",
+    obligacionesProveedor: [
+      'Prestar el servicio de transporte de pasajeros durante las fechas, horarios, rutas y destinos acordados en la cotizacion.',
+      'Proporcionar vehiculo en optimas condiciones mecanicas, de seguridad y con documentacion vigente.',
+      'Asignar conductor propio, debidamente autorizado, manteniendo la operacion y control del vehiculo durante todo el servicio.',
+      'Cubrir el combustible correspondiente al servicio cotizado.',
+      'Coordinar el itinerario, los puntos de abordaje y dar seguimiento durante el servicio.',
+      'Cumplir las disposiciones de transito y migratorias de los paises en ruta.',
+    ],
+    introCliente:    'EL CLIENTE se compromete a:',
+    obligacionesCliente: [
+      'Presentar la documentacion requerida para el viaje (incluidos pasaportes y visas para cruces internacionales).',
+      'Abordar en los puntos y horarios pactados; la espera se sujetara a las condiciones acordadas.',
+      'No subir al vehiculo personas ajenas al grupo contratado.',
+      'No fumar, ingerir alcohol ni sustancias prohibidas a bordo.',
+      'No solicitar desvios o paradas no programadas sin previo acuerdo.',
+      'Cuidar el vehiculo y sus accesorios durante el trayecto.',
+      'Comunicar con antelacion cualquier cambio de itinerario.',
+    ],
+    responsablePor: [],
+    restricciones: [
+      'Transportar pasajeros ajenos al grupo pactado',
+      'Introducir mercancia prohibida o ilegal al vehiculo',
+      'Fumar o consumir alcohol a bordo',
+      'Modificar la ruta o el itinerario sin autorizacion previa',
+      'Sobrecargar el vehiculo mas alla de su capacidad',
+    ],
+    muestraDeducibles: false,
+    terminacion: ['Incumplimiento de cualquier clausula contractual', 'Riesgo inminente para la seguridad de los pasajeros o del vehiculo', 'Falsedad de informacion proporcionada', 'Uso del servicio para fines ilicitos'],
+  },
+  corporativo: {
+    tituloPartes:    'Obligaciones de las partes',
+    rolArrendador:   'EL PRESTADOR DEL SERVICIO',
+    rolArrendatario: 'EL CLIENTE',
+    introProveedor:  "EL PRESTADOR DEL SERVICIO (Tz'unun AutoRentas) se compromete a:",
+    obligacionesProveedor: [
+      'Prestar el transporte corporativo acordado durante el periodo, frecuencia, rutas, zonas y horarios pactados.',
+      'Asignar los vehiculos y conductores indicados, manteniendo la operacion y control de las unidades.',
+      'Mantener las unidades en condiciones optimas, con documentacion y seguro vigentes.',
+      'Garantizar puntualidad y seguimiento durante la vigencia del servicio.',
+      'Cumplir las disposiciones de transito aplicables.',
+    ],
+    introCliente:    'EL CLIENTE se compromete a:',
+    obligacionesCliente: [
+      'Proporcionar la informacion y acceso necesarios para la prestacion del servicio.',
+      'Comunicar con antelacion cambios de horarios, rutas o servicios.',
+      'Utilizar las unidades exclusivamente para el personal autorizado.',
+      'Cumplir con la forma de facturacion y pago acordada.',
+    ],
+    responsablePor: [],
+    restricciones: [
+      'Utilizar las unidades para fines ajenos al servicio contratado',
+      'Ceder o subcontratar el servicio a terceros',
+      'Transportar mercancia prohibida o ilegal',
+      'Fumar o consumir alcohol a bordo',
+      'Sobrecargar las unidades mas alla de su capacidad',
+    ],
+    muestraDeducibles: false,
+    terminacion: ['Incumplimiento de cualquier clausula contractual', 'Falsedad de informacion proporcionada', 'Impago en los terminos acordados', 'Uso del servicio para fines ilicitos'],
+  },
+  logistica: {
+    tituloPartes:    'Obligaciones de las partes',
+    rolArrendador:   'EL PRESTADOR DEL SERVICIO',
+    rolArrendatario: 'EL CLIENTE',
+    introProveedor:  "EL PRESTADOR DEL SERVICIO (Tz'unun AutoRentas) se compromete a:",
+    obligacionesProveedor: [
+      'Transportar la carga descrita desde el origen hasta el destino en las fechas y horarios pactados.',
+      'Asignar vehiculo adecuado a la capacidad y caracteristicas de la carga.',
+      'Mantener la operacion y control del vehiculo durante todo el servicio.',
+      'Coordinar y dar seguimiento a la carga durante el trayecto.',
+      'Cumplir las disposiciones de transito y de transporte aplicables.',
+    ],
+    introCliente:    'EL CLIENTE se compromete a:',
+    obligacionesCliente: [
+      'Preparar, embalar y entregar la carga en condiciones aptas para su transporte.',
+      'Proporcionar la documentacion y especificaciones de la carga (peso, volumen, manejo especial).',
+      'Coordinar las operaciones de carga y descarga en los puntos acordados.',
+      'Designar o informar el responsable de entrega y recepcion.',
+      'Declarar cualquier condicion especial o riesgo de la carga.',
+    ],
+    responsablePor: [],
+    restricciones: [
+      'Mercancia prohibida o ilegal',
+      'Carga peligrosa no declarada o sin la documentacion requerida',
+      'Sobrepasar la capacidad de carga del vehiculo',
+      'Fumar o manipular la carga sin autorizacion',
+      'Modificar puntos de carga o descarga sin previo acuerdo',
+    ],
+    muestraDeducibles: false,
+    terminacion: ['Incumplimiento de cualquier clausula contractual', 'Declaracion falsa de la carga', 'Falsedad de informacion proporcionada', 'Riesgo inminente para la carga, el vehiculo o terceros'],
+  },
+};
+
+const CLAUSULAS_VACIO = {
+  tituloPartes: 'Obligaciones de las partes', rolArrendador: 'EL PRESTADOR DEL SERVICIO', rolArrendatario: 'EL CLIENTE',
+  introProveedor: '', obligacionesProveedor: [], introCliente: '', obligacionesCliente: [], responsablePor: [],
+  restricciones: [], muestraDeducibles: false, terminacion: [],
+};
+
+function getContractClauses(tipo) {
+  return CLAUSULAS[getContractType(tipo)] || CLAUSULAS_VACIO;
+}
+
+function getContractFields(tipo) {
+  const t = getContractType(tipo);
+  return {
+    esRenta:      t === 'renta',
+    esServicio:   t !== 'renta',
+    esTraslado:   t === 'traslado',
+    esCorporativo: t === 'corporativo',
+    esLogistica:  t === 'logistica',
+  };
+}
+
+function listaServicios(c) {
+  let svc = {};
+  try { svc = JSON.parse(c.servicios_incluidos || '{}'); } catch {}
+  const items = [];
+  if (esServicioTipo(c.tipo)) items.push('Servicio de transporte segun lo cotizado y aceptado');
+  SERVICIOS_INC_FLAGS.forEach(({ k, l }) => { if (svc[k] === true) items.push(l); });
+  return items;
+}
+
 const CHECKLIST_ITEMS = [
   { id: 'carroceria',   label: 'Carroceria sin danos visibles'   },
   { id: 'vidrios',      label: 'Vidrios completos'               },
@@ -71,6 +255,7 @@ const EF = {
   fecha_retorno: '', hora_retorno: '18:00',
   // Financiero
   concepto: 'renta', total_gtq: 0, metodo_pago: 'efectivo',
+  anticipo: 0, condiciones_cancelacion: '',
   banco: 'Banrural', numero_cuenta: '', tipo_cuenta: 'Monetaria',
   deducible_colision: 5000, deducible_robo: 10000, deducible_terceros: 3000,
   // Facturacion
@@ -88,6 +273,8 @@ const EF = {
   danos_previos: '', observaciones: '',
   // Ruta (traslados / servicios)
   origen: '', destino: '', ruta: '', itinerario: '', descripcion_servicio: '',
+  num_pasajeros: 0, servicios_incluidos: '{}', servicios_no_incluidos: '',
+  frecuencia: '', tarifacion: '', tipo_carga: '', responsable_entrega: '',
   reserva_id: '', cotizacion_id: '',
 };
 
@@ -266,14 +453,14 @@ const generarPDFContrato = (contrato) => {
     .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
     @media print{body{padding:20px 24px}.no-print{display:none}@page{size:A4;margin:15mm}}
   `;
-  const esServicio = ['traslado', 'corporativo', 'logistica'].includes(contrato.tipo);
-  const tituloDoc = {
-    renta:       'CONTRATO DE ARRENDAMIENTO DE VEHICULO',
-    traslado:    'CONTRATO DE SERVICIO DE TRASLADO / VIAJE',
-    corporativo: 'CONTRATO DE SERVICIO CORPORATIVO',
-    logistica:   'CONTRATO DE SERVICIO DE LOGISTICA / CARGA',
-  }[contrato.tipo] || 'CONTRATO DE SERVICIO';
-  const logoURL = window.location.origin + '/icons/Logo_Tzunun_Transp.png';
+  const tipo       = getContractType(contrato.tipo);
+  const esServicio = tipo !== 'renta';
+  const C          = getContractClauses(tipo);
+  const F          = getContractFields(tipo);
+  const tituloDoc  = getContractTitle(tipo);
+  const logoURL    = window.location.origin + '/icons/Logo_Tzunun_Transp.png';
+  const svcList    = listaServicios(contrato);
+  const saldo      = (parseFloat(contrato.total_gtq) || 0) - (parseFloat(contrato.anticipo) || 0);
 
   const html = `
   <!-- HEADER -->
@@ -300,14 +487,14 @@ const generarPDFContrato = (contrato) => {
     <div class="section-title">I. Partes contratantes</div>
     <div class="data-grid">
       <div class="data-box">
-        <div style="font-size:9px;font-weight:700;color:#94A3B8;margin-bottom:8px">EL ARRENDADOR</div>
+        <div style="font-size:9px;font-weight:700;color:#94A3B8;margin-bottom:8px">${C.rolArrendador} — TZ'UNUN AUTORENTAS</div>
         <div class="data-item"><label>Empresa</label><span>Tz'unun AutoRentas</span></div>
         <div class="data-item" style="margin-top:6px"><label>Representante legal</label><span>${contrato.representante_nombre || '________________________________'}</span></div>
         <div class="data-item" style="margin-top:6px"><label>DPI Representante</label><span>${contrato.representante_dpi || '________________________________'}</span></div>
         ${contrato.patente_comercio ? `<div class="data-item" style="margin-top:6px"><label>Patente de comercio</label><span>${contrato.patente_comercio}</span></div>` : ''}
       </div>
       <div class="data-box">
-        <div style="font-size:9px;font-weight:700;color:#94A3B8;margin-bottom:8px">EL ARRENDATARIO</div>
+        <div style="font-size:9px;font-weight:700;color:#94A3B8;margin-bottom:8px">${C.rolArrendatario}</div>
         <div class="data-item"><label>Nombre completo</label><span>${contrato.cliente_nombre || '________________________________'}</span></div>
         <div class="data-item" style="margin-top:6px"><label>DPI / Pasaporte / NIT</label><span>${contrato.cliente_dpi || contrato.cliente_nit || '________________________________'}</span></div>
         <div class="data-item" style="margin-top:6px"><label>Nacionalidad</label><span>${contrato.cliente_nacionalidad || 'Guatemalteca'}</span></div>
@@ -332,7 +519,9 @@ const generarPDFContrato = (contrato) => {
       </div>
     </div>
     <p style="font-size:10px;color:#64748B;margin-top:8px;font-style:italic">
-      El vehiculo se entrega en condiciones optimas de funcionamiento mecanico y operativo.
+      ${esServicio
+        ? 'El vehiculo es operado por EL PRESTADOR DEL SERVICIO y se encuentra en optimas condiciones mecanicas, de seguridad y operativas.'
+        : 'El vehiculo se entrega en condiciones optimas de funcionamiento mecanico y operativo.'}
     </p>
   </div>
 
@@ -347,7 +536,7 @@ const generarPDFContrato = (contrato) => {
     </div>
     <p style="font-size:10px;color:#64748B;margin-top:8px">
       ${esServicio
-        ? 'El servicio se presta con piloto de EL ARRENDADOR. Cualquier cambio de horario o itinerario debera acordarse previamente y por escrito.'
+        ? 'El servicio se presta con piloto de EL PRESTADOR DEL SERVICIO. Cualquier cambio de horario o itinerario debera acordarse previamente y por escrito.'
         : 'Cualquier prorroga debera ser autorizada previamente por EL ARRENDADOR. El incumplimiento en la devolucion generara cargos adicionales y responsabilidades legales aplicables.'}
     </p>
   </div>
@@ -360,10 +549,14 @@ const generarPDFContrato = (contrato) => {
       <div class="data-grid">
         <div class="data-item"><label>Origen</label><span>${contrato.origen || '—'}</span></div>
         <div class="data-item"><label>Destino</label><span>${contrato.destino || '—'}</span></div>
+        ${F.esTraslado ? `<div class="data-item"><label>Pasajeros</label><span>${contrato.num_pasajeros || '—'}</span></div>` : ''}
+        ${F.esCorporativo ? `<div class="data-item"><label>Frecuencia</label><span>${contrato.frecuencia || '—'}</span></div>` : ''}
+        ${F.esLogistica ? `<div class="data-item"><label>Tipo de carga</label><span>${contrato.tipo_carga || '—'}</span></div>` : ''}
         <div class="data-item"><label>Salida</label><span>${fmtD(contrato.fecha_salida)} a las ${contrato.hora_salida || '08:00'} hrs</span></div>
         <div class="data-item"><label>Retorno</label><span>${contrato.fecha_retorno ? fmtD(contrato.fecha_retorno) + ' a las ' + (contrato.hora_retorno||'18:00') + ' hrs' : 'Por confirmar'}</span></div>
         ${contrato.ruta ? `<div class="data-item full"><label>Ruta</label><span>${contrato.ruta}</span></div>` : ''}
         ${contrato.itinerario ? `<div class="data-item full"><label>Itinerario</label><span>${contrato.itinerario}</span></div>` : ''}
+        ${contrato.responsable_entrega ? `<div class="data-item full"><label>Responsable entrega / recepcion</label><span>${contrato.responsable_entrega}</span></div>` : ''}
         ${contrato.descripcion_servicio ? `<div class="data-item full"><label>Descripcion del servicio</label><span>${contrato.descripcion_servicio}</span></div>` : ''}
       </div>
     </div>
@@ -375,6 +568,9 @@ const generarPDFContrato = (contrato) => {
     <div class="fin-box">
       <div class="fin-row"><span>Concepto</span><span>${TIPOS.find(t=>t.v===contrato.tipo)?.l || contrato.tipo}</span></div>
       <div class="fin-row"><span>Forma de pago</span><span>${contrato.metodo_pago}</span></div>
+      ${parseFloat(contrato.anticipo || 0) > 0 ? `
+      <div class="fin-row"><span>Anticipo</span><span>Q ${fmt(contrato.anticipo)}</span></div>
+      <div class="fin-row"><span>Saldo pendiente</span><span>Q ${fmt(saldo)}</span></div>` : ''}
       <div class="fin-total"><span>TOTAL A PAGAR</span><span>Q ${fmt(contrato.total_gtq)}</span></div>
     </div>
     ${(contrato.banco || contrato.numero_cuenta) ? `
@@ -387,30 +583,45 @@ const generarPDFContrato = (contrato) => {
       </div>
     </div>` : ''}
     <p style="font-size:10px;color:#64748B;margin-top:8px">
-      Los cargos adicionales por danos, multas, combustible, kilometraje adicional, limpieza o deducibles
-      seran cobrados adicionalmente al valor inicial del contrato.
+      ${esServicio
+        ? 'El pago se realiza segun lo pactado en la cotizacion aprobada. Los costos no incluidos seran informados y autorizados previamente por EL CLIENTE.'
+        : 'Los cargos adicionales por danos, multas, combustible, kilometraje adicional, limpieza o deducibles seran cobrados adicionalmente al valor inicial del contrato.'}
     </p>
+    ${contrato.condiciones_cancelacion ? `
+    <p style="font-size:10px;color:#64748B;margin-top:6px"><strong>Condiciones de cancelacion:</strong> ${contrato.condiciones_cancelacion}</p>` : ''}
   </div>
+
+  <!-- SERVICIOS INCLUIDOS (traslados / servicios) -->
+  ${esServicio ? `
+  <div class="section">
+    <div class="section-title">Servicios incluidos</div>
+    <div class="data-box">
+      <ul style="padding-left:16px">
+        ${svcList.map(s => `<li style="font-size:10px;color:#475569;margin-bottom:3px">${s}</li>`).join('')}
+      </ul>
+      ${contrato.servicios_no_incluidos ? `<p style="font-size:10px;color:#64748B;margin-top:8px"><strong>No incluidos:</strong> ${contrato.servicios_no_incluidos}</p>` : ''}
+    </div>
+  </div>` : ''}
 
   <!-- V. RESPONSABILIDADES -->
   <div class="section">
-    <div class="section-title">V. Responsabilidades del arrendatario</div>
+    <div class="section-title">V. ${C.tituloPartes}</div>
     <div class="clausula">
-      <p style="font-size:10px;color:#475569;margin-bottom:6px">EL ARRENDATARIO se compromete a:</p>
+      ${C.introProveedor && C.obligacionesProveedor.length ? `
+      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introProveedor}</p>
       <ol>
-        <li>Utilizar el vehiculo unicamente para fines licitos.</li>
-        <li>No conducir bajo efectos de alcohol, drogas o sustancias prohibidas.</li>
-        <li>Respetar las leyes de transito vigentes de la Republica de Guatemala.</li>
-        <li>No subarrendar ni ceder el vehiculo a terceros no autorizados.</li>
-        <li>No sacar el vehiculo del pais sin autorizacion escrita de EL ARRENDADOR.</li>
-        <li>No sobrecargar el vehiculo mas alla de su capacidad.</li>
-        <li>Devolver el vehiculo en las mismas condiciones en que lo recibe.</li>
-      </ol>
-      <p style="font-size:10px;color:#475569;margin-top:8px;margin-bottom:4px">EL ARRENDATARIO sera responsable por:</p>
+        ${C.obligacionesProveedor.map((x, i) => `<li>${x}</li>`).join('')}
+      </ol>` : ''}
+      ${C.introCliente && C.obligacionesCliente.length ? `
+      <p style="font-size:10px;color:#475569;margin-top:${C.introProveedor ? '8px' : '0'};margin-bottom:6px">${C.introCliente}</p>
+      <ol>
+        ${C.obligacionesCliente.map((x, i) => `<li>${x}</li>`).join('')}
+      </ol>` : ''}
+      ${C.responsablePor.length ? `
+      <p style="font-size:10px;color:#475569;margin-top:8px;margin-bottom:4px">${C.rolArrendatario} sera responsable por:</p>
       <ul>
-        <li>Danos al vehiculo, danos a terceros, multas de transito</li>
-        <li>Perdida de documentos, robo por negligencia, uso indebido</li>
-      </ul>
+        ${C.responsablePor.map(x => `<li>${x}</li>`).join('')}
+      </ul>` : ''}
     </div>
   </div>
 
@@ -435,12 +646,7 @@ const generarPDFContrato = (contrato) => {
     <div class="clausula">
       <p style="font-size:10px;color:#475569;margin-bottom:4px">Queda terminantemente prohibido:</p>
       <ul>
-        <li>Conducir bajo efectos de alcohol, drogas o sustancias prohibidas</li>
-        <li>Utilizar el vehiculo para actos ilicitos o transporte de mercancia prohibida</li>
-        <li>Fumar dentro del vehiculo</li>
-        <li>Cruzar fronteras internacionales sin autorizacion escrita</li>
-        <li>Sobrecargar el vehiculo o participar en competencias</li>
-        <li>Realizar modificaciones al vehiculo sin autorizacion</li>
+        ${C.restricciones.map(x => `<li>${x}</li>`).join('')}
       </ul>
       <p style="font-size:10px;color:#DC2626;margin-top:6px;font-style:italic">
         El incumplimiento de estas restricciones anula cualquier cobertura o beneficio y genera responsabilidad legal.
@@ -448,7 +654,8 @@ const generarPDFContrato = (contrato) => {
     </div>
   </div>
 
-  <!-- VIII. DEDUCIBLES -->
+  <!-- VIII. DEDUCIBLES (solo renta) -->
+  ${C.muestraDeducibles ? `
   <div class="section">
     <div class="section-title">VIII. Deducibles y seguro</div>
     <table>
@@ -462,7 +669,7 @@ const generarPDFContrato = (contrato) => {
     <p style="font-size:10px;color:#64748B;margin-top:6px">
       Los danos seran evaluados por EL ARRENDADOR y/o la aseguradora correspondiente.
     </p>
-  </div>
+  </div>` : ''}
 
   <!-- CHECKLIST SALIDA -->
   ${Object.keys(checkSal).length > 0 ? `
@@ -481,8 +688,8 @@ const generarPDFContrato = (contrato) => {
   <div class="section">
     <div class="section-title">IX. Objetos personales y facturacion</div>
     <p style="font-size:10px;color:#475569;margin-bottom:8px">
-      EL ARRENDADOR no se hace responsable por objetos olvidados dentro del vehiculo.
-      EL ARRENDATARIO debera revisar el vehiculo antes de entregarlo.
+      ${C.rolArrendador} no se hace responsable por objetos olvidados dentro del vehiculo.
+      ${C.rolArrendatario} debera revisar el vehiculo antes de retirarse.
     </p>
     <div class="data-box">
       <div style="font-size:9px;font-weight:700;color:#94A3B8;margin-bottom:6px">DATOS DE FACTURACION</div>
@@ -497,12 +704,9 @@ const generarPDFContrato = (contrato) => {
   <div class="section">
     <div class="section-title">X. Terminacion del contrato</div>
     <div class="clausula">
-      <p style="font-size:10px;color:#475569;margin-bottom:4px">EL ARRENDADOR podra dar por terminado el contrato de forma inmediata en caso de:</p>
+      <p style="font-size:10px;color:#475569;margin-bottom:4px">${C.rolArrendador} podra dar por terminado el contrato de forma inmediata en caso de:</p>
       <ul>
-        <li>Incumplimiento de cualquier clausula contractual</li>
-        <li>Uso indebido o actos ilicitos con el vehiculo</li>
-        <li>Falsedad de informacion proporcionada</li>
-        <li>Riesgo inminente para el vehiculo o terceros</li>
+        ${C.terminacion.map(x => `<li>${x}</li>`).join('')}
       </ul>
     </div>
   </div>
@@ -529,7 +733,7 @@ const generarPDFContrato = (contrato) => {
         ${contrato.firma_arrendador ? `<img src="${contrato.firma_arrendador}" class="firma-img" alt="Firma arrendador"/>` : '<div class="firma-img"></div>'}
         <div class="firma-line">
           <div class="firma-name">Tz'unun AutoRentas</div>
-          <div class="firma-title">EL ARRENDADOR</div>
+          <div class="firma-title">${C.rolArrendador}</div>
           <div style="font-size:9px;color:#94A3B8;margin-top:2px">${contrato.representante_nombre || ''}</div>
         </div>
       </div>
@@ -537,7 +741,7 @@ const generarPDFContrato = (contrato) => {
         ${contrato.firma_arrendatario ? `<img src="${contrato.firma_arrendatario}" class="firma-img" alt="Firma arrendatario"/>` : '<div class="firma-img"></div>'}
         <div class="firma-line">
           <div class="firma-name">${contrato.cliente_nombre || '________________________________'}</div>
-          <div class="firma-title">EL ARRENDATARIO</div>
+          <div class="firma-title">${C.rolArrendatario}</div>
           <div style="font-size:9px;color:#94A3B8;margin-top:2px">DPI: ${contrato.cliente_dpi || contrato.cliente_nit || '—'}</div>
         </div>
       </div>
@@ -564,6 +768,8 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
   const [vehiculos, setVehiculos] = useState([]);
   const [reservas,  setReservas]  = useState([]);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const F = getContractFields(f.tipo);
+  const C = getContractClauses(f.tipo);
 
   useEffect(() => {
     Promise.all([
@@ -586,8 +792,17 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
       tipo:            r.tipo           || p.tipo,
       fecha_salida:    r.fecha_inicio   || p.fecha_salida,
       fecha_retorno:   r.fecha_fin      || p.fecha_retorno,
+      hora_salida:     r.hora_entrega   || p.hora_salida,
+      hora_retorno:    r.hora_regreso   || p.hora_retorno,
       total_gtq:       r.total_gtq      || p.total_gtq,
       metodo_pago:     r.metodo_pago    || p.metodo_pago,
+      anticipo:        r.anticipo       || p.anticipo,
+      origen:          r.origen         || p.origen,
+      destino:         r.destino        || p.destino,
+      ruta:            r.ruta           || p.ruta,
+      itinerario:      r.itinerario     || p.itinerario,
+      descripcion_servicio: r.descripcion_servicio || p.descripcion_servicio,
+      servicios_incluidos:  r.servicios_incluidos  || p.servicios_incluidos,
       vehiculo_id:     r.vehiculo_id    || p.vehiculo_id,
       vehiculo_nombre: r.vehiculo_nombre|| p.vehiculo_nombre,
       factura_nombre:  r.cliente_nombre || p.factura_nombre,
@@ -640,6 +855,8 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
         hora_retorno:         f.hora_retorno         || '18:00',
         concepto:             f.tipo                 || 'renta',
         metodo_pago:          f.metodo_pago          || 'efectivo',
+        anticipo:             parseFloat(f.anticipo) || 0,
+        condiciones_cancelacion: f.condiciones_cancelacion || null,
         banco:                f.banco                || null,
         numero_cuenta:        f.numero_cuenta        || null,
         tipo_cuenta:          f.tipo_cuenta          || null,
@@ -656,6 +873,19 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
         foto_licencia:        f.foto_licencia        || null,
         danos_previos:        f.danos_previos        || null,
         observaciones:        f.observaciones        || null,
+        // Ruta y servicio (traslados / servicios)
+        origen:               f.origen               || null,
+        destino:              f.destino              || null,
+        ruta:                 f.ruta                 || null,
+        itinerario:           f.itinerario           || null,
+        descripcion_servicio: f.descripcion_servicio || null,
+        num_pasajeros:        parseInt(f.num_pasajeros) || 0,
+        servicios_incluidos:  f.servicios_incluidos  || '{}',
+        servicios_no_incluidos: f.servicios_no_incluidos || null,
+        frecuencia:           f.frecuencia           || null,
+        tarifacion:           f.tarifacion           || null,
+        tipo_carga:           f.tipo_carga           || null,
+        responsable_entrega:  f.responsable_entrega  || null,
         // Campos numéricos
         total_gtq:            parseFloat(f.total_gtq)            || 0,
         km_salida:            parseInt(f.km_salida)              || 0,
@@ -757,7 +987,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div style={S.card}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>EL ARRENDADOR — TZ'UNUN</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>{C.rolArrendador} — TZ'UNUN</div>
               <div style={{ display: 'grid', gap: 11 }}>
                 <Fld label="REPRESENTANTE LEGAL">
                   <input style={S.inp} value={f.representante_nombre} onChange={e => sf('representante_nombre', e.target.value)} placeholder="Nombre completo" />
@@ -771,7 +1001,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
               </div>
             </div>
             <div style={S.card}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>EL ARRENDATARIO</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>{C.rolArrendatario}</div>
               <div style={{ display: 'grid', gap: 11 }}>
                 <Fld label="NOMBRE COMPLETO *">
                   <input style={S.inp} value={f.cliente_nombre} onChange={e => sf('cliente_nombre', e.target.value)} placeholder="Nombre o razon social" />
@@ -823,19 +1053,30 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
               <Fld label="TIPO"><input style={S.inp} value={f.vehiculo_tipo} onChange={e => sf('vehiculo_tipo', e.target.value)} placeholder="SUV" /></Fld>
               <Fld label="COLOR"><input style={S.inp} value={f.vehiculo_color} onChange={e => sf('vehiculo_color', e.target.value)} placeholder="Blanco" /></Fld>
               <Fld label="PLACA"><input style={{ ...S.inp, fontFamily: 'monospace', fontWeight: 700 }} value={f.vehiculo_placa} onChange={e => sf('vehiculo_placa', e.target.value.toUpperCase())} placeholder="P-000-ABC" /></Fld>
-              <Fld label="KM SALIDA"><input style={S.inp} type="number" value={f.km_salida} onChange={e => sf('km_salida', e.target.value)} /></Fld>
-              <Fld label="COMBUSTIBLE SALIDA">
-                <select style={S.sel} value={f.combustible_salida} onChange={e => sf('combustible_salida', e.target.value)}>
-                  {COMBUSTIBLE.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </Fld>
-              <Fld label="KM RETORNO (al devolver)"><input style={S.inp} type="number" value={f.km_retorno} onChange={e => sf('km_retorno', e.target.value)} placeholder="0" /></Fld>
-              <Fld label="COMBUSTIBLE RETORNO">
-                <select style={S.sel} value={f.combustible_retorno} onChange={e => sf('combustible_retorno', e.target.value)}>
-                  <option value="">Por confirmar</option>
-                  {COMBUSTIBLE.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </Fld>
+              {F.esRenta ? (
+                <>
+                  <Fld label="KM SALIDA"><input style={S.inp} type="number" value={f.km_salida} onChange={e => sf('km_salida', e.target.value)} /></Fld>
+                  <Fld label="COMBUSTIBLE SALIDA">
+                    <select style={S.sel} value={f.combustible_salida} onChange={e => sf('combustible_salida', e.target.value)}>
+                      {COMBUSTIBLE.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </Fld>
+                  <Fld label="KM RETORNO (al devolver)"><input style={S.inp} type="number" value={f.km_retorno} onChange={e => sf('km_retorno', e.target.value)} placeholder="0" /></Fld>
+                  <Fld label="COMBUSTIBLE RETORNO">
+                    <select style={S.sel} value={f.combustible_retorno} onChange={e => sf('combustible_retorno', e.target.value)}>
+                      <option value="">Por confirmar</option>
+                      {COMBUSTIBLE.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </Fld>
+                </>
+              ) : (
+                <>
+                  {F.esTraslado && <Fld label="NUM. PASAJEROS"><input style={S.inp} type="number" min="1" value={f.num_pasajeros} onChange={e => sf('num_pasajeros', e.target.value)} placeholder="Ej. 6" /></Fld>}
+                  {F.esLogistica && <Fld label="TIPO DE CARGA"><input style={S.inp} value={f.tipo_carga} onChange={e => sf('tipo_carga', e.target.value)} placeholder="Ej. Encomiendas, equipaje..." /></Fld>}
+                  {F.esLogistica && <Fld label="RESPONSABLE ENTREGA / RECEPCION"><input style={S.inp} value={f.responsable_entrega} onChange={e => sf('responsable_entrega', e.target.value)} placeholder="Nombre o area" /></Fld>}
+                  {F.esCorporativo && <Fld label="FRECUENCIA"><input style={S.inp} value={f.frecuencia} onChange={e => sf('frecuencia', e.target.value)} placeholder="Ej. Diario, semanal, por evento..." /></Fld>}
+                </>
+              )}
             </div>
           </div>
 
@@ -848,6 +1089,22 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
               <Fld label="HORA RETORNO"><input style={S.inp} type="time" value={f.hora_retorno} onChange={e => sf('hora_retorno', e.target.value)} /></Fld>
             </div>
           </div>
+
+          {/* RUTA E ITINERARIO — solo para traslados / servicios */}
+          {F.esServicio && (
+            <div style={S.card}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>RUTA E ITINERARIO DEL SERVICIO</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <Fld label="ORIGEN"><input style={S.inp} value={f.origen} onChange={e => sf('origen', e.target.value)} placeholder="Ciudad de origen" /></Fld>
+                <Fld label="DESTINO"><input style={S.inp} value={f.destino} onChange={e => sf('destino', e.target.value)} placeholder="Ciudad de destino" /></Fld>
+                <Fld label="RUTA"><input style={S.inp} value={f.ruta} onChange={e => sf('ruta', e.target.value)} placeholder="Via Coban, ruta alternativa..." /></Fld>
+                <Fld label="DESCRIPCION DEL SERVICIO"><input style={S.inp} value={f.descripcion_servicio} onChange={e => sf('descripcion_servicio', e.target.value)} placeholder="Traslado desde... hacia..." /></Fld>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <Fld label="ITINERARIO"><textarea style={{ ...S.inp, minHeight: 60, resize: 'vertical' }} value={f.itinerario} onChange={e => sf('itinerario', e.target.value)} placeholder="Dia 1: salida de Guatemala... Dia 2: regreso..." /></Fld>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div style={S.card}>
             <Fld label="DAÑOS PREVIOS DOCUMENTADOS">
@@ -869,7 +1126,9 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
             </div>
             {conductores.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '20px 0', color: T.sub, fontSize: 13 }}>
-                Sin conductores registrados — el arrendatario conduce el vehiculo
+                {F.esServicio
+                  ? 'Sin conductores registrados — el conductor es asignado y operado por Tz\'unun'
+                  : 'Sin conductores registrados — el arrendatario conduce el vehiculo'}
               </div>
             ) : conductores.map((c, i) => (
               <div key={i} style={{ background: T.surf, borderRadius: 10, padding: 14, marginBottom: 10 }}>
@@ -906,11 +1165,17 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={S.card}>
             <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>VALOR DEL SERVICIO</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: F.esServicio ? '1fr 1fr 1fr' : '1fr 1fr', gap: 12 }}>
               <Fld label="TOTAL DEL CONTRATO (Q) *">
                 <input style={{ ...S.inp, fontSize: 16, fontWeight: 700, color: T.acc }} type="number" step="0.01"
                   value={f.total_gtq} onChange={e => sf('total_gtq', e.target.value)} placeholder="0.00" />
               </Fld>
+              {F.esServicio && (
+                <Fld label="ANTICIPO (Q)">
+                  <input style={S.inp} type="number" step="0.01" value={f.anticipo}
+                    onChange={e => sf('anticipo', e.target.value)} placeholder="0.00" />
+                </Fld>
+              )}
               <Fld label="MÉTODO DE PAGO">
                 <select style={S.sel} value={f.metodo_pago} onChange={e => sf('metodo_pago', e.target.value)}>
                   {['efectivo','transferencia','cheque','tarjeta','deposito'].map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
@@ -926,14 +1191,58 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
               <Fld label="TIPO DE CUENTA"><input style={S.inp} value={f.tipo_cuenta} onChange={e => sf('tipo_cuenta', e.target.value)} placeholder="Monetaria" /></Fld>
             </div>
           </div>
-          <div style={S.card}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>DEDUCIBLES EN CASO DE SINIESTRO (Q)</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              <Fld label="COLISIONES Y VUELCOS"><input style={S.inp} type="number" value={f.deducible_colision} onChange={e => sf('deducible_colision', e.target.value)} /></Fld>
-              <Fld label="ROBO O HURTO"><input style={S.inp} type="number" value={f.deducible_robo} onChange={e => sf('deducible_robo', e.target.value)} /></Fld>
-              <Fld label="DAÑOS A TERCEROS"><input style={S.inp} type="number" value={f.deducible_terceros} onChange={e => sf('deducible_terceros', e.target.value)} /></Fld>
+          {F.esRenta && (
+            <div style={S.card}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>DEDUCIBLES EN CASO DE SINIESTRO (Q)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <Fld label="COLISIONES Y VUELCOS"><input style={S.inp} type="number" value={f.deducible_colision} onChange={e => sf('deducible_colision', e.target.value)} /></Fld>
+                <Fld label="ROBO O HURTO"><input style={S.inp} type="number" value={f.deducible_robo} onChange={e => sf('deducible_robo', e.target.value)} /></Fld>
+                <Fld label="DAÑOS A TERCEROS"><input style={S.inp} type="number" value={f.deducible_terceros} onChange={e => sf('deducible_terceros', e.target.value)} /></Fld>
+              </div>
             </div>
-          </div>
+          )}
+
+          {F.esServicio && (
+            <>
+              {F.esCorporativo && (
+                <div style={S.card}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>TARIFACIÓN CORPORATIVA</div>
+                  <Fld label="ESQUEMA DE TARIFACIÓN">
+                    <input style={S.inp} value={f.tarifacion} onChange={e => sf('tarifacion', e.target.value)}
+                      placeholder="Ej. Precio por servicio, por dia, por ruta, mensual..." />
+                  </Fld>
+                </div>
+              )}
+              <div style={S.card}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>SERVICIOS INCLUIDOS</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {(() => {
+                    const svc = JSON.parse(f.servicios_incluidos || '{}');
+                    return SERVICIOS_INC_FLAGS.map(({ k, l }) => (
+                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '6px 11px', borderRadius: 8, background: svc[k] ? T.accDim : T.surf, border: `1px solid ${svc[k] ? T.acc : T.bord}`, fontSize: 12, userSelect: 'none' }}>
+                        <input type="checkbox" checked={svc[k] === true}
+                          onChange={e => sf('servicios_incluidos', JSON.stringify({ ...svc, [k]: e.target.checked }))} style={{ accentColor: T.acc }} />
+                        {l}
+                      </label>
+                    ));
+                  })()}
+                </div>
+                <Fld label="SERVICIOS NO INCLUIDOS">
+                  <textarea style={{ ...S.inp, minHeight: 50, resize: 'vertical' }} value={f.servicios_no_incluidos}
+                    onChange={e => sf('servicios_no_incluidos', e.target.value)}
+                    placeholder="Ej. Alimentacion de pasajeros, visados, estadias..." />
+                </Fld>
+                <div style={{ marginTop: 10 }}>
+                  <Fld label="CONDICIONES DE CANCELACION">
+                    <textarea style={{ ...S.inp, minHeight: 50, resize: 'vertical' }} value={f.condiciones_cancelacion}
+                      onChange={e => sf('condiciones_cancelacion', e.target.value)}
+                      placeholder="Ej. Cancelacion gratuita 48h antes; despues aplica 50%..." />
+                  </Fld>
+                </div>
+              </div>
+            </>
+          )}
+
           <div style={S.card}>
             <Fld label="OBSERVACIONES ADICIONALES">
               <textarea style={{ ...S.inp, minHeight: 70, resize: 'vertical' }} value={f.observaciones} onChange={e => sf('observaciones', e.target.value)} placeholder="Condiciones especiales, acuerdos particulares..." />
@@ -942,18 +1251,31 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
         </div>
       )}
 
-      {/* ── PASO 5: CHECKLIST ── */}
+      {/* ── PASO 5: CHECKLIST (solo renta) / CONDICIONES (servicios) ── */}
       {paso === 5 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={S.card}>
-            <ChecklistVehiculo titulo="Checklist de ENTREGA (salida)"
-              valor={f.checklist_salida} onChange={v => sf('checklist_salida', v)} />
+        F.esRenta ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={S.card}>
+              <ChecklistVehiculo titulo="Checklist de ENTREGA (salida)"
+                valor={f.checklist_salida} onChange={v => sf('checklist_salida', v)} />
+            </div>
+            <div style={S.card}>
+              <ChecklistVehiculo titulo="Checklist de RECEPCION (retorno)"
+                valor={f.checklist_retorno} onChange={v => sf('checklist_retorno', v)} />
+            </div>
           </div>
+        ) : (
           <div style={S.card}>
-            <ChecklistVehiculo titulo="Checklist de RECEPCION (retorno)"
-              valor={f.checklist_retorno} onChange={v => sf('checklist_retorno', v)} />
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>
+              Condiciones especiales del servicio
+            </div>
+            <Fld label="DAÑOS PREVIOS DOCUMENTADOS / NOTAS">
+              <textarea style={{ ...S.inp, minHeight: 80, resize: 'vertical' }}
+                value={f.danos_previos} onChange={e => sf('danos_previos', e.target.value)}
+                placeholder="Observaciones del vehiculo, condiciones especiales o acuerdos particulares..." />
+            </Fld>
           </div>
-        </div>
+        )
       )}
 
       {/* ── PASO 6: FIRMAS ── */}
@@ -969,11 +1291,11 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={S.card}>
-              <FirmaDigital label="FIRMA DEL ARRENDADOR (Tz'unun AutoRentas)"
+              <FirmaDigital label={`FIRMA DEL ${C.rolArrendador} (Tz'unun AutoRentas)`}
                 valor={f.firma_arrendador} onChange={v => sf('firma_arrendador', v)} />
             </div>
             <div style={S.card}>
-              <FirmaDigital label={`FIRMA DEL ARRENDATARIO (${f.cliente_nombre || 'Cliente'})`}
+              <FirmaDigital label={`FIRMA DEL ${C.rolArrendatario} (${f.cliente_nombre || 'Cliente'})`}
                 valor={f.firma_arrendatario} onChange={v => sf('firma_arrendatario', v)} />
             </div>
           </div>
