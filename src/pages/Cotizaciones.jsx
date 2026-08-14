@@ -516,6 +516,7 @@ function makePDFData(r) {
 
 // ─── Estado inicial formulario ────────────────────────────────────────────────
 const EMPTY_F = {
+  tipo: "renta",
   cliente_nombre: "", cliente_nit: "", cliente_dir: "", cliente_codigo: "",
   cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
   saludo: "", descripcion_servicio: "",
@@ -540,6 +541,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
     try { svc = JSON.parse(initial.servicios_incluidos || "{}"); } catch {}
     return {
       ...EMPTY_F,
+      tipo: initial.tipo || "renta",
       cliente_nombre: initial.cliente_nombre || "", cliente_nit: initial.cliente_nit || "",
       cliente_dir: initial.cliente_dir || "", cliente_codigo: initial.cliente_codigo || "",
       cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "",
@@ -619,7 +621,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       const payload = {
         empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
-        tipo: "renta", cliente_tipo: f.cliente_tipo || "", cliente_contacto: f.cliente_contacto || "",
+        tipo: f.tipo || "renta", cliente_tipo: f.cliente_tipo || "", cliente_contacto: f.cliente_contacto || "",
         cliente_email: f.cliente_email || "", cliente_telefono: f.cliente_telefono || "",
         numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones", eId) : initial.numero,
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
@@ -652,6 +654,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       if (initial?.reserva_id && initial.id && !isClone) {
         const rPayload = {
           cliente_nombre: f.cliente_nombre,
+          tipo: f.tipo || "renta",
           vehiculo_nombre: f.vehiculo_nombre || "",
           dias, fecha_inicio: f.fecha_inicio || null, fecha_fin: f.fecha_fin || null,
           origen: f.origen || "", destino: f.destino || "",
@@ -741,6 +744,17 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           <div style={S.card}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>VEHICULO Y PERIODO</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={S.lbl}>TIPO DE SERVICIO</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[{ v: "renta", l: "Renta por dias" }, { v: "traslado", l: "Traslado / Viaje" }].map(o => (
+                    <button key={o.v} onClick={() => sf("tipo", o.v)}
+                      style={{ ...S.btn(f.tipo === o.v ? "primary" : "ghost"), flex: 1, fontSize: 12 }}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div style={{ gridColumn: "span 2" }}>
                 <label style={S.lbl}>VEHICULO</label>
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e => sf("vehiculo_nombre", e.target.value)}>
@@ -921,7 +935,7 @@ export default function PageCotizaciones({ showToast, empId }) {
     const r = await dbIns("reservas", {
       empresa_id: eId,
       cliente_nombre: cot.cliente_nombre,
-      tipo: cot.tipo || "renta",
+      tipo: cot.tipo || (cot.destino ? "traslado" : "renta"),
       numero,
       estado: "confirmada",
       cotizacion_id: cot.id,
