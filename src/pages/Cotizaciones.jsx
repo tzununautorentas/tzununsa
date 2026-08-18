@@ -573,6 +573,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
   });
   const [saving, setSaving] = useState(false);
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
+  const [alertaVeh, setAlertaVeh] = useState(null);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
 
   useEffect(() => {
@@ -583,6 +584,46 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       } catch {}
     })();
   }, []);
+
+  useEffect(() => {
+    if (!f.vehiculo_nombre || !f.fecha_inicio) { setAlertaVeh(null); return; }
+    const fin = f.fecha_fin || f.fecha_inicio;
+    if (fin < f.fecha_inicio) { setAlertaVeh(null); return; }
+    (async () => {
+      try {
+        const reservas = await dbGet("reservas",
+          `&select=numero,cliente_nombre,vehiculo_nombre,fecha_inicio,fecha_fin,estado` +
+          `&vehiculo_nombre=eq.${encodeURIComponent(f.vehiculo_nombre)}` +
+          `&estado=in.(pendiente,confirmada,en_curso)`);
+        const conflictos = (reservas || []).filter(r => {
+          const ri = r.fecha_inicio, rf = r.fecha_fin || r.fecha_inicio;
+          return ri <= fin && rf >= f.fecha_inicio;
+        });
+        if (conflictos.length > 0) {
+          const r = conflictos[0];
+          const tipo = r.estado === "en_curso" ? "en renta" : "en reserva";
+          setAlertaVeh({ tipo: "reserva", msg: `Vehiculo ${tipo} (${r.numero} — ${r.cliente_nombre}, ${fmtD(r.fecha_inicio)}${r.fecha_fin ? " → " + fmtD(r.fecha_fin) : ""})` });
+        } else {
+          const mantenimientos = await dbGet("mantenimiento",
+            `&select=vehiculo_nombre,fecha,fecha_fin,estado,descripcion` +
+            `&vehiculo_nombre=eq.${encodeURIComponent(f.vehiculo_nombre)}` +
+            `&estado=in.(programado,en_proceso)`);
+          const confMant = (mantenimientos || []).filter(m => {
+            const mi = m.fecha, mf = m.fecha_fin || m.fecha;
+            return mi <= fin && mf >= f.fecha_inicio;
+          });
+          if (confMant.length > 0) {
+            const m = confMant[0];
+            setAlertaVeh({ tipo: "mantenimiento", msg: `Vehiculo en mantenimiento (${fmtD(m.fecha)}${m.fecha_fin ? " → " + fmtD(m.fecha_fin) : ""}${m.descripcion ? " — " + m.descripcion : ""})` });
+          } else {
+            setAlertaVeh({ tipo: "disponible", msg: "Vehiculo disponible para esas fechas" });
+          }
+        }
+      } catch {
+        setAlertaVeh(null);
+      }
+    })();
+  }, [f.vehiculo_nombre, f.fecha_inicio, f.fecha_fin]);
 
   const tarifaFn = (v, d) => { if (!v) return 0; if (d >= 30) return v.mes; if (d >= 8) return v.sem; return v.dia; };
   const vehCat = CATALOGO.find(v => v.nombre === f.vehiculo_nombre) || null;
@@ -767,12 +808,22 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                       {flotaVehiculos.map(v => {
                         const nom = `${v.marca || ""} ${v.modelo || ""}`.trim();
                         if (!nom) return null;
-                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q${fmt(v.tarifa_dia)}/dia` : "";
+                        const p = parseFloat(v.tarifa_dia) > 0 ? ` — Q{fmt(v.tarifa_dia)}/dia` : "";
                         return <option key={"fl_"+nom} value={nom}>{nom}{p}</option>;
                       })}
                     </optgroup>
                   )}
                 </select>
+                {alertaVeh && (
+                  <div style={{
+                    marginTop: 8, padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    background: alertaVeh.tipo === "disponible" ? "#DCFCE7" : alertaVeh.tipo === "reserva" ? "#FEF3C7" : "#FEE2E2",
+                    color: alertaVeh.tipo === "disponible" ? "#166534" : alertaVeh.tipo === "reserva" ? "#92400E" : "#991B1B",
+                    border: `1px solid ${alertaVeh.tipo === "disponible" ? "#BBF7D0" : alertaVeh.tipo === "reserva" ? "#FDE68A" : "#FECACA"}`
+                  }}>
+                    {alertaVeh.tipo === "disponible" ? "✓ " : "⚠ "}{alertaVeh.msg}
+                  </div>
+                )}
               </div>
               <div><label style={S.lbl}>DIAS</label><input style={S.inp} type="number" min="1" value={f.dias} onChange={e => sf("dias", parseInt(e.target.value) || 1)} /></div>
               <div><label style={S.lbl}>PRECIO PERSONALIZADO</label><input style={S.inp} type="number" value={f.precio_custom} onChange={e => sf("precio_custom", e.target.value)} placeholder="Vacio = catalogo" /></div>

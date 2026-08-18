@@ -143,19 +143,26 @@ export default function ItinerarioServicio({ value, flotaVehiculos, onChange }) 
               <label style={{ ...S.lbl, fontSize: 9, margin: 0 }}>DÍAS DEL SERVICIO</label>
               <input style={{ ...inpStyle, width: 70, fontSize: 11 }} type="number" value={veh.dias || 1} onChange={e => cambiarVeh(vidx, "dias", parseInt(e.target.value) || 1)} placeholder="1" />
               <span style={{ fontSize: 10, color: T.mut }}>días</span>
+              {(() => {
+                const uniqueDates = new Set((veh.trayectos || []).map(t => t.fecha).filter(Boolean));
+                if (uniqueDates.size > 1 && uniqueDates.size !== (veh.dias || 1)) {
+                  return <span style={{ fontSize: 9, color: T.sec, fontStyle: "italic" }}>(según viajes: {uniqueDates.size} días)</span>;
+                }
+                return null;
+              })()}
             </div>
 
             {/* TRAYECTOS */}
             <div style={{ borderTop: `1px solid ${T.bord}22`, paddingTop: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>ITINERARIO DEL SERVICIO</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>VIAJES / TRAYECTOS</span>
                 <button type="button" onClick={() => agregarTrayecto(vidx)}
-                  style={{ ...S.btn("primary"), padding: "3px 10px", fontSize: 10 }}>+ Agregar Trayecto</button>
+                  style={{ ...S.btn("primary"), padding: "3px 10px", fontSize: 10 }}>+ Agregar Viaje</button>
               </div>
               {veh.trayectos.map((t, tidx) => (
                 <div key={t._id} style={{ background: T.surf, borderRadius: 8, padding: 10, marginBottom: 8, border: `1px solid ${T.bord}44` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: T.acc }}>Trayecto {tidx + 1}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: T.acc }}>Viaje {tidx + 1}</span>
                     {veh.trayectos.length > 1 && (
                       <button type="button" onClick={() => quitarTrayecto(vidx, tidx)}
                         style={{ ...S.btn("danger"), padding: "1px 8px", fontSize: 9, lineHeight: "18px" }}>X</button>
@@ -278,14 +285,20 @@ export function itinerarioToFlat(itinerario) {
   const v = itinerario.vehiculos[0];
   const ts = v.trayectos || [];
   const fechas = [];
+  const uniqueDates = new Set();
   for (const veh of itinerario.vehiculos) {
     for (const t of (veh.trayectos || [])) {
-      if (t.fecha) fechas.push(t.fecha);
+      if (t.fecha) {
+        fechas.push(t.fecha);
+        uniqueDates.add(t.fecha);
+      }
     }
   }
   fechas.sort();
   const totalKm = itinerario.vehiculos.reduce((s, v) => s + (parseFloat(v.km_ida) || 0) + (parseFloat(v.km_regreso) || 0), 0);
-  const totalDias = Math.max(...itinerario.vehiculos.map(v => parseInt(v.dias) || 1), 0);
+  const diasFromVehicles = Math.max(...itinerario.vehiculos.map(v => parseInt(v.dias) || 1), 0);
+  const diasFromDates = uniqueDates.size || 1;
+  const totalDias = Math.max(diasFromDates, diasFromVehicles);
   const primerTrayecto = ts[0] || {};
   const ultimoTrayecto = ts[ts.length - 1] || {};
   return {
