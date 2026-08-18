@@ -831,6 +831,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                   <option value="enviada">Enviada al cliente</option>
                   <option value="aprobada">Aprobada</option>
                   <option value="rechazada">Rechazada</option>
+                  <option value="descartada">Descartada</option>
                 </select>
               </div>
               <div><label style={S.lbl}>NOTAS INTERNAS</label><input style={S.inp} value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." /></div>
@@ -915,9 +916,15 @@ export default function PageCotizaciones({ showToast, empId }) {
   }, []);
 
   const del = async id => {
-    if (!confirm("Eliminar esta cotizacion?")) return;
+    if (!confirm("Eliminar esta cotizacion permanentemente?")) return;
     await dbDel("cotizaciones", id);
     showToast("Eliminada"); load();
+  };
+
+  const chDescartar = async id => {
+    if (!confirm("Marcar esta cotizacion como descartada?")) return;
+    await dbUpd("cotizaciones", id, { estado: "descartada" });
+    showToast("Cotizacion descartada"); load();
   };
 
   const chEst = async (id, estado) => {
@@ -998,6 +1005,7 @@ export default function PageCotizaciones({ showToast, empId }) {
     enviada:     { c: T.blue,   bg: T.blueDim,   l: "Enviada"        },
     aprobada:    { c: T.acc,    bg: T.accDim,    l: "Aprobada"       },
     rechazada:   { c: T.red,    bg: T.redDim,    l: "Rechazada"      },
+    descartada:  { c: "#94A3B8", bg: "#F1F5F9",  l: "Descartada"     },
     orden_venta: { c: T.purple, bg: T.purpleDim, l: "Orden de Venta" },
   };
 
@@ -1025,7 +1033,7 @@ export default function PageCotizaciones({ showToast, empId }) {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        {["todas", "borrador", "enviada", "aprobada", "rechazada", "orden_venta"].map(fi => (
+        {["todas", "borrador", "enviada", "aprobada", "rechazada", "descartada", "orden_venta"].map(fi => (
           <button key={fi} onClick={() => setFiltro(fi)} style={{ ...S.btn(filtro === fi ? "primary" : "ghost"), fontSize: 11, padding: "5px 10px" }}>
             {fi === "orden_venta" ? "Ordenes" : fi.charAt(0).toUpperCase() + fi.slice(1)}
           </button>
@@ -1072,7 +1080,9 @@ export default function PageCotizaciones({ showToast, empId }) {
                     <button onClick={() => convertirAReserva(r)} style={{ ...S.btn("green"), fontSize: 11, padding: "4px 9px" }}>Crear Reserva</button>
                   )}
                   {!r.orden_venta && <button onClick={() => chEst(r.id, "orden_venta")} style={{ ...S.btn("purple"), fontSize: 11, padding: "4px 9px" }}>Orden Venta</button>}
-                  <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), fontSize: 11, padding: "4px 9px", marginLeft: "auto" }}>Eliminar</button>
+                  {r.estado !== "descartada" && <button onClick={() => chDescartar(r.id)} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Descartar</button>}
+                  {r.estado === "descartada" && <button onClick={() => chEst(r.id, "borrador")} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Restaurar</button>}
+                  <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), fontSize: 11, padding: "4px 9px" }}>Eliminar</button>
                 </div>
               </div>
             );
