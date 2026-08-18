@@ -1080,7 +1080,7 @@ export default function PageCotizaciones({ showToast, empId }) {
                     <button onClick={() => convertirAReserva(r)} style={{ ...S.btn("green"), fontSize: 11, padding: "4px 9px" }}>Crear Reserva</button>
                   )}
                   {!r.orden_venta && <button onClick={() => chEst(r.id, "orden_venta")} style={{ ...S.btn("purple"), fontSize: 11, padding: "4px 9px" }}>Orden Venta</button>}
-                  {r.estado !== "descartada" && <button onClick={() => chDescartar(r.id)} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Descartar</button>}
+                  {r.estado !== "descartada" && <button onClick={() => chDescartar(r.id)} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px", background: "#EAB308", color: "#0A0F1E", border: "none" }}>Descartar</button>}
                   {r.estado === "descartada" && <button onClick={() => chEst(r.id, "borrador")} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Restaurar</button>}
                   <button onClick={() => del(r.id)} style={{ ...S.btn("danger"), fontSize: 11, padding: "4px 9px" }}>Eliminar</button>
                 </div>
