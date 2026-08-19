@@ -76,6 +76,14 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
       scale, useCORS: true, allowTaint: true, logging: false,
       width: 750,
     });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: format || "letter", orientation: orientation || "portrait" });
+    const pw = pdf.internal.pageSize.getWidth() - 16;
+    const ph = pdf.internal.pageSize.getHeight() - 16;
+    const cw = canvas.width;
+    const ch = canvas.height;
+    const pxPerMm = cw / pw;
+    const pagePxH = Math.floor(ph * pxPerMm);
 
     // Detectar saltos de página explícitos (.page-break-before)
     const breakEls = wrapper.querySelectorAll('.page-break-before');
@@ -91,21 +99,13 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
     for (const y of contentBreaks) allBreaks.push(y);
     const sortedBreaks = [...new Set(allBreaks)].sort((a, b) => a - b);
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: "mm", format: format || "letter", orientation: orientation || "portrait" });
-    const pw = pdf.internal.pageSize.getWidth() - 16;
-    const ph = pdf.internal.pageSize.getHeight() - 16;
-    const cw = canvas.width;
-    const ch2 = canvas.height;
-    const pxPerMm = cw / pw;
-    const pagePxH2 = Math.floor(ph * pxPerMm);
     const overlap = 4;
 
     let prevY = 0;
     for (const brk of sortedBreaks) {
       if (brk <= prevY) continue;
       if (prevY > 0) pdf.addPage();
-      const cropH = Math.min(brk - prevY + overlap, ch2 - prevY);
+      const cropH = Math.min(brk - prevY + overlap, ch - prevY);
       const tmp = document.createElement("canvas");
       tmp.width = cw; tmp.height = cropH;
       tmp.getContext("2d").drawImage(canvas, 0, prevY, cw, cropH, 0, 0, cw, cropH);
@@ -113,9 +113,9 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
       prevY = brk;
     }
     // Página final (si queda contenido)
-    if (prevY < ch2) {
+    if (prevY < ch) {
       if (prevY > 0) pdf.addPage();
-      const cropH = ch2 - prevY;
+      const cropH = ch - prevY;
       const tmp = document.createElement("canvas");
       tmp.width = cw; tmp.height = cropH;
       tmp.getContext("2d").drawImage(canvas, 0, prevY, cw, cropH, 0, 0, cw, cropH);
