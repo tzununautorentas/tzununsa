@@ -93,11 +93,18 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
       return Math.round((rect.top - wrapperRect.top) * scale);
     }).filter(y => y > 20 && y < ch - 20);
 
-    // Construir lista de puntos de corte: naturales + explícitos
+    // Construir puntos de corte: naturales + explícitos
     const allBreaks = [];
     for (let y = pagePxH; y < ch; y += pagePxH) allBreaks.push(y);
     for (const y of contentBreaks) allBreaks.push(y);
-    const sortedBreaks = [...new Set(allBreaks)].sort((a, b) => a - b);
+
+    // Si hay saltos explícitos, eliminar los naturales cercanos (dentro del 40% de una página)
+    const minDist = pagePxH * 0.4;
+    const sortedAll = [...new Set(allBreaks)].sort((a, b) => a - b);
+    const sortedBreaks = sortedAll.filter(y => {
+      if (contentBreaks.includes(y)) return true;
+      return !contentBreaks.some(eb => Math.abs(y - eb) < minDist);
+    });
 
     const overlap = 4;
 
