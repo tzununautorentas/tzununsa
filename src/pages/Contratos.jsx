@@ -452,6 +452,7 @@ const generarPDFContrato = (contrato) => {
     /* Footer */
     .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
     @media print{body{padding:20px 24px}.no-print{display:none}@page{size:A4;margin:15mm}}
+    .page-break-before{display:block;height:0;page-break-before:always}
   `;
   const tipo       = getContractType(contrato.tipo);
   const esServicio = tipo !== 'renta';
@@ -563,6 +564,7 @@ const generarPDFContrato = (contrato) => {
   </div>` : ''}
 
   <!-- IV. PAGO -->
+  <div class="page-break-before"></div>
   <div class="section">
     <div class="section-title">IV. Valor del servicio y forma de pago</div>
     <div class="fin-box">
@@ -641,6 +643,7 @@ const generarPDFContrato = (contrato) => {
   </div>` : ''}
 
   <!-- VII. RESTRICCIONES -->
+  <div class="page-break-before"></div>
   <div class="section">
     <div class="section-title">VII. Restricciones</div>
     <div class="clausula">

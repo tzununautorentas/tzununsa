@@ -76,24 +76,50 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
       scale, useCORS: true, allowTaint: true, logging: false,
       width: 750,
     });
+
+    // Detectar saltos de página explícitos (.page-break-before)
+    const breakEls = wrapper.querySelectorAll('.page-break-before');
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const contentBreaks = Array.from(breakEls).map(el => {
+      const rect = el.getBoundingClientRect();
+      return Math.round((rect.top - wrapperRect.top) * scale);
+    }).filter(y => y > 20 && y < ch - 20);
+
+    // Construir lista de puntos de corte: naturales + explícitos
+    const allBreaks = [];
+    for (let y = pagePxH; y < ch; y += pagePxH) allBreaks.push(y);
+    for (const y of contentBreaks) allBreaks.push(y);
+    const sortedBreaks = [...new Set(allBreaks)].sort((a, b) => a - b);
+
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: format || "letter", orientation: orientation || "portrait" });
     const pw = pdf.internal.pageSize.getWidth() - 16;
     const ph = pdf.internal.pageSize.getHeight() - 16;
     const cw = canvas.width;
-    const ch = canvas.height;
+    const ch2 = canvas.height;
     const pxPerMm = cw / pw;
-    const pagePxH = Math.floor(ph * pxPerMm);
+    const pagePxH2 = Math.floor(ph * pxPerMm);
     const overlap = 4;
-    let y0 = 0;
-    while (y0 < ch) {
-      if (y0 > 0) pdf.addPage();
-      const cropH = Math.min(pagePxH + overlap, ch - y0);
+
+    let prevY = 0;
+    for (const brk of sortedBreaks) {
+      if (brk <= prevY) continue;
+      if (prevY > 0) pdf.addPage();
+      const cropH = Math.min(brk - prevY + overlap, ch2 - prevY);
       const tmp = document.createElement("canvas");
       tmp.width = cw; tmp.height = cropH;
-      tmp.getContext("2d").drawImage(canvas, 0, y0, cw, cropH, 0, 0, cw, cropH);
+      tmp.getContext("2d").drawImage(canvas, 0, prevY, cw, cropH, 0, 0, cw, cropH);
       pdf.addImage(tmp.toDataURL("image/jpeg", 0.92), "JPEG", 8, 8, pw, (cropH * pw) / cw, undefined, "FAST");
-      y0 += pagePxH;
+      prevY = brk;
+    }
+    // Página final (si queda contenido)
+    if (prevY < ch2) {
+      if (prevY > 0) pdf.addPage();
+      const cropH = ch2 - prevY;
+      const tmp = document.createElement("canvas");
+      tmp.width = cw; tmp.height = cropH;
+      tmp.getContext("2d").drawImage(canvas, 0, prevY, cw, cropH, 0, 0, cw, cropH);
+      pdf.addImage(tmp.toDataURL("image/jpeg", 0.92), "JPEG", 8, 8, pw, (cropH * pw) / cw, undefined, "FAST");
     }
     pdf.save(filename || "documento.pdf");
   } catch (err) {
