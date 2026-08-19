@@ -84,13 +84,16 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
     const ch = canvas.height;
     const pxPerMm = cw / pw;
     const pagePxH = Math.floor(ph * pxPerMm);
-    for (let y0 = 0; y0 < ch; y0 += pagePxH) {
+    const overlap = 4;
+    let y0 = 0;
+    while (y0 < ch) {
       if (y0 > 0) pdf.addPage();
-      const cropH = Math.min(pagePxH, ch - y0);
+      const cropH = Math.min(pagePxH + overlap, ch - y0);
       const tmp = document.createElement("canvas");
       tmp.width = cw; tmp.height = cropH;
       tmp.getContext("2d").drawImage(canvas, 0, y0, cw, cropH, 0, 0, cw, cropH);
       pdf.addImage(tmp.toDataURL("image/jpeg", 0.92), "JPEG", 8, 8, pw, (cropH * pw) / cw, undefined, "FAST");
+      y0 += pagePxH;
     }
     pdf.save(filename || "documento.pdf");
   } catch (err) {
