@@ -87,6 +87,7 @@ export default function PageCalculadora({ showToast, empId }) {
     fechaInicio: today(), fechaFin: today(),
     origen: "", destino: "", observaciones_ruta: "",
     carta_poder: false, carta_poder_costo: 0,
+    comision_bancaria: 0,
     itinerario: { vehiculos: [] },
     descripcion_servicio: "",
   });
@@ -153,7 +154,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const sub2    = diasCalc * rate2;
   const totalPartidas = partidasRenta.reduce((s, i) => s + ((parseInt(i.cantidad) || 0) * (parseFloat(i.precio) || 0)), 0);
   const cpCostRenta = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
-  const extrasTotal = (inclPiloto ? diasCalc * (costoPiloto || 0) : 0) + (inclHospedaje ? diasCalc * (costoHospedaje || 0) : 0) + (inclAlimentacion ? diasCalc * (costoAlimentacion || 0) : 0) + (parseFloat(variosRenta) || 0) + cpCostRenta;
+  const comisionBancariaRenta = parseFloat(tf.comision_bancaria) || 0;
+  const extrasTotal = (inclPiloto ? diasCalc * (costoPiloto || 0) : 0) + (inclHospedaje ? diasCalc * (costoHospedaje || 0) : 0) + (inclAlimentacion ? diasCalc * (costoAlimentacion || 0) : 0) + (parseFloat(variosRenta) || 0) + cpCostRenta + comisionBancariaRenta;
   const subTotalRenta   = sub + sub2 + extrasTotal + totalPartidas;
   const ivaAmtRenta     = Math.round(subTotalRenta * iva / 100 * 100) / 100;
   const baseRenta       = subTotalRenta + ivaAmtRenta;
@@ -174,7 +176,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const aT   = d2 * (parseFloat(tf.ali) || 0);
   const misc = parseFloat(tf.varios) || 0;
   const cpCost = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
-  const tsub = vT + pT + hT + aT + fuel + misc + cpCost;
+  const comisionBancaria = parseFloat(tf.comision_bancaria) || 0;
+  const tsub = vT + pT + hT + aT + fuel + misc + cpCost + comisionBancaria;
   const tiva = tsub * (parseFloat(tf.iva) || 0) / 100;
   const tbase = tsub + tiva;
   const ttcr  = tf.conTC ? tbase * 0.05 : 0;
@@ -244,10 +247,12 @@ export default function PageCalculadora({ showToast, empId }) {
       extras: misc, peajes: 0,
       carta_poder: tf.carta_poder,
       carta_poder_costo: cpCost,
+      comision_bancaria: tab === "renta" ? comisionBancariaRenta : comisionBancaria,
       itinerario: tab === "renta" ? "" : JSON.stringify(tf.itinerario),
       servicios_incluidos: JSON.stringify({
         hora_entrega: horaEntrega,
         hora_regreso: horaRegreso,
+        comision_bancaria: comisionBancariaRenta,
         partidas: tab === "renta"
           ? [
               ...(selVeh && rate > 0 ? [{ descripcion: `${selVeh} (${diasCalc} día${diasCalc !== 1 ? "s" : ""} x Q${fmt(rate)}/día)`, cantidad: diasCalc, precio: rate }] : []),
@@ -257,6 +262,7 @@ export default function PageCalculadora({ showToast, empId }) {
               ...(inclAlimentacion && costoAlimentacion > 0 ? [{ descripcion: "Alimentación", cantidad: diasCalc, precio: costoAlimentacion }] : []),
               ...(variosRenta > 0 ? [{ descripcion: "Varios", cantidad: 1, precio: variosRenta }] : []),
               ...(tf.carta_poder && cpCostRenta > 0 ? [{ descripcion: "Carta Poder (viaje internacional)", cantidad: 1, precio: cpCostRenta }] : []),
+              ...(comisionBancariaRenta > 0 ? [{ descripcion: "Comisión bancaria (transferencia SWIFT)", cantidad: 1, precio: comisionBancariaRenta }] : []),
               ...partidasRenta,
             ]
           : [],
@@ -426,6 +432,12 @@ export default function PageCalculadora({ showToast, empId }) {
                         value={tf.carta_poder_costo} onChange={e => stf("carta_poder_costo", e.target.value)}
                         placeholder="Costo Q" />
                     )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <label style={{ fontSize: 13, color: T.sub, minWidth: 140 }}>Comisión bancaria (Q)</label>
+                    <input style={{ ...S.inp, width: 120, fontSize: 12 }} type="number" step="0.01"
+                      value={tf.comision_bancaria} onChange={e => stf("comision_bancaria", e.target.value)}
+                      placeholder="Transferencia SWIFT" />
                   </div>
                 </div>
               </div>

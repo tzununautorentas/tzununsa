@@ -339,6 +339,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       return total > 0 ? `<div class="inv-row"><span>${p.descripcion}</span><span>Q ${fmt(total)}</span></div>` : "";
     }).join("") : d.vehiculo ? `<div class="inv-row"><span>${d.vehiculo}</span><span></span></div>` : ""}
     ${d.carta_poder && d.carta_poder_costo > 0 ? `<div class="inv-row"><span>Carta Poder (viaje internacional)</span><span>Q ${fmt(d.carta_poder_costo)}</span></div>` : ""}
+    ${d.comision_bancaria > 0 ? `<div class="inv-row"><span>Comisión bancaria (transferencia SWIFT)</span><span>Q ${fmt(d.comision_bancaria)}</span></div>` : ""}
     <div class="inv-row"><span style="font-weight:600;color:#1B2D5C">Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
     ${mostrarIVA ? `<div class="inv-row iva"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
@@ -509,6 +510,7 @@ function makePDFData(r) {
     version: parseInt(r.version) || 1,
     carta_poder: !!r.carta_poder,
     carta_poder_costo: parseFloat(r.carta_poder_costo) || 0,
+    comision_bancaria: parseFloat(r.comision_bancaria) || 0,
     itinerario: r.itinerario || "",
     partidas,
   };
@@ -530,6 +532,7 @@ const EMPTY_F = {
   fecha_emision: today(), fecha_vence: "", estado: "borrador", notas: "",
   fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
   observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0,
+  comision_bancaria: 0,
 };
 
 // ─── Formulario de cotización ─────────────────────────────────────────────────
@@ -565,6 +568,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       version: parseInt(initial.version) || 1,
       carta_poder: initial.carta_poder || false,
       carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0,
+      comision_bancaria: parseFloat(initial.comision_bancaria) || 0,
       itinerario: initial.itinerario || "",
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
@@ -647,7 +651,8 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
   const sub_peajes = f.incl_peajes ? (parseFloat(f.peajes) || 0) : 0;
   const sub_extras = parseFloat(f.extras) || 0;
   const sub_cp = f.carta_poder ? (parseFloat(f.carta_poder_costo) || 0) : 0;
-  const sub = sub_veh + sub_piloto + sub_hos + sub_ali + sub_comb + sub_peajes + sub_extras + sub_cp;
+  const sub_comision = parseFloat(f.comision_bancaria) || 0;
+  const sub = sub_veh + sub_piloto + sub_hos + sub_ali + sub_comb + sub_peajes + sub_extras + sub_cp + sub_comision;
   const iva_amt = sub * f.iva_pct / 100;
   const total_ef = sub + iva_amt;
   const total_tc = total_ef * 1.05;
@@ -670,6 +675,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
         carta_poder: f.carta_poder,
       carta_poder_costo: parseFloat(f.carta_poder_costo) || 0,
+      comision_bancaria: sub_comision,
       itinerario: f.itinerario || "",
         servicios_incluidos: JSON.stringify({ piloto: f.incl_piloto, combustible: f.incl_combustible, peajes: f.incl_peajes, hospedaje: f.incl_hospedaje, alimentacion: f.incl_alimentacion, seguro: f.incl_seguro }),
         costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
@@ -858,6 +864,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               </>}
               {f.incl_peajes && <Fld label="PEAJES TOTAL (Q)"><input style={S.inp} type="number" step="0.01" value={f.peajes} onChange={e => sf("peajes", e.target.value)} placeholder="0.00" /></Fld>}
               <Fld label="GASTOS EXTRAS / VARIOS (Q)"><input style={S.inp} type="number" step="0.01" value={f.extras} onChange={e => sf("extras", e.target.value)} placeholder="0.00" /></Fld>
+              <Fld label="COMISIÓN BANCARIA (Q)"><input style={S.inp} type="number" step="0.01" value={f.comision_bancaria} onChange={e => sf("comision_bancaria", e.target.value)} placeholder="Transferencia SWIFT" /></Fld>
             </div>
           </div>
 
@@ -912,6 +919,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                 {f.incl_peajes && sub_peajes > 0 && <div style={S.srow(false)}><span>Peajes</span><span>Q {fmt(sub_peajes)}</span></div>}
                 {sub_extras > 0 && <div style={S.srow(false)}><span>Extras</span><span>Q {fmt(sub_extras)}</span></div>}
                 {f.carta_poder && sub_cp > 0 && <div style={S.srow(false)}><span>Carta Poder</span><span>Q {fmt(sub_cp)}</span></div>}
+                {sub_comision > 0 && <div style={S.srow(false)}><span>Comisión bancaria</span><span>Q {fmt(sub_comision)}</span></div>}
                 <div style={{ borderTop: `1px solid ${T.bord}`, margin: "6px 0" }} />
                 <div style={S.srow(false)}><span>Subtotal</span><span>Q {fmt(sub)}</span></div>
                 <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>Q {fmt(iva_amt)}</span></div>
