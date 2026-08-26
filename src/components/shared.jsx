@@ -137,6 +137,37 @@ export async function generarPDF({ html, css, filename, margin, format, orientat
   document.body.removeChild(wrapper);
 }
 
+// --- PDF editable (texto seleccionable, para edición externa) ---
+export function generarPDFEditable({ html, css, filename }) {
+  const printCSS = `
+    @page { size: letter; margin: 18mm 20mm; }
+    @media print { body { margin: 0; } }
+  `;
+  const fullHTML = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8"/>
+<title>${filename || "Documento"}</title>
+<style>${css}${printCSS}</style>
+</head><body>${html}
+<script>
+  window.onload = function() {
+    setTimeout(function() { window.print(); }, 500);
+  };
+</script>
+</body></html>`;
+
+  const blob = new Blob([fullHTML], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank");
+  if (!win) {
+    alert("Se abrió en una nueva pestaña. Selecciona 'Guardar como PDF' en el diálogo de impresión.");
+    URL.revokeObjectURL(url);
+    return;
+  }
+  // Liberar después de un tiempo
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
 // --- Toast ---
 export function Toast({ msg, type }) {
   if (!msg) return null;

@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
-import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDF, generarPDFEditable } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── API ──────────────────────────────────────────────────────────
@@ -394,7 +394,7 @@ function ChecklistVehiculo({ titulo, valor, onChange }) {
 // ═══════════════════════════════════════════════════════════════════
 // GENERADOR DE PDF — HTML profesional
 // ═══════════════════════════════════════════════════════════════════
-const generarPDFContrato = (contrato) => {
+function buildContratoHTML(contrato) {
   const conductores = JSON.parse(contrato.conductores || '[]');
   const checkSal    = JSON.parse(contrato.checklist_salida  || '{}');
   const checkRet    = JSON.parse(contrato.checklist_retorno || '{}');
@@ -757,8 +757,19 @@ const generarPDFContrato = (contrato) => {
   </div>
 
   `;
+  return { html, css };
+}
 
-  generarPDF({ html, css, filename: `Contrato_${contrato.numero}.pdf` });
+const generarPDFContrato = (contrato) => {
+  const { html, css } = buildContratoHTML(contrato);
+  const numero = contrato.numero || 'S-N';
+  generarPDF({ html, css, filename: `Contrato_${numero}.pdf` });
+};
+
+const generarPDFContratoEditable = (contrato) => {
+  const { html, css } = buildContratoHTML(contrato);
+  const numero = contrato.numero || 'S-N';
+  generarPDFEditable({ html, css, filename: `Contrato_${numero}_editable.pdf` });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1310,6 +1321,9 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
               <button onClick={() => generarPDFContrato(f)} style={{ ...S.btn('blue'), flex: 1 }}>
                 Ver PDF completo
               </button>
+              <button onClick={() => generarPDFContratoEditable(f)} style={{ ...S.btn('green'), flex: 1 }}>
+                PDF editable (texto)
+              </button>
               <button onClick={() => navigator.clipboard?.writeText(f.numero).then(() => showToast('Numero copiado'))}
                 style={{ ...S.btn('ghost'), fontSize: 11 }}>
                 Copiar No. contrato
@@ -1440,6 +1454,10 @@ export default function PageContratos({ showToast, empId }) {
                   <button onClick={() => generarPDFContrato(r)}
                     style={{ ...S.btn("blue"), padding: "3px 7px", fontSize: 10 }}>
                     PDF
+                  </button>
+                  <button onClick={() => generarPDFContratoEditable(r)}
+                    style={{ ...S.btn("green"), padding: "3px 7px", fontSize: 10 }}>
+                    PDF editable
                   </button>
                   <button onClick={() => { setEditItem(r); setVista('form'); }}
                     style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
