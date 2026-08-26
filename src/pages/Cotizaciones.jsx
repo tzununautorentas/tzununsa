@@ -308,6 +308,34 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       ${d.incl_seguro !== false ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Seguro de viaje</span></div>` : ""}
       ${d.carta_poder ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Carta Poder (viaje internacional)</span></div>` : ""}
     </div>
+
+    <!-- ITINERARIO / LUGARES A VISITAR -->
+    ${d.itinerario && (() => {
+      try {
+        const it = typeof d.itinerario === 'string' ? JSON.parse(d.itinerario) : d.itinerario;
+        if (!it?.vehiculos?.length) return "";
+        let html = `<div class="st" style="margin-top:8px">ITINERARIO / LUGARES A VISITAR</div><div style="font-size:11px;color:#475569;">`;
+        for (const veh of it.vehiculos) {
+          if (veh.vehiculo_nombre) html += `<div style="font-weight:700;color:#1B2D5C;margin-top:6px;margin-bottom:2px;">${veh.vehiculo_nombre}${veh.piloto_nombre ? " — Piloto: " + veh.piloto_nombre : ""}</div>`;
+          if (veh.trayectos?.length) {
+            for (const t of veh.trayectos) {
+              if (t.origen || t.destino) {
+                html += `<div style="padding:1px 0 1px 8px;">&#8594; ${t.origen || "—"} → ${t.destino || "—"}${t.fecha ? " (" + t.fecha + ")" : ""}${t.hora_salida ? " " + t.hora_salida : ""}</div>`;
+              }
+            }
+          }
+          if (veh.visitas?.length) {
+            const visL = veh.visitas.filter(v => v.nombre?.trim());
+            if (visL.length > 0) {
+              html += `<div style="padding:1px 0 1px 8px;font-style:italic;color:#64748B;">Visitas: ${visL.map(v => v.nombre).join(", ")}</div>`;
+            }
+          }
+        }
+        html += `</div>`;
+        return html;
+      } catch { return ""; }
+    })()}
+  </div>
   </div>
 
   <div class="col-right">
@@ -840,6 +868,37 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>DESCRIPCION DEL SERVICIO</label><textarea style={{ ...S.inp, minHeight: 56, resize: "vertical" }} value={f.descripcion_servicio} onChange={e => sf("descripcion_servicio", e.target.value)} placeholder="Traslado desde Guatemala hacia..." /></div>
             </div>
           </div>
+
+          {/* Itinerario / Visitas */}
+          {f.itinerario && (() => {
+            try {
+              const it = typeof f.itinerario === 'string' ? JSON.parse(f.itinerario) : f.itinerario;
+              if (!it?.vehiculos?.length) return null;
+              const hasVisitas = it.vehiculos.some(v => v.visitas?.length > 0);
+              if (!hasVisitas) return null;
+              return (
+                <div style={S.card}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>ITINERARIO / LUGARES A VISITAR</div>
+                  {it.vehiculos.map((veh, idx) => {
+                    const visL = (veh.visitas || []).filter(v => v.nombre?.trim());
+                    if (visL.length === 0) return null;
+                    return (
+                      <div key={idx} style={{ marginBottom: 8 }}>
+                        {veh.vehiculo_nombre && <div style={{ fontSize: 12, fontWeight: 600, color: T.acc, marginBottom: 4 }}>{veh.vehiculo_nombre}{veh.piloto_nombre ? ` — Piloto: ${veh.piloto_nombre}` : ""}</div>}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {visL.map((v, vi) => (
+                            <span key={vi} style={{ padding: "3px 10px", borderRadius: 8, background: T.accDim, border: `1px solid ${T.acc}44`, fontSize: 11, color: T.txt }}>
+                              {v.nombre}{v.fecha ? ` (${v.fecha})` : ""}{v.notas ? ` — ${v.notas}` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            } catch { return null; }
+          })()}
 
           {/* Servicios y costos */}
           <div style={S.card}>
