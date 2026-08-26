@@ -5,7 +5,8 @@ let uid = Date.now();
 const id = () => ++uid;
 
 const TRAYECTO_VACIO = () => ({ _id: id(), fecha: "", hora_salida: "", hora_estimada: "", origen: "", destino: "", observaciones: "" });
-const VEHICULO_VACIO = () => ({ _id: id(), vehiculo_nombre: "", piloto_nombre: "", costo_vehiculo: 0, costo_piloto: 0, costo_hospedaje: 0, costo_alimentacion: 0, km_ida: 0, km_regreso: 0, km_por_galon: 27, precio_galon: 48, dias: 1, trayectos: [TRAYECTO_VACIO()] });
+const VISITA_VACIA = () => ({ _id: id(), nombre: "", fecha: "", notas: "" });
+const VEHICULO_VACIO = () => ({ _id: id(), vehiculo_nombre: "", piloto_nombre: "", costo_vehiculo: 0, costo_piloto: 0, costo_hospedaje: 0, costo_alimentacion: 0, km_ida: 0, km_regreso: 0, km_por_galon: 27, precio_galon: 48, dias: 1, trayectos: [TRAYECTO_VACIO()], visitas: [] });
 
 export default function ItinerarioServicio({ value, flotaVehiculos, onChange }) {
   const vehiculos = value?.vehiculos?.length > 0 ? value.vehiculos : [];
@@ -45,6 +46,26 @@ export default function ItinerarioServicio({ value, flotaVehiculos, onChange }) 
     const v = [...vehiculos];
     const t = v[vidx].trayectos.filter((_, i) => i !== tidx);
     v[vidx] = { ...v[vidx], trayectos: t.length === 0 ? [TRAYECTO_VACIO()] : t };
+    onChange?.({ ...value, vehiculos: v });
+  }, [vehiculos, value, onChange]);
+
+  const agregarVisita = useCallback((vidx) => {
+    const v = [...vehiculos];
+    v[vidx] = { ...v[vidx], visitas: [...(v[vidx].visitas || []), VISITA_VACIA()] };
+    onChange?.({ ...value, vehiculos: v });
+  }, [vehiculos, value, onChange]);
+
+  const cambiarVisita = useCallback((vidx, vidx2, campo, val) => {
+    const v = [...vehiculos];
+    const visitas = [...(v[vidx].visitas || [])];
+    visitas[vidx2] = { ...visitas[vidx2], [campo]: val };
+    v[vidx] = { ...v[vidx], visitas };
+    onChange?.({ ...value, vehiculos: v });
+  }, [vehiculos, value, onChange]);
+
+  const quitarVisita = useCallback((vidx, vidx2) => {
+    const v = [...vehiculos];
+    v[vidx] = { ...v[vidx], visitas: (v[vidx].visitas || []).filter((_, i) => i !== vidx2) };
     onChange?.({ ...value, vehiculos: v });
   }, [vehiculos, value, onChange]);
 
@@ -199,6 +220,35 @@ export default function ItinerarioServicio({ value, flotaVehiculos, onChange }) 
                 </div>
               ))}
             </div>
+
+            {/* VISITAS (lista simple) */}
+            <div style={{ borderTop: `1px solid ${T.bord}22`, paddingTop: 8, marginTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.acc }}>VISITAS / PUNTOS DE INTERÉS</span>
+                <button type="button" onClick={() => agregarVisita(vidx)}
+                  style={{ ...S.btn("primary"), padding: "3px 10px", fontSize: 10 }}>+ Agregar Visita</button>
+              </div>
+              {(veh.visitas || []).length === 0 && (
+                <div style={{ fontSize: 10, color: T.sec, fontStyle: "italic", padding: "4px 0" }}>
+                  Opcional: lista de escuelas, puntos de visita, etc.
+                </div>
+              )}
+              {(veh.visitas || []).map((visita, vidx2) => (
+                <div key={visita._id} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
+                  <input style={{ ...inpStyle, fontSize: 10, padding: "4px 6px", flex: 3 }} value={visita.nombre}
+                    onChange={e => cambiarVisita(vidx, vidx2, "nombre", e.target.value)}
+                    placeholder="Nombre del lugar / escuela" />
+                  <input style={{ ...inpStyle, fontSize: 10, padding: "4px 6px", flex: 1 }} type="date" value={visita.fecha}
+                    onChange={e => cambiarVisita(vidx, vidx2, "fecha", e.target.value)} />
+                  <input style={{ ...inpStyle, fontSize: 10, padding: "4px 6px", flex: 2 }} value={visita.notas}
+                    onChange={e => cambiarVisita(vidx, vidx2, "notas", e.target.value)}
+                    placeholder="Notas (opcional)" />
+                  <button type="button" onClick={() => quitarVisita(vidx, vidx2)}
+                    style={{ ...S.btn("danger"), padding: "1px 8px", fontSize: 9, lineHeight: "18px" }}>X</button>
+                </div>
+              ))}
+            </div>
+
           </div>
         </div>
       ))}
@@ -222,14 +272,20 @@ export function generarDescripcionDesdeItinerario(itinerario) {
   for (const veh of itinerario.vehiculos) {
     const nom = veh.vehiculo_nombre || "Vehículo";
     const ts = veh.trayectos || [];
-    if (ts.length === 0) continue;
+    if (ts.length === 0 && (!veh.visitas || veh.visitas.length === 0)) continue;
     const trayectosStr = ts.map((t, i) => {
       const o = t.origen || "—";
       const d = t.destino || "—";
       const fecha = t.fecha ? fmt(t.fecha) : "";
       return `${i + 1}. ${o} → ${d}${fecha ? ` (${fecha})` : ""}`;
     }).join("; ");
-    partes.push(`${nom} (piloto: ${veh.piloto_nombre || "—"}): ${trayectosStr}`);
+    let resumen = `${nom} (piloto: ${veh.piloto_nombre || "—"})`;
+    if (trayectosStr) resumen += `: ${trayectosStr}`;
+    if (veh.visitas && veh.visitas.length > 0) {
+      const visitasStr = veh.visitas.map(v => v.nombre || "—").join(", ");
+      resumen += `. Visitas: ${visitasStr}`;
+    }
+    partes.push(resumen);
   }
   if (partes.length === 0) return "";
   const fechas = [];
