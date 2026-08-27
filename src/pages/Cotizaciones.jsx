@@ -60,6 +60,7 @@ async function generarPDFPremium(d, empId, mode = "download") {
     logo_url:  empData.logo_url           || "",
     banco1:    empData.banco1             || "Banco Industrial — Cta. Monetaria No. 853-000016-8",
     banco2:    empData.banco2             || "Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475",
+    banco_usd: empData.banco_usd          || "",
     firmante:  empData.firmante           || "Oscar Gálvez",
     cargo_firmante: empData.cargo_firmante || "Coordinador de Servicios",
     tel_firmante: empData.tel_firmante    || "+502 3122 1538",
@@ -153,7 +154,12 @@ async function generarPDFPremium(d, empId, mode = "download") {
   };
   const b1 = parseBanco(e.banco1);
   const b2 = parseBanco(e.banco2);
+  const bUSD = parseBanco(e.banco_usd);
   const hayBancos = b1 || b2;
+
+  const isUSD = d.moneda_cotizacion === "USD";
+  const curSym = isUSD ? "$" : "Q";
+  const curFmt = v => isUSD ? fmt(v / (d.exch || 7.70)) : fmt(v);
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
@@ -360,18 +366,18 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 <!-- ═══ 6. RESUMEN ECONÓMICO ═══ -->
 <div class="section">
-  <div class="st">RESUMEN ECON&Oacute;MICO</div>
+  <div class="st">RESUMEN ECON&Oacute;MICO ${isUSD ? "($ USD)" : "(Q GTQ)"}</div>
   <div class="inv-box">
     ${Array.isArray(d.partidas) && d.partidas.length > 0 ? d.partidas.filter(p => p.descripcion && p.descripcion.trim()).map(p => {
       const total = (parseInt(p.cantidad)||0) * (parseFloat(p.precio)||0);
-      return total > 0 ? `<div class="inv-row"><span>${p.descripcion}</span><span>Q ${fmt(total)}</span></div>` : "";
+      return total > 0 ? `<div class="inv-row"><span>${p.descripcion}</span><span>${curSym} ${curFmt(total)}</span></div>` : "";
     }).join("") : d.vehiculo ? `<div class="inv-row"><span>${d.vehiculo}</span><span></span></div>` : ""}
-    ${d.carta_poder && d.carta_poder_costo > 0 ? `<div class="inv-row"><span>Carta Poder (viaje internacional)</span><span>Q ${fmt(d.carta_poder_costo)}</span></div>` : ""}
-    ${d.comision_bancaria > 0 ? `<div class="inv-row"><span>Comisión Bancaria Inter. (${d.moneda_comision || "USD"} ${fmt(d.comision_bancaria_usd)} × Q${fmt(d.moneda_comision === "EUR" ? (d.exch_eur || 8.50) : (d.exch || 7.70))})</span><span>Q ${fmt(d.comision_bancaria)}</span></div>` : ""}
-    <div class="inv-row"><span style="font-weight:600;color:#1B2D5C">Subtotal</span><span>Q ${fmt(d.sub)}</span></div>
-    ${mostrarIVA ? `<div class="inv-row iva"><span>IVA (${d.iva_pct}%)</span><span>Q ${fmt(d.iva_amt)}</span></div>` : ""}
+    ${d.carta_poder && d.carta_poder_costo > 0 ? `<div class="inv-row"><span>Carta Poder (viaje internacional)</span><span>${curSym} ${curFmt(d.carta_poder_costo)}</span></div>` : ""}
+    ${d.comision_bancaria > 0 ? `<div class="inv-row"><span>Comisión Bancaria Inter. (${d.moneda_comision || "USD"} ${fmt(d.comision_bancaria_usd)})</span><span>${curSym} ${curFmt(d.comision_bancaria)}</span></div>` : ""}
+    <div class="inv-row"><span style="font-weight:600;color:#1B2D5C">Subtotal</span><span>${curSym} ${curFmt(d.sub)}</span></div>
+    ${mostrarIVA ? `<div class="inv-row iva"><span>IVA (${d.iva_pct}%)</span><span>${curSym} ${curFmt(d.iva_amt)}</span></div>` : ""}
     <div class="inv-divider"></div>
-    <div class="inv-total"><span>TOTAL DEL SERVICIO</span><span class="amt">Q ${fmt(d.total_ef)}</span></div>
+    <div class="inv-total"><span>TOTAL DEL SERVICIO</span><span class="amt">${curSym} ${curFmt(d.total_ef)}</span></div>
   </div>
 </div>
 
@@ -381,22 +387,25 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
   <div class="pago-grid">
     <div class="pago-card">
       <div class="pago-label">Tarjeta de cr&eacute;dito o d&eacute;bito</div>
-      <div class="pago-monto">Q ${fmt(totalTC)}</div>
+      <div class="pago-monto">${curSym} ${curFmt(totalTC)}</div>
     </div>
     <div class="pago-card">
       <div class="pago-label">Transferencia, dep&oacute;sito o efectivo</div>
-      <div class="pago-monto">Q ${fmt(d.total_ef)}</div>
+      <div class="pago-monto">${curSym} ${curFmt(d.total_ef)}</div>
     </div>
   </div>
 </div>
 
 <!-- ═══ 8. INFORMACIÓN BANCARIA ═══ -->
 <div class="section">
-  <div class="st">DATOS PARA PAGO</div>
+  <div class="st">DATOS PARA PAGO ${isUSD ? "($ USD)" : ""}</div>
   <div class="bancos-box">
-    ${b1 ? `<div class="b-item"><strong>${b1.banco}</strong>${b1.detalle ? "<br/>" + b1.detalle : ""}</div>` : ""}
+    ${isUSD
+      ? (bUSD ? `<div class="b-item"><strong>${bUSD.banco}</strong>${bUSD.detalle ? "<br/>" + bUSD.detalle : ""}</div><div class="b-titular">Titular: ${e.nombre}</div>` : '<div class="b-item"><em style="color:#94A3B8">Configure la cuenta bancaria en USD en Configuraci&oacute;n</em></div>')
+      : `${b1 ? `<div class="b-item"><strong>${b1.banco}</strong>${b1.detalle ? "<br/>" + b1.detalle : ""}</div>` : ""}
     ${b2 ? `<div class="b-item"><strong>${b2.banco}</strong>${b2.detalle ? "<br/>" + b2.detalle : ""}</div>` : ""}
-    ${hayBancos ? `<div class="b-titular">Titular: ${e.nombre}</div>` : ""}
+    ${hayBancos ? `<div class="b-titular">Titular: ${e.nombre}</div>` : ""}`
+    }
   </div>
 </div>
 
@@ -408,7 +417,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
     <li>La reserva del servicio se confirma mediante el pago del anticipo acordado entre las partes.</li>
     <li>Cualquier servicio o requerimiento adicional no contemplado ser&aacute; cotizado por separado.</li>
     <li>Se emitir&aacute; la Factura Electr&oacute;nica en L&iacute;nea (FEL) por los servicios contratados.</li>
-    <li>Todos nuestros veh&iacute;culos son entregados limpios e higienizados. Si al finalizar el servicio se requiere limpieza extraordinaria, se aplicar&aacute; el cargo correspondiente seg&uacute;n la tarifa vigente (Q ${fmt(e.tarifa_limpieza)}).</li>
+    <li>Todos nuestros veh&iacute;culos son entregados limpios e higienizados. Si al finalizar el servicio se requiere limpieza extraordinaria, se aplicar&aacute; el cargo correspondiente seg&uacute;n la tarifa vigente (${curSym} ${curFmt(e.tarifa_limpieza)}).</li>
   </ul>
 </div>
 
@@ -542,6 +551,7 @@ function makePDFData(r) {
     comision_bancaria_usd: parseFloat(r.comision_bancaria_usd) || 0,
     moneda_comision: r.moneda_comision || "USD",
     exch_eur: parseFloat(r.exch_eur) || 8.50,
+    moneda_cotizacion: r.moneda_cotizacion || "GTQ",
     itinerario: r.itinerario || "",
     partidas,
   };
@@ -564,6 +574,7 @@ const EMPTY_F = {
   fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
   observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0,
   comision_bancaria: 0, comision_bancaria_usd: 0, moneda_comision: "USD", exch_eur: 8.50,
+  moneda_cotizacion: "GTQ",
 };
 
 // ─── Formulario de cotización ─────────────────────────────────────────────────
@@ -603,6 +614,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       comision_bancaria_usd: parseFloat(initial.comision_bancaria_usd) || 0,
       moneda_comision: initial.moneda_comision || "USD",
       exch_eur: parseFloat(initial.exch_eur) || 8.50,
+      moneda_cotizacion: initial.moneda_cotizacion || "GTQ",
       itinerario: initial.itinerario || "",
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
@@ -723,6 +735,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         tasa_iva: f.iva_pct, metodo_pago: f.pago || "efectivo", tasa_cambio: exch,
         subtotal: sub, total_iva: iva_amt, recargo_tarjeta: total_tc - total_ef,
         total_gtq: total_ef, total_usd: total_ef / exch,
+        moneda_cotizacion: f.moneda_cotizacion || "GTQ",
         fecha_inicio: f.fecha_inicio || null, fecha_fin: f.fecha_fin || null,
         origen: f.origen || "", destino: f.destino || "", ruta: f.ruta || "",
         observaciones_ruta: f.observaciones_ruta || "",
@@ -758,6 +771,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           comision_bancaria_usd: comisionBancariaUSD,
           moneda_comision: f.moneda_comision || "USD",
           exch_eur: parseFloat(f.exch_eur) || 8.50,
+          moneda_cotizacion: f.moneda_cotizacion || "GTQ",
           itinerario: f.itinerario || "",
           version: nextVersion,
         };
@@ -963,6 +977,14 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
             <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>FISCAL Y VALIDEZ</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
               <div style={{ gridColumn: "span 2" }}>
+                <label style={S.lbl}>MONEDA DE COTIZACIÓN</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[{ v: "GTQ", l: "Q — Quetzales" }, { v: "USD", l: "$ — Dólares" }].map(o => (
+                    <button key={o.v} onClick={() => sf("moneda_cotizacion", o.v)} style={{ ...S.btn(f.moneda_cotizacion === o.v ? "primary" : "ghost"), flex: 1, fontSize: 11 }}>{o.l}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ gridColumn: "span 2" }}>
                 <label style={S.lbl}>IVA</label>
                 <div style={{ display: "flex", gap: 8 }}>
                   {[{ v: 12, l: "12% General" }, { v: 5, l: "5% Pequeño Cont." }, { v: 0, l: "Sin IVA" }].map(o => (
@@ -989,7 +1011,9 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
 
         {/* Derecha — Resumen */}
         <div style={S.card}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>Resumen</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>
+            Resumen {f.moneda_cotizacion === "USD" ? "($ USD)" : "(Q GTQ)"}
+          </div>
           {f.cliente_nombre && (
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>{f.cliente_nombre}</div>
@@ -998,32 +1022,36 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
             </div>
           )}
           {f.vehiculo_nombre && <div style={{ fontSize: 12, color: T.sub, marginBottom: 10 }}>{f.vehiculo_nombre} · {dias} dia{dias !== 1 ? "s" : ""}</div>}
-          {sub > 0 ? (
+          {sub > 0 ? (() => {
+            const isUSD = f.moneda_cotizacion === "USD";
+            const sym = isUSD ? "$" : "Q";
+            const toDisplay = v => isUSD ? fmt(v / exch) : fmt(v);
+            return (
             <>
               <div style={{ background: T.surf, borderRadius: 10, padding: 12, marginBottom: 10, fontSize: 12 }}>
-                {sub_veh > 0 && <div style={S.srow(false)}><span>Vehiculo</span><span>Q {fmt(sub_veh)}</span></div>}
-                {f.incl_piloto && sub_piloto > 0 && <div style={S.srow(false)}><span>Piloto</span><span>Q {fmt(sub_piloto)}</span></div>}
-                {f.incl_hospedaje && sub_hos > 0 && <div style={S.srow(false)}><span>Hospedaje</span><span>Q {fmt(sub_hos)}</span></div>}
-                {f.incl_alimentacion && sub_ali > 0 && <div style={S.srow(false)}><span>Alimentacion</span><span>Q {fmt(sub_ali)}</span></div>}
-                {f.incl_combustible && sub_comb > 0 && <div style={S.srow(false)}><span>Combustible ({fmt(gals)} gal)</span><span>Q {fmt(sub_comb)}</span></div>}
-                {f.incl_peajes && sub_peajes > 0 && <div style={S.srow(false)}><span>Peajes</span><span>Q {fmt(sub_peajes)}</span></div>}
-                {sub_extras > 0 && <div style={S.srow(false)}><span>Extras</span><span>Q {fmt(sub_extras)}</span></div>}
-                {f.carta_poder && sub_cp > 0 && <div style={S.srow(false)}><span>Carta Poder</span><span>Q {fmt(sub_cp)}</span></div>}
-                {sub_comision > 0 && <div style={S.srow(false)}><span>Comisión Bancaria Inter.</span><span>{f.moneda_comision || "USD"} {fmt(comisionBancariaUSD)} = Q {fmt(sub_comision)}</span></div>}
+                {sub_veh > 0 && <div style={S.srow(false)}><span>Vehiculo</span><span>{sym} {toDisplay(sub_veh)}</span></div>}
+                {f.incl_piloto && sub_piloto > 0 && <div style={S.srow(false)}><span>Piloto</span><span>{sym} {toDisplay(sub_piloto)}</span></div>}
+                {f.incl_hospedaje && sub_hos > 0 && <div style={S.srow(false)}><span>Hospedaje</span><span>{sym} {toDisplay(sub_hos)}</span></div>}
+                {f.incl_alimentacion && sub_ali > 0 && <div style={S.srow(false)}><span>Alimentacion</span><span>{sym} {toDisplay(sub_ali)}</span></div>}
+                {f.incl_combustible && sub_comb > 0 && <div style={S.srow(false)}><span>Combustible ({fmt(gals)} gal)</span><span>{sym} {toDisplay(sub_comb)}</span></div>}
+                {f.incl_peajes && sub_peajes > 0 && <div style={S.srow(false)}><span>Peajes</span><span>{sym} {toDisplay(sub_peajes)}</span></div>}
+                {sub_extras > 0 && <div style={S.srow(false)}><span>Extras</span><span>{sym} {toDisplay(sub_extras)}</span></div>}
+                {f.carta_poder && sub_cp > 0 && <div style={S.srow(false)}><span>Carta Poder</span><span>{sym} {toDisplay(sub_cp)}</span></div>}
+                {sub_comision > 0 && <div style={S.srow(false)}><span>Comisión Bancaria Inter.</span><span>{isUSD ? `$ ${fmt(comisionBancariaUSD)}` : `Q ${fmt(sub_comision)}`}</span></div>}
                 <div style={{ borderTop: `1px solid ${T.bord}`, margin: "6px 0" }} />
-                <div style={S.srow(false)}><span>Subtotal</span><span>Q {fmt(sub)}</span></div>
-                <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>Q {fmt(iva_amt)}</span></div>
+                <div style={S.srow(false)}><span>Subtotal</span><span>{sym} {toDisplay(sub)}</span></div>
+                <div style={S.srow(false)}><span>IVA {f.iva_pct}%</span><span>{sym} {toDisplay(iva_amt)}</span></div>
               </div>
               <div style={{ background: T.accDim, border: `1px solid ${T.acc}55`, borderRadius: 10, padding: "12px 16px", marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginBottom: 3 }}>PRECIO BENEFICIO (Efectivo / Transf.)</div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, fontWeight: 800, color: T.acc }}>
-                  <span>Q {fmt(total_ef)}</span>
-                  <span style={{ fontSize: 12, color: T.sub, alignSelf: "flex-end" }}>$ {fmt(total_ef / exch)}</span>
+                  <span>{sym} {toDisplay(total_ef)}</span>
+                  <span style={{ fontSize: 12, color: T.sub, alignSelf: "flex-end" }}>{isUSD ? "" : `$ ${fmt(total_ef / exch)}`}</span>
                 </div>
               </div>
               <div style={{ background: T.secDim, border: `1px solid ${T.sec}44`, borderRadius: 9, padding: "9px 14px", marginBottom: 16 }}>
                 <div style={{ fontSize: 10, color: T.sec }}>Con Tarjeta C/D (+5%)</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: T.sec }}>Q {fmt(total_tc)}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.sec }}>{sym} {toDisplay(total_tc)}</div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <button onClick={() => guardar("borrador")} disabled={saving} style={{ ...S.btn("ghost"), width: "100%" }}>{saving ? "..." : "Guardar borrador"}</button>

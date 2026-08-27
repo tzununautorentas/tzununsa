@@ -113,6 +113,7 @@ function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <Fld label="BANCO 1"><input style={S.inp} value={emp.banco1 || ""} onChange={e => se("banco1", e.target.value)} placeholder="Banco Industrial — Cta. Monetaria No. 853-000016-8" /></Fld>
             <Fld label="BANCO 2"><input style={S.inp} value={emp.banco2 || ""} onChange={e => se("banco2", e.target.value)} placeholder="Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475" /></Fld>
+            <Fld label="BANCO USD"><input style={S.inp} value={emp.banco_usd || ""} onChange={e => se("banco_usd", e.target.value)} placeholder="Cuenta bancaria en dólares para transferencias SWIFT" /></Fld>
           </div>
         </div>
         <div style={S.card}>
@@ -730,7 +731,7 @@ export default function PageConfiguracion({ showToast }) {
     if (empId) await dbUpd("empresas", empId, {
       nombre: emp.nombre, nit: emp.nit, direccion: emp.direccion,
       telefono: emp.telefono, email: emp.email,
-      eslogan: emp.eslogan, banco1: emp.banco1, banco2: emp.banco2,
+      eslogan: emp.eslogan, banco1: emp.banco1, banco2: emp.banco2, banco_usd: emp.banco_usd || "",
       contacto: emp.contacto, tel_contacto: emp.tel_contacto,
       email_contacto: emp.email_contacto, web: emp.web,
       firmante: emp.firmante, tel_firmante: emp.tel_firmante, nota_pie: emp.nota_pie,
