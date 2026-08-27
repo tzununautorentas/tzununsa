@@ -315,56 +315,71 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       ${d.carta_poder ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Carta Poder (viaje internacional)</span></div>` : ""}
     </div>
 
-    <!-- ITINERARIO / LUGARES A VISITAR -->
-    ${d.itinerario && (() => {
-      try {
-        const it = typeof d.itinerario === 'string' ? JSON.parse(d.itinerario) : d.itinerario;
-        if (!it?.vehiculos?.length) return "";
-        let html = `<div class="st" style="margin-top:8px">ITINERARIO / LUGARES A VISITAR</div><div style="font-size:11px;color:#475569;">`;
-        for (const veh of it.vehiculos) {
-          if (veh.vehiculo_nombre) html += `<div style="font-weight:700;color:#1B2D5C;margin-top:6px;margin-bottom:2px;">${veh.vehiculo_nombre}${veh.piloto_nombre ? " — Piloto: " + veh.piloto_nombre : ""}</div>`;
-          if (veh.trayectos?.length) {
-            for (const t of veh.trayectos) {
-              if (t.origen || t.destino) {
-                html += `<div style="padding:1px 0 1px 8px;">&#8594; ${t.origen || "—"} → ${t.destino || "—"}${t.fecha ? " (" + t.fecha + ")" : ""}${t.hora_salida ? " " + t.hora_salida : ""}</div>`;
-              }
-            }
-          }
-          if (veh.visitas?.length) {
-            const visL = veh.visitas.filter(v => v.nombre?.trim());
-            if (visL.length > 0) {
-              html += `<div style="padding:1px 0 1px 8px;font-style:italic;color:#64748B;">Visitas: ${visL.map(v => v.nombre).join(", ")}</div>`;
-            }
-          }
-        }
-        html += `</div>`;
-        return html;
-      } catch { return ""; }
-    })()}
-  </div>
-  </div>
-
-  <div class="col-right">
-    <!-- FICHA VEHICULO (foto + specs integrados) -->
-    <div class="veh-card">
-      ${fotoVehiculo ? `<div class="veh-photo-wrap">
-        <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-      </div>` : `<div class="veh-photo-placeholder">Sin fotograf&iacute;a</div>`}
-      <div class="veh-body">
-        <div class="veh-name">${vehNombreMatch || d.vehiculo || ""}</div>
-        <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" \u00b7 ")}</div>
-        <div class="veh-divider"></div>
-        ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
-        ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
-        ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
-        ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
-        ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ 6. RESUMEN ECONÓMICO ═══ -->
+<!-- ═══ 5.5. ITINERARIO / LUGARES A VISITAR ═══ -->
+${d.itinerario && (() => {
+  try {
+    const it = typeof d.itinerario === 'string' ? JSON.parse(d.itinerario) : d.itinerario;
+    if (!it?.vehiculos?.length) return "";
+    const allVisitas = [];
+    const allTrayectos = [];
+    for (const veh of it.vehiculos) {
+      const vnom = veh.vehiculo_nombre || "";
+      const piloto = veh.piloto_nombre || "";
+      for (const t of (veh.trayectos || [])) {
+        if (t.origen || t.destino) allTrayectos.push({ vehiculo: vnom, piloto, ...t });
+      }
+      for (const v of (veh.visitas || [])) {
+        if (v.nombre?.trim()) allVisitas.push({ vehiculo: vnom, ...v });
+      }
+    }
+    if (allVisitas.length === 0 && allTrayectos.length === 0) return "";
+    let html = `<div class="section"><div class="st">ITINERARIO / LUGARES A VISITAR</div>`;
+    html += `<div class="inv-box">`;
+    if (allTrayectos.length > 0) {
+      html += `<div style="font-size:10px;font-weight:700;color:#1B2D5C;padding:3px 0;border-bottom:1px solid #E2E8F0;margin-bottom:2px;">TRAYECTOS</div>`;
+      for (const t of allTrayectos) {
+        html += `<div class="inv-row" style="font-size:11px;"><span>${t.vehiculo ? t.vehiculo + " — " : ""}${t.origen || "—"} &rarr; ${t.destino || "—"}${t.fecha ? " (" + t.fecha + ")" : ""}${t.hora_salida ? " " + t.hora_salida : ""}</span></div>`;
+      }
+    }
+    if (allVisitas.length > 0) {
+      html += `<div style="font-size:10px;font-weight:700;color:#1B2D5C;padding:3px 0;border-bottom:1px solid #E2E8F0;margin-bottom:2px;margin-top:6px;">LUGARES A VISITAR</div>`;
+      for (let i = 0; i < allVisitas.length; i++) {
+        const v = allVisitas[i];
+        html += `<div class="inv-row" style="font-size:11px;"><span>${i + 1}. ${v.nombre}${v.fecha ? " (" + v.fecha + ")" : ""}${v.notas ? " — " + v.notas : ""}</span></div>`;
+      }
+    }
+    html += `</div></div>`;
+    return html;
+  } catch { return ""; }
+})()}
+
+<!-- ═══ 6. FICHA VEHÍCULO ═══ -->
+<div class="section">
+  <div class="st">VEH&Iacute;CULO ASIGNADO</div>
+  <div class="veh-card">
+    ${fotoVehiculo ? `<div class="veh-photo-wrap">
+      <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
+    </div>` : `<div class="veh-photo-placeholder">Sin fotograf&iacute;a</div>`}
+    <div class="veh-body">
+      <div class="veh-name">${vehNombreMatch || d.vehiculo || ""}</div>
+      <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" \u00b7 ")}</div>
+      <div class="veh-divider"></div>
+      ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
+      ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
+      ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
+      ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
+      ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 7. RESUMEN ECONÓMICO ═══ -->
 <div class="section">
   <div class="st">RESUMEN ECON&Oacute;MICO ${isUSD ? "($ USD)" : "(Q GTQ)"}</div>
   <div class="inv-box">
@@ -397,6 +412,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 </div>
 
 <!-- ═══ 8. INFORMACIÓN BANCARIA ═══ -->
+
 <div class="section">
   <div class="st">DATOS PARA PAGO ${isUSD ? "($ USD)" : ""}</div>
   <div class="bancos-box">
@@ -903,27 +919,39 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
             try {
               const it = typeof f.itinerario === 'string' ? JSON.parse(f.itinerario) : f.itinerario;
               if (!it?.vehiculos?.length) return null;
-              const hasVisitas = it.vehiculos.some(v => v.visitas?.length > 0);
-              if (!hasVisitas) return null;
+              const allVisitas = [];
+              const allTrayectos = [];
+              for (const veh of it.vehiculos) {
+                const vnom = veh.vehiculo_nombre || "";
+                for (const t of (veh.trayectos || [])) {
+                  if (t.origen || t.destino) allTrayectos.push({ vehiculo: vnom, ...t });
+                }
+                for (const v of (veh.visitas || [])) {
+                  if (v.nombre?.trim()) allVisitas.push({ vehiculo: vnom, ...v });
+                }
+              }
+              if (allVisitas.length === 0 && allTrayectos.length === 0) return null;
               return (
                 <div style={S.card}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>ITINERARIO / LUGARES A VISITAR</div>
-                  {it.vehiculos.map((veh, idx) => {
-                    const visL = (veh.visitas || []).filter(v => v.nombre?.trim());
-                    if (visL.length === 0) return null;
-                    return (
-                      <div key={idx} style={{ marginBottom: 8 }}>
-                        {veh.vehiculo_nombre && <div style={{ fontSize: 12, fontWeight: 600, color: T.acc, marginBottom: 4 }}>{veh.vehiculo_nombre}{veh.piloto_nombre ? ` — Piloto: ${veh.piloto_nombre}` : ""}</div>}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          {visL.map((v, vi) => (
-                            <span key={vi} style={{ padding: "3px 10px", borderRadius: 8, background: T.accDim, border: `1px solid ${T.acc}44`, fontSize: 11, color: T.txt }}>
-                              {v.nombre}{v.fecha ? ` (${v.fecha})` : ""}{v.notas ? ` — ${v.notas}` : ""}
-                            </span>
-                          ))}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 10 }}>ITINERARIO / LUGARES A VISITAR</div>
+                  <div style={{ background: T.surf, borderRadius: 8, padding: 10, border: `1px solid ${T.bord}44` }}>
+                    {allTrayectos.length > 0 && <>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginBottom: 4, textTransform: "uppercase" }}>Trayectos</div>
+                      {allTrayectos.map((t, i) => (
+                        <div key={i} style={{ fontSize: 11, color: T.txt, padding: "2px 0", borderBottom: `1px solid ${T.bord}22` }}>
+                          {t.vehiculo ? <span style={{ color: T.acc }}>{t.vehiculo} — </span> : ""}{t.origen || "—"} → {t.destino || "—"}{t.fecha ? ` (${t.fecha})` : ""}{t.hora_salida ? ` ${t.hora_salida}` : ""}
                         </div>
-                      </div>
-                    );
-                  })}
+                      ))}
+                    </>}
+                    {allVisitas.length > 0 && <>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginTop: allTrayectos.length > 0 ? 8 : 0, marginBottom: 4, textTransform: "uppercase" }}>Lugares a Visitar</div>
+                      {allVisitas.map((v, i) => (
+                        <div key={i} style={{ fontSize: 11, color: T.txt, padding: "2px 0", borderBottom: `1px solid ${T.bord}22` }}>
+                          {i + 1}. {v.nombre}{v.fecha ? ` (${v.fecha})` : ""}{v.notas ? ` — ${v.notas}` : ""}
+                        </div>
+                      ))}
+                    </>}
+                  </div>
                 </div>
               );
             } catch { return null; }
