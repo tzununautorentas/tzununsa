@@ -363,21 +363,24 @@ ${d.itinerario && (() => {
       }
     }
     if (allVisitas.length === 0 && allTrayectos.length === 0) return "";
+    const hasTrayFecha = allTrayectos.some(t => t.fecha || t.hora_salida);
+    const hasVisFecha = allVisitas.some(v => v.fecha);
+    const hasVisNotas = allVisitas.some(v => v.notas);
     let html = `<div class="section"><div class="st">ITINERARIO / LUGARES A VISITAR</div>`;
     html += `<div class="itin-table">`;
     if (allTrayectos.length > 0) {
       html += `<div class="itin-header">TRAYECTOS</div>`;
-      html += `<div class="itin-row itin-row-head"><span style="flex:3">VEH&Iacute;CULO</span><span style="flex:3">ORIGEN &rarr; DESTINO</span><span style="flex:1.5">FECHA</span></div>`;
+      html += `<div class="itin-row itin-row-head"><span style="flex:3">VEH&Iacute;CULO</span><span style="flex:4">ORIGEN &rarr; DESTINO</span>${hasTrayFecha ? `<span style="flex:2">FECHA</span>` : ""}</div>`;
       for (const t of allTrayectos) {
-        html += `<div class="itin-row"><span style="flex:3;color:#1B2D5C;font-weight:600">${t.vehiculo || "&mdash;"}</span><span style="flex:3">${t.origen || "&mdash;"} &rarr; ${t.destino || "&mdash;"}</span><span style="flex:1.5;color:#64748B">${t.fecha || ""} ${t.hora_salida || ""}</span></div>`;
+        html += `<div class="itin-row"><span style="flex:3;color:#1B2D5C;font-weight:600">${t.vehiculo || "&mdash;"}</span><span style="flex:4">${t.origen || "&mdash;"} &rarr; ${t.destino || "&mdash;"}</span>${hasTrayFecha ? `<span style="flex:2;color:#64748B;font-size:10px">${t.fecha || ""}${t.hora_salida ? " " + t.hora_salida : ""}</span>` : ""}</div>`;
       }
     }
     if (allVisitas.length > 0) {
       html += `<div class="itin-header" style="margin-top:${allTrayectos.length > 0 ? 8 : 0}">LUGARES A VISITAR</div>`;
-      html += `<div class="itin-row itin-row-head"><span style="flex:0.5;text-align:center">#</span><span style="flex:4">LUGAR</span><span style="flex:2">FECHA</span><span style="flex:3">OBSERVACIONES</span></div>`;
+      html += `<div class="itin-row itin-row-head"><span style="flex:0.5;text-align:center">#</span><span style="flex:5">LUGAR</span>${hasVisFecha ? `<span style="flex:2">FECHA</span>` : ""}${hasVisNotas ? `<span style="flex:3">OBSERVACIONES</span>` : ""}</div>`;
       for (let i = 0; i < allVisitas.length; i++) {
         const v = allVisitas[i];
-        html += `<div class="itin-row"><span style="flex:0.5;text-align:center;font-weight:700;color:#00D4AA">${i + 1}</span><span style="flex:4;font-weight:600;color:#1B2D5C">${v.nombre || ""}</span><span style="flex:2;color:#64748B">${v.fecha || ""}</span><span style="flex:3;color:#64748B;font-size:10px">${v.notas || ""}</span></div>`;
+        html += `<div class="itin-row"><span style="flex:0.5;text-align:center;font-weight:700;color:#00D4AA">${i + 1}</span><span style="flex:5;font-weight:600;color:#1B2D5C">${v.nombre || ""}</span>${hasVisFecha ? `<span style="flex:2;color:#64748B;font-size:10px">${v.fecha || ""}</span>` : ""}${hasVisNotas ? `<span style="flex:3;color:#64748B;font-size:10px">${v.notas || ""}</span>` : ""}</div>`;
       }
     }
     html += `</div></div>`;
