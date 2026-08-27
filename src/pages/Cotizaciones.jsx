@@ -1087,7 +1087,8 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                 <button onClick={() => guardar("orden_venta")} disabled={saving} style={{ ...S.btn("purple"), width: "100%" }}>{saving ? "..." : "Convertir a Orden de Venta"}</button>
               </div>
             </>
-          ) : (
+          );
+          })() : (
             <div style={{ textAlign: "center", padding: 24, color: T.sub, fontSize: 13 }}>Selecciona vehiculo y dias para ver el resumen</div>
           )}
         </div>
