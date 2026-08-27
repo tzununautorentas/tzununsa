@@ -210,14 +210,21 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 /* ── VEHICLE CARD (foto + ficha integrados) ── */
 .veh-card{border-radius:8px;overflow:hidden;background:#fff;margin-bottom:3px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #E2E8F0}
 .veh-photo-wrap{width:100%;background:#F8FAFC;text-align:center}
-.veh-photo-wrap img{max-width:100%;max-height:240px;display:inline-block}
-.veh-photo-placeholder{height:130px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;background:#F8FAFC;margin-bottom:0}
+.veh-photo-wrap img{max-width:100%;max-height:180px;display:inline-block}
+.veh-photo-placeholder{height:100px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#CBD5E1;background:#F8FAFC;margin-bottom:0}
 .veh-body{padding:7px 10px 9px}
-.veh-name{font-size:15px;font-weight:800;color:#1B2D5C;margin-bottom:0;line-height:1.2}
-.veh-subtitle{font-size:10.5px;color:#64748B;margin-bottom:3px;line-height:1.35}
+.veh-name{font-size:14px;font-weight:800;color:#1B2D5C;margin-bottom:0;line-height:1.2}
+.veh-subtitle{font-size:10px;color:#64748B;margin-bottom:3px;line-height:1.35}
 .veh-divider{height:1px;background:#E2E8F0;margin:3px 0 4px}
 .veh-check{color:#00D4AA;font-weight:700;margin-right:4px;font-size:11px}
-.veh-spec{font-size:10.5px;color:#475569;padding:2px 0;line-height:1.35}
+.veh-spec{font-size:10px;color:#475569;padding:2px 0;line-height:1.35}
+
+/* ── ITINERARIO TABLE ── */
+.itin-table{background:#F8FAFC;border-radius:8px;padding:6px 12px;border:1px solid #E2E8F0;margin-bottom:3px;font-size:11px}
+.itin-header{font-size:9px;font-weight:700;color:#1B2D5C;text-transform:uppercase;letter-spacing:1.2px;padding:4px 0 2px;border-bottom:2px solid #00D4AA;margin-bottom:2px}
+.itin-row{display:flex;padding:4px 0;border-bottom:1px solid #E2E8F0;color:#334155;align-items:center;line-height:1.3}
+.itin-row:last-child{border-bottom:none}
+.itin-row-head{font-size:9px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1.5px solid #CBD5E1;padding:3px 0;margin-bottom:1px}
 
 /* ── RESUMEN ECONÓMICO ── */
 .inv-box{background:#F8FAFC;border-radius:8px;padding:5px 14px;margin-bottom:3px;border:1px solid #E2E8F0}
@@ -316,10 +323,27 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
     </div>
 
         </div>
+        <div class="col-right">
+
+    <!-- VEHÍCULO ASIGNADO -->
+    <div class="veh-card">
+      ${fotoVehiculo ? `<div class="veh-photo-wrap">
+        <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
+      </div>` : `<div class="veh-photo-placeholder">Sin fotograf&iacute;a</div>`}
+      <div class="veh-body">
+        <div class="veh-name">${vehNombreMatch || d.vehiculo || ""}</div>
+        <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" \u00b7 ")}</div>
+        <div class="veh-divider"></div>
+        ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
+        ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
+        ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
+        ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
+        ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
       </div>
     </div>
-  </div>
-</div>
+
+        </div>
+      </div>
 
 <!-- ═══ 5.5. ITINERARIO / LUGARES A VISITAR ═══ -->
 ${d.itinerario && (() => {
@@ -340,44 +364,26 @@ ${d.itinerario && (() => {
     }
     if (allVisitas.length === 0 && allTrayectos.length === 0) return "";
     let html = `<div class="section"><div class="st">ITINERARIO / LUGARES A VISITAR</div>`;
-    html += `<div class="inv-box">`;
+    html += `<div class="itin-table">`;
     if (allTrayectos.length > 0) {
-      html += `<div style="font-size:10px;font-weight:700;color:#1B2D5C;padding:3px 0;border-bottom:1px solid #E2E8F0;margin-bottom:2px;">TRAYECTOS</div>`;
+      html += `<div class="itin-header">TRAYECTOS</div>`;
+      html += `<div class="itin-row itin-row-head"><span style="flex:3">VEH&Iacute;CULO</span><span style="flex:3">ORIGEN &rarr; DESTINO</span><span style="flex:1.5">FECHA</span></div>`;
       for (const t of allTrayectos) {
-        html += `<div class="inv-row" style="font-size:11px;"><span>${t.vehiculo ? t.vehiculo + " — " : ""}${t.origen || "—"} &rarr; ${t.destino || "—"}${t.fecha ? " (" + t.fecha + ")" : ""}${t.hora_salida ? " " + t.hora_salida : ""}</span></div>`;
+        html += `<div class="itin-row"><span style="flex:3;color:#1B2D5C;font-weight:600">${t.vehiculo || "&mdash;"}</span><span style="flex:3">${t.origen || "&mdash;"} &rarr; ${t.destino || "&mdash;"}</span><span style="flex:1.5;color:#64748B">${t.fecha || ""} ${t.hora_salida || ""}</span></div>`;
       }
     }
     if (allVisitas.length > 0) {
-      html += `<div style="font-size:10px;font-weight:700;color:#1B2D5C;padding:3px 0;border-bottom:1px solid #E2E8F0;margin-bottom:2px;margin-top:6px;">LUGARES A VISITAR</div>`;
+      html += `<div class="itin-header" style="margin-top:${allTrayectos.length > 0 ? 8 : 0}">LUGARES A VISITAR</div>`;
+      html += `<div class="itin-row itin-row-head"><span style="flex:0.5;text-align:center">#</span><span style="flex:4">LUGAR</span><span style="flex:2">FECHA</span><span style="flex:3">OBSERVACIONES</span></div>`;
       for (let i = 0; i < allVisitas.length; i++) {
         const v = allVisitas[i];
-        html += `<div class="inv-row" style="font-size:11px;"><span>${i + 1}. ${v.nombre}${v.fecha ? " (" + v.fecha + ")" : ""}${v.notas ? " — " + v.notas : ""}</span></div>`;
+        html += `<div class="itin-row"><span style="flex:0.5;text-align:center;font-weight:700;color:#00D4AA">${i + 1}</span><span style="flex:4;font-weight:600;color:#1B2D5C">${v.nombre || ""}</span><span style="flex:2;color:#64748B">${v.fecha || ""}</span><span style="flex:3;color:#64748B;font-size:10px">${v.notas || ""}</span></div>`;
       }
     }
     html += `</div></div>`;
     return html;
   } catch { return ""; }
 })()}
-
-<!-- ═══ 6. FICHA VEHÍCULO ═══ -->
-<div class="section">
-  <div class="st">VEH&Iacute;CULO ASIGNADO</div>
-  <div class="veh-card">
-    ${fotoVehiculo ? `<div class="veh-photo-wrap">
-      <img src="${fotoVehiculo}" alt="Veh&iacute;culo"/>
-    </div>` : `<div class="veh-photo-placeholder">Sin fotograf&iacute;a</div>`}
-    <div class="veh-body">
-      <div class="veh-name">${vehNombreMatch || d.vehiculo || ""}</div>
-      <div class="veh-subtitle">${[vehTipo, vehSpecs.cap ? vehSpecs.cap + " pasajeros" : ""].filter(Boolean).join(" \u00b7 ")}</div>
-      <div class="veh-divider"></div>
-      ${vehSpecs.aire ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Aire acondicionado</div>` : ""}
-      ${vehSpecs.trans ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Transmisi&oacute;n ${vehSpecs.trans.toLowerCase()}</div>` : ""}
-      ${vehSpecs.combustible ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.combustible}</div>` : ""}
-      ${vehSpecs.equipaje ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>${vehSpecs.equipaje}</div>` : ""}
-      ${vehSpecs.traccion ? `<div class="veh-spec"><span class="veh-check">&#10003;</span>Tracci&oacute;n ${vehSpecs.traccion}</div>` : ""}
-    </div>
-  </div>
-</div>
 
 <!-- ═══ 7. RESUMEN ECONÓMICO ═══ -->
 <div class="section">
