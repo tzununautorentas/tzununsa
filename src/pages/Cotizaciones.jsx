@@ -991,7 +991,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                   </div>
                   <input style={{ ...S.inp, width: 120 }} type="number" step="0.01" value={f.comision_bancaria_usd} onChange={e => sf("comision_bancaria_usd", e.target.value)} placeholder={`${f.moneda_comision || "USD"}`} />
                   <div style={{ display: "flex", gap: 8, flex: 1 }}>
-                    <Fld label="TASA USD"><input style={S.inp}} type="number" step="0.01" value={f.exch} onChange={e => sf("exch", e.target.value)} /></Fld>
+                    <Fld label="TASA USD"><input style={S.inp} type="number" step="0.01" value={f.exch} onChange={e => sf("exch", e.target.value)} /></Fld>
                     <Fld label="TASA EUR"><input style={S.inp} type="number" step="0.01" value={f.exch_eur} onChange={e => sf("exch_eur", e.target.value)} /></Fld>
                   </div>
                   <span style={{ fontSize: 12, color: T.acc, fontWeight: 600, whiteSpace: "nowrap" }}>= Q {fmt(sub_comision)}</span>
