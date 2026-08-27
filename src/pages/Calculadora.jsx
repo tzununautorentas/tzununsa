@@ -87,7 +87,8 @@ export default function PageCalculadora({ showToast, empId }) {
     fechaInicio: today(), fechaFin: today(),
     origen: "", destino: "", observaciones_ruta: "",
     carta_poder: false, carta_poder_costo: 0,
-    comision_bancaria: 0,
+    comision_bancaria_usd: 0, moneda_comision: "USD",
+    exch_eur: 8.50,
     itinerario: { vehiculos: [] },
     descripcion_servicio: "",
   });
@@ -154,7 +155,9 @@ export default function PageCalculadora({ showToast, empId }) {
   const sub2    = diasCalc * rate2;
   const totalPartidas = partidasRenta.reduce((s, i) => s + ((parseInt(i.cantidad) || 0) * (parseFloat(i.precio) || 0)), 0);
   const cpCostRenta = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
-  const comisionBancariaRenta = parseFloat(tf.comision_bancaria) || 0;
+  const monedaRateRenta = tf.moneda_comision === "EUR" ? (parseFloat(tf.exch_eur) || 8.50) : (parseFloat(exch) || 7.70);
+  const comisionBancariaUSD = parseFloat(tf.comision_bancaria_usd) || 0;
+  const comisionBancariaRenta = comisionBancariaUSD * monedaRateRenta;
   const extrasTotal = (inclPiloto ? diasCalc * (costoPiloto || 0) : 0) + (inclHospedaje ? diasCalc * (costoHospedaje || 0) : 0) + (inclAlimentacion ? diasCalc * (costoAlimentacion || 0) : 0) + (parseFloat(variosRenta) || 0) + cpCostRenta + comisionBancariaRenta;
   const subTotalRenta   = sub + sub2 + extrasTotal + totalPartidas;
   const ivaAmtRenta     = Math.round(subTotalRenta * iva / 100 * 100) / 100;
@@ -176,7 +179,9 @@ export default function PageCalculadora({ showToast, empId }) {
   const aT   = d2 * (parseFloat(tf.ali) || 0);
   const misc = parseFloat(tf.varios) || 0;
   const cpCost = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
-  const comisionBancaria = parseFloat(tf.comision_bancaria) || 0;
+  const comisionBancariaUSD = parseFloat(tf.comision_bancaria_usd) || 0;
+  const monedaRate = tf.moneda_comision === "EUR" ? (parseFloat(tf.exch_eur) || 8.50) : (parseFloat(tf.exch) || 7.70);
+  const comisionBancaria = comisionBancariaUSD * monedaRate;
   const tsub = vT + pT + hT + aT + fuel + misc + cpCost + comisionBancaria;
   const tiva = tsub * (parseFloat(tf.iva) || 0) / 100;
   const tbase = tsub + tiva;
@@ -223,6 +228,7 @@ export default function PageCalculadora({ showToast, empId }) {
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
       metodo_pago: tab === "renta" ? pago : tf.pago,
       tasa_cambio: tab === "renta" ? exch : parseFloat(tf.exch) || 7.70,
+      exch_eur: parseFloat(tf.exch_eur) || 8.50,
       subtotal: tab === "renta" ? subTotalRenta : tsub,
       total_iva: tab === "renta" ? ivaAmtRenta : tiva,
       recargo_tarjeta: tab === "renta" ? recTCRenta : ttcr,
@@ -248,11 +254,15 @@ export default function PageCalculadora({ showToast, empId }) {
       carta_poder: tf.carta_poder,
       carta_poder_costo: cpCost,
       comision_bancaria: tab === "renta" ? comisionBancariaRenta : comisionBancaria,
+      comision_bancaria_usd: comisionBancariaUSD,
+      moneda_comision: tf.moneda_comision || "USD",
       itinerario: tab === "renta" ? "" : JSON.stringify(tf.itinerario),
       servicios_incluidos: JSON.stringify({
         hora_entrega: horaEntrega,
         hora_regreso: horaRegreso,
         comision_bancaria: comisionBancariaRenta,
+        comision_bancaria_usd: comisionBancariaUSD,
+        moneda_comision: tf.moneda_comision || "USD",
         partidas: tab === "renta"
           ? [
               ...(selVeh && rate > 0 ? [{ descripcion: `${selVeh} (${diasCalc} día${diasCalc !== 1 ? "s" : ""} x Q${fmt(rate)}/día)`, cantidad: diasCalc, precio: rate }] : []),
@@ -262,7 +272,7 @@ export default function PageCalculadora({ showToast, empId }) {
               ...(inclAlimentacion && costoAlimentacion > 0 ? [{ descripcion: "Alimentación", cantidad: diasCalc, precio: costoAlimentacion }] : []),
               ...(variosRenta > 0 ? [{ descripcion: "Varios", cantidad: 1, precio: variosRenta }] : []),
               ...(tf.carta_poder && cpCostRenta > 0 ? [{ descripcion: "Carta Poder (viaje internacional)", cantidad: 1, precio: cpCostRenta }] : []),
-              ...(comisionBancariaRenta > 0 ? [{ descripcion: "Comisión bancaria (transferencia SWIFT)", cantidad: 1, precio: comisionBancariaRenta }] : []),
+              ...(comisionBancariaRenta > 0 ? [{ descripcion: `Comisión Bancaria Inter. (${tf.moneda_comision || "USD"} ${fmt(comisionBancariaUSD)} × Q${fmt(monedaRateRenta)})`, cantidad: 1, precio: comisionBancariaRenta }] : []),
               ...partidasRenta,
             ]
           : [],
@@ -433,11 +443,18 @@ export default function PageCalculadora({ showToast, empId }) {
                         placeholder="Costo Q" />
                     )}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <label style={{ fontSize: 13, color: T.sub, minWidth: 140 }}>Comisión bancaria (Q)</label>
-                    <input style={{ ...S.inp, width: 120, fontSize: 12 }} type="number" step="0.01"
-                      value={tf.comision_bancaria} onChange={e => stf("comision_bancaria", e.target.value)}
-                      placeholder="Transferencia SWIFT" />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <label style={{ fontSize: 13, color: T.sub, minWidth: 140 }}>Comisión Bancaria Inter.</label>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {["USD", "EUR"].map(m => (
+                        <button key={m} type="button" onClick={() => stf("moneda_comision", m)}
+                          style={{ ...S.btn(tf.moneda_comision === m ? "primary" : "ghost"), padding: "3px 10px", fontSize: 11 }}>{m}</button>
+                      ))}
+                    </div>
+                    <input style={{ ...S.inp, width: 100, fontSize: 12 }} type="number" step="0.01"
+                      value={tf.comision_bancaria_usd} onChange={e => stf("comision_bancaria_usd", e.target.value)}
+                      placeholder={`${tf.moneda_comision || "USD"}`} />
+                    <span style={{ fontSize: 11, color: T.mut }}>= Q {fmt(comisionBancariaRenta)}</span>
                   </div>
                 </div>
               </div>
@@ -478,8 +495,18 @@ export default function PageCalculadora({ showToast, empId }) {
                 </select>
               </Fld>
               <Fld label="TASA DE CAMBIO (Q por $1)">
-                <input style={S.inp} type="number" step="0.01" value={exch}
-                  onChange={e => setExch(parseFloat(e.target.value) || 7.70)} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: T.mut, fontWeight: 600 }}>USD</span>
+                    <input style={{ ...S.inp, flex: 1 }} type="number" step="0.01" value={exch}
+                      onChange={e => setExch(parseFloat(e.target.value) || 7.70)} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: T.mut, fontWeight: 600 }}>EUR</span>
+                    <input style={{ ...S.inp, flex: 1 }} type="number" step="0.01" value={tf.exch_eur}
+                      onChange={e => stf("exch_eur", e.target.value)} />
+                  </div>
+                </div>
               </Fld>
               <Fld label="METODO DE PAGO">
                 <div style={{ display: "flex", gap: 8 }}>
