@@ -1003,15 +1003,25 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           {/* Fiscal */}
           <div style={S.card}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 12 }}>FISCAL Y VALIDEZ</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
-              <div style={{ gridColumn: "span 2" }}>
-                <label style={S.lbl}>MONEDA DE COTIZACIÓN</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {[{ v: "GTQ", l: "Q — Quetzales" }, { v: "USD", l: "$ — Dólares" }].map(o => (
-                    <button key={o.v} onClick={() => sf("moneda_cotizacion", o.v)} style={{ ...S.btn(f.moneda_cotizacion === o.v ? "primary" : "ghost"), flex: 1, fontSize: 11 }}>{o.l}</button>
-                  ))}
-                </div>
+
+            {/* MONEDA DE COTIZACIÓN — destacado */}
+            <div style={{ background: f.moneda_cotizacion === "USD" ? "#164E63" : T.surf, border: `2px solid ${f.moneda_cotizacion === "USD" ? "#22D3EE" : T.acc}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12 }}>
+              <label style={{ ...S.lbl, marginBottom: 6, fontSize: 12, fontWeight: 700, color: T.acc }}>MONEDA DE LA COTIZACIÓN</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[{ v: "GTQ", l: "Q — Quetzales" }, { v: "USD", l: "$ — Dólares (USD)" }].map(o => (
+                  <button key={o.v} onClick={() => sf("moneda_cotizacion", o.v)} style={{
+                    flex: 1, padding: "10px 14px", borderRadius: 8, cursor: "pointer",
+                    fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+                    border: f.moneda_cotizacion === o.v ? `2px solid ${T.acc}` : `1px solid ${T.bord}`,
+                    background: f.moneda_cotizacion === o.v ? T.acc : T.surf,
+                    color: f.moneda_cotizacion === o.v ? "#0A0F1E" : T.txt,
+                    transition: "all 0.15s ease",
+                  }}>{o.l}</button>
+                ))}
               </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
               <div style={{ gridColumn: "span 2" }}>
                 <label style={S.lbl}>IVA</label>
                 <div style={{ display: "flex", gap: 8 }}>
