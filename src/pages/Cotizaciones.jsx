@@ -577,6 +577,7 @@ function makePDFData(r) {
     moneda_comision: r.moneda_comision || "USD",
     exch_eur: parseFloat(r.exch_eur) || 8.50,
     moneda_cotizacion: r.moneda_cotizacion || "GTQ",
+    exch: parseFloat(r.tasa_cambio) || 7.70,
     itinerario: r.itinerario || "",
     partidas,
   };
