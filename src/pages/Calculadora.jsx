@@ -156,8 +156,7 @@ export default function PageCalculadora({ showToast, empId }) {
   const totalPartidas = partidasRenta.reduce((s, i) => s + ((parseInt(i.cantidad) || 0) * (parseFloat(i.precio) || 0)), 0);
   const cpCostRenta = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
   const monedaRateRenta = tf.moneda_comision === "EUR" ? (parseFloat(tf.exch_eur) || 8.50) : (parseFloat(exch) || 7.70);
-  const comisionBancariaUSD = parseFloat(tf.comision_bancaria_usd) || 0;
-  const comisionBancariaRenta = comisionBancariaUSD * monedaRateRenta;
+  const comisionBancariaRenta = (parseFloat(tf.comision_bancaria_usd) || 0) * monedaRateRenta;
   const extrasTotal = (inclPiloto ? diasCalc * (costoPiloto || 0) : 0) + (inclHospedaje ? diasCalc * (costoHospedaje || 0) : 0) + (inclAlimentacion ? diasCalc * (costoAlimentacion || 0) : 0) + (parseFloat(variosRenta) || 0) + cpCostRenta + comisionBancariaRenta;
   const subTotalRenta   = sub + sub2 + extrasTotal + totalPartidas;
   const ivaAmtRenta     = Math.round(subTotalRenta * iva / 100 * 100) / 100;
@@ -179,9 +178,8 @@ export default function PageCalculadora({ showToast, empId }) {
   const aT   = d2 * (parseFloat(tf.ali) || 0);
   const misc = parseFloat(tf.varios) || 0;
   const cpCost = tf.carta_poder ? (parseFloat(tf.carta_poder_costo) || 0) : 0;
-  const comisionBancariaUSD = parseFloat(tf.comision_bancaria_usd) || 0;
   const monedaRate = tf.moneda_comision === "EUR" ? (parseFloat(tf.exch_eur) || 8.50) : (parseFloat(tf.exch) || 7.70);
-  const comisionBancaria = comisionBancariaUSD * monedaRate;
+  const comisionBancaria = (parseFloat(tf.comision_bancaria_usd) || 0) * monedaRate;
   const tsub = vT + pT + hT + aT + fuel + misc + cpCost + comisionBancaria;
   const tiva = tsub * (parseFloat(tf.iva) || 0) / 100;
   const tbase = tsub + tiva;
@@ -254,14 +252,14 @@ export default function PageCalculadora({ showToast, empId }) {
       carta_poder: tf.carta_poder,
       carta_poder_costo: cpCost,
       comision_bancaria: tab === "renta" ? comisionBancariaRenta : comisionBancaria,
-      comision_bancaria_usd: comisionBancariaUSD,
+      comision_bancaria_usd: parseFloat(tf.comision_bancaria_usd) || 0,
       moneda_comision: tf.moneda_comision || "USD",
       itinerario: tab === "renta" ? "" : JSON.stringify(tf.itinerario),
       servicios_incluidos: JSON.stringify({
         hora_entrega: horaEntrega,
         hora_regreso: horaRegreso,
         comision_bancaria: comisionBancariaRenta,
-        comision_bancaria_usd: comisionBancariaUSD,
+        comision_bancaria_usd: parseFloat(tf.comision_bancaria_usd) || 0,
         moneda_comision: tf.moneda_comision || "USD",
         partidas: tab === "renta"
           ? [
@@ -272,7 +270,7 @@ export default function PageCalculadora({ showToast, empId }) {
               ...(inclAlimentacion && costoAlimentacion > 0 ? [{ descripcion: "Alimentación", cantidad: diasCalc, precio: costoAlimentacion }] : []),
               ...(variosRenta > 0 ? [{ descripcion: "Varios", cantidad: 1, precio: variosRenta }] : []),
               ...(tf.carta_poder && cpCostRenta > 0 ? [{ descripcion: "Carta Poder (viaje internacional)", cantidad: 1, precio: cpCostRenta }] : []),
-              ...(comisionBancariaRenta > 0 ? [{ descripcion: `Comisión Bancaria Inter. (${tf.moneda_comision || "USD"} ${fmt(comisionBancariaUSD)} × Q${fmt(monedaRateRenta)})`, cantidad: 1, precio: comisionBancariaRenta }] : []),
+              ...(comisionBancariaRenta > 0 ? [{ descripcion: `Comisión Bancaria Inter. (${tf.moneda_comision || "USD"} ${fmt(parseFloat(tf.comision_bancaria_usd) || 0)} × Q${fmt(monedaRateRenta)})`, cantidad: 1, precio: comisionBancariaRenta }] : []),
               ...partidasRenta,
             ]
           : [],
