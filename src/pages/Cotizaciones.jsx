@@ -258,10 +258,10 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .pago-card .pago-monto{font-size:15px;font-weight:800;color:#1B2D5C}
 
 /* ── DATOS BANCARIOS ── */
-.bancos-box{font-size:10px;color:#475569;line-height:1.45;margin-bottom:4px;padding:6px 12px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
-.bancos-box .b-item{padding:2px 0}
+.bancos-box{font-size:12.5px;color:#475569;line-height:1.5;margin-bottom:4px;padding:8px 14px;background:#FAFBFC;border-radius:6px;border:1px solid #E2E8F0}
+.bancos-box .b-item{padding:3px 0}
 .bancos-box .b-item strong{color:#1B2D5C}
-.bancos-box .b-titular{font-weight:700;color:#1B2D5C;margin-top:3px;padding-top:3px;border-top:1px solid #E2E8F0;font-size:9.5px}
+.bancos-box .b-titular{font-weight:700;color:#1B2D5C;margin-top:4px;padding-top:4px;border-top:1px solid #E2E8F0;font-size:11.5px}
 
 /* ── TÉRMINOS ── */
 .terms-list{list-style:none;padding:0;margin:0 0 4px 0}
@@ -380,16 +380,19 @@ ${d.itinerario && (() => {
       }
     }
     if (allVisitas.length === 0 && allTrayectos.length === 0) return "";
+    // Solo mostrar la columna "Vehículo" cuando se cotizan 2+ vehículos distintos
+    const multi = new Set(allTrayectos.map(t => (t.vehiculo || "").toLowerCase()).filter(Boolean)).size >= 2;
     const hasTrayFecha = allTrayectos.some(t => t.fecha || t.hora_salida);
     const hasVisFecha = allVisitas.some(v => v.fecha);
     const hasVisNotas = allVisitas.some(v => v.notas);
+    const origenFlex = multi ? 4 : 7;
     let html = `<div class="section"><div class="st">ITINERARIO / LUGARES A VISITAR</div>`;
     html += `<div class="itin-table">`;
     if (allTrayectos.length > 0) {
       html += `<div class="itin-header">TRAYECTOS</div>`;
-      html += `<div class="itin-row itin-row-head"><span style="flex:3">VEH&Iacute;CULO</span><span style="flex:4">ORIGEN &rarr; DESTINO</span>${hasTrayFecha ? `<span style="flex:2">FECHA</span>` : ""}</div>`;
+      html += `<div class="itin-row itin-row-head">${multi ? `<span style="flex:3">VEH&Iacute;CULO</span>` : ""}<span style="flex:${origenFlex}">ORIGEN &rarr; DESTINO</span>${hasTrayFecha ? `<span style="flex:2">FECHA</span>` : ""}</div>`;
       for (const t of allTrayectos) {
-        html += `<div class="itin-row"><span style="flex:3;color:#1B2D5C;font-weight:600">${t.vehiculo || "&mdash;"}</span><span style="flex:4">${t.origen || "&mdash;"} &rarr; ${t.destino || "&mdash;"}</span>${hasTrayFecha ? `<span style="flex:2;color:#64748B;font-size:10px">${t.fecha || ""}${t.hora_salida ? " " + t.hora_salida : ""}</span>` : ""}</div>`;
+        html += `<div class="itin-row">${multi ? `<span style="flex:3;color:#1B2D5C;font-weight:600">${t.vehiculo || "&mdash;"}</span>` : ""}<span style="flex:${origenFlex}">${t.origen || "&mdash;"} &rarr; ${t.destino || "&mdash;"}</span>${hasTrayFecha ? `<span style="flex:2;color:#64748B;font-size:10px">${t.fecha || ""}${t.hora_salida ? " " + t.hora_salida : ""}</span>` : ""}</div>`;
       }
     }
     if (allVisitas.length > 0) {
