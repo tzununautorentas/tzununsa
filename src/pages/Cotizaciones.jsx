@@ -143,6 +143,27 @@ async function generarPDFPremium(d, empId, mode = "download") {
 
   const mostrarIVA = d.iva_pct > 0 && d.iva_amt > 0;
 
+  const isUSD = d.moneda_cotizacion === "USD";
+  const curSym = isUSD ? "$" : "Q";
+  const curFmt = v => isUSD ? fmt(v / (d.exch || 7.70)) : fmt(v);
+
+  // Resolver cuentas bancarias seleccionadas para el pago (desde el módulo Banca)
+  let cuentasSeleccionadas = [];
+  try {
+    const rawIds = d.cuentas_pago;
+    let idsPago = [];
+    if (Array.isArray(rawIds)) idsPago = rawIds.map(String);
+    else if (rawIds) { const p = JSON.parse(rawIds); if (Array.isArray(p)) idsPago = p.map(String); }
+    if (idsPago.length > 0) {
+      const lista = await dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,tipo_cuenta,moneda,notas");
+      const arr = Array.isArray(lista) ? lista : [];
+      let resultado = arr.filter(c => idsPago.includes(String(c.id)));
+      if (isUSD) resultado = resultado.filter(c => (c.moneda || "").toUpperCase() === "USD");
+      else resultado = resultado.filter(c => (c.moneda || "").toUpperCase() !== "USD");
+      cuentasSeleccionadas = resultado;
+    }
+  } catch {}
+
   const totalTC = d.total_ef * 1.05;
 
   // Parsear datos bancarios
@@ -156,10 +177,6 @@ async function generarPDFPremium(d, empId, mode = "download") {
   const b2 = parseBanco(e.banco2);
   const bUSD = parseBanco(e.banco_usd);
   const hayBancos = b1 || b2;
-
-  const isUSD = d.moneda_cotizacion === "USD";
-  const curSym = isUSD ? "$" : "Q";
-  const curFmt = v => isUSD ? fmt(v / (d.exch || 7.70)) : fmt(v);
 
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
@@ -425,11 +442,16 @@ ${d.itinerario && (() => {
 <div class="section">
   <div class="st">DATOS PARA PAGO ${isUSD ? "($ USD)" : ""}</div>
   <div class="bancos-box">
-    ${isUSD
-      ? (bUSD ? `<div class="b-item"><strong>${bUSD.banco}</strong>${bUSD.detalle ? "<br/>" + bUSD.detalle : ""}</div><div class="b-titular">Titular: ${e.nombre}</div>` : '<div class="b-item"><em style="color:#94A3B8">Configure la cuenta bancaria en USD en Configuraci&oacute;n</em></div>')
-      : `${b1 ? `<div class="b-item"><strong>${b1.banco}</strong>${b1.detalle ? "<br/>" + b1.detalle : ""}</div>` : ""}
+    ${cuentasSeleccionadas.length > 0
+      ? cuentasSeleccionadas.map(c => {
+          const tipo = (c.tipo_cuenta || "").charAt(0).toUpperCase() + (c.tipo_cuenta || "").slice(1);
+          return `<div class="b-item"><strong>${(c.banco || "").replace(/&/g, "&amp;")}</strong><br/>No. Cuenta: <strong style="font-family:monospace">${(c.numero_cuenta || "").replace(/&/g, "&amp;")}</strong>${tipo ? " &middot; " + tipo.replace(/&/g, "&amp;") : ""}</div>`;
+        }).join("") + `<div class="b-titular">Titular: ${e.nombre}</div>`
+      : (isUSD
+          ? (bUSD ? `<div class="b-item"><strong>${bUSD.banco}</strong>${bUSD.detalle ? "<br/>" + bUSD.detalle : ""}</div><div class="b-titular">Titular: ${e.nombre}</div>` : '<div class="b-item"><em style="color:#94A3B8">Configure la cuenta bancaria en USD en Configuraci&oacute;n</em></div>')
+          : `${b1 ? `<div class="b-item"><strong>${b1.banco}</strong>${b1.detalle ? "<br/>" + b1.detalle : ""}</div>` : ""}
     ${b2 ? `<div class="b-item"><strong>${b2.banco}</strong>${b2.detalle ? "<br/>" + b2.detalle : ""}</div>` : ""}
-    ${hayBancos ? `<div class="b-titular">Titular: ${e.nombre}</div>` : ""}`
+    ${hayBancos ? `<div class="b-titular">Titular: ${e.nombre}</div>` : ""}`)
     }
   </div>
 </div>
@@ -578,6 +600,7 @@ function makePDFData(r) {
     exch_eur: parseFloat(r.exch_eur) || 8.50,
     moneda_cotizacion: r.moneda_cotizacion || "GTQ",
     exch: parseFloat(r.tasa_cambio) || 7.70,
+    cuentas_pago: r.cuentas_pago || [],
     itinerario: r.itinerario || "",
     partidas,
   };
@@ -600,7 +623,7 @@ const EMPTY_F = {
   fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
   observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0,
   comision_bancaria: 0, comision_bancaria_usd: 0, moneda_comision: "USD", exch_eur: 8.50,
-  moneda_cotizacion: "GTQ",
+  moneda_cotizacion: "GTQ", cuentas_pago: [],
 };
 
 // ─── Formulario de cotización ─────────────────────────────────────────────────
@@ -641,6 +664,17 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       moneda_comision: initial.moneda_comision || "USD",
       exch_eur: parseFloat(initial.exch_eur) || 8.50,
       moneda_cotizacion: initial.moneda_cotizacion || "GTQ",
+      cuentas_pago: (() => {
+        try {
+          const raw = initial.cuentas_pago;
+          if (Array.isArray(raw)) return raw.map(String);
+          if (raw) {
+            const p = JSON.parse(raw);
+            return Array.isArray(p) ? p.map(String) : [];
+          }
+        } catch {}
+        return [];
+      })(),
       itinerario: initial.itinerario || "",
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
@@ -649,14 +683,27 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
   });
   const [saving, setSaving] = useState(false);
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
+  const [cuentasBancarias, setCuentasBancarias] = useState([]);
   const [alertaVeh, setAlertaVeh] = useState(null);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const toggleCuenta = (id) => {
+    setF(p => {
+      const actual = Array.isArray(p.cuentas_pago) ? p.cuentas_pago.map(String) : [];
+      const idS = String(id);
+      return { ...p, cuentas_pago: actual.includes(idS) ? actual.filter(x => x !== idS) : [...actual, idS] };
+    });
+  };
 
   useEffect(() => {
     (async () => {
       try {
         const res = await dbGet("vehiculos", "&select=marca,modelo,tipo,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion,tarifa_dia,tarifa_semana,tarifa_mes,foto_url&estado=eq.disponible&limit=100");
         if (res) setFlotaVehiculos(res);
+      } catch {}
+      try {
+        const cb = await dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,tipo_cuenta,moneda,notas&order=banco.asc");
+        if (cb) setCuentasBancarias(Array.isArray(cb) ? cb : []);
       } catch {}
     })();
   }, []);
@@ -754,6 +801,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       moneda_comision: f.moneda_comision || "USD",
       exch_eur: parseFloat(f.exch_eur) || 8.50,
       itinerario: f.itinerario || "",
+      cuentas_pago: Array.isArray(f.cuentas_pago) ? JSON.stringify(f.cuentas_pago.map(String)) : '[]',
         servicios_incluidos: JSON.stringify({ piloto: f.incl_piloto, combustible: f.incl_combustible, peajes: f.incl_peajes, hospedaje: f.incl_hospedaje, alimentacion: f.incl_alimentacion, seguro: f.incl_seguro }),
         costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
         km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
@@ -799,6 +847,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
           exch_eur: parseFloat(f.exch_eur) || 8.50,
           moneda_cotizacion: f.moneda_cotizacion || "GTQ",
           itinerario: f.itinerario || "",
+          cuentas_pago: Array.isArray(f.cuentas_pago) ? JSON.stringify(f.cuentas_pago.map(String)) : '[]',
           version: nextVersion,
         };
         await dbUpd("reservas", initial.reserva_id, rPayload);
@@ -1051,6 +1100,45 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               <div><label style={S.lbl}>NOTAS INTERNAS</label><input style={S.inp} value={f.notas} onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." /></div>
             </div>
           </div>
+
+          {/* Cuentas para pago */}
+          <div style={S.card}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 4 }}>CUENTAS PARA EL PAGO</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Marca las cuentas a las que el cliente puede depositar. El PDF mostrará solo las de la moneda de la cotización.</div>
+            {cuentasBancarias.length === 0 ? (
+              <div style={{ fontSize: 12, color: T.sec, padding: "8px 0" }}>
+                No hay cuentas bancarias registradas. Agrégalas en el módulo <strong>Banca</strong>.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {cuentasBancarias.map(c => {
+                  const id = String(c.id);
+                  const sel = Array.isArray(f.cuentas_pago) && f.cuentas_pago.map(String).includes(id);
+                  return (
+                    <label key={id} style={{
+                      display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 12px",
+                      borderRadius: 8, border: `1px solid ${sel ? T.acc : T.bord}`,
+                      background: sel ? T.accDim : T.surf, fontSize: 12, userSelect: "none",
+                    }}>
+                      <input type="checkbox" checked={sel} onChange={() => toggleCuenta(id)} style={{ accentColor: T.acc, width: 16, height: 16 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, color: T.txt }}>{c.banco}</div>
+                        <div style={{ fontSize: 11, color: T.sub }}>
+                          {c.numero_cuenta} · {c.tipo_cuenta || "—"} · {c.moneda}
+                          {c.notas ? " · " + c.notas : ""}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
+                        background: c.moneda === "USD" ? T.secDim : T.accDim,
+                        color: c.moneda === "USD" ? T.sec : T.acc,
+                      }}>{c.moneda}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Derecha — Resumen */}
@@ -1215,6 +1303,7 @@ export default function PageCotizaciones({ showToast, empId }) {
       carta_poder: !!cot.carta_poder,
       carta_poder_costo: parseFloat(cot.carta_poder_costo) || 0,
       itinerario: cot.itinerario || "",
+      cuentas_pago: cot.cuentas_pago || [],
     });
     if (r && !r.error) {
       await dbUpd("cotizaciones", cot.id, { reserva_id: r.id, estado: "aprobada" });
