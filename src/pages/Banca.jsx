@@ -7,7 +7,7 @@ const CATS = ["ventas", "combustible", "mantenimiento", "salarios", "seguros", "
 const CC = { ventas: T.acc, combustible: T.sec, mantenimiento: T.blue, salarios: T.green, seguros: T.purple, servicios: T.acc, oficina: T.mut, otros: T.sub };
 
 const EFM = { fecha: today(), tipo: "ingreso", descripcion: "", monto: "", referencia: "", categoria: "ventas", conciliado: false, notas: "" };
-const EFC = { banco: "", numero_cuenta: "", tipo_cuenta: "monetaria", moneda: "GTQ", saldo_inicial: "", saldo_actual: "", notas: "" };
+const EFC = { banco: "", numero_cuenta: "", tipo_cuenta: "monetaria", moneda: "GTQ", saldo_inicial: "", saldo_actual: "", notas: "", titular: "" };
 
 function DetalleMovimiento({ mov, onClose, onEditar }) {
   if (!mov) return null;
@@ -304,6 +304,7 @@ export default function PageBanca({ showToast, empId }) {
   const [loading,    setLoading]    = useState(true);
   const [showForm,   setShowForm]   = useState(false);
   const [showCuenta, setShowCuenta] = useState(false);
+  const [editCuentaId, setEditCuentaId] = useState(null);
   const [editMovId,  setEditMovId]  = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [filtroT,    setFiltroT]    = useState("todos");
@@ -375,10 +376,32 @@ export default function PageBanca({ showToast, empId }) {
     setSaving(true);
     const saldoInicial = parseFloat(fc.saldo_inicial) || 0;
     const payload = { ...fc, empresa_id: empId, saldo_inicial: saldoInicial, saldo_actual: saldoInicial };
-    const r = await dbIns("cuentas_bancarias", payload);
-    if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
-    showToast("Cuenta registrada"); setSaving(false); setShowCuenta(false); setFc({ ...EFC }); loadCuentas();
+    let r;
+    if (editCuentaId) {
+      const { saldo_actual, ...upd } = payload;
+      r = await dbUpd("cuentas_bancarias", editCuentaId, upd);
+      if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
+      showToast("Cuenta actualizada");
+    } else {
+      r = await dbIns("cuentas_bancarias", payload);
+      if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
+      showToast("Cuenta registrada");
+    }
+    setSaving(false); setShowCuenta(false); setEditCuentaId(null); setFc({ ...EFC }); loadCuentas();
   };
+
+  const abrirEditarCuenta = (c) => {
+    setEditCuentaId(c.id);
+    setFc({
+      banco: c.banco || "", numero_cuenta: c.numero_cuenta || "",
+      tipo_cuenta: c.tipo_cuenta || "monetaria", moneda: c.moneda || "GTQ",
+      saldo_inicial: c.saldo_inicial || "", saldo_actual: c.saldo_actual || "",
+      notas: c.notas || "", titular: c.titular || "",
+    });
+    setShowCuenta(true);
+  };
+
+  const cerrarCuenta = () => { setShowCuenta(false); setEditCuentaId(null); setFc({ ...EFC }); };
 
   const abrirEditarMov = (mov) => {
     setEditMovId(mov.id);
@@ -518,17 +541,22 @@ export default function PageBanca({ showToast, empId }) {
             <Empty icon="B" msg="Sin cuentas registradas" />
           ) : cuentas.map(c => (
             <div key={c.id} onClick={() => setCuentaAct(c)}
-              style={{ ...S.card, cursor: "pointer", minWidth: 170, flex: "0 0 auto",
+              style={{ ...S.card, cursor: "pointer", minWidth: 170, flex: "0 0 auto", position: "relative",
                 border: `1px solid ${cuentaAct?.id === c.id ? T.acc : T.bord}`,
                 background: cuentaAct?.id === c.id ? T.accDim : T.card }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.txt }}>{c.banco}</div>
+              <button title="Editar cuenta" onClick={e => { e.stopPropagation(); abrirEditarCuenta(c); }}
+                style={{ position: "absolute", top: 6, right: 6, background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 13, lineHeight: 1 }}>
+                ✎
+              </button>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.txt, paddingRight: 14 }}>{c.banco}</div>
+              {c.titular ? <div style={{ fontSize: 10, fontWeight: 600, color: T.txt }}>{c.titular}</div> : null}
               <div style={{ fontSize: 10, color: T.sub }}>{c.numero_cuenta} · {c.moneda}</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: T.acc, marginTop: 6 }}>
                 Q {fmt(c.saldo_actual)}
               </div>
             </div>
           ))}
-          <button onClick={() => setShowCuenta(true)}
+          <button onClick={() => { setEditCuentaId(null); setFc({ ...EFC }); setShowCuenta(true); }}
             style={{ ...S.btn("primary"), flex: "0 0 auto", alignSelf: "center", padding: "10px 14px", minWidth: 80, height: "fit-content" }}>
             + Cuenta
           </button>
@@ -539,11 +567,12 @@ export default function PageBanca({ showToast, empId }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ ...S.card, width: "100%", maxWidth: 420 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: T.acc }}>Nueva cuenta bancaria</div>
-              <button onClick={() => setShowCuenta(false)} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 20 }}>X</button>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.acc }}>{editCuentaId ? "Editar cuenta bancaria" : "Nueva cuenta bancaria"}</div>
+              <button onClick={cerrarCuenta} style={{ background: "transparent", border: "none", color: T.sub, cursor: "pointer", fontSize: 20 }}>X</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <Fld label="BANCO"><input style={S.inp} value={fc.banco} onChange={e => sfc("banco", e.target.value)} placeholder="Nombre del banco" /></Fld>
+              <Fld label="TITULAR DE LA CUENTA"><input style={S.inp} value={fc.titular} onChange={e => sfc("titular", e.target.value)} placeholder="Nombre del titular de la cuenta" /></Fld>
               <Fld label="NO. CUENTA"><input style={S.inp} value={fc.numero_cuenta} onChange={e => sfc("numero_cuenta", e.target.value)} placeholder="000-000000-00" /></Fld>
               <Fld label="TIPO">
                 <select style={S.sel} value={fc.tipo_cuenta} onChange={e => sfc("tipo_cuenta", e.target.value)}>
@@ -559,8 +588,9 @@ export default function PageBanca({ showToast, empId }) {
                 </select>
               </Fld>
               <Fld label="SALDO INICIAL"><input style={S.inp} type="number" step="0.01" value={fc.saldo_inicial} onChange={e => sfc("saldo_inicial", e.target.value)} placeholder="0.00" /></Fld>
-              <button onClick={async () => { await guardarCuenta(); setShowCuenta(false); }} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
-                {saving ? "Guardando..." : "Registrar cuenta"}
+              <Fld label="NOTAS"><input style={S.inp} value={fc.notas} onChange={e => sfc("notas", e.target.value)} placeholder="Observaciones..." /></Fld>
+              <button onClick={async () => { await guardarCuenta(); }} disabled={saving} style={{ ...S.btn("primary"), width: "100%" }}>
+                {saving ? "Guardando..." : editCuentaId ? "Actualizar cuenta" : "Registrar cuenta"}
               </button>
             </div>
           </div>

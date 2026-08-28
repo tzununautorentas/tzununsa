@@ -256,7 +256,7 @@ const EF = {
   // Financiero
   concepto: 'renta', total_gtq: 0, metodo_pago: 'efectivo',
   anticipo: 0, condiciones_cancelacion: '',
-  banco: 'Banrural', numero_cuenta: '', tipo_cuenta: 'Monetaria',
+  banco: 'Banrural', numero_cuenta: '', tipo_cuenta: 'Monetaria', titular: '',
   deducible_colision: 5000, deducible_robo: 10000, deducible_terceros: 3000,
   // Facturacion
   factura_nombre: '', factura_nit: 'CF',
@@ -582,6 +582,7 @@ function buildContratoHTML(contrato) {
         ${contrato.banco ? `<div class="data-item"><label>Banco</label><span>${contrato.banco}</span></div>` : ''}
         ${contrato.numero_cuenta ? `<div class="data-item"><label>No. Cuenta</label><span style="font-family:monospace">${contrato.numero_cuenta}</span></div>` : ''}
         ${contrato.tipo_cuenta ? `<div class="data-item"><label>Tipo de cuenta</label><span>${contrato.tipo_cuenta}</span></div>` : ''}
+        ${contrato.titular ? `<div class="data-item"><label>Titular</label><span style="font-weight:600">${contrato.titular}</span></div>` : ''}
       </div>
     </div>` : ''}
     <p style="font-size:10px;color:#64748B;margin-top:8px">
@@ -781,6 +782,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
   const [saving, setSaving] = useState(false);
   const [vehiculos, setVehiculos] = useState([]);
   const [reservas,  setReservas]  = useState([]);
+  const [cuentasBancarias, setCuentasBancarias] = useState([]);
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
   const F = getContractFields(f.tipo);
   const C = getContractClauses(f.tipo);
@@ -789,11 +791,27 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
     Promise.all([
       dbGet('vehiculos', '&order=marca.asc'),
       dbGet('reservas', '&estado=in.(confirmada,en_curso)&order=fecha_inicio.desc&limit=50'),
-    ]).then(([v, r]) => {
+      dbGet('cuentas_bancarias', '&select=id,banco,numero_cuenta,tipo_cuenta,moneda,titular&order=banco.asc'),
+    ]).then(([v, r, cb]) => {
       setVehiculos(Array.isArray(v) ? v : []);
       setReservas(Array.isArray(r) ? r : []);
+      setCuentasBancarias(Array.isArray(cb) ? cb : []);
     });
   }, []);
+
+  // Auto-fill datos bancarios desde cuenta del módulo Banca
+  const cargarCuentaBancaria = (id) => {
+    if (!id) return;
+    const c = cuentasBancarias.find(x => x.id === id);
+    if (!c) return;
+    setF(p => ({
+      ...p,
+      banco: c.banco || p.banco,
+      numero_cuenta: c.numero_cuenta || p.numero_cuenta,
+      tipo_cuenta: c.tipo_cuenta ? (c.tipo_cuenta.charAt(0).toUpperCase() + c.tipo_cuenta.slice(1)) : p.tipo_cuenta,
+      titular: c.titular || p.titular,
+    }));
+  };
 
   // Auto-fill desde reserva
   const cargarDesdeReserva = (reservaId) => {
@@ -874,6 +892,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
         banco:                f.banco                || null,
         numero_cuenta:        f.numero_cuenta        || null,
         tipo_cuenta:          f.tipo_cuenta          || null,
+        titular:              f.titular              || null,
         factura_nombre:       f.factura_nombre       || f.cliente_nombre || null,
         factura_nit:          f.factura_nit          || 'CF',
         conductores:          f.conductores          || '[]',
@@ -1199,10 +1218,25 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
           </div>
           <div style={S.card}>
             <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>DATOS BANCARIOS</div>
+            {cuentasBancarias.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <Fld label="USAR CUENTA DEL MÓDULO BANCA (auto-completa)">
+                  <select style={S.sel} value="" onChange={e => { if (e.target.value) cargarCuentaBancaria(e.target.value); e.target.value = ""; }}>
+                    <option value="">Seleccionar cuenta...</option>
+                    {cuentasBancarias.map(c => (
+                      <option key={c.id} value={c.id}>{c.banco} — {c.numero_cuenta} ({c.moneda}){c.titular ? " — Titular: " + c.titular : ""}</option>
+                    ))}
+                  </select>
+                </Fld>
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <Fld label="BANCO"><input style={S.inp} value={f.banco} onChange={e => sf('banco', e.target.value)} placeholder="Banrural" /></Fld>
               <Fld label="NO. CUENTA"><input style={S.inp} value={f.numero_cuenta} onChange={e => sf('numero_cuenta', e.target.value)} placeholder="000-000000-00" /></Fld>
               <Fld label="TIPO DE CUENTA"><input style={S.inp} value={f.tipo_cuenta} onChange={e => sf('tipo_cuenta', e.target.value)} placeholder="Monetaria" /></Fld>
+              <Fld label="TITULAR DE LA CUENTA" span2>
+                <input style={S.inp} value={f.titular} onChange={e => sf('titular', e.target.value)} placeholder="Nombre del titular de la cuenta" />
+              </Fld>
             </div>
           </div>
           {F.esRenta && (

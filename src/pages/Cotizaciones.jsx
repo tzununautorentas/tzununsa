@@ -155,7 +155,7 @@ async function generarPDFPremium(d, empId, mode = "download") {
     if (Array.isArray(rawIds)) idsPago = rawIds.map(String);
     else if (rawIds) { const p = JSON.parse(rawIds); if (Array.isArray(p)) idsPago = p.map(String); }
     if (idsPago.length > 0) {
-      const lista = await dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,tipo_cuenta,moneda,notas");
+      const lista = await dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,tipo_cuenta,moneda,notas,titular");
       const arr = Array.isArray(lista) ? lista : [];
       let resultado = arr.filter(c => idsPago.includes(String(c.id)));
       if (isUSD) resultado = resultado.filter(c => (c.moneda || "").toUpperCase() === "USD");
@@ -445,8 +445,8 @@ ${d.itinerario && (() => {
     ${cuentasSeleccionadas.length > 0
       ? cuentasSeleccionadas.map(c => {
           const tipo = (c.tipo_cuenta || "").charAt(0).toUpperCase() + (c.tipo_cuenta || "").slice(1);
-          return `<div class="b-item"><strong>${(c.banco || "").replace(/&/g, "&amp;")}</strong><br/>No. Cuenta: <strong style="font-family:monospace">${(c.numero_cuenta || "").replace(/&/g, "&amp;")}</strong>${tipo ? " &middot; " + tipo.replace(/&/g, "&amp;") : ""}</div>`;
-        }).join("") + `<div class="b-titular">Titular: ${e.nombre}</div>`
+          return `<div class="b-item"><strong>${(c.banco || "").replace(/&/g, "&amp;")}</strong><br/>No. Cuenta: <strong style="font-family:monospace">${(c.numero_cuenta || "").replace(/&/g, "&amp;")}</strong>${tipo ? " &middot; " + tipo.replace(/&/g, "&amp;") : ""}<div class="b-titular">Titular: ${(c.titular || e.nombre).replace(/&/g, "&amp;")}</div></div>`;
+        }).join("")
       : (isUSD
           ? (bUSD ? `<div class="b-item"><strong>${bUSD.banco}</strong>${bUSD.detalle ? "<br/>" + bUSD.detalle : ""}</div><div class="b-titular">Titular: ${e.nombre}</div>` : '<div class="b-item"><em style="color:#94A3B8">Configure la cuenta bancaria en USD en Configuraci&oacute;n</em></div>')
           : `${b1 ? `<div class="b-item"><strong>${b1.banco}</strong>${b1.detalle ? "<br/>" + b1.detalle : ""}</div>` : ""}
@@ -702,7 +702,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         if (res) setFlotaVehiculos(res);
       } catch {}
       try {
-        const cb = await dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,tipo_cuenta,moneda,notas&order=banco.asc");
+        const cb = await dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,tipo_cuenta,moneda,notas,titular&order=banco.asc");
         if (cb) setCuentasBancarias(Array.isArray(cb) ? cb : []);
       } catch {}
     })();
@@ -1123,6 +1123,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                       <input type="checkbox" checked={sel} onChange={() => toggleCuenta(id)} style={{ accentColor: T.acc, width: 16, height: 16 }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, color: T.txt }}>{c.banco}</div>
+                        {c.titular ? <div style={{ fontSize: 11, fontWeight: 600, color: T.txt }}>{c.titular}</div> : null}
                         <div style={{ fontSize: 11, color: T.sub }}>
                           {c.numero_cuenta} · {c.tipo_cuenta || "—"} · {c.moneda}
                           {c.notas ? " · " + c.notas : ""}

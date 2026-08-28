@@ -243,7 +243,7 @@ export default function PagePagos({ showToast, empId }) {
                     <option value="">Seleccionar cuenta que recibe el pago...</option>
                     {cuentas.map(c=>(
                       <option key={c.id} value={c.id}>
-                        {c.banco} — {c.numero_cuenta} ({c.moneda}) — Saldo: Q {fmt(c.saldo_actual)}
+                        {c.banco} — {c.numero_cuenta} ({c.moneda}){c.titular ? " — Titular: " + c.titular : ""} — Saldo: Q {fmt(c.saldo_actual)}
                       </option>
                     ))}
                   </select>
