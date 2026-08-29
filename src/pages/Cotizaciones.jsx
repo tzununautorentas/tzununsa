@@ -46,6 +46,14 @@ const cargarScript = (url) => new Promise((resolve, reject) => {
   document.head.appendChild(s);
 });
 
+// ─── Conservar saltos de línea y escapar texto en el PDF ──────────────────────
+const nl2p = (txt = "") => {
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(txt).split(/\n{2,}/).map(blk =>
+    `<p>${blk.split("\n").map(esc).join("<br/>")}</p>`
+  ).join("");
+};
+
 // ─── PDF Premium — Propuesta Comercial Corporativa ──────────────────────────────
 async function generarPDFPremium(d, empId, mode = "download") {
   const empData = await dbGet("empresas", `&select=*&id=eq.${empId}`).then(dd => dd?.[0] || {});
@@ -218,6 +226,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
 /* ── TIPO DE SERVICIO ── */
 .tipo-text{font-size:13px;color:#1B2D5C;font-weight:700;line-height:1.4;padding:0 0 3px}
+.tipo-text p{margin:0 0 7px;font-weight:500;color:#334155;line-height:1.5}
+.tipo-text p:last-child{margin-bottom:0}
 
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:3px 0 0 0}
@@ -325,7 +335,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 
     <!-- TIPO DE SERVICIO -->
     <div class="st">TIPO DE SERVICIO</div>
-    ${d.servicio ? `<div class="tipo-text">${d.servicio}</div>` : ""}
+    ${d.servicio ? `<div class="tipo-text">${nl2p(d.servicio)}</div>` : ""}
 
     <!-- SERVICIOS INCLUIDOS -->
     <div class="st" style="margin-top:4px">SERVICIOS INCLUIDOS</div>
