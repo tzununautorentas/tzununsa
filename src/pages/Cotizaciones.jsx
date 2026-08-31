@@ -230,6 +230,12 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
 .tipo-text p{margin:0 0 7px;font-weight:500;color:#334155;line-height:1.5}
 .tipo-text p:last-child{margin-bottom:0}
 
+/* ── CONDICIONES / NOTAS PARA EL CLIENTE (opcional) ── */
+.cond-box{margin-top:6px;padding:8px 12px;background:#FFFBEB;border-left:4px solid #D97706;border-radius:0 6px 6px 0;font-size:12px;color:#78350F;line-height:1.5}
+.cond-box .cond-title{font-size:9px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.cond-box p{margin:0 0 6px;font-size:12px;line-height:1.5}
+.cond-box p:last-child{margin-bottom:0}
+
 /* ── SERVICIOS INCLUIDOS ── */
 .inc-list{list-style:none;padding:0;margin:3px 0 0 0}
 .inc-item{padding:2px 0;font-size:11px;color:#475569;display:flex;align-items:center;gap:6px}
@@ -349,6 +355,9 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;colo
       ${d.incl_seguro !== false ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Seguro de viaje</span></div>` : ""}
       ${d.carta_poder ? `<div class="inc-item"><span class="inc-check">&#10003;</span><span>Carta Poder (viaje internacional)</span></div>` : ""}
     </div>
+
+    <!-- CONDICIONES / NOTAS PARA EL CLIENTE (opcional) -->
+    ${d.condiciones ? `<div class="cond-box"><div class="cond-title">CONDICIONES Y CL&Aacute;USULAS</div>${nl2p(d.condiciones)}</div>` : ""}
 
         </div>
         <div class="col-right">
@@ -616,6 +625,7 @@ function makePDFData(r) {
     exch: parseFloat(r.tasa_cambio) || 7.70,
     cuentas_pago: r.cuentas_pago || [],
     itinerario: r.itinerario || "",
+    condiciones: r.condiciones || "",
     partidas,
   };
 }
@@ -633,7 +643,7 @@ const EMPTY_F = {
   km_total: "", km_por_galon: 27, precio_galon: 48,
   peajes: "", extras: "",
   iva_pct: 5, pago: "efectivo", exch: 7.70,
-  fecha_emision: today(), fecha_vence: "", estado: "borrador", notas: "",
+  fecha_emision: today(), fecha_vence: "", estado: "borrador", notas: "", condiciones: "",
   fecha_inicio: "", fecha_fin: "", origen: "", destino: "", ruta: "",
   observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0,
   comision_bancaria: 0, comision_bancaria_usd: 0, moneda_comision: "USD", exch_eur: 8.50,
@@ -692,7 +702,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       itinerario: initial.itinerario || "",
       iva_pct: initial.tasa_iva || 5, pago: initial.metodo_pago || "efectivo",
       exch: initial.tasa_cambio || 7.70, fecha_vence: initial.fecha_vence || "",
-      estado: "borrador", notas: initial.notas || "",
+      estado: "borrador", notas: initial.notas || "", condiciones: initial.condiciones || "",
     };
   });
   const [saving, setSaving] = useState(false);
@@ -830,7 +840,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
         version: initial?.id && !isClone ? nextVersion : 1,
         estado: estado === "orden_venta" ? "aprobada" : estado,
         orden_venta: estado === "orden_venta",
-        fecha_emision: f.fecha_emision || today(), fecha_vence: f.fecha_vence || "", notas: f.notas || "",
+        fecha_emision: f.fecha_emision || today(), fecha_vence: f.fecha_vence || "", notas: f.notas || "", condiciones: f.condiciones || "",
       };
       let result;
       if (initial?.id && !isClone) result = await dbUpd("cotizaciones", initial.id, payload);
@@ -984,6 +994,11 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
               <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>ORIGEN</label><input style={S.inp} value={f.origen} onChange={e => sf("origen", e.target.value)} placeholder="Ciudad de origen" /></div>
               <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>DESTINO</label><input style={S.inp} value={f.destino} onChange={e => sf("destino", e.target.value)} placeholder="Ciudad de destino" /></div>
               <div style={{ gridColumn: "span 2" }}><label style={S.lbl}>DESCRIPCION DEL SERVICIO</label><textarea style={{ ...S.inp, minHeight: 56, resize: "vertical" }} value={f.descripcion_servicio} onChange={e => sf("descripcion_servicio", e.target.value)} placeholder="Traslado desde Guatemala hacia..." /></div>
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={S.lbl}>CONDICIONES / NOTAS PARA EL CLIENTE (Opcional)</label>
+                <textarea style={{ ...S.inp, minHeight: 56, resize: "vertical" }} value={f.condiciones} onChange={e => sf("condiciones", e.target.value)} placeholder="Ej: condiciones del seguro del vehículo, cláusulas solicitadas, requisitos..." />
+                <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Si se deja vacío, no aparece en el PDF.</div>
+              </div>
             </div>
           </div>
 
