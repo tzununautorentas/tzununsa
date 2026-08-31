@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, siguienteNumero } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
+import ItinerarioServicio from '../components/ItinerarioServicio.jsx';
 
 // ─── Autocomplete local ───────────────────────────────────────────────────────
 function ClienteAC({ value, onChange, onSelect, clientes }) {
@@ -986,45 +987,14 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
             </div>
           </div>
 
-          {/* Itinerario / Visitas */}
-          {f.itinerario && (() => {
+          {/* Itinerario / Visitas (editable) */}
+          {(() => {
             try {
               const it = typeof f.itinerario === 'string' ? JSON.parse(f.itinerario) : f.itinerario;
               if (!it?.vehiculos?.length) return null;
-              const allVisitas = [];
-              const allTrayectos = [];
-              for (const veh of it.vehiculos) {
-                const vnom = veh.vehiculo_nombre || "";
-                for (const t of (veh.trayectos || [])) {
-                  if (t.origen || t.destino) allTrayectos.push({ vehiculo: vnom, ...t });
-                }
-                for (const v of (veh.visitas || [])) {
-                  if (v.nombre?.trim()) allVisitas.push({ vehiculo: vnom, ...v });
-                }
-              }
-              if (allVisitas.length === 0 && allTrayectos.length === 0) return null;
               return (
-                <div style={S.card}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: T.mut, marginBottom: 10 }}>ITINERARIO / LUGARES A VISITAR</div>
-                  <div style={{ background: T.surf, borderRadius: 8, padding: 10, border: `1px solid ${T.bord}44` }}>
-                    {allTrayectos.length > 0 && <>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginBottom: 4, textTransform: "uppercase" }}>Trayectos</div>
-                      {allTrayectos.map((t, i) => (
-                        <div key={i} style={{ fontSize: 11, color: T.txt, padding: "2px 0", borderBottom: `1px solid ${T.bord}22` }}>
-                          {t.vehiculo ? <span style={{ color: T.acc }}>{t.vehiculo} — </span> : ""}{t.origen || "—"} → {t.destino || "—"}{t.fecha ? ` (${t.fecha})` : ""}{t.hora_salida ? ` ${t.hora_salida}` : ""}
-                        </div>
-                      ))}
-                    </>}
-                    {allVisitas.length > 0 && <>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: T.acc, marginTop: allTrayectos.length > 0 ? 8 : 0, marginBottom: 4, textTransform: "uppercase" }}>Lugares a Visitar</div>
-                      {allVisitas.map((v, i) => (
-                        <div key={i} style={{ fontSize: 11, color: T.txt, padding: "2px 0", borderBottom: `1px solid ${T.bord}22` }}>
-                          {i + 1}. {v.nombre}{v.fecha ? ` (${v.fecha})` : ""}{v.notas ? ` — ${v.notas}` : ""}
-                        </div>
-                      ))}
-                    </>}
-                  </div>
-                </div>
+                <ItinerarioServicio value={it} flotaVehiculos={flotaVehiculos}
+                  onChange={newIt => sf("itinerario", JSON.stringify(newIt))} />
               );
             } catch { return null; }
           })()}
