@@ -1,6 +1,6 @@
 // src/pages/Reservas.jsx
 import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES, siguienteNumero } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, CATALOGO, GT, EST_RES, FLUJO_RES, siguienteNumero, ordenarNumeracion } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -356,8 +356,10 @@ export default function PageReservas({ showToast, empId }) {
     query,
     search: busqueda,
     columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
-    order: 'numero.desc.nullslast',
+    order: 'created_at.desc.nullslast',
   });
+
+  const rowsOrdenadas = ordenarNumeracion(rows, "fecha_inicio");
 
   const cambiarEstado = async (id, nuevoEstado) => {
     await dbUpd("reservas", id, { estado: nuevoEstado });
@@ -392,7 +394,7 @@ export default function PageReservas({ showToast, empId }) {
   return (
     <div>
       {exportar && (
-        <ModalExportar titulo="Reservas" datos={rows} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />
+        <ModalExportar titulo="Reservas" datos={rowsOrdenadas} campos={CAMPOS_EXP} onClose={() => setExportar(false)} />
       )}
 
       {/* KPIs */}
@@ -430,11 +432,11 @@ export default function PageReservas({ showToast, empId }) {
         </button>
       </div>
 
-      {loading ? <Spinner /> : rows.length === 0 ? (
+      {loading ? <Spinner /> : rowsOrdenadas.length === 0 ? (
         <Empty icon="R" msg="Sin reservas" action="+ Nueva reserva" onAction={() => setVista("form")} />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {rows.map(r => {
+          {rowsOrdenadas.map(r => {
             const est = EST_RES[r.estado] || EST_RES.pendiente;
             const total = parseFloat(r.total_gtq) || 0;
             return (
@@ -475,7 +477,7 @@ export default function PageReservas({ showToast, empId }) {
           })}
         </div>
       )}
-      {rows.length > 0 && (
+      {rowsOrdenadas.length > 0 && (
         <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       )}
     </div>

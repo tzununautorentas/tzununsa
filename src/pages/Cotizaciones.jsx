@@ -1,6 +1,6 @@
 // src/pages/Cotizaciones.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, siguienteNumero } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, siguienteNumero, ordenarNumeracion } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ItinerarioServicio from '../components/ItinerarioServicio.jsx';
@@ -1217,8 +1217,10 @@ export default function PageCotizaciones({ showToast, empId }) {
     query,
     search: busqueda,
     columns: ['numero', 'cliente_nombre', 'cliente_nit', 'cliente_dir', 'vehiculo_nombre', 'descripcion_servicio', 'notas'],
-    order: 'numero.desc.nullslast',
+    order: 'created_at.desc.nullslast',
   });
+
+  const rowsOrdenadas = ordenarNumeracion(rows, "fecha_emision");
 
   useEffect(() => {
     dbGet("clientes", "&order=codigo.asc,nombre.asc").then(d => setClientes(Array.isArray(d) ? d : []));
@@ -1329,7 +1331,7 @@ export default function PageCotizaciones({ showToast, empId }) {
   return (
     <div>
       {exportar && (
-        <ModalExportar titulo="Cotizaciones" datos={rows}
+        <ModalExportar titulo="Cotizaciones" datos={rowsOrdenadas}
           campos={[{ label: "Numero", key: "numero" }, { label: "Cliente", key: "cliente_nombre" }, { label: "Vehiculo", key: "vehiculo_nombre" }, { label: "Total GTQ", key: "total_gtq" }, { label: "Estado", key: "estado" }]}
           onClose={() => setExportar(false)} />
       )}
@@ -1355,9 +1357,9 @@ export default function PageCotizaciones({ showToast, empId }) {
         <button onClick={() => { setEditItem(null); setVista("form"); }} style={{ ...S.btn("primary"), fontSize: 12 }}>+ Nueva</button>
       </div>
 
-      {loading ? <Spinner /> : rows.length === 0 ? <Empty icon="Q" msg="Sin cotizaciones" /> : (
+      {loading ? <Spinner /> : rowsOrdenadas.length === 0 ? <Empty icon="Q" msg="Sin cotizaciones" /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {rows.map(r => {
+          {rowsOrdenadas.map(r => {
             const e = r.orden_venta ? EC.orden_venta : (EC[r.estado] || EC.borrador);
             const total = parseFloat(r.total_gtq) || 0;
             return (
@@ -1400,7 +1402,7 @@ export default function PageCotizaciones({ showToast, empId }) {
           })}
         </div>
       )}
-      {rows.length > 0 && (
+      {rowsOrdenadas.length > 0 && (
         <Paginador page={page} totalPages={totalPages} total={total} desde={desde} hasta={hasta} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       )}
 

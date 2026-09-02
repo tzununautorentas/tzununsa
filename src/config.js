@@ -336,3 +336,28 @@ export const FLUJO_RES = {
 
 // --- LOGO (base64) ---
 export const LOGO_B64 = "";
+
+// --- Ordenar lista: primero correlativos (p.ej. COT-000104), luego numeración al azar por fecha ---
+export function ordenarNumeracion(lista, campoFecha = "created_at") {
+  if (!Array.isArray(lista)) return lista;
+  const esCorrelativo = n => /^(COT|RES)-\d{6}$/.test(n || "");
+  const fechaVal = r => {
+    if (campoFecha === "fecha_emision") return r.fecha_emision || "";
+    if (campoFecha === "fecha_inicio") return r.fecha_inicio || "";
+    return r.created_at || r.fecha_emision || r.fecha_inicio || "";
+  };
+  const copy = [...lista];
+  copy.sort((a, b) => {
+    const ac = esCorrelativo(a.numero);
+    const bc = esCorrelativo(b.numero);
+    if (ac && !bc) return -1;
+    if (!ac && bc) return 1;
+    if (ac && bc) {
+      const na = parseInt((a.numero.match(/(\d+)/) || [])[1] || "0", 10);
+      const nb = parseInt((b.numero.match(/(\d+)/) || [])[1] || "0", 10);
+      return nb - na;
+    }
+    return String(fechaVal(b)).localeCompare(String(fechaVal(a)));
+  });
+  return copy;
+}
