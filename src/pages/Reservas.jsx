@@ -356,7 +356,7 @@ export default function PageReservas({ showToast, empId }) {
     query,
     search: busqueda,
     columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
-    order: 'numero.desc',
+    order: 'numero.desc.nullslast',
   });
 
   const cambiarEstado = async (id, nuevoEstado) => {

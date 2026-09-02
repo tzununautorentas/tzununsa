@@ -1217,7 +1217,7 @@ export default function PageCotizaciones({ showToast, empId }) {
     query,
     search: busqueda,
     columns: ['numero', 'cliente_nombre', 'cliente_nit', 'cliente_dir', 'vehiculo_nombre', 'descripcion_servicio', 'notas'],
-    order: 'numero.desc',
+    order: 'numero.desc.nullslast',
   });
 
   useEffect(() => {
@@ -1244,7 +1244,8 @@ export default function PageCotizaciones({ showToast, empId }) {
   const convertirAReserva = async (cot) => {
     if (!confirm(`Convertir ${cot.numero} en Reserva confirmada?`)) return;
     const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
-    const numero = await siguienteNumero("RES-", "reservas", eId);
+    const cotNum = (cot.numero || '').match(/(\d+)/);
+    const numero = cotNum ? 'RES-' + cotNum[1].padStart(6, '0') : await siguienteNumero("RES-", "reservas", eId);
 
     let svc = {};
     try { svc = JSON.parse(cot.servicios_incluidos || "{}"); } catch {}
