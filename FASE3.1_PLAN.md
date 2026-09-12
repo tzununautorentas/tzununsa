@@ -63,26 +63,32 @@ Nuevo: `sbLogin` → `supabase.auth.signInWithPassword`; la sesión vive **dentr
 - Se **elimina** la escritura/lectura de `tzunun_session`. Si quedara residual por sesiones viejas de navegadores, se borra la clave en `logout` y no se usa nunca como fuente.
 - Pre-login no hay llamadas REST; si alguna ocurriera sin sesión, `apiFetch` envía anon (como hoy) y no rompe.
 
-## 6. `api()` con JWT real
+## 6. `api()` con JWT real (corrección: sin fallback anon)
 
 `apiFetch(path|url, opts)`:
 
 ```js
 token = await getAccessToken();
-headers = { apikey: SK, "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : `Bearer ${SK}` };
+const headers = { apikey: SK, "Content-Type": "application/json" };
+if (token) headers.Authorization = `Bearer ${token}`;
+// SIN sesión: NO se envía Authorization artificial ni Bearer con el anon key.
 ```
 
-`api(path, opts)` (exportado) usa `apiFetch`, `null` en 204, lanza `Error(message/hint)` si `!ok`, JSON en éxito. Hereda la semántica exacta de los `api` locales actuales, por lo que Contabilidad/Gastos/Contratos/Facturacion/Proveedores/ImportadorSAT/Empleados conservan su comportamiento.
+`api(path, opts)` (exportado) usa `apiFetch`, `null` en 204, lanza `Error(message/hint)` si `!ok`, JSON en éxito. Hereda la semántica exacta de los `api` locales actuales actuales.
+
+**Regla de control:** sin sesión no hay `Authorization` (PostgREST la trataría como rol anon; la app **no** debe consultar REST antes del login — `App.jsx` restringe el render al login). El 401-retry solo aplica cuando había token. Con esto, el anon key deja de ser una vía alternativa de autenticación y queda solo como requisito del gateway.
 
 ## 7. Expiración, refresh y retry 401
 
 ```
-fetch → 401 con token?
-  ├─ no → respuesta tal cual
-  └─ sí → refreshSession() [delegado, single-flight del SDK]
-            ├─ token nuevo → reintentar UNA sola vez
-            └─ falla      → logout() + throw Error("La sesión expiró. Inicia sesión nuevamente.")
+fetch
+ ├─ SIN token → solo se envía `apikey: SK`; sin retry 401 (no hay nada que refrescar).
+ │              Comportamiento controlado por la app (sin REST pre-login).
+ └─ CON token → 401?
+      ├─ no → respuesta tal cual
+      └─ sí → refreshSession() [single-flight del SDK]
+              ├─ token nuevo → reintentar UNA sola vez
+              └─ falla      → logout() + throw Error("La sesión expiró. Inicia sesión nuevamente.")
 ```
 
 No loops. SDK también autorrefresca (autoRefreshToken). `getAccessToken` refresca cuando faltan ≤ 60 s — cubre el caso de expiración cercana sin esperar el 401.
@@ -111,6 +117,44 @@ No loops. SDK también autorrefresca (autoRefreshToken). `getAccessToken` refres
 5. **Compatibilidad GoTrue del proyecto**: el endpoint es el mismo (`/auth/v1`), solo cambia el cliente que llama → sin cambios en Supabase.
 6. **Persistencia**: sesión en `localStorage` del SDK (clave `tzunun_auth`); al recargar la página `getSession()` la restaura sin tocar `tzunun_session`.
 7. **`package-lock.json` no existe hoy**: se creará al `npm install`, cambio esperado y controlado.
+
+---
+
+## 11. Anexo — Auditoría final de usos de sesión y transporte (verificada)
+
+Resultado de la búsqueda completa en el repo (antes de tocar código; árbol limpio, tag `pre-fase-3.1-jwt` creado).
+
+**`tzunun_session` (solo código; los otros hits están en BDs de informes `.md`, no en runtime):**
+- `src/App.jsx:593` (lectura inicial), `:656` (escritura post-login), `:662` (borrado en logout).
+- `src/pages/Gastos.jsx:667` (solo nombre de usuario en UI).
+
+**`localStorage` no relacionados con auth (NO se tocan):** `tzunun_theme` (theme.jsx), `tzunun_read` (readState.js / Notificaciones / Dashboard). `sessionStorage`: sin usos.
+
+**`/auth/v1` (llamadas directas a eliminar):** `src/config.js:103` (`sbLogin`, `POST token?grant_type=password`) y `:114` (`sbLogout`). Se reemplazan por `signInWithPassword` / `signOut` del SDK.
+
+**`/rest/v1` (llamadas directas a migrar al fetcher autenticado):**
+| Archivo | Línea | Uso |
+|---|---|---|
+| `src/config.js` | :9,20,39,44,53,66,79 | `dbGet/dbIns/dbUpd/dbDel/siguienteNumero` |
+| `src/hooks/usePaginacion.js` | :27-29 | fetch con `Range` + `count=exact` |
+| `src/services/dashboardService.js` | :5-6 | `api` local |
+| `src/pages/Banca.jsx` | :364-365 | `loadAllMovs` |
+| `src/pages/Contabilidad.jsx` | :13-14 | `api` local |
+| `src/pages/Contratos.jsx` | :15-16 | `api` local |
+| `src/pages/Facturacion.jsx` | :15-16 | `api` local |
+| `src/pages/Gastos.jsx` | :44-45 | `api` local |
+| `src/pages/Proveedores.jsx` | :7-8 | `apiFetch` local |
+| `src/pages/Empleados.jsx` | :17 | `api` local |
+| `src/components/ImportadorSAT.jsx` | :10-11 | `api` local |
+
+**Anon key (`SK`) y `H` (Bearer con anon):**
+- `src/config.js:3-4` — única definición canónica (`SK`, `H`).
+- `src/pages/Empleados.jsx:12-14` — **anon key y `H` duplicados en el archivo** (se eliminan al migrar; ya no se duplica el secreto).
+- `Authorization: Bearer ${SK}` hoy solo en `config.js:4` y `Empleados.jsx:14` (ambos se eliminan).
+
+**Other `fetch()` a Supabase:** ninguno adicional. Los `fetch()` de `ruteoService.js` (Nominatim/OSRM) son externos (geocoding) y NO pasan por Supabase; quedan intactos.
+
+**`process.env` / `import.meta.env`:** sin usos.
 
 ---
 
