@@ -4,7 +4,7 @@
 // Tabla: facturas (confirmada en Supabase)
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback } from 'react';
-import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, TIPOS_SERVICIO } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
@@ -40,7 +40,7 @@ const ESTADOS = {
 const EF = {
   numero_factura: '', serie: '', fecha: today(),
   fecha_hora_emision: '', fecha_vencimiento: '',
-  tipo_dte: 'FACT', moneda: 'GTQ', tipo_cambio: 1, condicion_pago: 'contado',
+  tipo_dte: 'FACT', moneda: 'GTQ', tasa_cambio: 1, condicion_pago: 'contado',
   numero_autorizacion: '', fecha_certificacion: '',
   cliente_nombre: '', cliente_nit: 'CF', cliente_id: '',
   direccion_receptor: '', municipio_receptor: '', departamento_receptor: '',
@@ -235,7 +235,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
     const lineas = (p.lineas || []).map((l, idx) => idx === i ? { ...l, [campo]: val } : l);
     return { ...p, lineas, ...recalcularLineas(lineas, p.tasa_iva) };
   });
-  const agregarLinea = () => setF(p => ({ ...p, lineas: [...(p.lineas || []), { descripcion: '', cantidad: 1, precio_unitario: '' }] }));
+  const agregarLinea = () => setF(p => ({ ...p, lineas: [...(p.lineas || []), { tipo_servicio: '', servicio_x: '', descripcion: '', cantidad: 1, precio_unitario: '' }] }));
   const quitarLinea = (i) => setF(p => {
     const lineas = (p.lineas || []).filter((_, idx) => idx !== i);
     return { ...p, lineas, ...recalcularLineas(lineas, p.tasa_iva) };
@@ -260,7 +260,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
       fecha_vencimiento: r.fecha_vencimiento || '',
       tipo_dte:       r.tipo_dte       || 'FACT',
       moneda:         r.moneda         || 'GTQ',
-      tipo_cambio:    r.tipo_cambio    ?? 1,
+      tasa_cambio:    r.tasa_cambio    ?? 1,
       condicion_pago: r.condicion_pago || 'contado',
       numero_autorizacion: r.numero_autorizacion || '',
       fecha_certificacion: r.fecha_certificacion || '',
@@ -277,6 +277,8 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
       total_descuentos: r.total_descuentos || 0,
       descripcion:    det.length ? det.map(x => x.descripcion).join(' | ') : (r.descripcion || ''),
       lineas:         det.length ? det.map(x => ({
+        tipo_servicio:  x.tipo_servicio || '',
+        servicio_x:     x.servicio_x || '',
         descripcion:    x.descripcion || '',
         cantidad:       x.cantidad || 1,
         precio_unitario: x.precio_unitario != null ? x.precio_unitario : (x.precio || ''),
@@ -323,7 +325,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
         fecha_vencimiento: f.fecha_vencimiento || null,
         tipo_dte:       f.tipo_dte       || 'FACT',
         moneda:         f.moneda         || 'GTQ',
-        tipo_cambio:    parseFloat(f.tipo_cambio) || 1,
+        tasa_cambio:    parseFloat(f.tasa_cambio) || 1,
         condicion_pago: f.condicion_pago || 'contado',
         numero_autorizacion: f.numero_autorizacion || null,
         fecha_certificacion: f.fecha_certificacion || null,
@@ -338,13 +340,19 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
         telefono_receptor: f.telefono_receptor || null,
         numero_cuenta:  f.numero_cuenta  || null,
         total_descuentos: parseFloat(f.total_descuentos) || 0,
-        descripcion:    (f.lineas || []).length ? f.lineas.map(l => l.descripcion || '').filter(Boolean).join(' | ') : (f.descripcion || null),
+        descripcion:    (f.lineas || []).length
+        ? f.lineas
+            .map(l => [l.tipo_servicio, l.descripcion].filter(Boolean).map(s => s.trim()).join(' — '))
+            .filter(Boolean).join(' | ')
+        : (f.descripcion || null),
         detalles:       (f.lineas || []).length ? f.lineas.map((l, i) => ({
           numero_linea:    i + 1,
           bien_servicio:   'Servicio',
+          tipo_servicio:   l.tipo_servicio || l.servicio_x || '',
+          servicio_x:      l.servicio_x || '',
           cantidad:        parseFloat(l.cantidad) || 1,
           unidad_medida:   'UNI',
-          descripcion:     l.descripcion || '',
+          descripcion:     [l.tipo_servicio, l.servicio_x, l.descripcion].filter(Boolean).map(s => s.trim()).join(' — ') || 'Servicio',
           precio_unitario: parseFloat(l.precio_unitario) || 0,
           precio:          (parseFloat(l.cantidad) || 1) * (parseFloat(l.precio_unitario) || 0),
           total_linea:     (parseFloat(l.cantidad) || 1) * (parseFloat(l.precio_unitario) || 0),
@@ -493,8 +501,8 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
               </Fld>
               {f.moneda !== 'GTQ' && (
                 <Fld label="TIPO DE CAMBIO">
-                  <input style={S.inp} type="number" step="0.0001" value={f.tipo_cambio}
-                    onChange={e => sf('tipo_cambio', e.target.value)} placeholder="7.50" />
+                  <input style={S.inp} type="number" step="0.0001" value={f.tasa_cambio}
+                    onChange={e => sf('tasa_cambio', e.target.value)} placeholder="7.50" />
                 </Fld>
               )}
               <Fld label="CONDICION DE PAGO">
@@ -573,21 +581,30 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
             <div style={{ display: 'grid', gap: 8 }}>
               {(f.lineas || []).map((l, i) => (
                 <div key={i} style={{ border: `1px solid ${T.bord}`, borderRadius: 10, padding: 10, background: T.card }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 90px 60px 30px', gap: 6, alignItems: 'center' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 34px', gap: 6, alignItems: 'center' }}>
+                    <select style={S.sel} value={l.tipo_servicio}
+                      onChange={e => setLineaVal(i, 'tipo_servicio', e.target.value)}>
+                      <option value="">Tipo de servicio...</option>
+                      {TIPOS_SERVICIO.map(ts => (
+                        <option key={ts} value={ts}>{ts}</option>
+                      ))}
+                    </select>
                     <input style={S.inp} value={l.descripcion}
                       onChange={e => setLineaVal(i, 'descripcion', e.target.value)}
-                      placeholder="Descripcion del cobro (ej: Alquiler de vehiculo)" />
+                      placeholder="Descripcion (ej: Hyundai Verna 14 dias, chofer 3 dias...)" />
+                    <button onClick={() => quitarLinea(i)} title="Quitar linea"
+                      style={{ ...S.btn('danger'), padding: '5px 9px', fontSize: 12 }}>×</button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '90px 120px 1fr', gap: 6, marginTop: 8, alignItems: 'center' }}>
                     <input style={S.inp} type="number" min="1" value={l.cantidad}
                       onChange={e => setLineaVal(i, 'cantidad', e.target.value)}
                       placeholder="Cant." title="Cantidad" />
                     <input style={S.inp} type="number" step="0.01" value={l.precio_unitario}
                       onChange={e => setLineaVal(i, 'precio_unitario', e.target.value)}
                       placeholder="P. unit." title="Precio unitario" />
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       Q {fmt((parseFloat(l.cantidad) || 0) * (parseFloat(l.precio_unitario) || 0))}
                     </div>
-                    <button onClick={() => quitarLinea(i)} title="Quitar linea"
-                      style={{ ...S.btn('danger'), padding: '4px 8px', fontSize: 11 }}>×</button>
                   </div>
                 </div>
               ))}
@@ -607,7 +624,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
               </div>
             )}
             <div style={{ fontSize: 10, color: T.mut, marginTop: 8, lineHeight: 1.6 }}>
-              Usa las lineas para desglosar cada servicio cobrado (ej: Alquiler vehiculo, servicio de chofer, limpieza, etc.). El subtotal y el total se calculan solos.
+              Usa las lineas para desglosar cada servicio cobrado: elegi el TIPO DE SERVICIO (ej: Alquiler de vehiculo, Limpieza de vehiculo, Servicio de chofer) y agrega la cantidad y precio. El subtotal y el total se calculan solos.
             </div>
           </div>
         </div>
