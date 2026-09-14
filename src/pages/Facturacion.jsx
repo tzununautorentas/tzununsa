@@ -8,6 +8,7 @@ import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../co
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
+import ImportadorXML from '../components/ImportadorXML.jsx';
 
 // ─── API directa con manejo de errores explícito ──────────────────
 async function apiFetch(path, opts = {}) {
@@ -38,7 +39,13 @@ const ESTADOS = {
 
 const EF = {
   numero_factura: '', serie: '', fecha: today(),
+  fecha_hora_emision: '', fecha_vencimiento: '',
+  tipo_dte: 'FACT', moneda: 'GTQ', tipo_cambio: 1, condicion_pago: 'contado',
+  numero_autorizacion: '', fecha_certificacion: '',
   cliente_nombre: '', cliente_nit: 'CF', cliente_id: '',
+  direccion_receptor: '', municipio_receptor: '', departamento_receptor: '',
+  codigo_postal_receptor: '', correo_receptor: '', telefono_receptor: '',
+  numero_cuenta: '', total_descuentos: 0,
   descripcion: '', subtotal: '', tasa_iva: 12, impuestos: '', total: '',
   metodo_pago: 'efectivo', estado: 'borrador', notas: '', reserva_id: '',
   emisor_id: '',
@@ -74,6 +81,19 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
 .amount-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1B2D5C;font-size:16px;font-weight:800;color:#1B2D5C}
 .footer{margin-top:28px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
 `;
+  const detalle = Array.isArray(r.detalles) && r.detalles.length ? r.detalles : null;
+  const filasDet = detalle ? detalle.map((x, i) => `
+      <tr>
+        <td>${i + 1}. ${x.descripcion || ''}</td>
+        <td style="text-align:right">${x.cantidad || 1}</td>
+        <td style="text-align:right">Q ${fmt(x.precio_unitario)}</td>
+        <td style="text-align:right;font-weight:600">Q ${fmt(x.total_linea || x.precio)}</td>
+      </tr>`).join('') : `
+      <tr><td>${r.descripcion || 'Servicios de transporte y renta'}</td>
+      <td style="text-align:right">1</td>
+      <td style="text-align:right">Q ${fmt(r.subtotal)}</td>
+      <td style="text-align:right;font-weight:600">Q ${fmt(r.subtotal)}</td></tr>`;
+  const descTotal = parseFloat(r.total_descuentos) || 0;
   const html = `
 <div class="header">
   <div class="logo-area">
@@ -84,10 +104,11 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
     ${telEnt ? `<p>Tel: ${telEnt}</p>` : ''}
   </div>
   <div class="factura-info">
-    <div class="num">FACTURA FEL</div>
+    <div class="num">FACTURA ${r.tipo_dte || 'FEL'}</div>
     <p>No. ${r.numero_factura || '—'}</p>
     ${r.serie ? `<p>Serie: ${r.serie}</p>` : ''}
     <p>Fecha: ${fmtD(r.fecha)}</p>
+    ${r.moneda ? `<p>Moneda: ${r.moneda}</p>` : ''}
     <div class="badge">${ESTADOS[r.estado]?.l || r.estado}</div>
   </div>
 </div>
@@ -96,24 +117,29 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
   <div class="client-box">
     <strong>${r.cliente_nombre || 'Consumidor Final'}</strong>
     <p style="margin-top:4px;color:#475569">NIT: ${r.cliente_nit || 'CF'}</p>
+    ${r.direccion_receptor ? `<p style="margin-top:2px;color:#94A3B8">${r.direccion_receptor}</p>` : ''}
+    ${(r.municipio_receptor || r.departamento_receptor) ? `<p style="margin-top:2px;color:#94A3B8">${r.municipio_receptor || ''}${r.municipio_receptor && r.departamento_receptor ? ', ' : ''}${r.departamento_receptor || ''}</p>` : ''}
+    ${r.correo_receptor ? `<p style="margin-top:2px;color:#94A3B8">${r.correo_receptor}</p>` : ''}
   </div>
 </div>
 <div class="section">
   <div class="section-title">DETALLE DEL SERVICIO</div>
   <table>
-    <thead><tr><th>Descripcion</th><th style="text-align:right">Monto Q</th></tr></thead>
-    <tbody>
-      <tr><td>${r.descripcion || 'Servicios de transporte y renta'}</td>
-      <td style="text-align:right;font-weight:600">Q ${fmt(r.subtotal)}</td></tr>
-    </tbody>
+    <thead><tr><th>Descripcion</th><th style="text-align:right">Cant.</th><th style="text-align:right">P. Unit.</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>${filasDet}</tbody>
   </table>
 </div>
 <div class="amounts">
   <div class="amount-row"><span>Subtotal</span><span>Q ${fmt(r.subtotal)}</span></div>
+  ${descTotal > 0 ? `<div class="amount-row"><span>Descuentos</span><span>-Q ${fmt(descTotal)}</span></div>` : ''}
   <div class="amount-row"><span>IVA (${r.tasa_iva || 12}%)</span><span>Q ${fmt(r.impuestos)}</span></div>
   <div class="amount-total"><span>TOTAL</span><span>Q ${fmt(r.total)}</span></div>
 </div>
-${r.metodo_pago ? `<p style="margin-top:12px;font-size:10px;color:#64748B">Metodo de pago: ${r.metodo_pago}</p>` : ''}
+<div style="margin-top:14px;font-size:9px;color:#64748B;line-height:1.7">
+  <div>Condicion de pago: ${r.condicion_pago || 'contado'}${r.fecha_vencimiento ? ` · Vence: ${fmtD(r.fecha_vencimiento)}` : ''} · Metodo: ${r.metodo_pago || '—'}${r.numero_cuenta ? ` · Cuenta: ${r.numero_cuenta}` : ''}</div>
+  ${r.numero_autorizacion ? `<div>No. de autorizacion: ${r.numero_autorizacion}</div>` : ''}
+  ${r.textos_frases ? `<div>${r.textos_frases}</div>` : ''}
+</div>
 <div class="footer">
   Documento generado por Tz'unun AutoRentas &nbsp;|&nbsp;
   ${new Date().toLocaleDateString('es-GT', { day:'2-digit', month:'long', year:'numeric' })}
@@ -133,6 +159,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
   const [busqueda, setBusqueda] = useState('');
   const [exportar, setExportar] = useState(false);
   const [showSAT,  setShowSAT]  = useState(false);
+  const [showXML,  setShowXML]  = useState(false);
   const [emisores, setEmisores] = useState([]);
   const [cuentas,  setCuentas]  = useState([]);
   const [f,        setF]        = useState({ ...EF });
@@ -145,7 +172,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
     table: 'facturas',
     query: queryFact,
     search: busqueda,
-    columns: ['numero', 'nombre_receptor', 'nit_receptor', 'serie', 'descripcion'],
+    columns: ['cliente_nombre', 'cliente_nit', 'numero_factura', 'numero', 'serie', 'descripcion', 'numero_autorizacion'],
     order: 'created_at.desc',
   });
 
@@ -205,14 +232,31 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
 
   // ─── Abrir editar ─────────────────────────────────────────────
   const abrirEditar = (r) => {
+    const det = Array.isArray(r.detalles) ? r.detalles : [];
     setF({
       numero_factura: r.numero_factura || '',
       serie:          r.serie          || '',
       fecha:          r.fecha          || today(),
+      fecha_hora_emision: r.fecha_hora_emision || '',
+      fecha_vencimiento: r.fecha_vencimiento || '',
+      tipo_dte:       r.tipo_dte       || 'FACT',
+      moneda:         r.moneda         || 'GTQ',
+      tipo_cambio:    r.tipo_cambio    ?? 1,
+      condicion_pago: r.condicion_pago || 'contado',
+      numero_autorizacion: r.numero_autorizacion || '',
+      fecha_certificacion: r.fecha_certificacion || '',
       cliente_nombre: r.cliente_nombre || '',
       cliente_nit:    r.cliente_nit    || 'CF',
       cliente_id:     r.cliente_id     || '',
-      descripcion:    r.descripcion    || '',
+      direccion_receptor: r.direccion_receptor || '',
+      municipio_receptor: r.municipio_receptor || '',
+      departamento_receptor: r.departamento_receptor || '',
+      codigo_postal_receptor: r.codigo_postal_receptor || '',
+      correo_receptor: r.correo_receptor || '',
+      telefono_receptor: r.telefono_receptor || '',
+      numero_cuenta:  r.numero_cuenta  || '',
+      total_descuentos: r.total_descuentos || 0,
+      descripcion:    det.length ? det.map(x => x.descripcion).join(' | ') : (r.descripcion || ''),
       subtotal:       r.subtotal       || '',
       tasa_iva:       r.tasa_iva       ?? 12,
       impuestos:      r.impuestos      || '',
@@ -251,10 +295,27 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
         numero_factura: f.numero_factura || ('FEL-' + Date.now().toString().slice(-6)),
         serie:          f.serie          || null,
         fecha:          f.fecha,
+        fecha_hora_emision: f.fecha_hora_emision || null,
+        fecha_vencimiento: f.fecha_vencimiento || null,
+        tipo_dte:       f.tipo_dte       || 'FACT',
+        moneda:         f.moneda         || 'GTQ',
+        tipo_cambio:    parseFloat(f.tipo_cambio) || 1,
+        condicion_pago: f.condicion_pago || 'contado',
+        numero_autorizacion: f.numero_autorizacion || null,
+        fecha_certificacion: f.fecha_certificacion || null,
         cliente_nombre: f.cliente_nombre.trim(),
         cliente_nit:    f.cliente_nit.trim() || 'CF',
         cliente_id:     f.cliente_id     || null,
+        direccion_receptor: f.direccion_receptor || null,
+        municipio_receptor: f.municipio_receptor || null,
+        departamento_receptor: f.departamento_receptor || null,
+        codigo_postal_receptor: f.codigo_postal_receptor || null,
+        correo_receptor: f.correo_receptor || null,
+        telefono_receptor: f.telefono_receptor || null,
+        numero_cuenta:  f.numero_cuenta  || null,
+        total_descuentos: parseFloat(f.total_descuentos) || 0,
         descripcion:    f.descripcion    || null,
+        detalles:       editItem && Array.isArray(editItem.detalles) ? editItem.detalles : null,
         subtotal:       parseFloat(f.subtotal)  || 0,
         tasa_iva:       parseInt(f.tasa_iva)    || 12,
         impuestos:      parseFloat(f.impuestos) || 0,
@@ -383,6 +444,42 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
                 <input style={S.inp} type="date" value={f.fecha}
                   onChange={e => sf('fecha', e.target.value)} />
               </Fld>
+              <Fld label="TIPO DE DOCUMENTO">
+                <select style={S.sel} value={f.tipo_dte} onChange={e => sf('tipo_dte', e.target.value)}>
+                  {['FACT', 'FPEQ', 'CCF', 'FCF', 'NF', 'NC'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </Fld>
+              <Fld label="MONEDA">
+                <select style={S.sel} value={f.moneda} onChange={e => sf('moneda', e.target.value)}>
+                  <option value="GTQ">GTQ — Quetzales</option>
+                  <option value="USD">USD — Dolares</option>
+                  <option value="EUR">EUR — Euros</option>
+                </select>
+              </Fld>
+              {f.moneda !== 'GTQ' && (
+                <Fld label="TIPO DE CAMBIO">
+                  <input style={S.inp} type="number" step="0.0001" value={f.tipo_cambio}
+                    onChange={e => sf('tipo_cambio', e.target.value)} placeholder="7.50" />
+                </Fld>
+              )}
+              <Fld label="CONDICION DE PAGO">
+                <select style={S.sel} value={f.condicion_pago} onChange={e => sf('condicion_pago', e.target.value)}>
+                  <option value="contado">Contado</option>
+                  <option value="credito">Credito</option>
+                </select>
+              </Fld>
+              <Fld label="FECHA VENCIMIENTO">
+                <input style={S.inp} type="date" value={f.fecha_vencimiento}
+                  onChange={e => sf('fecha_vencimiento', e.target.value)} />
+              </Fld>
+              <Fld label="NO. AUTORIZACION / CERTIFICACION">
+                <input style={{ ...S.inp, fontFamily: 'monospace', fontSize: 11 }}
+                  value={f.numero_autorizacion}
+                  onChange={e => sf('numero_autorizacion', e.target.value)}
+                  placeholder="UUID de certificacion SAT" />
+              </Fld>
               <Fld label="ESTADO">
                 <select style={S.sel} value={f.estado}
                   onChange={e => sf('estado', e.target.value)}>
@@ -408,6 +505,31 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
                   onChange={e => sf('cliente_nit', e.target.value)}
                   placeholder="CF o NIT del cliente" />
               </Fld>
+              <Fld label="DIRECCION">
+                <input style={S.inp} value={f.direccion_receptor}
+                  onChange={e => sf('direccion_receptor', e.target.value)}
+                  placeholder="Calle, numero, zona, ciudad" />
+              </Fld>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+                <Fld label="MUNICIPIO">
+                  <input style={S.inp} value={f.municipio_receptor}
+                    onChange={e => sf('municipio_receptor', e.target.value)} placeholder="Guatemala" />
+                </Fld>
+                <Fld label="DEPARTAMENTO">
+                  <input style={S.inp} value={f.departamento_receptor}
+                    onChange={e => sf('departamento_receptor', e.target.value)} placeholder="Guatemala" />
+                </Fld>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+                <Fld label="CORREO">
+                  <input style={S.inp} type="email" value={f.correo_receptor}
+                    onChange={e => sf('correo_receptor', e.target.value)} placeholder="cliente@correo.com" />
+                </Fld>
+                <Fld label="TELEFONO">
+                  <input style={S.inp} value={f.telefono_receptor}
+                    onChange={e => sf('telefono_receptor', e.target.value)} placeholder="502-00000000" />
+                </Fld>
+              </div>
             </div>
           </div>
 
@@ -471,6 +593,13 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
                 </button>
               ))}
             </div>
+            {['transferencia', 'deposito', 'cheque'].includes(f.metodo_pago) && (
+              <Fld label="NUMERO DE CUENTA / REFERENCIA">
+                <input style={S.inp} value={f.numero_cuenta}
+                  onChange={e => sf('numero_cuenta', e.target.value)}
+                  placeholder="No. de cuenta bancaria del emisor" />
+              </Fld>
+            )}
           </div>
 
           <div style={S.card}>
@@ -536,6 +665,12 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
       {showSAT && (
         <ImportadorSAT tipo="ventas" empId={empId} showToast={showToast}
           onClose={() => setShowSAT(false)} onImportado={reload} />
+      )}
+
+      {/* Modal importador XML FEL */}
+      {showXML && (
+        <ImportadorXML empId={empId} emisores={emisores} showToast={showToast}
+          onClose={() => setShowXML(false)} onImportado={reload} />
       )}
 
       {/* KPIs */}
@@ -610,9 +745,13 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
             <option key={em.id} value={em.id}>{em.nombre_entidad}</option>
           ))}
         </select>
-        <button onClick={() => setShowSAT(true)}
+        <button onClick={() => setShowXML(true)}
           style={{ ...S.btn('blue'), fontSize: 11, whiteSpace: 'nowrap' }}>
-          Importar SAT
+          Importar XML FEL
+        </button>
+        <button onClick={() => setShowSAT(true)}
+          style={{ ...S.btn('ghost'), fontSize: 11, whiteSpace: 'nowrap' }}>
+          Importar Excel SAT
         </button>
         <button onClick={() => setExportar(true)}
           style={{ ...S.btn('ghost'), fontSize: 11 }}>
@@ -646,8 +785,11 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
                       {r.cliente_nombre}
                     </div>
                     <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", fontSize: 11, color: T.mut }}>
-                      <span>NIT: {r.cliente_nit || 'CF'}</span>
-                      <span>{fmtD(r.fecha)}</span>
+                      <span>NIT: {r.nit_receptor || r.cliente_nit || 'CF'}</span>
+                      <span>{fmtD(r.fecha_hora_emision || r.fecha)}</span>
+                      {r.tipo_dte && <span style={{ fontWeight: 600 }}>• {r.tipo_dte}</span>}
+                      {r.moneda && <span>• {r.moneda}</span>}
+                      {r.numero_autorizacion && <span style={{ color: T.blue }}>• Aut: {r.numero_autorizacion}</span>}
                       {r.emisor_id && (() => {
                         const em = emisores.find(x => x.id === r.emisor_id);
                         return em ? <span style={{ fontWeight: 600 }}>• {em.nombre_entidad}</span> : null;
