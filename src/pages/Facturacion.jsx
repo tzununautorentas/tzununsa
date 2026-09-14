@@ -46,7 +46,7 @@ const EF = {
   direccion_receptor: '', municipio_receptor: '', departamento_receptor: '',
   codigo_postal_receptor: '', correo_receptor: '', telefono_receptor: '',
   numero_cuenta: '', total_descuentos: 0,
-  descripcion: '', subtotal: '', tasa_iva: 12, impuestos: '', total: '',
+  descripcion: '', lineas: [], subtotal: '', tasa_iva: 12, impuestos: '', total: '',
   metodo_pago: 'efectivo', estado: 'borrador', notas: '', reserva_id: '',
   emisor_id: '',
 };
@@ -222,6 +222,25 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
     setF(p => ({ ...p, impuestos: imp.toFixed(2), total: (s + imp).toFixed(2) }));
   };
 
+  // ─── Lineas de cobro (desglose del servicio) ───────────────────
+  const subtotalLineas = (lineas) => (lineas || []).reduce(
+    (s, l) => s + ((parseFloat(l.cantidad) || 0) * (parseFloat(l.precio_unitario) || 0)), 0);
+  const recalcularLineas = (lineas, tasaIva) => {
+    const s = Math.round(subtotalLineas(lineas) * 100) / 100;
+    const t = parseInt(tasaIva) || 0;
+    const imp = Math.round(s * (t / 100) * 100) / 100;
+    return { subtotal: s ? s.toFixed(2) : '', impuestos: imp.toFixed(2), total: (s + imp).toFixed(2) };
+  };
+  const setLineaVal = (i, campo, val) => setF(p => {
+    const lineas = (p.lineas || []).map((l, idx) => idx === i ? { ...l, [campo]: val } : l);
+    return { ...p, lineas, ...recalcularLineas(lineas, p.tasa_iva) };
+  });
+  const agregarLinea = () => setF(p => ({ ...p, lineas: [...(p.lineas || []), { descripcion: '', cantidad: 1, precio_unitario: '' }] }));
+  const quitarLinea = (i) => setF(p => {
+    const lineas = (p.lineas || []).filter((_, idx) => idx !== i);
+    return { ...p, lineas, ...recalcularLineas(lineas, p.tasa_iva) };
+  });
+
   // ─── Abrir nuevo ──────────────────────────────────────────────
   const abrirNuevo = () => {
     const numero = 'FEL-' + Date.now().toString().slice(-6);
@@ -257,6 +276,11 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
       numero_cuenta:  r.numero_cuenta  || '',
       total_descuentos: r.total_descuentos || 0,
       descripcion:    det.length ? det.map(x => x.descripcion).join(' | ') : (r.descripcion || ''),
+      lineas:         det.length ? det.map(x => ({
+        descripcion:    x.descripcion || '',
+        cantidad:       x.cantidad || 1,
+        precio_unitario: x.precio_unitario != null ? x.precio_unitario : (x.precio || ''),
+      })) : [],
       subtotal:       r.subtotal       || '',
       tasa_iva:       r.tasa_iva       ?? 12,
       impuestos:      r.impuestos      || '',
@@ -314,8 +338,17 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
         telefono_receptor: f.telefono_receptor || null,
         numero_cuenta:  f.numero_cuenta  || null,
         total_descuentos: parseFloat(f.total_descuentos) || 0,
-        descripcion:    f.descripcion    || null,
-        detalles:       editItem && Array.isArray(editItem.detalles) ? editItem.detalles : null,
+        descripcion:    (f.lineas || []).length ? f.lineas.map(l => l.descripcion || '').filter(Boolean).join(' | ') : (f.descripcion || null),
+        detalles:       (f.lineas || []).length ? f.lineas.map((l, i) => ({
+          numero_linea:    i + 1,
+          bien_servicio:   'Servicio',
+          cantidad:        parseFloat(l.cantidad) || 1,
+          unidad_medida:   'UNI',
+          descripcion:     l.descripcion || '',
+          precio_unitario: parseFloat(l.precio_unitario) || 0,
+          precio:          (parseFloat(l.cantidad) || 1) * (parseFloat(l.precio_unitario) || 0),
+          total_linea:     (parseFloat(l.cantidad) || 1) * (parseFloat(l.precio_unitario) || 0),
+        })) : null,
         subtotal:       parseFloat(f.subtotal)  || 0,
         tasa_iva:       parseInt(f.tasa_iva)    || 12,
         impuestos:      parseFloat(f.impuestos) || 0,
@@ -534,12 +567,48 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
           </div>
 
           <div style={S.card}>
-            <Fld label="DESCRIPCION DEL SERVICIO">
-              <textarea style={{ ...S.inp, minHeight: 90, resize: 'vertical' }}
-                value={f.descripcion}
-                onChange={e => sf('descripcion', e.target.value)}
-                placeholder="Descripcion detallada del servicio facturado..." />
-            </Fld>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.mut, marginBottom: 12, letterSpacing: 1 }}>
+              DESGLOSE DEL SERVICIO (LINEAS DE COBRO)
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {(f.lineas || []).map((l, i) => (
+                <div key={i} style={{ border: `1px solid ${T.bord}`, borderRadius: 10, padding: 10, background: T.card }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 90px 60px 30px', gap: 6, alignItems: 'center' }}>
+                    <input style={S.inp} value={l.descripcion}
+                      onChange={e => setLineaVal(i, 'descripcion', e.target.value)}
+                      placeholder="Descripcion del cobro (ej: Alquiler de vehiculo)" />
+                    <input style={S.inp} type="number" min="1" value={l.cantidad}
+                      onChange={e => setLineaVal(i, 'cantidad', e.target.value)}
+                      placeholder="Cant." title="Cantidad" />
+                    <input style={S.inp} type="number" step="0.01" value={l.precio_unitario}
+                      onChange={e => setLineaVal(i, 'precio_unitario', e.target.value)}
+                      placeholder="P. unit." title="Precio unitario" />
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      Q {fmt((parseFloat(l.cantidad) || 0) * (parseFloat(l.precio_unitario) || 0))}
+                    </div>
+                    <button onClick={() => quitarLinea(i)} title="Quitar linea"
+                      style={{ ...S.btn('danger'), padding: '4px 8px', fontSize: 11 }}>×</button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={agregarLinea}
+                style={{ ...S.btn('blue'), padding: '8px 12px', fontSize: 12 }}>
+                + Agregar linea de cobro
+              </button>
+            </div>
+            {!(f.lineas || []).length && (
+              <div style={{ marginTop: 10 }}>
+                <Fld label="DESCRIPCION GENERAL (opcional, si no usas lineas)">
+                  <textarea style={{ ...S.inp, minHeight: 60, resize: 'vertical' }}
+                    value={f.descripcion}
+                    onChange={e => sf('descripcion', e.target.value)}
+                    placeholder="O escribi una descripcion simple..." />
+                </Fld>
+              </div>
+            )}
+            <div style={{ fontSize: 10, color: T.mut, marginTop: 8, lineHeight: 1.6 }}>
+              Usa las lineas para desglosar cada servicio cobrado (ej: Alquiler vehiculo, servicio de chofer, limpieza, etc.). El subtotal y el total se calculan solos.
+            </div>
           </div>
         </div>
 
