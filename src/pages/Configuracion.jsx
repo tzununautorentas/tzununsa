@@ -45,6 +45,33 @@ const ORDEN_PROP = { propio: 0, socio: 1, alquilado: 2 };
 
 function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
   const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
+  const [cuentas, setCuentas] = useState([]);
+  useEffect(() => {
+    dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,moneda,titular&order=banco.asc").then(d => {
+      setCuentas(Array.isArray(d) ? d : []);
+    });
+  }, []);
+
+  const bancoOpc = cuentas.map(c => ({
+    v: `${c.banco} - No. ${c.numero_cuenta}${c.moneda ? ` (${c.moneda})` : ""}${c.titular ? ` - Titular: ${c.titular}` : ""}`,
+    t: `${c.banco} — ${c.numero_cuenta} (${c.moneda})${c.titular ? " · " + c.titular : ""}`,
+  }));
+
+  const FldBanco = ({ label, k }) => {
+    const val = emp[k] || "";
+    const known = val && bancoOpc.some(o => o.v === val);
+    return (
+      <Fld label={label}>
+        <select style={S.sel} value={val} onChange={e => se(k, e.target.value)}>
+          <option value="">— Seleccionar cuenta —</option>
+          {val && !known && <option value={val}>{val}</option>}
+          {bancoOpc.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
+        </select>
+        <div style={{ fontSize: 10, color: T.mut, marginTop: 4 }}>Si tu cuenta no aparece, créala en el módulo Banca.</div>
+      </Fld>
+    );
+  };
+
   const subirLogo = e => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -112,11 +139,11 @@ function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
           </div>
         </div>
         <div style={S.card}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Cuentas bancarias</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Cuentas bancarias a vincular</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Fld label="BANCO 1"><input style={S.inp} value={emp.banco1 || ""} onChange={e => se("banco1", e.target.value)} placeholder="Banco Industrial — Cta. Monetaria No. 853-000016-8" /></Fld>
-            <Fld label="BANCO 2"><input style={S.inp} value={emp.banco2 || ""} onChange={e => se("banco2", e.target.value)} placeholder="Banco de Desarrollo Rural — BANRURAL — Cta. No. 3309159475" /></Fld>
-            <Fld label="BANCO USD"><input style={S.inp} value={emp.banco_usd || ""} onChange={e => se("banco_usd", e.target.value)} placeholder="Cuenta bancaria en dólares para transferencias SWIFT" /></Fld>
+            <FldBanco label="CUENTA 1 (cotizaciones Q)" k="banco1" />
+            <FldBanco label="CUENTA 2 (cotizaciones Q)" k="banco2" />
+            <FldBanco label="CUENTA USD (transferencias SWIFT)" k="banco_usd" />
           </div>
         </div>
         <div style={S.card}>
