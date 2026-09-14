@@ -189,7 +189,7 @@ export default function ImportadorXML({ empId, emisores = [], showToast, onClose
             empresa_id: empId,
             emisor_id: emisor?.id || null,
             numero_factura: f.numero_factura || `FEL-${i + 1}`,
-            numero: f.numero_factura || null,
+            numero: f.numero_factura || `FEL-${i + 1}`,
             serie: f.serie || null,
             fecha: f.fecha,
             fecha_hora_emision: f.fecha_hora_emision || null,

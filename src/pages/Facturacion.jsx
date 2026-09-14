@@ -38,7 +38,7 @@ const ESTADOS = {
 };
 
 const EF = {
-  numero_factura: '', serie: '', fecha: today(),
+  numero_factura: '', numero: '', serie: '', fecha: today(),
   fecha_hora_emision: '', fecha_vencimiento: '',
   tipo_dte: 'FACT', moneda: 'GTQ', tasa_cambio: 1, condicion_pago: 'contado',
   numero_autorizacion: '', fecha_certificacion: '',
@@ -244,7 +244,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
   // ─── Abrir nuevo ──────────────────────────────────────────────
   const abrirNuevo = () => {
     const numero = 'FEL-' + Date.now().toString().slice(-6);
-    setF({ ...EF, numero_factura: numero, fecha: today(), emisor_id: emisorDeUsuario() });
+    setF({ ...EF, numero_factura: numero, numero: numero, fecha: today(), emisor_id: emisorDeUsuario() });
     setEditItem(null);
     setVista('form');
   };
@@ -253,7 +253,8 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
   const abrirEditar = (r) => {
     const det = Array.isArray(r.detalles) ? r.detalles : [];
     setF({
-      numero_factura: r.numero_factura || '',
+      numero_factura: r.numero_factura || r.numero || '',
+      numero:         r.numero || r.numero_factura || '',
       serie:          r.serie          || '',
       fecha:          r.fecha          || today(),
       fecha_hora_emision: r.fecha_hora_emision || '',
@@ -319,6 +320,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
         empresa_id:     empId,
         emisor_id:      f.emisor_id        || null,
         numero_factura: f.numero_factura || ('FEL-' + Date.now().toString().slice(-6)),
+        numero:         f.numero_factura || f.numero || ('FEL-' + Date.now().toString().slice(-6)),
         serie:          f.serie          || null,
         fecha:          f.fecha,
         fecha_hora_emision: f.fecha_hora_emision || null,
@@ -473,7 +475,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
               <Fld label="NUMERO FACTURA">
                 <input style={{ ...S.inp, fontFamily: 'monospace', fontWeight: 700 }}
                   value={f.numero_factura}
-                  onChange={e => sf('numero_factura', e.target.value)}
+                  onChange={e => { const v = e.target.value; setF(p => ({ ...p, numero_factura: v, numero: v })); }}
                   placeholder="FEL-000001" />
               </Fld>
               <Fld label="SERIE">
