@@ -713,15 +713,18 @@ function PanelEmisores({ empId, showToast }) {
   const guardar = async () => {
     if (!form.nombre_entidad.trim()) { showToast("Nombre de la entidad requerido", "err"); return; }
     setSaving(true);
-    const payload = { ...form, empresa_id: empId, user_email: form.user_email?.trim() || "" };
-    if (form.id) await dbUpd("emisores", form.id, payload);
-    else await dbIns("emisores", payload);
-    setSaving(false); setForm(null); showToast("Emisor guardado"); load();
+    const { id, ...datos } = form;
+    const payload = { ...datos, empresa_id: empId, user_email: form.user_email?.trim() || "" };
+    const res = form.id ? await dbUpd("emisores", form.id, payload) : await dbIns("emisores", payload);
+    setSaving(false);
+    if (res && res.error) { showToast("Error al guardar: " + res.error, "err"); return; }
+    setForm(null); showToast("Emisor guardado"); load();
   };
 
   const eliminar = async (e) => {
     if (!confirm(`Eliminar emisor "${e.nombre_entidad}"?`)) return;
-    await dbDel("emisores", e.id);
+    const res = await dbDel("emisores", e.id);
+    if (res && res.error) { showToast("Error al eliminar: " + res.error, "err"); return; }
     showToast("Emisor eliminado"); load();
   };
 
