@@ -9,6 +9,7 @@ import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, 
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
 import ImportadorXML from '../components/ImportadorXML.jsx';
+import ImportadorPDF from '../components/ImportadorPDF.jsx';
 
 // ─── API directa con manejo de errores explícito ──────────────────
 async function apiFetch(path, opts = {}) {
@@ -85,8 +86,9 @@ const imprimirFactura = async (r, emisor) => {
   const propietario = em.responsable || '';
   const regimen = (r.regimen || (r.tasa_iva == 5 ? 'PEQUENIO' : 'GENERAL'));
   const esPequeno = regimen === 'PEQUENIO' || (r.tipo_dte || '').toUpperCase().includes('FPEQ') || (r.tasa_iva == 5);
-  let qrImg = '';
-  try { qrImg = await generarQRdata(r.numero_autorizacion || `${r.serie || ''}${r.serie ? '-' : ''}${r.numero_factura || r.numero || ''}`); } catch {}
+  const qrBydoc = r.qr_imagen ? null : (r.numero_autorizacion || `${r.serie || ''}${r.serie ? '-' : ''}${r.numero_factura || r.numero || ''}`);
+  let qrImg = r.qr_imagen || '';
+  if (!qrImg) { try { qrImg = await generarQRdata(qrBydoc); } catch {} }
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Arial',sans-serif;padding:32px;font-size:11px;color:#1E293B;background:#fff}
@@ -113,8 +115,12 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
 .amounts{margin-left:auto;width:280px}
 .amount-row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569}
 .amount-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1B2D5C;font-size:16px;font-weight:800;color:#1B2D5C}
-.leyendas{margin-top:16px;font-size:9px;color:#475569;line-height:1.7}
-.leyendas .tit{font-weight:700;color:#1B2D5C;margin-bottom:2px}
+.qr-ley{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-top:18px;padding-top:16px;border-top:2px solid #1B2D5C}
+.qr-box{display:flex;flex-direction:column;align-items:center}
+.qr-box img{width:110px;height:110px;border:1px solid #E2E8F0;padding:6px;border-radius:8px;background:#fff}
+.qr-box .qr-tit{font-size:9px;font-weight:700;color:#1B2D5C;margin-top:6px}
+.leyendas{flex:1;font-size:9px;color:#475569;line-height:1.7;text-align:right}
+.gris-claro{background:#F8FAFC;padding:8px 12px;border-radius:6px}
 .footer{margin-top:24px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
 `;
   const detalle = Array.isArray(r.detalles) && r.detalles.length ? r.detalles : null;
@@ -158,8 +164,8 @@ ${(r.numero_autorizacion || numDoc) ? `
     <strong>No. de autorizacion: ${r.numero_autorizacion || numDoc}</strong>
     ${r.numero_acceso ? `<div>No. de acceso: ${r.numero_acceso}</div>` : ''}
     <div>Serie ${r.serie || '—'} · No. ${numDoc}</div>
+    ${r.fecha_certificacion ? `<div>Fecha y hora de certificacion: ${fmtFH(r.fecha_certificacion)}</div>` : ''}
   </div>
-  <div class="qr">${qrImg ? `<img src="${qrImg}" alt="QR FEL"/>` : ''}</div>
 </div>` : ''}
 <div class="section">
   <div class="section-title">DATOS DEL CLIENTE</div>
@@ -185,13 +191,27 @@ ${(r.numero_autorizacion || numDoc) ? `
   <div class="amount-row"><span>IVA (${r.tasa_iva || 12}%)</span><span>Q ${fmt(r.impuestos)}</span></div>
   <div class="amount-total"><span>TOTAL</span><span>Q ${fmt(r.total)}</span></div>
 </div>
-<div class="leyendas">
-  <div class="tit">Leyendas:</div>
-  ${esPequeno ? `<div>* No genera derecho a credito fiscal.</div>` : ''}
-  ${r.textos_frases ? `<div>${r.textos_frases.replace(/\|/g, ' · ')}</div>` : ''}
-  <div>Datos del certificador: Superintendencia de Administracion Tributaria (SAT)</div>
-  <div>NIT: 16693949 · Ciudad de Guatemala, Guatemala</div>
-  <div style="margin-top:6px">Metodo de pago: ${r.metodo_pago || '—'}${r.numero_cuenta ? ` · Numero de cuenta: ${r.numero_cuenta}` : ''}</div>
+<div class="qr-ley">
+  <div style="display:flex;gap:18px;align-items:flex-start">
+    <div class="qr-box">
+      ${qrImg ? `<img src="${qrImg}" alt="QR FEL"/>` : `<div class="gris-claro" style="width:110px;height:110px;display:flex;align-items:center;justify-content:center;color:#94A3B8;font-size:9px;text-align:center">QR no disponible</div>`}
+      <div class="qr-tit">Codigo QR de verificacion</div>
+    </div>
+    <div>
+      ${esPequeno ? `<div style="font-size:10px;font-weight:700;color:#1B2D5C;margin-bottom:8px">Factura de Pequenio Contribuyente</div>` : ''}
+      <div style="font-size:10px;color:#475569;line-height:1.8">
+        ${r.metodo_pago ? `<div>Metodo de pago: ${r.metodo_pago}${r.numero_cuenta ? ` · Numero de cuenta: ${r.numero_cuenta}` : ''}</div>` : ''}
+        ${r.total_descuentos > 0 ? `<div>Descuento aplicado: Q ${fmt(descTotal)}</div>` : ''}
+        ${r.pais_receptor ? `<div>Pais receptor: ${r.pais_receptor}</div>` : ''}
+      </div>
+    </div>
+  </div>
+  <div class="leyendas">
+    ${esPequeno ? `<div>* No genera derecho a credito fiscal.</div>` : ''}
+    ${r.textos_frases ? `<div>${r.textos_frases.replace(/\|/g, ' · ')}</div>` : ''}
+    <div>Datos del certificador: Superintendencia de Administracion Tributaria (SAT)</div>
+    <div>NIT: 16693949 · Ciudad de Guatemala, Guatemala</div>
+  </div>
 </div>
 <div class="footer">
   Documento generado por Tz'unun AutoRentas &nbsp;|&nbsp;
@@ -213,6 +233,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
   const [exportar, setExportar] = useState(false);
   const [showSAT,  setShowSAT]  = useState(false);
   const [showXML,  setShowXML]  = useState(false);
+  const [showPDF,  setShowPDF]  = useState(false);
   const [emisores, setEmisores] = useState([]);
   const [cuentas,  setCuentas]  = useState([]);
   const [f,        setF]        = useState({ ...EF });
@@ -814,6 +835,12 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
           onClose={() => setShowXML(false)} onImportado={reload} />
       )}
 
+      {/* Modal importador PDF FEL */}
+      {showPDF && (
+        <ImportadorPDF empId={empId} emisores={emisores} userEmail={userEmail} showToast={showToast}
+          onClose={() => setShowPDF(false)} onImportado={reload} />
+      )}
+
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
         {[
@@ -886,8 +913,12 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
             <option key={em.id} value={em.id}>{em.nombre_entidad}</option>
           ))}
         </select>
-        <button onClick={() => setShowXML(true)}
+        <button onClick={() => setShowPDF(true)}
           style={{ ...S.btn('blue'), fontSize: 11, whiteSpace: 'nowrap' }}>
+          Importar PDF FEL
+        </button>
+        <button onClick={() => setShowXML(true)}
+          style={{ ...S.btn('ghost'), fontSize: 11, whiteSpace: 'nowrap' }}>
           Importar XML FEL
         </button>
         <button onClick={() => setShowSAT(true)}
