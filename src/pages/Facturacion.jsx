@@ -41,10 +41,16 @@ const EF = {
   cliente_nombre: '', cliente_nit: 'CF', cliente_id: '',
   descripcion: '', subtotal: '', tasa_iva: 12, impuestos: '', total: '',
   metodo_pago: 'efectivo', estado: 'borrador', notas: '', reserva_id: '',
+  emisor_id: '',
 };
 
 // ─── Imprimir factura (ventana HTML) ─────────────────────────────
-const imprimirFactura = (r) => {
+const imprimirFactura = (r, emisor) => {
+  const em = emisor || {};
+  const nombreEnt = em.nombre_entidad || 'Tz\'unun AutoRentas';
+  const dirEnt    = em.direccion || 'Guatemala City, Guatemala';
+  const nitEnt    = em.nit || '';
+  const telEnt    = em.telefono || '';
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Arial',sans-serif;padding:32px;font-size:11px;color:#1E293B;background:#fff}
@@ -71,9 +77,11 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
   const html = `
 <div class="header">
   <div class="logo-area">
-    <h1>Tz'unun AutoRentas</h1>
-    <p>Servicios de Transporte y Renta de Vehiculos</p>
-    <p>Guatemala City, Guatemala</p>
+    <h1>${nombreEnt}</h1>
+    ${em.eslogan ? `<p>${em.eslogan}</p>` : ''}
+    <p>${dirEnt}</p>
+    ${nitEnt ? `<p>NIT: ${nitEnt}</p>` : ''}
+    ${telEnt ? `<p>Tel: ${telEnt}</p>` : ''}
   </div>
   <div class="factura-info">
     <div class="num">FACTURA FEL</div>
@@ -116,17 +124,23 @@ ${r.metodo_pago ? `<p style="margin-top:12px;font-size:10px;color:#64748B">Metod
 // ════════════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ════════════════════════════════════════════════════════════════════
-export default function PageFacturacion({ showToast, empId }) {
+export default function PageFacturacion({ showToast, empId, userEmail }) {
   const [vista,    setVista]    = useState('lista');
   const [editItem, setEditItem] = useState(null);
   const [saving,   setSaving]   = useState(false);
   const [filtro,   setFiltro]   = useState('todos');
+  const [filtroEm, setFiltroEm] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [exportar, setExportar] = useState(false);
   const [showSAT,  setShowSAT]  = useState(false);
+  const [emisores, setEmisores] = useState([]);
+  const [cuentas,  setCuentas]  = useState([]);
   const [f,        setF]        = useState({ ...EF });
   const sf = (k, v) => setF(p => ({ ...p, [k]: v }));
-  const queryFact = filtro !== 'todos' ? 'estado=eq.'+filtro : '';
+  const queryFact = [
+    filtro !== 'todos' ? 'estado=eq.'+filtro : '',
+    filtroEm ? 'emisor_id=eq.'+filtroEm : '',
+  ].filter(Boolean).join('&');
   const { data: rows, loading, total, page, totalPages, pageSize, setPage, setPageSize, reload, desde, hasta } = usePaginacion({
     table: 'facturas',
     query: queryFact,
@@ -134,6 +148,44 @@ export default function PageFacturacion({ showToast, empId }) {
     columns: ['numero', 'nombre_receptor', 'nit_receptor', 'serie', 'descripcion'],
     order: 'created_at.desc',
   });
+
+  useEffect(() => {
+    dbGet("emisores", `&empresa_id=eq.${empId}&order=nombre_entidad.asc`).then(d => {
+      setEmisores(Array.isArray(d) ? d : []);
+    });
+    dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}&select=id,banco,numero_cuenta`).then(d => {
+      setCuentas(Array.isArray(d) ? d : []);
+    });
+  }, [empId]);
+
+  const emisorDeUsuario = () => {
+    if (!userEmail || emisores.length === 0) return '';
+    const em = emisores.find(e => (e.user_email || '').toLowerCase() === userEmail.toLowerCase());
+    return em ? em.id : (emisores[0]?.id || '');
+  };
+
+  // ─── Control por entidad (reporte) ─────────────────────────────
+  const [controlEnt, setControlEnt] = useState(null);
+  const cargarControl = async () => {
+    const [pagos, facs] = await Promise.all([
+      dbGet("pagos_recibidos", `&empresa_id=eq.${empId}&select=id,monto,emisor_id,cuenta_bancaria_id,fecha`),
+      dbGet("facturas", `&empresa_id=eq.${empId}&select=id,total,estado,emisor_id`),
+    ]);
+    const res = (emisores.length ? emisores : [{ id: "", nombre_entidad: "Sin emisor" }]).map(em => {
+      const fact = (Array.isArray(facs) ? facs : []).filter(x => (x.emisor_id || "") === (em.id || "") && x.estado !== "anulada");
+      const pg    = (Array.isArray(pagos) ? pagos : []).filter(x => (x.emisor_id || "") === (em.id || ""));
+      const facturado = fact.reduce((s, x) => s + (parseFloat(x.total) || 0), 0);
+      const cobrado   = pg.reduce((s, x) => s + (parseFloat(x.monto) || 0), 0);
+      const porCuenta = {};
+      for (const p of pg) {
+        const cid = p.cuenta_bancaria_id || "sin_cuenta";
+        porCuenta[cid] = (porCuenta[cid] || 0) + (parseFloat(p.monto) || 0);
+      }
+      return { em, facturado, facturas: fact.length, cobrado, pendiente: facturado - cobrado, porCuenta };
+    });
+    setControlEnt(res);
+  };
+  useEffect(() => { if (empId && emisores.length > 0 && !controlEnt) cargarControl(); }, [empId, emisores]);
 
   // ─── Calcular IVA y total ──────────────────────────────────────
   const calcular = (sub, tasaIva) => {
@@ -146,7 +198,7 @@ export default function PageFacturacion({ showToast, empId }) {
   // ─── Abrir nuevo ──────────────────────────────────────────────
   const abrirNuevo = () => {
     const numero = 'FEL-' + Date.now().toString().slice(-6);
-    setF({ ...EF, numero_factura: numero, fecha: today() });
+    setF({ ...EF, numero_factura: numero, fecha: today(), emisor_id: emisorDeUsuario() });
     setEditItem(null);
     setVista('form');
   };
@@ -169,6 +221,7 @@ export default function PageFacturacion({ showToast, empId }) {
       estado:         r.estado         || 'borrador',
       notas:          r.notas          || '',
       reserva_id:     r.reserva_id     || '',
+      emisor_id:      r.emisor_id      || emisorDeUsuario(),
     });
     setEditItem(r);
     setVista('form');
@@ -194,6 +247,7 @@ export default function PageFacturacion({ showToast, empId }) {
     try {
       const payload = {
         empresa_id:     empId,
+        emisor_id:      f.emisor_id        || null,
         numero_factura: f.numero_factura || ('FEL-' + Date.now().toString().slice(-6)),
         serie:          f.serie          || null,
         fecha:          f.fecha,
@@ -269,6 +323,11 @@ export default function PageFacturacion({ showToast, empId }) {
     anuladas:   rows.filter(r => r.estado === 'anulada').length,
   };
 
+  const cuentaBancariaNombre = (id) => {
+    const c = cuentas.find(x => x.id === id);
+    return c ? (`${c.banco || ''}${c.numero_cuenta ? ' ' + c.numero_cuenta : ''}`.trim() || '—') : '—';
+  };
+
   // ════════════════════════════════════════════════════════════════
   // VISTA: FORMULARIO
   // ════════════════════════════════════════════════════════════════
@@ -298,6 +357,17 @@ export default function PageFacturacion({ showToast, empId }) {
               DATOS DE FACTURA
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+              <Fld label="EMISOR (ENTIDAD QUE FACTURA)" >
+                <select style={S.sel} value={f.emisor_id || ''}
+                  onChange={e => sf('emisor_id', e.target.value)}>
+                  <option value="">Seleccionar emisor...</option>
+                  {emisores.map(em => (
+                    <option key={em.id} value={em.id}>
+                      {em.nombre_entidad}{em.responsable ? ` — ${em.responsable}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </Fld>
               <Fld label="NUMERO FACTURA">
                 <input style={{ ...S.inp, fontFamily: 'monospace', fontWeight: 700 }}
                   value={f.numero_factura}
@@ -442,7 +512,10 @@ export default function PageFacturacion({ showToast, empId }) {
     <div>
       {/* Modal exportar */}
       {exportar && (
-        <ModalExportar titulo="Facturas FEL" datos={rows}
+        <ModalExportar titulo="Facturas FEL" datos={rows.map(r => ({
+          ...r,
+          emisor_nombre: emisores.find(x => x.id === r.emisor_id)?.nombre_entidad || '',
+        }))}
           campos={[
             { label: 'No. Factura',  key: 'numero_factura' },
             { label: 'Serie',        key: 'serie'          },
@@ -453,6 +526,7 @@ export default function PageFacturacion({ showToast, empId }) {
             { label: 'IVA',          key: 'impuestos'      },
             { label: 'Total',        key: 'total'          },
             { label: 'Metodo',       key: 'metodo_pago'    },
+            { label: 'Emisor',       key: 'emisor_nombre'  },
             { label: 'Estado',       key: 'estado'         },
           ]}
           onClose={() => setExportar(false)} />
@@ -479,6 +553,44 @@ export default function PageFacturacion({ showToast, empId }) {
         ))}
       </div>
 
+      {/* Control por entidad */}
+      {controlEnt && emisores.length > 0 && (
+        <div style={S.card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 10 }}>
+            CONTROL POR ENTIDAD
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {controlEnt.map(({ em, facturado, facturas, cobrado, pendiente, porCuenta }) => (
+              <div key={em.id} style={{ border: `1px solid ${T.bord}`, borderRadius: 10, padding: 12, background: T.surf }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.acc }}>{em.nombre_entidad}</div>
+                    {em.responsable && <div style={{ fontSize: 10, color: T.sub }}>{em.responsable}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
+                    <div>Facturado: <strong style={{ color: T.blue }}>Q {fmt(facturado)}</strong> ({facturas})</div>
+                    <div>Cobrado: <strong style={{ color: T.green }}>Q {fmt(cobrado)}</strong></div>
+                    <div>Por cobrar: <strong style={{ color: pendiente > 0 ? T.sec : T.mut }}>Q {fmt(Math.max(pendiente, 0))}</strong></div>
+                  </div>
+                </div>
+                {Object.keys(porCuenta).length > 0 && (
+                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {Object.entries(porCuenta).map(([cid, tot]) => (
+                      <div key={cid} style={{ fontSize: 10, background: T.accDim, padding: "3px 8px", borderRadius: 6, color: T.acc }}>
+                        Recibido en: <strong>{cid === "sin_cuenta" ? "sin cuenta" : (cuentaBancariaNombre(cid))} — Q {fmt(tot)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={{ fontSize: 10, color: T.mut }}>
+              Muestra cuánto facturó y cobró cada entidad. Aunque el pago entre a cualquier cuenta bancaria, aquí se asocia a la entidad que facturó el servicio.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filtros de estado */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         {['todos', ...Object.keys(ESTADOS)].map(est => (
@@ -492,6 +604,12 @@ export default function PageFacturacion({ showToast, empId }) {
       {/* Barra de acciones */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
         <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar por cliente o numero de factura..." />
+        <select style={S.sel} value={filtroEm} onChange={e => setFiltroEm(e.target.value)}>
+          <option value="">Todos los emisores</option>
+          {emisores.map(em => (
+            <option key={em.id} value={em.id}>{em.nombre_entidad}</option>
+          ))}
+        </select>
         <button onClick={() => setShowSAT(true)}
           style={{ ...S.btn('blue'), fontSize: 11, whiteSpace: 'nowrap' }}>
           Importar SAT
@@ -530,6 +648,10 @@ export default function PageFacturacion({ showToast, empId }) {
                     <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", fontSize: 11, color: T.mut }}>
                       <span>NIT: {r.cliente_nit || 'CF'}</span>
                       <span>{fmtD(r.fecha)}</span>
+                      {r.emisor_id && (() => {
+                        const em = emisores.find(x => x.id === r.emisor_id);
+                        return em ? <span style={{ fontWeight: 600 }}>• {em.nombre_entidad}</span> : null;
+                      })()}
                     </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
@@ -545,7 +667,7 @@ export default function PageFacturacion({ showToast, empId }) {
                     <span style={{ fontSize: 11, color: T.sub }}>{r.metodo_pago || '—'}</span>
                   </div>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    <button onClick={() => imprimirFactura(r)}
+                    <button onClick={() => imprimirFactura(r, emisores.find(x => x.id === r.emisor_id))}
                       style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
                       Imprimir
                     </button>

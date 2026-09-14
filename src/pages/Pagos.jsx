@@ -9,14 +9,15 @@ const MC = { efectivo:T.acc, transferencia:T.blue, deposito:T.green, tarjeta:T.p
 const EF = {
   fecha:today(), cliente_nombre:"", monto:"", metodo:"efectivo",
   referencia:"", concepto:"", reserva_id:"", factura_id:"",
-  cotizacion_id:"", cuenta_bancaria_id:"", notas:"",
+  cotizacion_id:"", cuenta_bancaria_id:"", emisor_id:"", notas:"",
 };
 
-export default function PagePagos({ showToast, empId }) {
+export default function PagePagos({ showToast, empId, userEmail }) {
   const [reservas, setReservas] = useState([]);
   const [facturas, setFacturas] = useState([]);
   const [cots,     setCots]     = useState([]);
   const [cuentas,  setCuentas]  = useState([]);
+  const [emisores, setEmisores] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId,   setEditId]   = useState(null);
   const [saving,   setSaving]   = useState(false);
@@ -38,18 +39,20 @@ export default function PagePagos({ showToast, empId }) {
 
   useEffect(() => {
     (async () => {
-      const [r,fa,co,cu] = await Promise.all([
+      const [r,fa,co,cu,em] = await Promise.all([
         dbGet("reservas","&estado=in.(confirmada,en_curso,completada)&select=id,numero,cliente_nombre,monto"),
-        dbGet("facturas","&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente"),
+        dbGet("facturas","&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente,emisor_id"),
         dbGet("cotizaciones","&estado=in.(aprobada,orden_venta)&select=id,numero,cliente_nombre,total_gtq"),
         dbGet("cuentas_bancarias"),
+        dbGet("emisores", `&empresa_id=eq.${empId}&order=nombre_entidad.asc`),
       ]);
       setReservas(Array.isArray(r)?r:[]);
       setFacturas(Array.isArray(fa)?fa:[]);
       setCots(Array.isArray(co)?co:[]);
       setCuentas(Array.isArray(cu)?cu:[]);
+      setEmisores(Array.isArray(em)?em:[]);
     })();
-  }, []);
+  }, [empId]);
 
   // Auto-seleccionar Banrural cuando el método es tarjeta
   const onMetodo = (v) => {
@@ -70,7 +73,7 @@ export default function PagePagos({ showToast, empId }) {
   const onFactura = (id) => {
     sf("factura_id", id);
     const fa = facturas.find(x=>x.id===id);
-    if (fa) { sf("cliente_nombre", fa.nombre_receptor||""); sf("concepto","Pago factura "+fa.numero); sf("monto", fa.saldo_pendiente||fa.total||""); }
+    if (fa) { sf("cliente_nombre", fa.nombre_receptor||""); sf("concepto","Pago factura "+fa.numero); sf("monto", fa.saldo_pendiente||fa.total||""); if (fa.emisor_id) sf("emisor_id", fa.emisor_id); }
   };
   // Auto-llenar desde cotización
   const onCot = (id) => {
@@ -93,7 +96,8 @@ export default function PagePagos({ showToast, empId }) {
       monto, metodo:f.metodo, referencia:f.referencia||"",
       concepto:f.concepto||"", reserva_id:f.reserva_id||null,
       factura_id:f.factura_id||null, cotizacion_id:f.cotizacion_id||null,
-      cuenta_bancaria_id:f.cuenta_bancaria_id||null, notas:f.notas||"",
+      cuenta_bancaria_id:f.cuenta_bancaria_id||null, emisor_id:f.emisor_id||null,
+      notas:f.notas||"",
     };
     let result;
     if (editId) result = await dbUpd("pagos_recibidos", editId, payload);
@@ -129,7 +133,7 @@ export default function PagePagos({ showToast, empId }) {
 
   const abrirEditar = r => {
     setEditId(r.id);
-    setF({fecha:r.fecha||today(),cliente_nombre:r.cliente_nombre||"",monto:r.monto||"",metodo:r.metodo||"efectivo",referencia:r.referencia||"",concepto:r.concepto||"",reserva_id:r.reserva_id||"",factura_id:r.factura_id||"",cotizacion_id:r.cotizacion_id||"",cuenta_bancaria_id:r.cuenta_bancaria_id||"",notas:r.notas||""});
+    setF({fecha:r.fecha||today(),cliente_nombre:r.cliente_nombre||"",monto:r.monto||"",metodo:r.metodo||"efectivo",referencia:r.referencia||"",concepto:r.concepto||"",reserva_id:r.reserva_id||"",factura_id:r.factura_id||"",cotizacion_id:r.cotizacion_id||"",cuenta_bancaria_id:r.cuenta_bancaria_id||"",emisor_id:r.emisor_id||"",notas:r.notas||""});
     setShowForm(true);
   };
   const del = async id => {
@@ -143,8 +147,12 @@ export default function PagePagos({ showToast, empId }) {
 
   return (
     <div>
-      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={pag.data}
-        campos={[{label:"Fecha",key:"fecha"},{label:"Cliente",key:"cliente_nombre"},{label:"Concepto",key:"concepto"},{label:"Monto",key:"monto"},{label:"Metodo",key:"metodo"},{label:"Referencia",key:"referencia"}]}
+      {exportar&&<ModalExportar titulo="Pagos Recibidos" datos={pag.data.map(r=>({
+        ...r,
+        emisor_nombre: emisores.find(x=>x.id===r.emisor_id)?.nombre_entidad || "",
+        cuenta_nombre: cuentas.find(c=>c.id===r.cuenta_bancaria_id)?.banco || "",
+      }))}
+        campos={[{label:"Fecha",key:"fecha"},{label:"Cliente",key:"cliente_nombre"},{label:"Concepto",key:"concepto"},{label:"Monto",key:"monto"},{label:"Metodo",key:"metodo"},{label:"Referencia",key:"referencia"},{label:"Entidad",key:"emisor_nombre"},{label:"Cuenta",key:"cuenta_nombre"}]}
         onClose={()=>setExportar(false)}/>}
 
       {/* KPIs */}
@@ -225,6 +233,19 @@ export default function PagePagos({ showToast, empId }) {
                   <input style={{...S.inp,fontWeight:700,color:T.acc}} type="number" step="0.01" value={f.monto} onChange={e=>sf("monto",e.target.value)} placeholder="0.00"/>
                 </Fld>
 
+                {/* Entidad a la que pertenece el pago */}
+                <Fld label="ENTIDAD (A QUIEN SE LE PAGA)" span2>
+                  <select style={S.sel} value={f.emisor_id || ""} onChange={e=>sf("emisor_id",e.target.value)}>
+                    <option value="">Seleccionar entidad que recibe el ingreso...</option>
+                    {emisores.map(em=>(
+                      <option key={em.id} value={em.id}>{em.nombre_entidad}{em.responsable ? " — " + em.responsable : ""}</option>
+                    ))}
+                  </select>
+                  <div style={{fontSize:10,color:T.mut,marginTop:3}}>
+                    Aunque el pago pueda entrar a cualquier cuenta bancaria, indica qué entidad facturó el servicio.
+                  </div>
+                </Fld>
+
                 <div style={{gridColumn:"span 2"}}>
                   <label style={S.lbl}>METODO DE PAGO</label>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -299,6 +320,9 @@ export default function PagePagos({ showToast, empId }) {
                       <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:T.mut}}>
                         <span>{fmtD(r.fecha)}</span>
                         {cuenta&&<span>{cuenta.banco}</span>}
+                        {r.emisor_id&&(emisores.find(x=>x.id===r.emisor_id)?.nombre_entidad ? (
+                          <span style={{fontWeight:600}}>• {emisores.find(x=>x.id===r.emisor_id).nombre_entidad}</span>
+                        ):null)}
                       </div>
                       <div style={{display:"flex",gap:4}}>
                         <button onClick={()=>abrirEditar(r)} style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10}}>Editar</button>

@@ -9,6 +9,9 @@ const SECCIONES = [
     { id: "marca",      label: "Personalización" },
     { id: "suscripcion",label: "Suscripción" },
   ]},
+  { id: "emisores", label: "Emisores",         icon: "🏦", sub: [
+    { id: "emisores",   label: "Entidades que facturan" },
+  ]},
   { id: "usuarios", label: "Usuarios y Roles",  icon: "👥", sub: [
     { id: "usuarios",   label: "Usuarios" },
     { id: "roles",      label: "Roles" },
@@ -687,6 +690,135 @@ function PanelCargos({ emp, setEmp, showToast }) {
   );
 }
 
+function PanelEmisores({ empId, showToast }) {
+  const [emisores, setEmisores] = useState([]);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = () => {
+    dbGet("emisores", `&empresa_id=eq.${empId}&order=nombre_entidad.asc`).then(d => {
+      setEmisores(Array.isArray(d) ? d : []);
+    });
+  };
+  const sf = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => { if (empId) load(); }, [empId]);
+
+  const E = {
+    responsable: "", nombre_entidad: "", nit: "", direccion: "", telefono: "",
+    email_contacto: "", firmante: "", cargo_firmante: "", tel_firmante: "",
+    serie_default: "", banco_preferido: "", user_email: "", notas: "", logo_url: "",
+  };
+
+  const guardar = async () => {
+    if (!form.nombre_entidad.trim()) { showToast("Nombre de la entidad requerido", "err"); return; }
+    setSaving(true);
+    const payload = { ...form, empresa_id: empId, user_email: form.user_email?.trim() || "" };
+    if (form.id) await dbUpd("emisores", form.id, payload);
+    else await dbIns("emisores", payload);
+    setSaving(false); setForm(null); showToast("Emisor guardado"); load();
+  };
+
+  const eliminar = async (e) => {
+    if (!confirm(`Eliminar emisor "${e.nombre_entidad}"?`)) return;
+    await dbDel("emisores", e.id);
+    showToast("Emisor eliminado"); load();
+  };
+
+  return (
+    <div style={{ maxWidth: 780, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ fontSize: 12, color: T.mut }}>
+        Registra cada entidad legal que emite facturas (ej: Transportes Tz'unun, Servicios Múltiples Tz'unun, Transportes R&amp;G).
+        Cada emisor puede tener sus propios datos fiscales y su URL de serie en FEL.
+      </div>
+
+      {form ? (
+        <div style={S.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 14 }}>
+            {form.id ? "Editar emisor" : "Nuevo emisor"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+            <Fld label="RESPONSABLE / USUARIO">
+              <input style={S.inp} value={form.responsable || ""} onChange={e => sf("responsable", e.target.value)} placeholder="Vanessa Gálvez" />
+            </Fld>
+            <Fld label="EMAIL DEL USUARIO">
+              <input style={S.inp} value={form.user_email || ""} onChange={e => sf("user_email", e.target.value)} placeholder="vanessa@..." />
+            </Fld>
+            <Fld label="NOMBRE DE LA ENTIDAD">
+              <input style={S.inp} value={form.nombre_entidad || ""} onChange={e => sf("nombre_entidad", e.target.value)} placeholder="Transportes Tz'unun" />
+            </Fld>
+            <Fld label="NIT">
+              <input style={S.inp} value={form.nit || ""} onChange={e => sf("nit", e.target.value)} placeholder="16693949" />
+            </Fld>
+            <Fld label="DIRECCIÓN">
+              <input style={S.inp} value={form.direccion || ""} onChange={e => sf("direccion", e.target.value)} placeholder="Dirección fiscal" />
+            </Fld>
+            <Fld label="TELÉFONO">
+              <input style={S.inp} value={form.telefono || ""} onChange={e => sf("telefono", e.target.value)} placeholder="502-31221538" />
+            </Fld>
+            <Fld label="EMAIL CONTACTO">
+              <input style={S.inp} value={form.email_contacto || ""} onChange={e => sf("email_contacto", e.target.value)} placeholder="propuestas@..." />
+            </Fld>
+            <Fld label="SERIE FEL (URL)">
+              <input style={S.inp} value={form.serie_default || ""} onChange={e => sf("serie_default", e.target.value)} placeholder="A o URL de la serie SAT" />
+            </Fld>
+            <Fld label="FIRMANTE">
+              <input style={S.inp} value={form.firmante || ""} onChange={e => sf("firmante", e.target.value)} placeholder="Nombre de quien firma" />
+            </Fld>
+            <Fld label="CARGO DEL FIRMANTE">
+              <input style={S.inp} value={form.cargo_firmante || ""} onChange={e => sf("cargo_firmante", e.target.value)} placeholder="Gerente General" />
+            </Fld>
+            <Fld label="BANCO PREFERIDO">
+              <input style={S.inp} value={form.banco_preferido || ""} onChange={e => sf("banco_preferido", e.target.value)} placeholder="Guía para saber a qué cuenta entra el pago" />
+            </Fld>
+            <Fld label="NOTAS">
+              <input style={S.inp} value={form.notas || ""} onChange={e => sf("notas", e.target.value)} placeholder="Notas internas" />
+            </Fld>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <button onClick={guardar} disabled={saving} style={{ ...S.btn("primary") }}>{saving ? "Guardando..." : "Guardar"}</button>
+            <button onClick={() => setForm(null)} style={{ ...S.btn("ghost") }}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <button onClick={() => setForm({ id: "", ...E })} style={{ ...S.btn("primary"), alignSelf: "flex-start", fontSize: 12 }}>
+            + Nuevo emisor
+          </button>
+          {emisores.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 28, color: T.mut, fontSize: 13 }}>No hay emisores registrados.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {emisores.map(e => (
+                <div key={e.id} style={S.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.acc }}>{e.nombre_entidad}</div>
+                      <div style={{ fontSize: 11, color: T.sub }}>
+                        {e.responsable || "—"} {e.user_email ? `· ${e.user_email}` : ""}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => { setForm({ ...e }); }} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Editar</button>
+                      <button onClick={() => eliminar(e)} style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px", color: T.red }}>Eliminar</button>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 6, fontSize: 11, color: T.sub }}>
+                    <div>NIT: <strong>{e.nit || "—"}</strong></div>
+                    <div>Dirección: <strong>{e.direccion || "—"}</strong></div>
+                    <div>Serie: <strong>{e.serie_default || "—"}</strong></div>
+                    <div>Banco pref.: <strong>{e.banco_preferido || "—"}</strong></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function PanelNotif() {
   return (
     <div style={S.card}>
@@ -705,6 +837,7 @@ const PANELS = {
   general: PanelGeneral, monedas: PanelMonedas, terminos: PanelTerminos, recordatorios: PanelRecordatorios,
   portal: PanelPortal,
   series: PanelSeries,
+  emisores: PanelEmisores,
   pdf: PanelPDF, firma: PanelFirmaDigital, cargos: PanelCargos,
   notif: PanelNotif,
 };
