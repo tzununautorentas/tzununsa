@@ -51,23 +51,57 @@ const EF = {
   emisor_id: '',
 };
 
-// ─── Imprimir factura (ventana HTML) ─────────────────────────────
-const imprimirFactura = (r, emisor) => {
+// ─── Utilidades para el PDF ────────────────────────────────────────
+const fmtFH = (s) => {
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d)) return String(s).slice(0, 16);
+  return d.toLocaleString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+const generarQRdata = (texto) => new Promise((resolve, reject) => {
+  const gen = () => {
+    try {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(texto || '');
+      qr.make();
+      resolve(qr.createDataURL(5, 4));
+    } catch (e) { reject(e); }
+  };
+  if (window.qrcode) return gen();
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+  s.onload = () => gen();
+  s.onerror = () => reject(new Error('No se pudo cargar el generador QR'));
+  document.head.appendChild(s);
+});
+
+// ─── Imprimir factura (PDF FEL) ────────────────────────────────────
+const imprimirFactura = async (r, emisor) => {
   const em = emisor || {};
   const nombreEnt = em.nombre_entidad || 'Tz\'unun AutoRentas';
   const dirEnt    = em.direccion || 'Guatemala City, Guatemala';
-  const nitEnt    = em.nit || '';
+  const nitEnt    = em.nit || r.nit_emisor || '';
   const telEnt    = em.telefono || '';
+  const propietario = em.responsable || '';
+  const regimen = (r.regimen || (r.tasa_iva == 5 ? 'PEQUENIO' : 'GENERAL'));
+  const esPequeno = regimen === 'PEQUENIO' || (r.tipo_dte || '').toUpperCase().includes('FPEQ') || (r.tasa_iva == 5);
+  let qrImg = '';
+  try { qrImg = await generarQRdata(r.numero_autorizacion || `${r.serie || ''}${r.serie ? '-' : ''}${r.numero_factura || r.numero || ''}`); } catch {}
   const css = `
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Arial',sans-serif;padding:32px;font-size:11px;color:#1E293B;background:#fff}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #1B2D5C}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:3px solid #1B2D5C}
 .logo-area h1{color:#1B2D5C;font-size:20px;font-weight:800;margin-bottom:4px}
 .logo-area p{color:#64748B;font-size:10px}
 .factura-info{text-align:right}
 .factura-info .num{font-size:18px;font-weight:800;color:#1B2D5C}
 .factura-info p{font-size:10px;color:#64748B;margin-top:2px}
 .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:9px;font-weight:700;background:#00D4AA22;color:#00D4AA;margin-top:4px}
+.aut-box{display:flex;justify-content:space-between;align-items:center;background:#0B1F4B;color:#fff;border-radius:8px;padding:10px 16px;margin-bottom:20px}
+.aut-box .qr{background:#fff;padding:6px;border-radius:6px;width:74px;height:74px;display:flex;align-items:center;justify-content:center}
+.aut-box .qr img{width:62px;height:62px}
+.aut-box .aut-info{font-size:10px;line-height:1.7;word-break:break-all}
+.aut-box .aut-info strong{font-size:12px;color:#00D4AA}
 .section{margin-bottom:20px}
 .section-title{font-size:9px;font-weight:700;color:#94A3B8;letter-spacing:1.5px;margin-bottom:8px}
 .client-box{background:#F8FAFC;border-radius:8px;padding:14px;border-left:3px solid #1B2D5C}
@@ -79,12 +113,14 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
 .amounts{margin-left:auto;width:280px}
 .amount-row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569}
 .amount-total{display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1B2D5C;font-size:16px;font-weight:800;color:#1B2D5C}
-.footer{margin-top:28px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
+.leyendas{margin-top:16px;font-size:9px;color:#475569;line-height:1.7}
+.leyendas .tit{font-weight:700;color:#1B2D5C;margin-bottom:2px}
+.footer{margin-top:24px;padding-top:16px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
 `;
   const detalle = Array.isArray(r.detalles) && r.detalles.length ? r.detalles : null;
   const filasDet = detalle ? detalle.map((x, i) => `
       <tr>
-        <td>${i + 1}. ${x.descripcion || ''}</td>
+        <td>${i + 1}. ${[x.tipo_servicio, x.descripcion].filter(Boolean).map(s => s.trim()).join(' — ')}</td>
         <td style="text-align:right">${x.cantidad || 1}</td>
         <td style="text-align:right">Q ${fmt(x.precio_unitario)}</td>
         <td style="text-align:right;font-weight:600">Q ${fmt(x.total_linea || x.precio)}</td>
@@ -94,10 +130,12 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
       <td style="text-align:right">Q ${fmt(r.subtotal)}</td>
       <td style="text-align:right;font-weight:600">Q ${fmt(r.subtotal)}</td></tr>`;
   const descTotal = parseFloat(r.total_descuentos) || 0;
+  const numDoc = r.numero_factura || r.numero || '—';
   const html = `
 <div class="header">
   <div class="logo-area">
     <h1>${nombreEnt}</h1>
+    ${propietario ? `<p style="font-weight:700;color:#1B2D5C">Propietario: ${propietario}</p>` : ''}
     ${em.eslogan ? `<p>${em.eslogan}</p>` : ''}
     <p>${dirEnt}</p>
     ${nitEnt ? `<p>NIT: ${nitEnt}</p>` : ''}
@@ -105,21 +143,33 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
   </div>
   <div class="factura-info">
     <div class="num">FACTURA ${r.tipo_dte || 'FEL'}</div>
-    <p>No. ${r.numero_factura || '—'}</p>
+    <p>No. ${numDoc}</p>
     ${r.serie ? `<p>Serie: ${r.serie}</p>` : ''}
-    <p>Fecha: ${fmtD(r.fecha)}</p>
-    ${r.moneda ? `<p>Moneda: ${r.moneda}</p>` : ''}
+    <p>Fecha y hora de emision: ${r.fecha_hora_emision ? fmtFH(r.fecha_hora_emision) : fmtD(r.fecha)}</p>
+    ${r.fecha_certificacion ? `<p>Fecha y hora de certificacion: ${fmtFH(r.fecha_certificacion)}</p>` : ''}
+    ${r.condicion_pago ? `<p>Condicion: ${r.condicion_pago}${r.fecha_vencimiento ? ` · Vence: ${fmtD(r.fecha_vencimiento)}` : ''}</p>` : ''}
+    ${r.moneda ? `<p>Moneda: ${r.moneda}${r.tasa_cambio > 1 ? ` (TC ${r.tasa_cambio})` : ''}</p>` : ''}
     <div class="badge">${ESTADOS[r.estado]?.l || r.estado}</div>
   </div>
 </div>
+${(r.numero_autorizacion || numDoc) ? `
+<div class="aut-box">
+  <div class="aut-info">
+    <strong>No. de autorizacion: ${r.numero_autorizacion || numDoc}</strong>
+    ${r.numero_acceso ? `<div>No. de acceso: ${r.numero_acceso}</div>` : ''}
+    <div>Serie ${r.serie || '—'} · No. ${numDoc}</div>
+  </div>
+  <div class="qr">${qrImg ? `<img src="${qrImg}" alt="QR FEL"/>` : ''}</div>
+</div>` : ''}
 <div class="section">
   <div class="section-title">DATOS DEL CLIENTE</div>
   <div class="client-box">
-    <strong>${r.cliente_nombre || 'Consumidor Final'}</strong>
-    <p style="margin-top:4px;color:#475569">NIT: ${r.cliente_nit || 'CF'}</p>
+    <strong>${r.cliente_nombre || r.nombre_receptor || 'Consumidor Final'}</strong>
+    <p style="margin-top:4px;color:#475569">NIT: ${r.cliente_nit || r.nit_receptor || 'CF'}</p>
     ${r.direccion_receptor ? `<p style="margin-top:2px;color:#94A3B8">${r.direccion_receptor}</p>` : ''}
     ${(r.municipio_receptor || r.departamento_receptor) ? `<p style="margin-top:2px;color:#94A3B8">${r.municipio_receptor || ''}${r.municipio_receptor && r.departamento_receptor ? ', ' : ''}${r.departamento_receptor || ''}</p>` : ''}
     ${r.correo_receptor ? `<p style="margin-top:2px;color:#94A3B8">${r.correo_receptor}</p>` : ''}
+    ${r.telefono_receptor ? `<p style="margin-top:2px;color:#94A3B8">Tel: ${r.telefono_receptor}</p>` : ''}
   </div>
 </div>
 <div class="section">
@@ -135,16 +185,19 @@ td{padding:8px 12px;border-bottom:1px solid #E2E8F0;font-size:11px}
   <div class="amount-row"><span>IVA (${r.tasa_iva || 12}%)</span><span>Q ${fmt(r.impuestos)}</span></div>
   <div class="amount-total"><span>TOTAL</span><span>Q ${fmt(r.total)}</span></div>
 </div>
-<div style="margin-top:14px;font-size:9px;color:#64748B;line-height:1.7">
-  <div>Condicion de pago: ${r.condicion_pago || 'contado'}${r.fecha_vencimiento ? ` · Vence: ${fmtD(r.fecha_vencimiento)}` : ''} · Metodo: ${r.metodo_pago || '—'}${r.numero_cuenta ? ` · Cuenta: ${r.numero_cuenta}` : ''}</div>
-  ${r.numero_autorizacion ? `<div>No. de autorizacion: ${r.numero_autorizacion}</div>` : ''}
-  ${r.textos_frases ? `<div>${r.textos_frases}</div>` : ''}
+<div class="leyendas">
+  <div class="tit">Leyendas:</div>
+  ${esPequeno ? `<div>* No genera derecho a credito fiscal.</div>` : ''}
+  ${r.textos_frases ? `<div>${r.textos_frases.replace(/\|/g, ' · ')}</div>` : ''}
+  <div>Datos del certificador: Superintendencia de Administracion Tributaria (SAT)</div>
+  <div>NIT: 16693949 · Ciudad de Guatemala, Guatemala</div>
+  <div style="margin-top:6px">Metodo de pago: ${r.metodo_pago || '—'}${r.numero_cuenta ? ` · Numero de cuenta: ${r.numero_cuenta}` : ''}</div>
 </div>
 <div class="footer">
   Documento generado por Tz'unun AutoRentas &nbsp;|&nbsp;
   ${new Date().toLocaleDateString('es-GT', { day:'2-digit', month:'long', year:'numeric' })}
 </div>`;
-  generarPDF({ html, css, filename: `FEL_${r.numero_factura || r.id || "factura"}.pdf` });
+  generarPDF({ html, css, filename: `FEL_${numDoc.replace(/[^A-Za-z0-9_-]/g, '')}.pdf` });
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -751,7 +804,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
 
       {/* Modal importador SAT */}
       {showSAT && (
-        <ImportadorSAT tipo="ventas" empId={empId} showToast={showToast}
+        <ImportadorSAT tipo="ventas" empId={empId} emisores={emisores} userEmail={userEmail} showToast={showToast}
           onClose={() => setShowSAT(false)} onImportado={reload} />
       )}
 
