@@ -775,8 +775,8 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
   return (
     <div>
       {showSAT && (
-        <ImportadorSAT tipo="compras" empId={empId} showToast={showToast}
-          onClose={() => setShowSAT(false)} onImportado={reload} />
+              <ImportadorSAT tipo="compras" empId={empId} emisores={emisores} userEmail={userEmail} showToast={showToast}
+                onClose={() => setShowSAT(false)} onImportado={reload} />
       )}
 
       {/* KPIs */}
@@ -1042,24 +1042,27 @@ function ModProveedores({ empId, showToast }) {
 // ═══════════════════════════════════════════════════════════════════
 // PAGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════
-export default function PageGastos({ showToast, empId }) {
+export default function PageGastos({ showToast, empId, userEmail }) {
   const [tab, setTab]           = useState('gastos');
   const [vehiculos, setVehiculos]   = useState([]);
   const [reservas, setReservas]     = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [empleados, setEmpleados]   = useState([]);
+  const [emisores,  setEmisores]    = useState([]);
 
   const cargarDatos = useCallback(async () => {
-    const [v, r, p, e] = await Promise.all([
-      dbGet('vehiculos', '&select=id,marca,modelo,placa'),
-      dbGet('reservas', '&estado=in.(confirmada,en_curso)&select=id,numero,cliente_nombre'),
-      dbGet('proveedores', '&select=id,nombre,nit,tipo&order=nombre.asc'),
-      dbGet('empleados', '&select=id,nombre').catch(() => []),
-    ]);
-    setVehiculos(Array.isArray(v) ? v : []);
-    setReservas(Array.isArray(r) ? r : []);
-    setProveedores(Array.isArray(p) ? p : []);
-    setEmpleados(Array.isArray(e) ? e : []);
+  const [v, r, p, e, em] = await Promise.all([
+    dbGet('vehiculos', '&select=id,marca,modelo,placa'),
+    dbGet('reservas', '&estado=in.(confirmada,en_curso)&select=id,numero,cliente_nombre'),
+    dbGet('proveedores', '&select=id,nombre,nit,tipo&order=nombre.asc'),
+    dbGet('empleados', '&select=id,nombre').catch(() => []),
+    dbGet('emisores', `&empresa_id=eq.${empId}&select=id,nombre_entidad,nit,user_email,activo&order=nombre_entidad.asc`).catch(() => []),
+  ]);
+  setVehiculos(Array.isArray(v) ? v : []);
+  setReservas(Array.isArray(r) ? r : []);
+  setProveedores(Array.isArray(p) ? p : []);
+  setEmpleados(Array.isArray(e) ? e : []);
+  setEmisores(Array.isArray(em) ? em : []);
   }, []);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
