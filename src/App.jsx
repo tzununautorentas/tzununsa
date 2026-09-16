@@ -191,8 +191,8 @@ function ModIcon({ mod, size = 52 }) {
 }
 
 // ─── Render de pagina ─────────────────────────────────────────────
-function RenderPage({ pag, empId, showToast }) {
-  const p = { showToast, empId };
+function RenderPage({ pag, empId, showToast, userEmail }) {
+  const p = { showToast, empId, userEmail };
   const pages = {
     dashboard:     <PageDashboard     {...p} />,
     calculadora:   <PageCalculadora   {...p} />,
@@ -362,7 +362,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
       <div style={{ flex: 1, overflowY: "auto", padding: "14px" }}>
         {onHome
           ? <PageDashboard />
-          : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} /></ErrBoundary>
+          : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} /></ErrBoundary>
         }
       </div>
 
@@ -578,7 +578,7 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
         {/* Pagina activa */}
         <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
           <ErrBoundary>
-            <RenderPage pag={pag} empId={empId} showToast={showToast} />
+            <RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} />
           </ErrBoundary>
         </div>
       </div>

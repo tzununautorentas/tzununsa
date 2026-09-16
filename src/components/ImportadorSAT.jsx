@@ -78,17 +78,47 @@ const parsearVenta = (row, headers) => {
   const autorizacion = pick(row, headers, ['numero de autorizacion', 'autorizacion']);
   const nitRec    = normNIT(pick(row, headers, ['id del receptor', 'nit del receptor', 'nit receptor', 'nit comprador']));
   const nombreRec = pick(row, headers, ['nombre completo del receptor', 'nombre del receptor', 'nombre receptor', 'comprador', 'cliente']);
+  const dirRec    = pick(row, headers, ['direccion completa del receptor', 'direccion del receptor', 'direccion receptor', 'direccion']);
+  const munRec    = pick(row, headers, ['municipio']);
+  const depRec    = pick(row, headers, ['departamento']);
+  const corRec    = pick(row, headers, ['correo electronico del receptor', 'correo del receptor', 'correo electronico', 'correo', 'email']);
+  const telRec    = pick(row, headers, ['telefono del receptor', 'telefono']);
+  const desc      = pick(row, headers, ['descripcion del bien o servicio', 'descripcion del servicio', 'descripcion', 'detalle', 'concepto', 'producto']);
+  const cantidad  = normMonto(pick(row, headers, ['cantidad']));
+  const pu        = normMonto(pick(row, headers, ['precio unitario', 'precio']));
   const serie     = pick(row, headers, ['serie']);
   const numDoc    = pick(row, headers, ['numero del dte', 'numero dte', 'numero de dte', 'no. documento', 'numero documento']).replace(/^0+/,'');
   const fecha     = normFecha(pick(row, headers, ['fecha de emision', 'fecha emision', 'emision', 'fecha']));
+  const horaEmi   = pick(row, headers, ['hora de emision', 'hora']).replace(/[^0-9:]/g,'');
+  const fechaCert = pick(row, headers, ['fecha de certificacion', 'fecha certificacion', 'fecha del dia de la certificacion']);
   const granTotal = normMonto(pick(row, headers, ['gran total (moneda original)', 'gran total', 'total']));
   const iva       = normMonto(pick(row, headers, ['iva (monto de este impuesto)', 'iva']));
   const estado    = pick(row, headers, ['estado']);
   const tipo      = pick(row, headers, ['tipo de dte (nombre)', 'tipo dte', 'tipo documento']);
+  const tipoCod   = pick(row, headers, ['tipo de dte (codigo)', 'codigo del tipo de dte']);
   const anulado   = pick(row, headers, ['marca de anulado']);
   const subtotal  = Math.max(0, Math.round((granTotal - iva) * 100) / 100);
 
-  return { autorizacion, nitRec, nombreRec, serie, numDoc, fecha, subtotal, iva, total: granTotal, estado, tipo, anulado };
+  // Detectar tasa de IVA por monto (5% o 12%) y por tipo de DTE (FPEQ = pequeno contribuyente)
+  let tasaIva = 12;
+  if (subtotal > 0) {
+    const r = Math.round((iva / subtotal) * 100);
+    if (r === 5 || r === 12) tasaIva = r;
+  }
+  const tipoTxt = normText((tipo || '') + ' ' + (tipoCod || ''));
+  if (tipoTxt.includes('pequeno') || tipoTxt.includes('peque') || tipoTxt.includes('fpeq')) tasaIva = 5;
+
+  const detalles = desc
+    ? [{ numero_linea: 1, bien_servicio: 'Servicio', tipo_servicio: '', cantidad: cantidad || 1,
+         unidad_medida: 'UNI', descripcion: desc, precio_unitario: pu || subtotal || 0,
+         precio: (cantidad || 1) * (pu || subtotal || 0), total_linea: subtotal || (cantidad || 1) * (pu || subtotal || 0) }]
+    : null;
+
+  return {
+    autorizacion, nitRec, nombreRec, dirRec, munRec, depRec, corRec, telRec,
+    serie, numDoc, fecha, horaEmi, fechaCert, subtotal, iva, total: granTotal,
+    estado, tipo, tipoCod, anulado, tasaIva, detalles,
+  };
 };
 
 const parsearCompra = (row, headers) => {
@@ -121,7 +151,7 @@ const normalizarTipoImportacion = (tipo) => {
   return '';
 };
 
-export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImportado }) {
+export default function ImportadorSAT({ tipo, empId, emisores = [], userEmail = '', showToast, onClose, onImportado }) {
   const tipoForzado = normalizarTipoImportacion(tipo);
   const [paso,       setPaso]       = useState(1);
   const [cargando,   setCargando]   = useState(false);
@@ -202,6 +232,12 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
     const cliMap = {};
     (cliExist || []).forEach(c => { if (c.nit) cliMap[normNIT(c.nit)] = c; });
 
+    // Emisor por defecto: el del usuario logueado, o el primero configurado
+    const emisorMap = {};
+    (emisores || []).forEach(x => { if (x.nit) emisorMap[normNIT(x.nit)] = x; });
+    const emisorDefault = (emisores || []).find(x => (x.user_email || '').toLowerCase() === (userEmail || '').toLowerCase())
+      || (emisores || [])[0] || null;
+
     for (let i = 0; i < filas.length; i++) {
       const f = filas[i];
       setProgreso(`Procesando ${i + 1} de ${filas.length}...`);
@@ -228,6 +264,8 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
           }
         }
 
+        const emisorSel = emisorMap[f.nitEmi] || emisorDefault;
+
         await api('/facturas', {
           method: 'POST',
           body: JSON.stringify({
@@ -236,12 +274,27 @@ export default function ImportadorSAT({ tipo, empId, showToast, onClose, onImpor
             numero_factura: f.numDoc || null,
             serie:          f.serie  || null,
             fecha:          f.fecha,
+            fecha_hora_emision: (f.fecha && f.horaEmi) ? `${f.fecha}T${f.horaEmi}:00` : null,
+            fecha_certificacion: f.fechaCert ? normFecha(f.fechaCert) : null,
+            tipo_dte:       f.tipoCod || f.tipo || 'FACT',
+            regimen:        f.tasaIva === 5 ? 'PEQUENIO' : 'GENERAL',
+            emisor_id:      emisorSel?.id || null,
+            nit_emisor:     emisorSel?.nit || f.nitEmi || '',
+            nombre_emisor:  emisorSel?.nombre_entidad || '',
             cliente_nombre: f.nombreRec || 'Consumidor Final',
             cliente_nit:    f.nitRec   || 'CF',
             cliente_id:     clienteId,
-            descripcion:    `Importado SAT â€” ${f.tipo || 'Factura'} ${f.serie || ''}-${f.numDoc || ''}`.trim(),
+            direccion_receptor: f.dirRec || null,
+            municipio_receptor: f.munRec || null,
+            departamento_receptor: f.depRec || null,
+            correo_receptor: f.corRec || null,
+            telefono_receptor: f.telRec || null,
+            detalles:       f.detalles,
+            descripcion:    f.detalles
+              ? f.detalles.map(d => [d.tipo_servicio, d.descripcion].filter(Boolean).map(s => s.trim()).join(' - ')).join(' | ')
+              : `Importado SAT - ${f.tipo || 'Factura'} ${f.serie || ''}-${f.numDoc || ''}`.trim(),
             subtotal:       f.subtotal,
-            tasa_iva:       12,
+            tasa_iva:       f.tasaIva,
             impuestos:      f.iva,
             total:          f.total,
             metodo_pago:    'efectivo',

@@ -239,6 +239,18 @@ export const fmtD = (s) => {
 export const today = () => new Date().toISOString().slice(0, 10);
 export const newId = () => Date.now().toString().slice(-6);
 
+// --- TIPOS DE SERVICIO FACTURABLES ---
+export const TIPOS_SERVICIO = [
+  'Alquiler de vehiculo',
+  'Limpieza de vehiculo',
+  'Servicio de chofer',
+  'Alquiler de microbús',
+  'Alquiler de bus',
+  'Alquiler de camioneta',
+  'Traslado / viaje',
+  'Otro',
+];
+
 // --- CATALOGO DE VEHICULOS ---
 export const CATALOGO = [
   { id:"c1", nombre:"Hyundai Verna (Sedan)",    tipo:"Sedan",    dia:300,  sem:275,  mes:250,  cap:5,  aire:true, trans:"Manual" },
