@@ -112,7 +112,7 @@ export default function PageContabilidad({ showToast, empId }) {
     try {
       const res = await api("/asientos_contables", {
         method: "POST",
-        body: JSON.stringify({ ...asientoForm, empresa_id: empId, modulo_origen: "manual", estado: "activo" }),
+        body: JSON.stringify({ ...asientoForm, empresa_id: empId, origen_tipo: "manual", evento_tipo: "manual", estado: "activo" }),
         extraHeaders: { Prefer: "return=representation" },
       });
       const nuevoId = Array.isArray(res) ? res[0]?.id : res?.id;
@@ -122,7 +122,7 @@ export default function PageContabilidad({ showToast, empId }) {
       for (const l of lv) {
         await api("/asiento_lineas", {
           method: "POST",
-          body: JSON.stringify({ ...l, asiento_id: nuevoId, debe: Number(l.debe), haber: Number(l.haber) }),
+          body: JSON.stringify({ ...l, asiento_id: nuevoId, empresa_id: empId, debe: Number(l.debe), haber: Number(l.haber) }),
           extraHeaders: { Prefer: "return=minimal" },
         });
       }
@@ -350,7 +350,7 @@ export default function PageContabilidad({ showToast, empId }) {
       { label: "Fecha",       key: "fecha"         },
       { label: "Descripcion", key: "descripcion"   },
       { label: "Referencia",  key: "referencia"    },
-      { label: "Modulo",      key: "modulo_origen" },
+      { label: "Modulo",      key: "origen_tipo" },
       { label: "Estado",      key: "estado"        },
     ];
 
@@ -395,7 +395,7 @@ export default function PageContabilidad({ showToast, empId }) {
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.txt }}>{a.descripcion}</div>
                   <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
                     {a.referencia && <span style={{ fontSize: 11, color: T.sub }}>Ref: {a.referencia}</span>}
-                    {a.modulo_origen && a.modulo_origen !== "manual" && <span style={{ fontSize: 10, color: T.acc, fontWeight: 600 }}>Auto: {a.modulo_origen}</span>}
+                    {a.origen_tipo && a.origen_tipo !== "manual" && <span style={{ fontSize: 10, color: T.acc, fontWeight: 600 }}>Auto: {a.origen_tipo}</span>}
                     {a.estado === "anulado" && <span style={{ fontSize: 10, color: T.red, fontWeight: 700 }}>ANULADO</span>}
                   </div>
                 </div>

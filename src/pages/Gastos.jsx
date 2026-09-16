@@ -697,6 +697,18 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
       const cuentaDebeId  = cuentasGasto?.[0]?.id;
       const cuentaHaberId = cuentaCaja?.[0]?.id;
 
+      // 1b. Idempotencia: si ya existe un asiento activo para (empresa, gasto, tesoreria),
+      //     no crear otro; solo marcar el gasto como contabilizado.
+      const identidad = `origen_tipo=eq.gasto&origen_id=eq.${gasto.id}&evento_tipo=eq.tesoreria&empresa_id=eq.${empId}&estado=eq.activo&select=id`;
+      const yaExiste = await api(`/asientos_contables?${identidad}`).then(r => Array.isArray(r) ? r : []);
+      if (yaExiste.length > 0) {
+        await dbUpd('gastos', gasto.id, { contabilizado: true, estado: 'contabilizado' });
+        setPanelItem(null);
+        showToast('Gasto ya estaba contabilizado; no se duplico asiento');
+        reload();
+        return;
+      }
+
       // 2. Crear el asiento en libro diario
       const asientoRes = await api('/asientos_contables', {
         method: 'POST',
@@ -704,7 +716,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
           empresa_id: empId, fecha: gasto.fecha,
           descripcion: `Gasto: ${gasto.descripcion} — ${gasto.proveedor || ''}`,
           referencia: gasto.numero_factura || gasto.id.slice(0, 8),
-          modulo_origen: 'gastos', origen_id: gasto.id, estado: 'activo',
+          origen_tipo: 'gasto', origen_id: gasto.id, evento_tipo: 'tesoreria', estado: 'activo',
         }),
         extraHeaders: { Prefer: 'return=representation' },
       });
@@ -715,14 +727,14 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
         if (cuentaDebeId) {
           await api('/asiento_lineas', {
             method: 'POST',
-            body: JSON.stringify({ asiento_id: asientoId, cuenta_id: cuentaDebeId, descripcion: `${gasto.categoria} — ${gasto.descripcion}`, debe: parseFloat(gasto.total) || 0, haber: 0 }),
+            body: JSON.stringify({ asiento_id: asientoId, empresa_id: empId, cuenta_id: cuentaDebeId, descripcion: `${gasto.categoria} — ${gasto.descripcion}`, debe: parseFloat(gasto.total) || 0, haber: 0 }),
             extraHeaders: { Prefer: 'return=minimal' },
           });
         }
         if (cuentaHaberId) {
           await api('/asiento_lineas', {
             method: 'POST',
-            body: JSON.stringify({ asiento_id: asientoId, cuenta_id: cuentaHaberId, descripcion: `Pago: ${gasto.metodo_pago}`, debe: 0, haber: parseFloat(gasto.total) || 0 }),
+            body: JSON.stringify({ asiento_id: asientoId, empresa_id: empId, cuenta_id: cuentaHaberId, descripcion: `Pago: ${gasto.metodo_pago}`, debe: 0, haber: parseFloat(gasto.total) || 0 }),
             extraHeaders: { Prefer: 'return=minimal' },
           });
         }
