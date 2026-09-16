@@ -22,8 +22,9 @@
 -- ---------------------------------------------------------------------------
 -- PARTE 0 — VALIDACION DE TIPOS REFERENCIADOS (solo lectura)
 -- ---------------------------------------------------------------------------
--- Confirma ANTES de crear la tabla que roles.id es INTEGER, usuarios_sistema.id
+-- Confirma ANTES de crear la tabla que roles.id es BIGINT, usuarios_sistema.id
 -- es UUID y empresas.id es UUID. Si alguno difiere, DETIENE (regla 11).
+-- roles.id real en PG 17.6 es BIGINT (identidad), no integer.
 DO $$
 DECLARE
   t_text text;
@@ -36,8 +37,8 @@ BEGIN
 
   SELECT data_type INTO t_text FROM information_schema.columns
   WHERE table_schema='public' AND table_name='roles' AND column_name='id';
-  IF t_text IS DISTINCT FROM 'integer' THEN
-    RAISE EXCEPTION 'PRE-CHECK 0 BLOQUEO: roles.id es % (se espera integer)', t_text;
+  IF t_text IS DISTINCT FROM 'bigint' THEN
+    RAISE EXCEPTION 'PRE-CHECK 0 BLOQUEO: roles.id es % (se espera bigint)', t_text;
   END IF;
 
   SELECT data_type INTO t_text FROM information_schema.columns
@@ -52,7 +53,7 @@ BEGIN
     RAISE EXCEPTION 'PRE-CHECK 0 BLOQUEO: empresas.id es % (se espera uuid)', t_text;
   END IF;
 
-  RAISE NOTICE 'PRE-CHECK 0 OK: roles.id=integer, usuarios_sistema.id=uuid, empresas.id=uuid';
+  RAISE NOTICE 'PRE-CHECK 0 OK: roles.id=bigint, usuarios_sistema.id=uuid, empresas.id=uuid';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ BEGIN
       CREATE TABLE public.usuario_empresas (
         usuario_id uuid   NOT NULL REFERENCES public.usuarios_sistema(id) ON DELETE CASCADE,
         empresa_id uuid   NOT NULL REFERENCES public.empresas(id)        ON DELETE RESTRICT,
-        rol_id     integer NOT NULL REFERENCES public.roles(id)          ON DELETE RESTRICT,
+        rol_id     bigint  NOT NULL REFERENCES public.roles(id)          ON DELETE RESTRICT,
         activo     boolean NOT NULL DEFAULT true,
         PRIMARY KEY (usuario_id, empresa_id)
       )';
