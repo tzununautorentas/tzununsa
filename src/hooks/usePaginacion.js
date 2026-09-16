@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { SB, H } from '../config.js';
+import { apiFetch } from '../config.js';
 
 export function usePaginacion({ table, query = '', search = '', columns = [], pageSize: ps = 25, order = 'created_at.desc' }) {
   const [data, setData] = useState([]);
@@ -24,9 +24,9 @@ export function usePaginacion({ table, query = '', search = '', columns = [], pa
       }
       const start = (p.page - 1) * p.pageSize;
       const end = start + p.pageSize - 1;
-      const url = `${SB}/rest/v1/${p.table}?select=*&order=${p.order}${q}`;
-      const r = await fetch(url, {
-        headers: { ...H, Range: `${start}-${end}`, Prefer: 'count=exact' },
+      const url = `/${p.table}?select=*&order=${p.order}${q}`;
+      const r = await apiFetch(url, {
+        headers: { Range: `${start}-${end}`, Prefer: 'count=exact' },
       });
       const match = r.headers.get('content-range')?.match(/\/(\d+)$/);
       const totalCount = match ? parseInt(match[1]) : 0;

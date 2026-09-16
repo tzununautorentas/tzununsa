@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CAT_GASTO } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CAT_GASTO, api } from '../config.js';
+import { getUserName } from '../services/session.js';
 import { Spinner, Empty, Fld, Badge, CatBadge, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
@@ -39,15 +40,6 @@ const EF = {
 };
 
 // ─── API helper ───────────────────────────────────────────────────
-async function api(path, opts = {}) {
-  const { extraHeaders, ...rest } = opts;
-  const res = await fetch(`${SB}/rest/v1${path}`, {
-    headers: { ...H, ...(extraHeaders || {}) }, ...rest,
-  });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`); }
-  if (res.status === 204) return null;
-  return res.json();
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // OCR GRATUITO — Tesseract.js + PDF.js (sin API key)
@@ -664,7 +656,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
   const [filtroPer, setFiltroPer] = useState('');
   const [busqueda,  setBusqueda]  = useState('');
   const [showSAT,   setShowSAT]   = useState(false);
-  const [userName] = useState(() => { try { return JSON.parse(localStorage.getItem('tzunun_session'))?.user?.email?.split('@')[0] || 'Usuario'; } catch { return 'Usuario'; } });
+  const [userName] = useState(getUserName);
 
   const queryParts = [];
   if (filtroEst !== 'todos') queryParts.push('estado=eq.'+filtroEst);

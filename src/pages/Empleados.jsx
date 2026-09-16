@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, api } from '../config.js';
 import { Spinner, Empty, Fld, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import {
@@ -7,18 +7,6 @@ import {
   IconRefresh, IconPDF, IconExcel, IconUser, IconEmployee,
   IconCheck, IconClose, IconList
 } from '../components/icons.jsx';
-
-// ─── API helper ───────────────────────────────────────────────────
-const SB = "https://fmijbpatkddkbxlkfoza.supabase.co";
-const SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaWpicGF0a2Rka2J4bGtmb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTQ3NDAsImV4cCI6MjA5MDQ5MDc0MH0.zEVmDgLUQWv9gnQrJggGhAmTuqRcQyhGbMvcL_i8joA";
-const H = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
-async function api(path, opts = {}) {
-  const { extraHeaders, ...rest } = opts;
-  const res = await fetch(`${SB}/rest/v1${path}`, { headers: { ...H, ...(extraHeaders || {}) }, ...rest });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || `Error ${res.status}`); }
-  if (res.status === 204) return null;
-  return res.json();
-}
 
 // ─── Constantes ───────────────────────────────────────────────────
 const TIPOS = {

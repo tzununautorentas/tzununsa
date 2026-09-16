@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Component } from "react";
-import { T, S, sbLogin, sbLogout, dbGet } from "./config.js";
+import { T, S, dbGet } from "./config.js";
+import { getSession, onAuth, signIn, logout, getUserEmail } from "./services/session.js";
 import { ThemeProvider, useTheme } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
 import {
@@ -383,10 +384,10 @@ function LoginScreen({ onLogin }) {
   const login = async (e) => {
     e.preventDefault();
     if (!email || !pwd) { setError("Ingresa correo y contrasena"); return; }
+    if (loading) return;
     setLoading(true); setError("");
-    const res = await sbLogin(email, pwd);
-    if (res.error || res.error_description) setError("Credenciales incorrectas");
-    else onLogin(res);
+    const res = await onLogin(email, pwd);
+    if (res?.error) setError("Credenciales incorrectas");
     setLoading(false);
   };
 
@@ -589,10 +590,9 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
 
 // ─── App principal ────────────────────────────────────────────────
 function AppContent() {
-  const [session, setSession] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("tzunun_session")); }
-    catch { return null; }
-  });
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
   const [pag,      setPag]      = useState("dashboard");
   const [empId,    setEmpId]    = useState(null);
   const [toast,    setToast]    = useState(null);
@@ -639,35 +639,55 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (session) {
-      dbGet("empresas", "&select=id&limit=1").then(d => {
-        if (d?.[0]) setEmpId(d[0].id);
+    if (!authed) return;
+    dbGet("empresas", "&select=id&limit=1").then(d => {
+      if (d?.[0]) setEmpId(d[0].id);
+    });
+  }, [authed]);
+
+  useEffect(() => {
+    let unsub;
+    (async () => {
+      try {
+        const s = await getSession();
+        setUserEmail(s?.user?.email || "");
+        setAuthed(!!s);
+      } catch { /* sin sesión */ }
+      const sub = onAuth((event, session) => {
+        setUserEmail(session?.user?.email || "");
+        if (event === "SIGNED_OUT") setAuthed(false);
+        else if (session) setAuthed(true);
       });
-    }
-  }, [session]);
+      unsub = sub?.data?.subscription?.unsubscribe || sub?.data?.unsubscribe || sub?.unsubscribe;
+      setChecking(false);
+    })();
+    return () => { if (typeof unsub === "function") unsub(); };
+  }, []);
 
   const showToast = (msg, type = "ok") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleLogin = (res) => {
-    const s = { token: res.access_token, user: res.user };
-    localStorage.setItem("tzunun_session", JSON.stringify(s));
-    setSession(s);
+  const handleLogin = async (email, pwd) => {
+    const res = await signIn(email, pwd);
+    if (!res.error) {
+      setAuthed(true);
+      setUserEmail(getUserEmail() || "");
+    }
+    return res;
   };
 
   const handleLogout = async () => {
-    if (session?.token) await sbLogout(session.token);
-    localStorage.removeItem("tzunun_session");
-    setSession(null);
+    await logout();
+    setAuthed(false);
   };
 
-  if (!session) return <LoginScreen onLogin={handleLogin} />;
+  if (checking) return null;
+  if (!authed) return <LoginScreen onLogin={handleLogin} />;
 
   const props = {
-    pag, setPag, empId, showToast, toast, handleLogout,
-    userEmail: session?.user?.email || "",
+    pag, setPag, empId, showToast, toast, handleLogout, userEmail,
   };
 
   return isMobile

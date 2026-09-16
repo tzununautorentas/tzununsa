@@ -1,11 +1,8 @@
-import { SB, H } from '../config.js';
+import { apiFetch } from '../config.js';
 
 const api = async (path, opts = {}) => {
   try {
-    const res = await fetch(`${SB}/rest/v1${path}`, {
-      headers: { ...H, ...(opts.headers || {}) },
-      ...opts,
-    });
+    const res = await apiFetch(path, opts);
     if (!res.ok) return [];
     const d = await res.json();
     return Array.isArray(d) ? d : [];

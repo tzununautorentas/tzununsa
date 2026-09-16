@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, apiFetch } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
@@ -361,8 +361,8 @@ export default function PageBanca({ showToast, empId }) {
   const loadAllMovs = useCallback(async () => {
     if (!cuentaAct) { setAllMovs([]); return; }
     try {
-      const url = `${SB}/rest/v1/movimientos_bancarios?select=*&order=fecha.asc&cuenta_id=eq.${cuentaAct.id}`;
-      const r = await fetch(url, { headers: H });
+      const url = `/movimientos_bancarios?select=*&order=fecha.asc&cuenta_id=eq.${cuentaAct.id}`;
+      const r = await apiFetch(url);
       if (!r.ok) { setAllMovs([]); return; }
       const d = await r.json();
       setAllMovs(Array.isArray(d) ? d : []);

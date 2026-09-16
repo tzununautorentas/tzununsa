@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { T, S, SB, H, dbIns, dbUpd, dbDel } from "../config.js";
+import { T, S, dbIns, dbUpd, dbDel, api } from "../config.js";
 import { Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
-
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(`${SB}/rest/v1${path}`, {
-    headers: { ...H, ...(opts.extraHeaders || {}) },
-    ...opts,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.hint || `Error ${res.status}`);
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
 
 const TIPOS = [
   { value:"combustible", label:"⛽ Combustible",        color:"#F59E0B" },
@@ -63,8 +50,8 @@ export default function PageProveedores({ showToast, empId }) {
     setLoadingHist(true);
     try {
       const [g, m] = await Promise.all([
-        apiFetch(`/gastos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50`).catch(()=>[]),
-        apiFetch(`/mantenimientos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50`).catch(()=>[]),
+        api(`/gastos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50`).catch(()=>[]),
+        api(`/mantenimientos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50`).catch(()=>[]),
       ]);
       setHistorial({ gastos: g||[], compras:[], mantenimientos: m||[] });
     } catch { setHistorial({ gastos:[], compras:[], mantenimientos:[] }); }

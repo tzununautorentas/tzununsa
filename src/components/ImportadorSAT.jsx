@@ -3,22 +3,7 @@
 // Soporta: facturas emitidas (ventas) y facturas recibidas (compras)
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 import React, { useState, useRef } from 'react';
-import { T, S, SB, H, fmt, today } from '../config.js';
-
-async function api(path, opts = {}) {
-  const { extraHeaders, ...rest } = opts;
-  const res = await fetch(`${SB}/rest/v1${path}`, {
-    headers: { ...H, ...(extraHeaders || {}) }, ...rest,
-  });
-  if (res.status === 204) return null;
-  const text = await res.text();
-  if (!res.ok) {
-    let msg = text;
-    try { msg = JSON.parse(text).message || JSON.parse(text).hint || text; } catch {}
-    throw new Error(msg);
-  }
-  try { return JSON.parse(text); } catch { return null; }
-}
+import { T, S, fmt, today, api } from '../config.js';
 
 // â”€â”€â”€ Cargar SheetJS desde CDN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const cargarXLSX = () => new Promise((resolve, reject) => {

@@ -4,23 +4,8 @@
 // Catálogo · Libro Diario · Libro Mayor · Balance · Resultados
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { T, S, SB, H, dbIns, dbUpd } from "../config.js";
+import { T, S, dbIns, dbUpd, api } from "../config.js";
 import { generarPDF } from "../components/shared.jsx";
-
-// ─── API helper ───────────────────────────────────────────────────
-async function api(path, opts = {}) {
-  const { extraHeaders, ...rest } = opts;
-  const res = await fetch(`${SB}/rest/v1${path}`, {
-    headers: { ...H, ...(extraHeaders || {}) },
-    ...rest,
-  });
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error(e.message || e.hint || `Error ${res.status}`);
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
 
 // ─── Utilidades ───────────────────────────────────────────────────
 const fmtQ    = (n) => "Q " + (Number(n) || 0).toLocaleString("es-GT", { minimumFractionDigits: 2 });

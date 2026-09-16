@@ -4,27 +4,10 @@
 // Tabla: facturas (confirmada en Supabase)
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useCallback } from 'react';
-import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, api } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, BuscadorCliente, Paginador, Buscador, generarPDF } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ImportadorSAT from '../components/ImportadorSAT.jsx';
-
-// ─── API directa con manejo de errores explícito ──────────────────
-async function apiFetch(path, opts = {}) {
-  const { extraHeaders, ...rest } = opts;
-  const res = await fetch(`${SB}/rest/v1${path}`, {
-    headers: { ...H, ...(extraHeaders || {}) },
-    ...rest,
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    let msg = text;
-    try { msg = JSON.parse(text).message || JSON.parse(text).hint || text; } catch {}
-    throw new Error(`[${res.status}] ${msg}`);
-  }
-  if (!text || text === 'null') return null;
-  try { return JSON.parse(text); } catch { return null; }
-}
 
 // ─── Estados de factura ───────────────────────────────────────────
 const ESTADOS = {
@@ -212,13 +195,13 @@ export default function PageFacturacion({ showToast, empId }) {
       };
 
       if (editItem?.id) {
-        await apiFetch(`/facturas?id=eq.${editItem.id}`, {
+        await api(`/facturas?id=eq.${editItem.id}`, {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
         showToast('Factura actualizada');
       } else {
-        await apiFetch('/facturas', {
+        await api('/facturas', {
           method: 'POST',
           body: JSON.stringify(payload),
           extraHeaders: { Prefer: 'return=minimal' },
@@ -240,7 +223,7 @@ export default function PageFacturacion({ showToast, empId }) {
   const del = async (id) => {
     if (!confirm('Eliminar esta factura?')) return;
     try {
-      await apiFetch(`/facturas?id=eq.${id}`, { method: 'DELETE' });
+      await api(`/facturas?id=eq.${id}`, { method: 'DELETE' });
       showToast('Factura eliminada');
       reload();
     } catch (e) {
@@ -251,7 +234,7 @@ export default function PageFacturacion({ showToast, empId }) {
   // ─── Cambiar estado ───────────────────────────────────────────
   const cambiarEstado = async (id, estado) => {
     try {
-      await apiFetch(`/facturas?id=eq.${id}`, {
+      await api(`/facturas?id=eq.${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ estado }),
       });

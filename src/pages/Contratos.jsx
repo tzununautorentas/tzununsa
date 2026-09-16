@@ -5,21 +5,9 @@
 // Auto-fill desde: Reservas, Cotizaciones, Clientes, Vehículos
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { T, S, SB, H, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, api } from '../config.js';
 import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDF, generarPDFEditable } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
-
-// ─── API ──────────────────────────────────────────────────────────
-async function api(path, opts = {}) {
-  const { extraHeaders, ...rest } = opts;
-  const res = await fetch(`${SB}/rest/v1${path}`, {
-    headers: { ...H, ...(extraHeaders || {}) }, ...rest,
-  });
-  if (res.status === 204) return null;
-  const text = await res.text();
-  if (!res.ok) { let m = text; try { m = JSON.parse(text).message || text; } catch {} throw new Error(m); }
-  try { return JSON.parse(text); } catch { return null; }
-}
 
 // ─── Estados ─────────────────────────────────────────────────────
 const ESTADOS = {

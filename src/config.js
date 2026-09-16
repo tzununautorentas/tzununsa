@@ -1,12 +1,67 @@
 // --- SUPABASE ---
+import { initAuth, getAccessToken, refreshSession, signIn, logout } from "./services/session.js";
+
 export const SB = "https://fmijbpatkddkbxlkfoza.supabase.co";
 export const SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaWpicGF0a2Rka2J4bGtmb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTQ3NDAsImV4cCI6MjA5MDQ5MDc0MH0.zEVmDgLUQWv9gnQrJggGhAmTuqRcQyhGbMvcL_i8joA";
-export const H  = { apikey: SK, Authorization: `Bearer ${SK}`, "Content-Type": "application/json" };
+
+initAuth(SB, SK);
+
+// --- AUTHENTICATED FETCHER ---
+// Con sesión: apikey + Authorization: Bearer <JWT>.
+// Sin sesión: solo apikey (sin Bearer con anon key). 401 con token → refresh UNA vez → retry; si falla el refresh, logout.
+export async function apiFetch(path, opts = {}) {
+  const { extraHeaders, ...rest } = opts;
+  const url = /:\/\//.test(path)
+    ? path
+    : `${SB}/rest/v1${path.startsWith("/") ? path : "/" + path}`;
+  const token = await getAccessToken();
+  const headers = {
+    apikey: SK,
+    "Content-Type": "application/json",
+    ...(extraHeaders || {}),
+    ...(rest.headers || {}),
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const exec = () => fetch(url, { ...rest, headers });
+  let r = await exec();
+  if (r.status === 401 && token) {
+    const rf = await refreshSession();
+    if (!rf.error) {
+      const t2 = await getAccessToken();
+      if (t2) {
+        headers.Authorization = `Bearer ${t2}`;
+        r = await exec();
+      }
+    } else {
+      await logout();
+      throw new Error("La sesión expiró. Inicia sesión nuevamente.");
+    }
+  }
+  return r;
+}
+
+export async function api(path, opts = {}) {
+  const res = await apiFetch(path, opts);
+  if (res.status === 204) return null;
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = `Error ${res.status}`;
+    if (text) {
+      try {
+        const j = JSON.parse(text);
+        msg = j?.message || j?.hint || j?.error_description || j?.error || msg;
+      } catch { msg = text.slice(0, 200); }
+    }
+    throw new Error(msg);
+  }
+  if (!text || text === "null") return null;
+  try { return JSON.parse(text); } catch { return null; }
+}
 
 // --- DB HELPERS ---
 export async function dbGet(table, query = "") {
   try {
-    const r = await fetch(`${SB}/rest/v1/${table}?order=created_at.desc${query}`, { headers: H });
+    const r = await apiFetch(`/${table}?order=created_at.desc${query}`);
     if (!r.ok) return [];
     const d = await r.json();
     return Array.isArray(d) ? d : [];
@@ -17,9 +72,9 @@ export async function dbIns(table, data, timeoutMs) {
   try {
     const ctrl = timeoutMs ? new AbortController() : null;
     const timer = timeoutMs ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
-    const r = await fetch(`${SB}/rest/v1/${table}`, {
+    const r = await apiFetch(`/${table}`, {
       method: "POST",
-      headers: { ...H, Prefer: "return=representation" },
+      extraHeaders: { Prefer: "return=representation" },
       body: JSON.stringify(data),
       signal: ctrl?.signal,
     });
@@ -36,13 +91,13 @@ export async function siguienteNumero(prefijo, tabla, empId) {
     try {
       const campo = tabla === 'cotizaciones' ? 'ultima_cotizacion'
         : tabla === 'reservas' ? 'ultima_reserva' : 'ultima_factura';
-      const r = await fetch(`${SB}/rest/v1/empresas?select=${campo}&id=eq.${empId}`, { headers: H });
+      const r = await apiFetch(`/empresas?select=${campo}&id=eq.${empId}`);
       const d = await r.json();
       const actual = Array.isArray(d) && d.length > 0 ? d[0][campo] || '' : '';
       const num = actual.startsWith(prefijo) ? parseInt(actual.slice(prefijo.length), 10) || 0 : 0;
       const nuevo = prefijo + String(num + 1).padStart(6, '0');
-      await fetch(`${SB}/rest/v1/empresas?id=eq.${empId}`, {
-        method: "PATCH", headers: { ...H },
+      await apiFetch(`/empresas?id=eq.${empId}`, {
+        method: "PATCH",
         body: JSON.stringify({ [campo]: nuevo }),
       });
       return nuevo;
@@ -50,7 +105,7 @@ export async function siguienteNumero(prefijo, tabla, empId) {
   }
   // Fallback: max desde la tabla
   try {
-    const r = await fetch(`${SB}/rest/v1/${tabla}?select=numero&order=numero.desc&limit=1`, { headers: H });
+    const r = await apiFetch(`/${tabla}?select=numero&order=numero.desc&limit=1`);
     if (!r.ok) return prefijo + '000001';
     const d = await r.json();
     const last = Array.isArray(d) && d.length > 0 ? d[0].numero || '' : '';
@@ -63,9 +118,9 @@ export async function siguienteNumero(prefijo, tabla, empId) {
 
 export async function dbUpd(table, id, data) {
   try {
-    const r = await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`, {
+    const r = await apiFetch(`/${table}?id=eq.${id}`, {
       method: "PATCH",
-      headers: { ...H, Prefer: "return=representation" },
+      extraHeaders: { Prefer: "return=representation" },
       body: JSON.stringify(data),
     });
     const j = await r.json();
@@ -76,9 +131,9 @@ export async function dbUpd(table, id, data) {
 
 export async function dbDel(table, id) {
   try {
-    const r = await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`, {
+    const r = await apiFetch(`/${table}?id=eq.${id}`, {
       method: "DELETE",
-      headers: { ...H, Prefer: "return=representation" },
+      extraHeaders: { Prefer: "return=representation" },
     });
     const text = await r.text();
     let j = null;
@@ -97,26 +152,16 @@ export async function getEmpId() {
   return d && d[0] ? d[0].id : null;
 }
 
-// --- SUPABASE AUTH ---
+// --- SUPABASE AUTH (delegado al SDK) ---
 export async function sbLogin(email, password) {
-  try {
-    const r = await fetch(`${SB}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: { apikey: SK, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    return r.json();
-  } catch { return { error: "Sin conexion" }; }
+  try { return await signIn(email, password); } catch { return { error: "Sin conexion" }; }
 }
 
 export async function sbLogout(token) {
-  try {
-    await fetch(`${SB}/auth/v1/logout`, {
-      method: "POST",
-      headers: { apikey: SK, Authorization: `Bearer ${token}` },
-    });
-  } catch {}
+  await logout();
 }
+
+export { getAccessToken, refreshSession, logout };
 
 // --- THEME (reactivo via CSS Variables) ---
 // Cualquier propiedad accedida en T se resuelve como var(--theme-<prop>)
