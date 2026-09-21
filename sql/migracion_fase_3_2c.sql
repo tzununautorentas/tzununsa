@@ -5,6 +5,25 @@
 -- DB:         PostgreSQL 17.6
 -- Ejecutar:   ENTERO, en orden, en Supabase SQL Editor como OWNER.
 -- Doc:        "FASE3.2C_PLAN_DETALLADO.md"
+-- Revision:   3.2C-R2 — Estrategia transaccional corregida.
+--
+-- PROBLEMA EN R1: el SQL Editor ejecuta todo el archivo como UNA sola
+-- transaccion implicita (simple query). Dentro de ella, un BEGIN top-level es
+-- un no-op (aviso "already a transaction in progress"), por lo que el ROLLBACK
+-- de las pruebas revirtio TAMBIEN el ALTER TABLE ADD CONSTRAINT recien creado
+-- (evidencia: GATE R1 -> "el constraint NO existe"; DB limpia, 47 filas).
+--
+-- SOLUCION R2: tras la migracion se ejecuta un COMMIT top-level (sentencia de
+-- seccion, NUNCA dentro de un bloque DO/PLpgSQL). Esto persiste el constraint
+-- ANTES del BEGIN de las pruebas. El ROLLBACK de C1-C4 queda confinado a su
+-- propio bloque transaccional y solo revierte las inserciones ZZTEST1.
+-- El mismo mecanismo de frontera que el servidor honro en el ROLLBACK de R1
+-- (lo reverto todo) garantiza que el COMMIT top-level tambien se honrara.
+--
+-- FLUJO LOGICO (concordante con lo aprobado):
+--   MIGRACION -> CREATE CONSTRAINT -> COMMIT (PERSISTIR) -> PRUEBAS
+--   (BEGIN -> C1 C2 C3 C4 -> ROLLBACK) -> POST-CHECK (V1-V7 + GATE)
+--
 -- Alcance:    SOLO el create del constraint:
 --               uq_cuenta_empresa_codigo
 --               UNIQUE NULLS NOT DISTINCT (empresa_id, codigo)
@@ -12,7 +31,8 @@
 -- PROHIBIDO:  modificar datos reales, otras tablas, tipos, RLS, frontend, banca,
 --             facturas, o el indice del catalogo: uq_cuentas_contables_empresa_codigo.
 -- Seguridad:  idempotente; pre-checks detienen con error controlado; la prueba
---             transaccional termina SIEMPRE en ROLLBACK.
+--             transaccional termina SIEMPRE en ROLLBACK y ZZTEST1 jamas se
+--             persiste; el constraint queda persistido por el COMMIT top-level.
 -- ============================================================================
 
 -- ============================================================================
@@ -106,7 +126,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- SECCION 2: MIGRACION (idempotente)
+-- SECCION 2: MIGRACION (idempotente) + PERSISTENCIA
 -- ============================================================================
 DO $$
 DECLARE
@@ -129,67 +149,108 @@ BEGIN
   END IF;
 END $$;
 
+-- PERSISTIR CONSTRAINT (3.2C-R2)
+-- COMMIT top-level: cierra la transaccion implicita del editor y persiste el
+-- ALTER TABLE de la Seccion 2 ANTES de que comiencen las pruebas.
+-- Es una sentencia de SECCION, no esta dentro de ningun bloque DO/PLpgSQL
+-- (restriccion respetada). Sin esto, el ROLLBACK de C1-C4 (misma transaccion
+-- implicita) revertiria tambien el constraint, como ocurrio en R1.
+COMMIT;
+
 -- ============================================================================
--- SECCION 3: PRUEBA DE ACEPTACION (transaccion que termina en ROLLBACK)
+-- SECCION 3: PRUEBA DE ACEPTACION (transaccion propia que termina en ROLLBACK)
 -- ============================================================================
+-- El BEGIN de esta seccion abre un bloque transaccional NUEVO, posterior al
+-- COMMIT de la Seccion 2: el constraint ya esta persistido y el ROLLBACK de
+-- abajo SOLO revierte las inserciones ZZTEST1 (y nada del constraint).
+--
+-- Tabla temporal (solo sesion) para compartir el empresa_id real usado en C2
+-- y reutilizarlo exactamente en C4 (mismo UUID real; nunca inventado).
+DROP TABLE IF EXISTS pg_temp._t32c_emp;
+CREATE TEMP TABLE _t32c_emp (empresa_id uuid PRIMARY KEY);
+
 BEGIN;
 
--- C1 — NULL + ZZTEST1 (maestro): permitido
+-- C1 — NULL + ZZTEST1 (maestro): DEBE ser permitido.
 DO $$
 BEGIN
-  INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
-  VALUES (NULL, 'ZZTEST1', 'ZZ prueba maestro 3.2C', 'activo', 1, true);
-  RAISE NOTICE 'PASS — NULL + ZZTEST1 permitido';
-EXCEPTION WHEN unique_violation THEN
-  RAISE NOTICE 'FAIL — NULL + ZZTEST1 rechazado (no esperado)';
+  BEGIN
+    INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
+    VALUES (NULL, 'ZZTEST1', 'ZZ prueba maestro 3.2C', 'activo', 1, true);
+    RAISE NOTICE 'PASS — C1: NULL + ZZTEST1 permitido';
+  EXCEPTION WHEN unique_violation THEN
+    RAISE NOTICE 'FAIL — C1: NULL + ZZTEST1 rechazado (no esperado)';
+  WHEN OTHERS THEN
+    RAISE NOTICE 'FAIL — C1: error inesperado: %', SQLERRM;
+  END;
 END $$;
 
--- C2 — empresa real + ZZTEST1: permitido (empresa obtenida dinamicamente)
+-- C2 — empresa real + ZZTEST1: DEBE ser permitido (empresa obtenida dinamicamente
+-- de public.empresas y guardada en _t32c_emp para reutilizarla en C4).
 DO $$
 DECLARE
   v_emp uuid;
 BEGIN
   SELECT id INTO v_emp FROM public.empresas ORDER BY id LIMIT 1;
   IF v_emp IS NULL THEN
-    RAISE NOTICE 'FAIL — no existe ninguna empresa real en public.empresas (no se pudo probar C2/C4)';
+    RAISE NOTICE 'FAIL — C2: NO EJECUTADA (no existe ninguna empresa real en public.empresas; no se inventan datos)';
   ELSE
-    INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
-    VALUES (v_emp, 'ZZTEST1', 'ZZ prueba empresa 3.2C', 'activo', 1, true);
-    RAISE NOTICE 'PASS — empresa + ZZTEST1 permitido';
+    BEGIN
+      INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
+      VALUES (v_emp, 'ZZTEST1', 'ZZ prueba empresa 3.2C', 'activo', 1, true);
+      INSERT INTO pg_temp._t32c_emp (empresa_id) VALUES (v_emp);
+      RAISE NOTICE 'PASS — C2: empresa + ZZTEST1 permitido';
+    EXCEPTION WHEN unique_violation THEN
+      RAISE NOTICE 'FAIL — C2: empresa + ZZTEST1 rechazado (no esperado)';
+    WHEN OTHERS THEN
+      RAISE NOTICE 'FAIL — C2: error inesperado: %', SQLERRM;
+    END;
   END IF;
-EXCEPTION WHEN unique_violation THEN
-  RAISE NOTICE 'FAIL — empresa + ZZTEST1 rechazado (no esperado)';
 END $$;
 
--- C3 — segundo NULL + ZZTEST1: rechazado (unique_violation)
+-- C3 — segundo NULL + ZZTEST1: DEBE producir unique_violation.
 DO $$
 BEGIN
-  INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
-  VALUES (NULL, 'ZZTEST1', 'ZZ prueba maestro duplicado 3.2C', 'activo', 1, true);
-  RAISE NOTICE 'FAIL — segundo NULL + ZZTEST1 permitido (constraint no actua)';
-EXCEPTION WHEN unique_violation THEN
-  RAISE NOTICE 'PASS — segundo NULL + ZZTEST1 rechazado';
+  BEGIN
+    INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
+    VALUES (NULL, 'ZZTEST1', 'ZZ prueba maestro duplicado 3.2C', 'activo', 1, true);
+    RAISE NOTICE 'FAIL — C3: segundo NULL + ZZTEST1 permitido (constraint no actua)';
+  EXCEPTION WHEN unique_violation THEN
+    RAISE NOTICE 'PASS — C3: segundo NULL + ZZTEST1 rechazado (unique_violation)';
+  WHEN OTHERS THEN
+    RAISE NOTICE 'FAIL — C3: error inesperado: %', SQLERRM;
+  END;
 END $$;
 
--- C4 — segunda misma empresa + ZZTEST1: rechazado (unique_violation)
+-- C4 — segunda misma empresa + ZZTEST1: DEBE producir unique_violation.
+-- Usa exactamente el empresa_id registrado por C2 en _t32c_emp.
 DO $$
 DECLARE
   v_emp uuid;
 BEGIN
-  SELECT id INTO v_emp FROM public.empresas ORDER BY id LIMIT 1;
+  SELECT empresa_id INTO v_emp FROM pg_temp._t32c_emp LIMIT 1;
   IF v_emp IS NULL THEN
-    RAISE NOTICE 'FAIL — no existe empresa real (no se pudo probar C4)';
+    RAISE NOTICE 'FAIL — C4: NO EJECUTADA (C2 no registro ninguna empresa real; se esperaba unique_violation)';
   ELSE
-    INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
-    VALUES (v_emp, 'ZZTEST1', 'ZZ prueba empresa duplicada 3.2C', 'activo', 1, true);
-    RAISE NOTICE 'FAIL — segunda misma empresa + ZZTEST1 permitido (constraint no actua)';
+    BEGIN
+      INSERT INTO public.cuentas_contables (empresa_id, codigo, nombre, tipo, nivel, activa)
+      VALUES (v_emp, 'ZZTEST1', 'ZZ prueba empresa duplicada 3.2C', 'activo', 1, true);
+      RAISE NOTICE 'FAIL — C4: segunda misma empresa + ZZTEST1 permitido (constraint no actua)';
+    EXCEPTION WHEN unique_violation THEN
+      RAISE NOTICE 'PASS — C4: segunda misma empresa + ZZTEST1 rechazado (unique_violation)';
+    WHEN OTHERS THEN
+      RAISE NOTICE 'FAIL — C4: error inesperado: %', SQLERRM;
+    END;
   END IF;
-EXCEPTION WHEN unique_violation THEN
-  RAISE NOTICE 'PASS — segunda misma empresa + ZZTEST1 rechazado';
 END $$;
 
--- ROLLBACK obligatorio: los datos ZZTEST1 jamás se persisten.
+-- ROLLBACK obligatorio: revertira SOLO este bloque transaccional (inserciones
+-- ZZTEST1). El constraint ya fue persistido por el COMMIT de la Seccion 2 y no
+-- se ve afectado.
 ROLLBACK;
+
+-- Limpieza de la tabla temporal de sesion (opcional: cae al cerrar sesion).
+DROP TABLE IF EXISTS pg_temp._t32c_emp;
 
 -- ============================================================================
 -- SECCION 4: POST-CHECK (verificaciones posteriores)
@@ -198,11 +259,14 @@ ROLLBACK;
 -- V1 — Tabla existe.
 SELECT to_regclass('public.cuentas_contables') AS tabla_cuentas;
 
--- V2 — Constraint existe (por nombre) y
--- V3 — su definicion es realmente UNIQUE NULLS NOT DISTINCT.
-SELECT
-  count(*) AS n_constraint_nombre,
-  bool_and(pg_get_constraintdef(oid) ILIKE '%NULLS NOT DISTINCT (empresa_id, codigo)%') AS def_correcta
+-- V2 — Constraint existe (por nombre).
+SELECT count(*) AS n_constraint_nombre
+FROM pg_constraint
+WHERE conname='uq_cuenta_empresa_codigo'
+  AND conrelid='public.cuentas_contables'::regclass;
+
+-- V3 — Su definicion es realmente UNIQUE NULLS NOT DISTINCT.
+SELECT pg_get_constraintdef(oid) AS def_constraint
 FROM pg_constraint
 WHERE conname='uq_cuenta_empresa_codigo'
   AND conrelid='public.cuentas_contables'::regclass;
@@ -229,6 +293,68 @@ SELECT count(*) AS n_duplicados FROM (
   GROUP BY empresa_id, codigo
   HAVING count(*) > 1
 ) d;
+
+-- GATE 3.2C-R2 — BLOQUEO de cierre: fuerza que la migracion no pueda
+-- terminar aparentando exito si algun invariante falla. Corre DESPUES del
+-- ROLLBACK (transaccion propia), sin escribir datos, y sobre un constraint
+-- ya persistido por el COMMIT de la Seccion 2.
+DO $$
+DECLARE
+  v_def        text;
+  v_idx        boolean;
+  v_n          bigint;
+  v_zz         bigint;
+  v_dups       bigint;
+  v_empresas   bigint;
+BEGIN
+  SELECT pg_get_constraintdef(oid) INTO v_def
+    FROM pg_constraint
+   WHERE conname='uq_cuenta_empresa_codigo'
+     AND conrelid='public.cuentas_contables'::regclass;
+
+  IF v_def IS NULL THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: el constraint uq_cuenta_empresa_codigo NO existe';
+  END IF;
+  IF v_def ILIKE '%NULLS NOT DISTINCT (empresa_id, codigo)%' IS NOT TRUE THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: definicion del constraint incorrecta: %', v_def;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM pg_indexes
+     WHERE schemaname='public' AND tablename='cuentas_contables'
+       AND indexname='uq_cuentas_contables_empresa_codigo'
+  ) INTO v_idx;
+  IF v_idx IS NOT TRUE THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: falta el indice uq_cuentas_contables_empresa_codigo';
+  END IF;
+
+  SELECT count(*) INTO v_n    FROM public.cuentas_contables;
+  IF v_n <> 47 THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: conteo de cuentas alterado: % (referencia 47)', v_n;
+  END IF;
+
+  SELECT count(*) INTO v_zz   FROM public.cuentas_contables WHERE codigo='ZZTEST1';
+  IF v_zz <> 0 THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: quedaron datos ZZTEST1 persistidos (% registros)', v_zz;
+  END IF;
+
+  SELECT count(*) INTO v_dups FROM (
+    SELECT empresa_id, codigo
+    FROM public.cuentas_contables
+    GROUP BY empresa_id, codigo
+    HAVING count(*) > 1
+  ) d;
+  IF v_dups <> 0 THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: se detectaron % duplicados (empresa_id,codigo)', v_dups;
+  END IF;
+
+  SELECT count(*) INTO v_empresas FROM public.empresas;
+  IF v_empresas < 1 THEN
+    RAISE EXCEPTION 'GATE 3.2C-R2 BLOQUEO: public.empresas sin registros (C2/C4 no pudieron probarse)';
+  END IF;
+
+  RAISE NOTICE 'GATE 3.2C-R2 OK: constraint persistido, indice plano intacto, 47 cuentas, 0 ZZTEST1, 0 duplicados, % empresa(s) disponible(s) para C2/C4', v_empresas;
+END $$;
 
 -- ============================================================================
 -- SECCION 5: ROLLBACK (solo para revertir; NO ejecutar en esta fase)
