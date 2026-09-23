@@ -42,6 +42,7 @@ export default function PageProveedores({ showToast, empId }) {
     search: busqueda,
     columns: ['nombre', 'nit', 'telefono', 'email', 'direccion', 'contacto_nombre', 'contacto_tel', 'notas'],
     order: 'nombre.asc',
+    empresaId: empId,
   });
 
   useEffect(() => { setPage(1); }, [filtroTipo]);
@@ -50,8 +51,8 @@ export default function PageProveedores({ showToast, empId }) {
     setLoadingHist(true);
     try {
       const [g, m] = await Promise.all([
-        api(`/gastos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50`).catch(()=>[]),
-        api(`/mantenimientos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50`).catch(()=>[]),
+api(`/gastos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50&empresa_id=eq.${empId}`).catch(()=>[]),
+      api(`/mantenimientos?proveedor_id=eq.${provId}&order=fecha.desc&limit=50&empresa_id=eq.${empId}`).catch(()=>[]),
       ]);
       setHistorial({ gastos: g||[], compras:[], mantenimientos: m||[] });
     } catch { setHistorial({ gastos:[], compras:[], mantenimientos:[] }); }

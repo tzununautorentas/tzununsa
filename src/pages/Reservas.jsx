@@ -59,16 +59,16 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await dbGet("vehiculos", "&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes&estado=eq.disponible&limit=100");
+        const res = await dbGet("vehiculos", `&empresa_id=eq.${empId}&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes&estado=eq.disponible&limit=100`);
         if (res) setFlotaVehiculos(res);
       } catch {}
     })();
-  }, []);
+  }, [empId]);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await dbGet("empleados", "&select=id,nombre,puesto,estado&estado=eq.activo&order=nombre.asc&limit=200");
+        const res = await dbGet("empleados", `&empresa_id=eq.${empId}&select=id,nombre,puesto,estado&estado=eq.activo&order=nombre.asc&limit=200`);
         if (res) setEmpleados(res);
       } catch {}
     })();
@@ -357,6 +357,7 @@ export default function PageReservas({ showToast, empId }) {
     search: busqueda,
     columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
     order: 'created_at.desc.nullslast',
+    empresaId: empId,
   });
 
   const rowsOrdenadas = ordenarNumeracion(rows, "fecha_inicio");

@@ -31,6 +31,7 @@ export default function PageFlota({ showToast, empId }) {
     search: busqueda,
     columns: ['marca', 'modelo', 'placa', 'codigo', 'color', 'tipo', 'vin', 'notas'],
     order: 'codigo.asc',
+    empresaId: empId,
   });
 
   const ordenProp = { propio: 0, socio: 1, alquilado: 2 };

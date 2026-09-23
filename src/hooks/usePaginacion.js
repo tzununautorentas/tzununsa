@@ -1,23 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiFetch } from '../config.js';
+import { apiFetch, filtroEmpresa } from '../config.js';
 
-export function usePaginacion({ table, query = '', search = '', columns = [], pageSize: ps = 25, order = 'created_at.desc' }) {
+export function usePaginacion({ table, query = '', search = '', columns = [], pageSize: ps = 25, order = 'created_at.desc', empresaId = null }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(ps);
   const prevSearch = useRef(search);
-  const paramsRef = useRef({ table, query, search, columns, page, pageSize, order });
-  paramsRef.current = { table, query, search, columns, page, pageSize, order };
+  const paramsRef = useRef({ table, query, search, columns, page, pageSize, order, empresaId });
+  paramsRef.current = { table, query, search, columns, page, pageSize, order, empresaId };
 
-  const loadKey = [table, query, search, page, pageSize, order, JSON.stringify(columns)].join('|');
+  const loadKey = [table, query, search, page, pageSize, order, empresaId, JSON.stringify(columns)].join('|');
 
   const load = useCallback(async () => {
     const p = paramsRef.current;
     setLoading(true);
     try {
       let q = p.query ? `&${p.query}` : '';
+      const fEmp = filtroEmpresa(p.empresaId);
+      if (fEmp) q += `&${fEmp}`;
       if (p.search && p.columns.length > 0) {
         const clauses = p.columns.map(c => `${c}.ilike.*${encodeURIComponent(p.search)}*`);
         q += `&or=(${clauses.join(',')})`;

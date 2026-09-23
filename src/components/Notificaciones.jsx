@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
-import { T, S, dbGet, fmtD, fmt } from '../config.js';
+import { T, S, dbGet, fmtD, fmt, filtroEmpresa } from '../config.js';
 import { markRead, markAllRead, cleanupReadIds } from '../services/readState.js';
 
 // ─── Hook principal ───────────────────────────────────────────────────────────
-export function useNotificaciones() {
+export function useNotificaciones(empId) {
   const [alerts,  setAlerts]  = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -14,12 +14,13 @@ export function useNotificaciones() {
     const en3    = new Date(); en3.setDate(hoy.getDate() + 3);
 
     try {
+      const fe = filtroEmpresa(empId);
       const [reservas, vehiculos, mantos, cotizaciones, facturas] = await Promise.all([
-        dbGet("reservas",      "&estado=in.(confirmada,pendiente)&select=id,numero,cliente_nombre,vehiculo_nombre,fecha_inicio,estado"),
-        dbGet("vehiculos",     "&select=id,marca,modelo,placa,km_actual,estado"),
-        dbGet("mantenimientos","&estado=eq.completado&select=id,vehiculo_id,km_salida,fecha_salida&order=km_salida.desc"),
-        dbGet("cotizaciones",  "&estado=eq.enviada&select=id,numero,cliente_nombre,created_at,total_gtq"),
-        dbGet("facturas",      "&estado=in.(emitida,certificada,parcial)&select=id,numero,nombre_receptor,saldo_pendiente"),
+        dbGet("reservas",      `&estado=in.(confirmada,pendiente)&select=id,numero,cliente_nombre,vehiculo_nombre,fecha_inicio,estado${fe ? "&"+fe : ""}`),
+        dbGet("vehiculos",     `&select=id,marca,modelo,placa,km_actual,estado${fe ? "&"+fe : ""}`),
+        dbGet("mantenimientos",`&estado=eq.completado&select=id,vehiculo_id,km_salida,fecha_salida&order=km_salida.desc${fe ? "&"+fe : ""}`),
+        dbGet("cotizaciones",  `&estado=eq.enviada&select=id,numero,cliente_nombre,created_at,total_gtq${fe ? "&"+fe : ""}`),
+        dbGet("facturas",      `&estado=in.(emitida,certificada,parcial)&select=id,numero,nombre_receptor,saldo_pendiente${fe ? "&"+fe : ""}`),
       ]);
 
       // ── 1. Reservas próximas (0-3 días) ───────────────────────────────────
@@ -94,14 +95,12 @@ export function useNotificaciones() {
     } catch (e) {
       console.error("Error cargando notificaciones:", e);
     }
-
-    // Ordenar: danger → warning → info
     const orden = { danger: 0, warning: 1, info: 2 };
     alertas.sort((a, b) => (orden[a.nivel] || 2) - (orden[b.nivel] || 2));
     cleanupReadIds(alertas.map(a => a.id));
     setAlerts(alertas);
     setLoading(false);
-  }, []);
+  }, [empId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -120,8 +119,8 @@ const TIPO_LETRA  = { reserva: "R", mantenimiento: "M", cobro: "$" };
 const TIPO_LABEL  = { reserva: "Reservas", mantenimiento: "Mantenimiento", cobro: "Cobros" };
 
 // ─── Componente Bell (insertar en el header de App.jsx) ───────────────────────
-export function NotificacionesBell({ isMobile = false }) {
-  const { alerts, loading, reload } = useNotificaciones();
+export function NotificacionesBell({ isMobile = false, empId = null }) {
+  const { alerts, loading, reload } = useNotificaciones(empId);
   const [open, setOpen] = useState(false);
   const [filtro, setFiltro] = useState("todos");
 

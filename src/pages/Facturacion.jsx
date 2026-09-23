@@ -231,6 +231,7 @@ export default function PageFacturacion({ showToast, empId, userEmail }) {
     search: busqueda,
     columns: ['cliente_nombre', 'cliente_nit', 'numero_factura', 'numero', 'serie', 'descripcion', 'numero_autorizacion'],
     order: 'created_at.desc',
+    empresaId: empId,
   });
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { apiFetch } from '../config.js';
+import { apiFetch, filtroEmpresa } from '../config.js';
 
 const api = async (path, opts = {}) => {
   try {
@@ -9,17 +9,22 @@ const api = async (path, opts = {}) => {
   } catch { return []; }
 };
 
-export async function loadDashboardData() {
+export async function loadDashboardData(empId) {
+  const fe = filtroEmpresa(empId);
+  const q = (base) => {
+    if (!fe) return base;
+    return `${base}${base.includes('?') ? '&' : '?'}${fe}`;
+  };
   const [vehiculos, reservas, cotizaciones, facturas, movimientos, cuentas, clientes, mantenimientos, contratos] = await Promise.all([
-    api('/vehiculos?order=created_at.desc'),
-    api('/reservas?order=fecha_inicio.desc'),
-    api('/cotizaciones?order=created_at.desc'),
-    api('/facturas?order=created_at.desc'),
-    api('/movimientos_bancarios?order=fecha.desc'),
-    api('/cuentas_bancarias?select=*'),
-    api('/clientes?order=nombre.asc'),
-    api('/mantenimientos?order=created_at.desc'),
-    api('/contratos?order=created_at.desc'),
+    api(q('/vehiculos?order=created_at.desc')),
+    api(q('/reservas?order=fecha_inicio.desc')),
+    api(q('/cotizaciones?order=created_at.desc')),
+    api(q('/facturas?order=created_at.desc')),
+    api(q('/movimientos_bancarios?order=fecha.desc')),
+    api(q('/cuentas_bancarias?select=*')),
+    api(q('/clientes?order=nombre.asc')),
+    api(q('/mantenimientos?order=created_at.desc')),
+    api(q('/contratos?order=created_at.desc')),
   ]);
 
   const v = Array.isArray(vehiculos) ? vehiculos : [];

@@ -577,26 +577,26 @@ function GraficoIngresos({ data }) {
   );
 }
 // ─── Centro de control principal ───────────────────────────────────
-export default function PageDashboard() {
+export default function PageDashboard({ empId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   const load = async () => {
     setLoading(true);
-    const d = await loadDashboardData();
+    const d = await loadDashboardData(empId);
     setData(d);
     setLastUpdate(new Date());
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [empId]);
 
   // Auto-refresh cada 2 minutos
   useEffect(() => {
     const interval = setInterval(load, 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, [empId]);
 
   const hora = new Date().getHours();
   const saludo = hora < 12 ? 'Buenos dias' : hora < 18 ? 'Buenas tardes' : 'Buenas noches';

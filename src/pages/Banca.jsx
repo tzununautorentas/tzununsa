@@ -340,10 +340,10 @@ export default function PageBanca({ showToast, empId }) {
 
   const loadCuentas = async () => {
     setLoading(true);
-    const c = await dbGet("cuentas_bancarias");
+    const c = await dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`);
     const arr = Array.isArray(c) ? c : [];
     setCuentas(arr);
-    if (arr.length > 0 && !cuentaAct) setCuentaAct(arr[0]);
+    setCuentaAct(arr.length > 0 ? arr[0] : null);
     setLoading(false);
   };
 
@@ -354,9 +354,10 @@ export default function PageBanca({ showToast, empId }) {
     search: busqueda,
     columns: ['concepto', 'referencia', 'descripcion', 'categoria', 'notas', 'tipo'],
     order: 'fecha.asc',
+    empresaId: empId,
   });
 
-  useEffect(() => { loadCuentas(); }, []);
+  useEffect(() => { loadCuentas(); }, [empId]);
 
   const loadAllMovs = useCallback(async () => {
     if (!cuentaAct) { setAllMovs([]); return; }

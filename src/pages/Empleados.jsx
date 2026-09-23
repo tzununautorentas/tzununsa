@@ -27,9 +27,9 @@ const EF = {
 };
 
 // ─── Generar codigo auto ──────────────────────────────────────────
-async function generarCodigo() {
+async function generarCodigo(empId) {
   try {
-    const d = await api("/empleados?select=codigo&order=codigo.desc&limit=1");
+    const d = await api(`/empleados?select=codigo&order=codigo.desc&limit=1&empresa_id=eq.${empId}`);
     const ultimo = d?.[0]?.codigo;
     if (!ultimo) return "EMP-0001";
     const n = parseInt(ultimo.replace(/\D/g, "")) || 0;
@@ -83,6 +83,7 @@ export default function PageEmpleados({ showToast, empId }) {
     search: busqueda,
     columns: ['nombre', 'codigo', 'telefono', 'puesto', 'dpi', 'nit', 'email', 'direccion', 'notas'],
     order: 'nombre.asc',
+    empresaId: empId,
   });
 
   useEffect(() => { setPage(1); }, [filtroTipo, filtroEst]);
@@ -92,9 +93,9 @@ export default function PageEmpleados({ showToast, empId }) {
     setLoadHist(true);
     try {
       const [g, p, r] = await Promise.all([
-        api(`/gastos?empleado_nombre=eq.${encodeURIComponent(nombre)}&order=fecha.desc&limit=30`).catch(() => []),
-        api(`/pagos?cliente_nombre=eq.${encodeURIComponent(nombre)}&order=fecha.desc&limit=30`).catch(() => []),
-        api(`/reservas?conductor_nombre=eq.${encodeURIComponent(nombre)}&order=created_at.desc&limit=50`).catch(() => []),
+        api(`/gastos?empleado_nombre=eq.${encodeURIComponent(nombre)}&order=fecha.desc&limit=30&empresa_id=eq.${empId}`).catch(() => []),
+        api(`/pagos?cliente_nombre=eq.${encodeURIComponent(nombre)}&order=fecha.desc&limit=30&empresa_id=eq.${empId}`).catch(() => []),
+        api(`/reservas?conductor_nombre=eq.${encodeURIComponent(nombre)}&order=created_at.desc&limit=50&empresa_id=eq.${empId}`).catch(() => []),
       ]);
       setHistorial({ gastos: g || [], pagos: p || [], asignaciones: r || [] });
     } catch { setHistorial({ gastos: [], pagos: [], asignaciones: [] }); }
@@ -103,7 +104,7 @@ export default function PageEmpleados({ showToast, empId }) {
 
   // ─── Abrir nuevo ──────────────────────────────────────────────
   const abrirNuevo = async () => {
-    const codigo = await generarCodigo();
+    const codigo = await generarCodigo(empId);
     setF({ ...EF, codigo });
     setEditItem(null); setVista("form");
   };

@@ -33,10 +33,10 @@ export default function PageMantenimiento({ showToast, empId }) {
 
   useEffect(() => {
     (async () => {
-      const v = await dbGet("vehiculos", "&order=marca.asc");
+      const v = await dbGet("vehiculos", `&empresa_id=eq.${empId}&order=marca.asc`);
       setVehiculos(Array.isArray(v) ? v : []);
     })();
-  }, []);
+  }, [empId]);
 
   const calcTotal = (rep, mo) => {
     const t = (parseFloat(rep) || 0) + (parseFloat(mo) || 0);
@@ -53,6 +53,7 @@ export default function PageMantenimiento({ showToast, empId }) {
     search: busqueda,
     columns: ['vehiculo_nombre', 'placa', 'tipo', 'descripcion', 'taller', 'mecanico', 'notas'],
     order: 'fecha.desc',
+    empresaId: empId,
   });
 
   const abrirEditar = r => {

@@ -35,15 +35,16 @@ export default function PagePagos({ showToast, empId, userEmail }) {
     search: busqueda,
     columns: ['numero', 'cliente_nombre', 'concepto', 'referencia', 'notas'],
     order: 'fecha.desc',
+    empresaId: empId,
   });
 
   useEffect(() => {
     (async () => {
       const [r,fa,co,cu,em] = await Promise.all([
-        dbGet("reservas","&estado=in.(confirmada,en_curso,completada)&select=id,numero,cliente_nombre,monto"),
-        dbGet("facturas","&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente,emisor_id"),
-        dbGet("cotizaciones","&estado=in.(aprobada,orden_venta)&select=id,numero,cliente_nombre,total_gtq"),
-        dbGet("cuentas_bancarias"),
+dbGet("reservas",`&empresa_id=eq.${empId}&estado=in.(confirmada,en_curso,completada)&select=id,numero,cliente_nombre,monto`),
+dbGet("facturas",`&empresa_id=eq.${empId}&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente,emisor_id`),
+dbGet("cotizaciones",`&empresa_id=eq.${empId}&estado=in.(aprobada,orden_venta)&select=id,numero,cliente_nombre,total_gtq`),
+dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`),
         dbGet("emisores", `&empresa_id=eq.${empId}&order=nombre_entidad.asc`),
       ]);
       setReservas(Array.isArray(r)?r:[]);

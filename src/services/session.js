@@ -4,11 +4,13 @@ let _sb = null;
 let _inited = false;
 let _userEmail = null;
 let _userName = "Usuario";
+let _userId = null;
 
 function setUserFromSession(session) {
   const email = session?.user?.email || "Usuario";
   _userEmail = email;
   _userName = email.split("@")[0] || "Usuario";
+  _userId = session?.user?.id || null;
 }
 
 export function initAuth(sbUrl, sbKey) {
@@ -78,6 +80,7 @@ export async function logout() {
   try { await client().auth.signOut(); } catch {}
   _userEmail = null;
   _userName = "Usuario";
+  _userId = null;
   try { localStorage.removeItem("tzunun_session"); } catch {}
 }
 
@@ -87,4 +90,8 @@ export function getUserEmail() {
 
 export function getUserName() {
   return _userName;
+}
+
+export function getUserId() {
+  return _userId;
 }

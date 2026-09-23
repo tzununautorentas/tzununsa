@@ -1218,13 +1218,14 @@ export default function PageCotizaciones({ showToast, empId }) {
     search: busqueda,
     columns: ['numero', 'cliente_nombre', 'cliente_nit', 'cliente_dir', 'vehiculo_nombre', 'descripcion_servicio', 'notas'],
     order: 'created_at.desc.nullslast',
+    empresaId: empId,
   });
 
   const rowsOrdenadas = ordenarNumeracion(rows, "fecha_emision");
 
   useEffect(() => {
-    dbGet("clientes", "&order=codigo.asc,nombre.asc").then(d => setClientes(Array.isArray(d) ? d : []));
-  }, []);
+    dbGet("clientes", `&empresa_id=eq.${empId}&order=codigo.asc,nombre.asc`).then(d => setClientes(Array.isArray(d) ? d : []));
+  }, [empId]);
 
   const del = async id => {
     if (!confirm("Eliminar esta cotizacion permanentemente?")) return;

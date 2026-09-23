@@ -1,5 +1,5 @@
 // --- SUPABASE ---
-import { initAuth, getAccessToken, refreshSession, signIn, logout } from "./services/session.js";
+import { initAuth, getAccessToken, refreshSession, signIn, logout, getUserId } from "./services/session.js";
 
 export const SB = "https://fmijbpatkddkbxlkfoza.supabase.co";
 export const SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaWpicGF0a2Rka2J4bGtmb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTQ3NDAsImV4cCI6MjA5MDQ5MDc0MH0.zEVmDgLUQWv9gnQrJggGhAmTuqRcQyhGbMvcL_i8joA";
@@ -147,9 +147,50 @@ export async function dbDel(table, id) {
   }
 }
 
+// Filtro REST de empresa activa (FASE 3.5). Devuelve cadena vacía si no hay empresa.
+export function filtroEmpresa(empId) {
+  return empId ? `empresa_id=eq.${empId}` : "";
+}
+
+// Resolución de empresas autorizadas del usuario autenticado (FASE 3.5).
+// Replica el contrato de authz.empresas_autorizadas() mediante REST autenticado:
+//   auth_id (JWT) -> usuarios_sistema.id -> usuario_empresas (activo=true) -> empresas.
+// La RPC authz no está expuesta por PostgREST (solo public/graphql_public), por eso
+// se resuelve desde las relaciones existentes. FASE 3.6 endurecerá con RLS.
+export async function getEmpresasAutorizadas() {
+  try {
+    const authId = getUserId();
+    if (!authId) return [];
+    const usr = await apiFetch(`/usuarios_sistema?select=id&auth_id=eq.${authId}&limit=1`);
+    const us = usr.ok ? await usr.json() : [];
+    const usuario = Array.isArray(us) && us.length ? us[0] : null;
+    if (!usuario?.id) return [];
+    const rels = await apiFetch(`/usuario_empresas?select=empresa_id&usuario_id=eq.${usuario.id}&activo=eq.true`);
+    if (!rels.ok) return [];
+    const rj = await rels.json();
+    const ids = Array.isArray(rj) ? rj.map(r => r.empresa_id).filter(Boolean) : [];
+    if (ids.length === 0) return [];
+    const ent = await apiFetch(`/empresas?select=id,nombre&id=in.(${ids.map(encodeURIComponent).join(",")})`);
+    if (!ent.ok) return [];
+    const ej = await ent.json();
+    return Array.isArray(ej) ? ej : [];
+  } catch { return []; }
+}
+
+// Fallback LEGACY (secundario): primera empresa del catálogo global.
+export async function getEmpresaFallback() {
+  try {
+    const ent = await apiFetch(`/empresas?select=id,nombre&limit=1`);
+    const ej = ent.ok ? await ent.json() : [];
+    return Array.isArray(ej) && ej.length ? ej[0] : null;
+  } catch { return null; }
+}
+
 export async function getEmpId() {
-  const d = await dbGet("empresas", "&select=id&limit=1");
-  return d && d[0] ? d[0].id : null;
+  const autorizadas = await getEmpresasAutorizadas();
+  if (autorizadas && autorizadas.length > 0) return autorizadas[0].id;
+  const fb = await getEmpresaFallback();
+  return fb ? fb.id : null;
 }
 
 // --- SUPABASE AUTH (delegado al SDK) ---
@@ -161,7 +202,7 @@ export async function sbLogout(token) {
   await logout();
 }
 
-export { getAccessToken, refreshSession, logout };
+export { getAccessToken, refreshSession, logout, getUserId };
 
 // --- THEME (reactivo via CSS Variables) ---
 // Cualquier propiedad accedida en T se resuelve como var(--theme-<prop>)

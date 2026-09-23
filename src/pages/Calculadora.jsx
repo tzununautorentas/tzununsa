@@ -71,11 +71,11 @@ export default function PageCalculadora({ showToast, empId }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await dbGet("vehiculos", "&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion,foto_url&estado=eq.disponible&limit=100");
+        const res = await dbGet("vehiculos", `&empresa_id=eq.${empId}&select=marca,modelo,tarifa_dia,tarifa_semana,tarifa_mes,capacidad,transmision,aire_acondicionado,combustible,capacidad_equipaje,traccion,foto_url&estado=eq.disponible&limit=100`);
         if (res) setFlotaVehiculos(res);
       } catch {}
     })();
-  }, []);
+  }, [empId]);
 
   const [tf, setTf] = useState({
     cliente: "", clienteNit: "", clienteDir: "", clienteCodigo: "",

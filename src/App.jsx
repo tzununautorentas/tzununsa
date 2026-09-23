@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Component } from "react";
-import { T, S, dbGet } from "./config.js";
+import { T, S, getEmpresasAutorizadas, getEmpresaFallback } from "./config.js";
 import { getSession, onAuth, signIn, logout, getUserEmail } from "./services/session.js";
 import { ThemeProvider, useTheme } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
@@ -174,6 +174,39 @@ function ThemeToggle() {
   );
 }
 
+// ─── Selector de empresa activa (FASE 3.5) ─────────────────────────
+function EmpresaSelector({ empresas, activa, onChange }) {
+  if (!empresas || empresas.length === 0) return null;
+  if (empresas.length === 1) {
+    return (
+      <div title="Empresa activa"
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "5px 10px", borderRadius: 8,
+          background: T.accDim, border: `1px solid ${T.acc}44`,
+          fontSize: 11, fontWeight: 700, color: T.acc,
+          whiteSpace: "nowrap", maxWidth: 180,
+          overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+        <span style={{ fontSize: 12, flexShrink: 0 }}>🏢</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{empresas[0].nombre}</span>
+      </div>
+    );
+  }
+  return (
+    <select value={activa?.id || ""}
+      onChange={e => onChange(e.target.value)}
+      title="Cambiar empresa activa"
+      style={{
+        ...S.sel, width: "auto", maxWidth: 190,
+        padding: "5px 8px", fontSize: 11, fontWeight: 700,
+        color: T.acc, cursor: "pointer",
+      }}>
+      {empresas.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+    </select>
+  );
+}
+
 // ─── Icono de modulo ──────────────────────────────────────────────
 function ModIcon({ mod, size = 52 }) {
   const Icon = mod.icon;
@@ -313,7 +346,7 @@ function LeftDrawer({ open, pag, onSelect, onClose, userName, onLogout }) {
 }
 
 // ─── Layout Movil ─────────────────────────────────────────────────
-function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail }) {
+function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail, empresasAutorizadas, empresaActiva, onChangeEmpresa }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [onHome,     setOnHome]     = useState(true);
   const userName  = userEmail.split("@")[0];
@@ -354,14 +387,15 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
           <div style={{ fontSize: 14, fontWeight: 700, color: T.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {onHome ? "Centro de Control" : TITULOS[pag] || ""}
           </div>
+          <EmpresaSelector empresas={empresasAutorizadas} activa={empresaActiva} onChange={onChangeEmpresa} />
         </div>
-        <NotificacionesBell isMobile={true} />
+        <NotificacionesBell isMobile={true} empId={empId} />
       </div>
 
       {/* Contenido */}
       <div style={{ flex: 1, overflowY: "auto", padding: "14px" }}>
         {onHome
-          ? <PageDashboard />
+          ? <PageDashboard empId={empId} />
           : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} /></ErrBoundary>
         }
       </div>
@@ -433,7 +467,7 @@ function LoginScreen({ onLogin }) {
 }
 
 // ─── Layout Desktop ───────────────────────────────────────────────
-function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, userEmail }) {
+function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, userEmail, empresasAutorizadas, empresaActiva, onChangeEmpresa }) {
   const [collapsed, setCollapsed] = useState(false);
   const userName = userEmail.split("@")[0];
 
@@ -565,7 +599,8 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
             {TITULOS[pag] || ""}
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            <NotificacionesBell isMobile={false} />
+            <EmpresaSelector empresas={empresasAutorizadas} activa={empresaActiva} onChange={onChangeEmpresa} />
+            <NotificacionesBell isMobile={false} empId={empId} />
             <ThemeToggle />
             <div style={{ fontSize: 11, color: T.sub }}>
               {new Date().toLocaleDateString("es-GT", {
@@ -589,12 +624,16 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
 }
 
 // ─── App principal ────────────────────────────────────────────────
+const EMPRESA_CLAVE = "tzunun_empresa_activa";
+
 function AppContent() {
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
   const [userEmail, setUserEmail] = useState("");
   const [pag,      setPag]      = useState("dashboard");
   const [empId,    setEmpId]    = useState(null);
+  const [empresaActiva, setEmpresaActiva] = useState(null);   // { id, nombre } de la empresa activa
+  const [empresasAutorizadas, setEmpresasAutorizadas] = useState([]); // empresa activa + opciones del selector
   const [toast,    setToast]    = useState(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth < 768
@@ -640,9 +679,28 @@ function AppContent() {
 
   useEffect(() => {
     if (!authed) return;
-    dbGet("empresas", "&select=id&limit=1").then(d => {
-      if (d?.[0]) setEmpId(d[0].id);
-    });
+    let cancel = false;
+    (async () => {
+      // 1) Empresas autorizadas del usuario autenticado (RPC authz replicada vía REST)
+      let autorizadas = await getEmpresasAutorizadas();
+      if (cancel) return;
+      // 2) Fallback LEGACY (secundario) cuando no hay autorizadas
+      let lista = autorizadas && autorizadas.length ? autorizadas : null;
+      if (!lista) {
+        const fb = await getEmpresaFallback();
+        if (cancel) return;
+        lista = fb ? [fb] : [];
+      }
+      setEmpresasAutorizadas(lista);
+      // 3) Restaurar la empresa activa persistida si aún está autorizada; si no, primera
+      let persistida = null;
+      try { persistida = localStorage.getItem(EMPRESA_CLAVE); } catch {}
+      const activa = lista.find(e => String(e.id) === String(persistida)) || lista[0] || null;
+      setEmpresaActiva(activa);
+      setEmpId(activa ? activa.id : null);
+      if (activa) { try { localStorage.setItem(EMPRESA_CLAVE, activa.id); } catch {} }
+    })();
+    return () => { cancel = true; };
   }, [authed]);
 
   useEffect(() => {
@@ -679,8 +737,20 @@ function AppContent() {
   };
 
   const handleLogout = async () => {
+    try { localStorage.removeItem(EMPRESA_CLAVE); } catch {}
+    setEmpresaActiva(null);
+    setEmpId(null);
+    setEmpresasAutorizadas([]);
     await logout();
     setAuthed(false);
+  };
+
+  const onChangeEmpresa = (empIdSel) => {
+    const nex = empresasAutorizadas.find(e => String(e.id) === String(empIdSel));
+    if (!nex) return;
+    setEmpresaActiva(nex);
+    setEmpId(nex.id);
+    try { localStorage.setItem(EMPRESA_CLAVE, nex.id); } catch {}
   };
 
   if (checking) return null;
@@ -688,6 +758,7 @@ function AppContent() {
 
   const props = {
     pag, setPag, empId, showToast, toast, handleLogout, userEmail,
+    empresasAutorizadas, empresaActiva, onChangeEmpresa,
   };
 
   return isMobile

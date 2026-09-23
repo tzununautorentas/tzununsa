@@ -75,22 +75,22 @@ export default function PageContabilidad({ showToast, empId }) {
   // ─── Carga de cuentas ─────────────────────────────────────────
   const cargarCuentas = useCallback(async () => {
     try {
-      const data = await api("/cuentas_contables?order=codigo.asc&select=*");
+      const data = await api(`/cuentas_contables?order=codigo.asc&select=*&or=(empresa_id.is.null,empresa_id.eq.${empId})`);
       setCuentas(data || []);
     } catch { showToast("Error cargando catalogo", "err"); }
-  }, []);
+  }, [empId]);
 
   // ─── Carga de asientos ────────────────────────────────────────
   const cargarAsientos = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api(
-        `/asientos_contables?fecha=gte.${desdeDiario}&fecha=lte.${hastaDiario}&order=fecha.desc,created_at.desc&select=*`
+        `/asientos_contables?fecha=gte.${desdeDiario}&fecha=lte.${hastaDiario}&order=fecha.desc,created_at.desc&select=*&empresa_id=eq.${empId}`
       );
       setAsientos(data || []);
     } catch { showToast("Error cargando asientos", "err"); }
     finally { setLoading(false); }
-  }, [desdeDiario, hastaDiario]);
+  }, [desdeDiario, hastaDiario, empId]);
 
   useEffect(() => { cargarCuentas(); }, [cargarCuentas]);
   useEffect(() => {
@@ -184,7 +184,7 @@ export default function PageContabilidad({ showToast, empId }) {
     if (!cuentaMayor) { showToast("Selecciona una cuenta", "err"); return; }
     setLoadingMayor(true);
     try {
-      const lineas = await api(`/asiento_lineas?cuenta_id=eq.${cuentaMayor}&select=*,asientos_contables(fecha,descripcion,referencia,estado)`);
+      const lineas = await api(`/asiento_lineas?cuenta_id=eq.${cuentaMayor}&select=*,asientos_contables(empresa_id=eq.${empId},fecha,descripcion,referencia,estado)`);
       const filtradas = (lineas || [])
         .filter(l => {
           const f = l.asientos_contables?.fecha || "";
@@ -200,7 +200,7 @@ export default function PageContabilidad({ showToast, empId }) {
   const cargarBalance = async () => {
     setLoadingBalance(true);
     try {
-      const lineas = await api("/asiento_lineas?select=*,asientos_contables(fecha,estado),cuentas_contables(codigo,nombre,tipo,nivel)");
+      const lineas = await api(`/asiento_lineas?select=*,asientos_contables(empresa_id=eq.${empId},fecha,estado),cuentas_contables(codigo,nombre,tipo,nivel)`);
       const filtradas = (lineas || []).filter(l =>
         l.asientos_contables?.fecha <= fechaBalance &&
         l.asientos_contables?.estado === "activo"
@@ -225,7 +225,7 @@ export default function PageContabilidad({ showToast, empId }) {
   const cargarResultados = async () => {
     setLoadingResult(true);
     try {
-      const lineas = await api("/asiento_lineas?select=*,asientos_contables(fecha,estado),cuentas_contables(codigo,nombre,tipo,nivel)");
+      const lineas = await api(`/asiento_lineas?select=*,asientos_contables(empresa_id=eq.${empId},fecha,estado),cuentas_contables(codigo,nombre,tipo,nivel)`);
       const f = (lineas || []).filter(l =>
         l.asientos_contables?.fecha >= desdeResult &&
         l.asientos_contables?.fecha <= hastaResult &&

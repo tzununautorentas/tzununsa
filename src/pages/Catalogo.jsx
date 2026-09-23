@@ -26,6 +26,7 @@ export default function PageCatalogo({ showToast, empId }) {
     search: busqueda,
     columns: ['nombre', 'codigo', 'tipo', 'descripcion', 'notas'],
     order: 'codigo.asc,nombre.asc',
+    empresaId: empId,
   });
 
   const abrirEditar = s => {

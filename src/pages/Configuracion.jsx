@@ -47,10 +47,11 @@ function PanelEmpresa({ emp, setEmp, guardarEmp, saving }) {
   const se = (k, v) => setEmp(p => ({ ...p, [k]: v }));
   const [cuentas, setCuentas] = useState([]);
   useEffect(() => {
-    dbGet("cuentas_bancarias", "&select=id,banco,numero_cuenta,moneda,titular&order=banco.asc").then(d => {
+    if (!emp?.id) return;
+    dbGet("cuentas_bancarias", `&empresa_id=eq.${emp.id}&select=id,banco,numero_cuenta,moneda,titular&order=banco.asc`).then(d => {
       setCuentas(Array.isArray(d) ? d : []);
     });
-  }, []);
+  }, [emp?.id]);
 
   const bancoOpc = cuentas.map(c => ({
     v: `${c.banco} - No. ${c.numero_cuenta}${c.moneda ? ` (${c.moneda})` : ""}${c.titular ? ` - Titular: ${c.titular}` : ""}`,
@@ -872,7 +873,7 @@ const PANELS = {
   notif: PanelNotif,
 };
 
-export default function PageConfiguracion({ showToast }) {
+export default function PageConfiguracion({ showToast, empId: empIdProp }) {
   const [sec, setSec] = useState("org");
   const [sub, setSub] = useState("empresa");
   const [emp, setEmp] = useState({});
@@ -883,10 +884,17 @@ export default function PageConfiguracion({ showToast }) {
   });
 
   useEffect(() => {
-    dbGet("empresas", "&select=*&limit=1").then(d => {
-      if (d && d[0]) { setEmp(d[0]); setEmpId(d[0].id); }
-    });
-  }, []);
+    const eId = empIdProp;
+    if (eId) {
+      dbGet("empresas", `&select=*&id=eq.${eId}`).then(d => {
+        if (d && d[0]) { setEmp(d[0]); setEmpId(eId); }
+      });
+    } else {
+      dbGet("empresas", "&select=*&limit=1").then(d => {
+        if (d && d[0]) { setEmp(d[0]); setEmpId(d[0].id); }
+      });
+    }
+  }, [empIdProp]);
 
   const guardarEmp = async () => {
     if (!emp.nombre?.trim()) { showToast("Nombre requerido", "err"); return; }

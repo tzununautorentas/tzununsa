@@ -23,6 +23,7 @@ export default function PageClientes({ showToast, empId }) {
     table: 'clientes', query: '', search: busqueda,
     columns: ['nombre', 'codigo', 'nit', 'telefono', 'email', 'direccion', 'contacto', 'notas'],
     order: 'codigo.asc',
+    empresaId: empId,
   });
 
   useEffect(() => {

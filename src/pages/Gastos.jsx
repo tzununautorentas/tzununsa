@@ -669,6 +669,7 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
     search: busqueda,
     columns: ['descripcion', 'proveedor', 'empleado_nombre', 'numero_factura', 'categoria', 'referencia', 'notas', 'vehiculo_nombre'],
     order: 'fecha.desc',
+    empresaId: empId,
   });
 
   // ── Flujo de aprobaciones ──
@@ -691,8 +692,8 @@ function ModGastos({ empId, showToast, vehiculos, reservas, empleados, proveedor
     try {
       // 1. Buscar la cuenta de gasto por categoria
       const codigoCuenta = CATEGORIA_CUENTA[gasto.categoria] || '6.11';
-      const cuentasGasto = await api(`/cuentas_contables?codigo=eq.${codigoCuenta}&select=*`);
-      const cuentaCaja   = await api(`/cuentas_contables?codigo=eq.1.1.1&select=*`);
+      const cuentasGasto = await api(`/cuentas_contables?codigo=eq.${codigoCuenta}&select=*&or=(empresa_id.is.null,empresa_id.eq.${empId})`);
+      const cuentaCaja   = await api(`/cuentas_contables?codigo=eq.1.1.1&select=*&or=(empresa_id.is.null,empresa_id.eq.${empId})`);
 
       const cuentaDebeId  = cuentasGasto?.[0]?.id;
       const cuentaHaberId = cuentaCaja?.[0]?.id;
