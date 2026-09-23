@@ -137,12 +137,12 @@ Consulta: `or=(empresa_id.is.null,empresa_id.eq.<activa>)`. Las cuentas nuevas s
 
 - Build PASS (§9).
 - Revisión estática/por grep: todas las tablas empresariales consultadas llevan `empresa_id=eq.<activa>` o el híbrido correspondiente.
-- **Pendiente (manual del owner, navegador con credencial real):**
-  - Selector con ≥2 empresas autorizadas → solo se ven datos de la activa.
-  - Cambio de empresa → todas las vistas/dashboard recargan.
-  - Fallback legacy (usuario sin `usuario_empresas`).
-  - Restauración tras recargar la página.
-  - Desescalada si la empresa activa deja de autorizar (caer a primera autorizada/fallback sin crash).
+- **Prueba manual del owner (navegador, credencial real): PASÓ** ✅
+  - Login autenticado → chip de empresa activa visible (`Transportes Tz´unun`).
+  - Network/DevTools: llamadas con `empresa_id=eq.adc5f324-a108-49ad-875c-779afe3b9f7f` en dashboard, módulos y notificaciones.
+  - Resolución por REST autenticado confirmada: `usuarios_sistema` (auth_id) → `usuario_empresas` (activo=true) → `empresas`.
+  - Persistencia `tzunun_empresa_activa` en localStorage y restauración al recargar OK.
+  - **Pendiente**: selector con ≥2 empresas (bloqueado, ver §11).
 
 ---
 
@@ -151,6 +151,8 @@ Consulta: `or=(empresa_id.is.null,empresa_id.eq.<activa>)`. Las cuentas nuevas s
 No realizada: **no existe un usuario con ≥2 empresas autorizadas** en el entorno actual (1 sola empresa; 2 relaciones de usuarios distintos). Se permitió por la regla de no modificar datos en 3.5 (no crear empresas/relaciones ficticias).
 
 **Pendiente para cuando exista un usuario multiempresa:** validar selector + recarga por empresa + persistencia, y registrar el resultado en este informe.
+
+> Nota: el flujo de **descenso de privilegios** (empresa activa deja de estar autorizada → caer a primera autorizada/fallback) también queda pendiente de probar con datos reales; implementado y cubierto por revisión de código.
 
 ---
 
@@ -164,4 +166,5 @@ No realizada: **no existe un usuario con ≥2 empresas autorizadas** en el entor
 
 ---
 
-**ESTADO: FASE 3.5 IMPLEMENTADA (código + build PASS). Pendiente: prueba manual del owner multiempresa y cierre formal del GATE.**
+**ESTADO: FASE 3.5 IMPLEMENTADA Y VALIDADA (build PASS + prueba manual del owner OK).**
+**GATE 3.5: CERRADO. Pendiente futuro: prueba multiempresa y descenso de privilegios cuando exista un usuario con ≥2 empresas.**
