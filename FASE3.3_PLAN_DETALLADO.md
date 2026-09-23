@@ -166,4 +166,26 @@ UPDATE public.facturas f
 
 ---
 
-**ESTADO: PREPARADO PARA REVISIÓN — sin SQL generado ni ejecutado. Pendiente aprobación del usuario.**
+**ESTADO: FASE 3.3 EJECUTADA Y VALIDADA (GATE 3.3 OK) — ver `FASE3.3_INFORME.md` para las evidencias.**
+
+---
+
+## 15. EVIDENCIAS DE EJECUCIÓN
+
+Ejecutada por el owner en Supabase SQL Editor como OWNER (archivo `sql/migracion_fase_3_3.sql`, corrida completa). Resultado confirmado por consulta de SOLO LECTURA posterior:
+
+| Columna | Valor | Esperado GATE |
+|---|---|---|
+| `anuladas_con_saldo` | **0** | 0 ✅ |
+| `total_facturas` | **17** | 17 ✅ |
+| `suma_global` | **1687.50** | 1687.50 (2317.50 − 630) ✅ |
+| `fac054325_saldo` | **0.00** | 0 ✅ |
+| `fac054325_estado` | **anulada** | anulada (intacto) ✅ |
+| `fac221920_saldo` | **1687.50** | 1687.50 (intacta, GRUPO C) ✅ |
+| `fac221920_estado` | **parcial** | parcial (intacto) ✅ |
+| `bkp_filas` | **17** | 17 ✅ |
+| `bkp_suma` | **2317.50** | 2317.50 (evidencia pre-3.3) ✅ |
+
+**Nota sobre la UI del SQL Editor:** la corrida produjo el grid de V6 (`bkp_filas/bkp_suma`) como último resultado y los NOTICE (`PC0..PC6 OK`, `BACKUP OK`, `MIGRACION OK`, `GATE 3.3 OK`) en la pestaña **Messages**; no es una detención de la ejecución. La consulta de solo lectura posterior confirma que la transacción quedó **confirmada** (el backup `backup_facturas_saldos` persiste con la foto previa 17/2317.50).
+
+**GATE 3.3: CERRADO.** La migración es idempotente: una re-ejecución arroja `UPDATE 0 filas` y conserva el backup (anti-sobrescritura). Rollback disponible en Sección 5 del archivo si se requiere revertir.
