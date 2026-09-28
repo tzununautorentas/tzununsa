@@ -1,6 +1,18 @@
 # FASE 3.6 — PLAN DETALLADO DE IMPLEMENTACIÓN
 
 > Multiempresa · **Activación de ROW LEVEL SECURITY + políticas** sobre las tablas del negocio · Riesgo global ALTO
+> Revisión técnica **R3** incorporada (PUERTA 3.4, idempotencia de policies, separación pruebas OWNER/JWT, inventario dinámico, atomicidad, alcance)
+
+---
+
+## ⚠️ CAMBIOS DE LA REVISIÓN R3 (resumen)
+
+1. **PUERTA 3.4** — Se elimina "1 usuario de prueba creado ad hoc". Se usan los usuarios reales autenticados existentes y sus vínculos reales en `usuario_empresas`. La "empresa ajena" se resuelve dinámicamente entre las **empresas existentes**; si el inventario no arroja una empresa real no autorizada para el usuario de prueba, las pruebas negativas quedan **pendientes** (se documentan) y **no se fabrican datos**.
+2. **Idempotencia de policies** — Queda prohibido `CREATE POLICY IF NOT EXISTS`. Patrón obligatorio: `DROP POLICY IF EXISTS <tz36_nombre_conocido>` + `CREATE POLICY`. Un PC previo audita `pg_policies` por tabla: las políticas **desconocidas** (no nombradas `tz36_*`) bloquean la corrida (nunca se eliminan en silencio).
+3. **Pruebas RLS** — Separación estricta en tres bloques: migración estructural (OWNER), pruebas funcionales con **JWT real del usuario `authenticated`** (vía REST/curl), y verificaciones estructurales finales (OWNER). Las pruebas simuladas `SET ROLE authenticated + request.jwt.claims` quedan solo como *smoke estructural* y **no** se presentan como evidencia de comportamiento de un usuario real.
+4. **Inventario** — El SQL descubre dinámicamente las tablas reales de `public` y sus columnas (nada asumido del plan). Clasifica: negocio con `empresa_id`, autorización, catálogos híbridos (`empresa_id IS NULL` con filas maestras reales), globales/técnicas excluidas. Toda exclusión queda documentada en el informe.
+5. **Atomicidad** — La migración estructural es una **única transacción implícita** (patrón 3.3/3.4): cualquier fallo revierte TODO (nada de activación parcial). `DISABLE ROW LEVEL SECURITY` es **solo rollback de emergencia** post-commit, nunca mecanismo normal de prueba.
+6. **Alcance** — No se toca 3.7/3.8/3.9, ni Auth, ni frontend. Esta revisión **no detectó** incompatibilidad que exija cambios de app (los filtros de 3.5 + fetcher JWT de 3.1 son suficientes); queda como verificación (no cambio) confirmar que no hay consultas de datos pre-login en sesión anónima.
 
 ---
 
@@ -13,9 +25,11 @@ Activar **RLS** en las tablas sensibles y aplicar las políticas de autorizació
 - Tablas de autorización (`usuarios_sistema`, `usuario_empresas`, `roles`): lectura propia/super admin; escritura solo super admin (sin recursión).
 
 **PUERTAS (obligatorias antes de activar):**
-1. **FASE 3.1** verificada (JWT + fetcher autenticado; las RPC y consultas usan JWT real).
-2. **FASE 3.4** completada: `usuario_empresas` poblada + super admin registrado + al menos **1 usuario de prueba** que demuestre lectura restringida.
-3. **FASE 3.5** completada: la app ya filtra por empresa activa (para no "caerse" si algo queda fuera).
+1. **FASE 3.1** cerrada ✅ — JWT + fetcher autenticado (las RPC y consultas usan JWT real).
+2. **FASE 3.4** cerrada ✅ — `usuario_empresas` poblada con **vínculos reales** y super admin registrado.
+3. **FASE 3.5** cerrada ✅ — la app filtra por empresa activa (no se "cae" si algo queda fuera).
+
+**Requisito R3 de PUERTA 3.4:** NO se crean datos ficticios ni usuarios adicionales para probar multiempresa. La validación usa los usuarios autenticados reales existentes y sus vínculos reales; la "empresa ajena" es una empresa existente no autorizada para el usuario de prueba (si no existe en el entorno, se documenta como pendiente).
 
 ---
 
@@ -25,154 +39,186 @@ Referencias de `FASE3.2B` (políticas ya diseñadas §10.3-10.4):
 
 - Páginas de política típicas:
 ```sql
-CREATE POLICY p_<tabla>_select ON public.<tabla>
+CREATE POLICY tz36_<tabla>_select ON public.<tabla>
   FOR SELECT TO authenticated
   USING (empresa_id IN (SELECT authz.empresas_autorizadas()));
 
-CREATE POLICY p_<tabla>_insert ON public.<tabla>
+CREATE POLICY tz36_<tabla>_insert ON public.<tabla>
   FOR INSERT TO authenticated
   WITH CHECK (empresa_id IN (SELECT authz.empresas_autorizadas()));
 
-CREATE POLICY p_<tabla>_update ON public.<tabla>
+CREATE POLICY tz36_<tabla>_update ON public.<tabla>
   FOR UPDATE TO authenticated
   USING (empresa_id IN (SELECT authz.empresas_autorizadas()))
   WITH CHECK (empresa_id IN (SELECT authz.empresas_autorizadas()));
 
-CREATE POLICY p_<tabla>_delete ON public.<tabla>
+CREATE POLICY tz36_<tabla>_delete ON public.<tabla>
   FOR DELETE TO authenticated
   USING (empresa_id IN (SELECT authz.empresas_autorizadas()));
 ```
-- Catálogos con filas maestras (`cuentas_contables` con `empresa_id NULL`): `USING (empresa_id IS NULL OR empresa_id IN (SELECT authz.empresas_autorizadas()))`.
+- Catálogos híbridos con filas maestras (`cuentas_contables` con `empresa_id NULL`): `USING/WITH CHECK (empresa_id IS NULL OR empresa_id IN (SELECT authz.empresas_autorizadas()))`.
 - **Tablas de autorización SIN recursión** (`FASE3.2B §10.4`):
 ```sql
 -- usuarios_sistema.SELECT: auth.uid() = auth_id OR authz.es_super_admin()
 -- usuarios_sistema.INSERT/UPDATE/DELETE: solo authz.es_super_admin()
--- usuario_empresas.SELECT: tiene fila con mi usuario OR authz.es_super_admin()
+-- usuario_empresas.SELECT: existe vínculo con mi usuario OR authz.es_super_admin()
 -- usuario_empresas.INSERT/UPDATE/DELETE: solo authz.es_super_admin()
 -- roles.SELECT: authenticated; escritura solo super admin
 ```
+Nota: las RPC `authz.*` no están expuestas a REST (fuera de alcance) pero **sí se ejecutan dentro de Postgres** en las policies, que es lo que 3.6 necesita.
 
 ---
 
 ## 3. DECISIONES DE DISEÑO
 
-**D1 — Activación por RO/CLI en dos fases:** (a) primero `ALTER TABLE … ENABLE ROW LEVEL SECURITY` en las tablas con políticas verificadas y probadas con el usuario de prueba mediante transacciones con rollback; (b) solo tras demo OK se persiste. Fase 3.6 completa = RLS activada en TODAS las tablas objetivo.
+**D1 — Activación atómica (R3, sustituye dos fases con rollback):** la migración estructural (ENABLE + policies + GATE estructural) se ejecuta como **UNA transacción implícita**. Si cualquier policy/check falla → `RAISE EXCEPTION` revierte **todo el lote**; no existe estado intermedio de RLS parcialmente activo. Nada se persiste hasta que el lote completo termina sin error. El `DISABLE ROW LEVEL SECURITY` queda SOLO como rollback de emergencia post-commit (R3), no como mecanismo de iteración normal.
 
-**D2 — Rollback maestro:** `ALTER TABLE <t> DISABLE ROW LEVEL SECURITY` por tabla (decisión `FASE3A1 §14/§16`). RLS desactivada = acceso abierto (comportamiento pre-3.6).
+**D2 — Rollback maestro (emergencia):** `ALTER TABLE <t> DISABLE ROW LEVEL SECURITY` por tabla (decisión `FASE3A1 §14/§16`). Único uso legítimo: revertir una corrida YA confirmada si las pruebas funcionales con JWT real revelaran un problema. No forma parte del flujo normal de prueba.
 
-**D3 — No recursión garantizada:** `usuarios_sistema`/`usuario_empresas`/`roles` NUNCA llaman a `empresas_autorizadas()` (usan `auth.uid()` y `es_super_admin()`); sin TRIGGER RLS recursivo (postgres noble). Se verifica con `WHERE` estático al crear.
+**D3 — Sin recursión garantizada:** `usuarios_sistema`/`usuario_empresas`/`roles` NUNCA llaman a `empresas_autorizadas()` (usan `auth.uid()` y `es_super_admin()`); sin TRIGGER RLS recursivo. Se verifica con `WHERE`/definición estática al crear.
 
 **D4 — Super admin para administración:** solo super admin puede escribir en `usuarios_sistema`/`usuario_empresas`/`roles`; un usuario normal solo lee sus vínculos.
 
-**D5 — Inventario de tablas:** se parte de la lista establecida (FASE3A1): las tablas operativas con `empresa_id` + catálogos + tablas de autorización. Se confirma el inventario real en PRE-CHECK (nunca inventado). Incluye `asientos_contables`, `asiento_lineas`, `movimientos_bancarios`, `cuentas_bancarias`, `cuentas_contables`, `facturas`, `cotizaciones`, `reservas`, `clientes`, `proveedores`, `empleados`, `contratos`, `pagos`, `pagos_recibidos`, `usuarios_sistema`, `usuario_empresas`, `roles`, entre otras (las que el índice real confirme).
+**D5 — Inventario dinámico (R3, ya no lista fija):** el SQL descubre las tablas reales de `public` (`information_schema.tables`/`columns`/`pg_class`) y clasifica en el momento:
+- **Negocio con `empresa_id`** → RLS ON + 4 policies (`tz36_*`).
+- **Autorización** → políticas sin recursión (D3/D4).
+- **Catálogos híbridos** → detector: `empresa_id` nullable **y** `count(empresa_id IS NULL) > 0` → `USING/WITH CHECK (IS NULL OR autorizada)`.
+- **Globales/técnicas excluidas** → se listan y se documenta el motivo de cada exclusión en el informe.
+La lista del plan (asientos_contables, asiento_lineas, movimientos_bancarios, cuentas_bancarias, cuentas_contables, facturas, cotizaciones, reservas, clientes, proveedores, empleados, contratos, pagos, pagos_recibidos, gastos, mantenimientos, vehiculos, servicios, emisores, ubicaciones_personalizadas, usuarios_sistema, usuario_empresas, roles) es **referencia inicial, no definitiva**: manda el descubrimiento dinámico.
 
 ---
 
-## 4. PRE-CHECKS (owner, SOLO lectura)
+## 4. PRE-CHECKS (owner, SOLO lectura) — los que el SQL ejecutará
 
-- **PC1** — `authz.empresas_autorizadas()` / `authz.es_super_admin()` ejecutan correctas; `usuario_empresas` poblada (≥1 vínculo); super admin registrado.
-- **PC2** — Inventario real de tablas objetivo (`pg_class` + `information_schema.tables`) y columnas `empresa_id` por tabla (para no crear políticas sobre tablas sin esa columna).
-- **PC3** — Estado actual de RLS: `SELECT relname, relrowsecurity FROM pg_class …` — confirmar que **ninguna** tenga RLS activa todavía.
-- **PC4** — No existen políticas previas sobre las tablas objetivo (evitar conflictos de nombre).
-- **PC5** — Usuario de prueba disponible (email/uid) para validar lectura restringida.
-- **PC6** — Baseline de datos: para cada tabla operativa, `count(*)` y `count(distinct empresa_id)`; y `count(*)` filtrando por la empresa del usuario de prueba.
+- **PC0** — `authz.empresas_autorizadas()` y `authz.es_super_admin()` existen y compilan; `usuario_empresas` con ≥1 vínculo real; existe super admin real registrado.
+- **PC1** — Inventario dinámico (R3/C): todas las tablas de `public`, sus columnas, presencia/nullability de `empresa_id`, y clasificación (negocio / autorización / híbrido / excluida) con `count(*)` y `count(empresa_id IS NULL)` por tabla cuando aplique.
+- **PC2** — Estado actual RLS: `pg_class.relrowsecurity` — **ninguna** tabla objetivo con RLS activa aún (si ya lo está por corrida previa, se valida como re-ejecución, no se duplica).
+- **PC3** — **Auditoría de policies (R3):** `pg_policies` por tabla objetivo. Políticas `tz36_*` conocidas → manejables (DROP+CREATE idempotente). Cualquier política **desconocida** → `RAISE EXCEPTION` mencionando tabla y policy (bloquea; jamás se borra en silencio).
+- **PC4** — Usuarios de prueba **reales** (R3): emails/UIDs existentes con rol en `roles` del vínculo real: `galheroa@gmail.com` (uid `6800b0a2-ada9-40f5-a4a9-6e531a8c6cd4`, rol super_admin) y `vanessamgh@gmail.com` (uid `b9e1dda6-05d2-4e31-bce4-1c73210c09f4`, rol admin). No se crean usuarios.
+- **PC5** — Inventario de empresas reales: `empresas` (id, nombre). Determina si existe **empresa real no autorizada** para el usuario de prueba (para T1neg/T2neg). Si no existe → pruebas negativas **pendientes** (se documentan; no se fabrican).
+- **PC6** — Baseline de datos: por tabla operativa `count(*)` y `count(distinct empresa_id)`; y `count(*)` filtrado por la empresa autorizada del usuario de prueba (expectativa de lo que el usuario DEBE ver).
+- **PC7** — Compatibilidad app (solo verificación, sin cambio): confirmar por revisión de código que **no hay consultas de datos en sesión anónima** antes del login (no las hay: el login es UI + Auth). Sin esto no se rompe el login con RLS.
 
 ---
 
-## 5. MIGRACIÓN PROPUESTA (NO ejecutar; con aprobación)
+## 5. MIGRACIÓN ESTRUCTURAL PROPUESTA (NO ejecutar; con aprobación)
 
 ```sql
--- 5.1 Habilitar RLS (por tabla; se ejecuta tras validar políticas en la tabla en cuestión)
-ALTER TABLE public.asientos_contables       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.asiento_lineas           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.movimientos_bancarios    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.cuentas_bancarias        ENABLE ROW LEVEL SECURITY;
--- ... (inventario real de PC2)
-
--- 5.2 Políticas (SELECT/INSERT/UPDATE/DELETE por tabla y rol authenticated) — patrón §2
--- 5.3 Políticas catálogos híbridos (NULL maestro o empresa autorizada): cuentas_contables
--- 5.4 Políticas tablas de autorización sin recursión (usuarios_sistema, usuario_empresas, roles)
+-- 5.0 Audit PC0–PC7 (bloqueo con RAISE EXCEPTION ante cualquier fallo)
+-- 5.1 Para cada tabla de negocio/híbrido/autorización (inventario dinámico PC1):
+--       DROP POLICY IF EXISTS tz36_<tabla>_{select,insert,update,delete};  -- solo si tz36_* ya existe (PC3 validó que lo demás bloquea)
+--       CREATE POLICY tz36_<tabla>_<cmd> ... (patrón §2, rol authenticated);
+-- 5.2 ENABLE ROW LEVEL SECURITY per tabla (idempotente);
+-- 5.3 GATE ESTRUCTURAL (STR) dentro de la misma transacción (validación pg_class/pg_policies + smoke estructural).
+--     Fallo → RAISE EXCEPTION → rollback íntegro (sin activación parcial).
 ```
 
-- Idempotente: `CREATE POLICY IF NOT EXISTS`/`DROP POLICY IF EXISTS` previos + `ENABLE ROW LEVEL SECURITY` idempotente.
-- Con aislación transaccional de la prueba: validar por tabla en subtransacciones `TZ001` antes del COMMIT de la fase (patrón 3.2D-R4/3.2E).
+- **Idempotencia R3:** solo `DROP POLICY IF EXISTS tz36_*` + `CREATE POLICY` (PostgreSQL **no** soporta `CREATE POLICY IF NOT EXISTS`). Re-ejecución: la auditoría PC3 acepta nuestras `tz36_*` y bloquea cualquier política desconocida.
+- **Atomicidad R3:** un solo lote-transacción. Nada de subtransacciones de prueba dentro de la migración para "aislar" activación: la funcionalidad se prueba DESPUÉS con JWT real (§6).
 
 ---
 
-## 6. PRUEBAS TRANSACCIONALES DE ACEPTACIÓN (por tabla)
+## 6. ESTRATEGIA DE PRUEBAS — OWNER vs JWT REAL authenticated (R3)
 
-Con sesión del **usuario de prueba** (rol `authenticated`) vía RPC/consultas:
+Separación estricta en tres bloques. Regla R3: **ninguna prueba ejecutada como OWNER se presenta como evidencia de comportamiento de un usuario `authenticated`.**
 
-- **T1 (lectura restringida):** `count(*)` sobre tabla operativa con su `empresa_id` autorizada = baseline de esa empresa; con empresa ajena = **0**.
-- **T2 (escritura):** INSERT/UPDATE con `empresa_id` ajeno → **error** (WITH CHECK); con empresa propia → permitido (denro de subtransacción revertida).
-- **T3 (catálogo híbrido):** `cuentas_contables` muestra maestras (`NULL`) + propias; no las de otra empresa.
-- **T4 (super admin):** el super admin puede escribir en tablas de autorización; un usuario normal NO.
-- **T5 (sin recursión):** leer escritura tabla de autorización no dispara recursión; las consultas RPC responden sin error.
-- Todo con rollback (nada se persiste) y GATE `t1_result` (patrón tz32d).
+### Bloque A — Migración estructural (OWNER, dentro de la transacción, §5)
+- Produce las políticas y activa RLS de forma atómica.
+- **STR-1** RLS `relrowsecurity=true` en todas las tablas objetivo.
+- **STR-2** `pg_policies`: solo `tz36_*`, sin duplicados ni colisiones de nombres.
+- **STR-3** Funciones `authz.*` válidas; sin recursión en las definiciones emitidas (revisión estática).
+- **STR-4** Baselines OWNER (bypass RLS): counts por tabla y por empresa del usuario de prueba (expectativas).
+- **STR-5 (smoke estructural, NO es evidencia)** `SET LOCAL ROLE authenticated` + `request.jwt.claims` con un claim de prueba: solo comprueba que la política **no revienta sintácticamente**. **No** se registra como comportamiento real de usuario en el informe.
+
+### Bloque B — Pruebas funcionales con JWT REAL del usuario (REST/curl o cliente autenticado, post-commit)
+Ejecutadas por el owner o el usuario con el **access_token real** de cada cuenta; nunca vía SQL Editor como OWNER.
+
+| Test | Cómo | Esperado |
+|---|---|---|
+| **T1a (lectura propia)** | vanessa JWT: `GET /rest/v1/<tabla>?select=*` (empresa autorizada) | = baseline de SU empresa (STR-4) |
+| **T1b (lectura ajena)** | vanessa JWT con empresa ajena existente (PC5) | **0 filas** (o **pendiente** si no existe empresa ajena real) |
+| **T2pos (escritura propia)** | vanessa JWT: INSERT/UPDATE con empresa autorizada (fila temporal, luego DELETE) | **201/2xx** |
+| **T2neg (escritura ajena)** | vanessa JWT: INSERT/UPDATE con empresa ajena | **403/42501** (WITH CHECK); pendiente si no hay empresa ajena real |
+| **T3 (catálogo híbrido)** | vanessa JWT: `cuentas_contables` (u híbrido detectado) | masters (`NULL`) + propias; **0** de otra empresa |
+| **T4 (autorización)** | vanessa JWT vs galheroa JWT sobre `usuarios_sistema`/`usuario_empresas` | vanessa: solo su lectura; escritura **error**. galheroa (super_admin): escritura permitida |
+| **T5 (sin recursión)** | galheroa JWT: consultas authz + lectura tablas autorización | responden sin error de recursión |
+
+Convención: las pruebas **B** se ejecutan con datos reales del entorno; cualquier escritura temporal se elimina por el propio usuario (su policy DELETE lo permite). Nada ficticio.
+
+### Blo que C — Verificaciones estructurales finales (OWNER, después de B)
+- **POST-1** `relrowsecurity=true` en todas las tablas objetivo + policy count + sin duplicados.
+- **POST-2** Counts desde super admin = inventario real (sin pérdida de datos).
+- **POST-3** Estado del backup/evidencias y consolidado para `FASE3.6_INFORME.md`.
+
+**GATE doble:** `GATE-ESTRUCTURAL` (Bloque A, antes del commit) + cierre formal solo con las evidencias B (JWT real) y C. Si B (negativos) no se puede ejecutar (sin empresa ajena real), se registra como **pendiente multiempresa** (no fabricar datos), igual que en 3.5.
 
 ---
 
 ## 7. POST-CHECKS y GATE DE CIERRE
 
-| Verificación | Esperado |
-|---|---|
-| `relrowsecurity=true` en TODAS las tablas objetivo (PC2) | sí |
-| Nº de políticas por tabla | ≥ esperado (SELECT/INSERT/UPDATE/DELETE donde aplique) |
-| `pg_policies` sin duplicados / sin nombres colisionados | sí |
-| Usuario de prueba: filas de empresa ajena | 0 en todas las tablas |
-| INSERT/UPDATE ajeno | error para usuario normal, permitido para super admin |
-| Sin recursión (`track_functions` / logs) | sin errores |
-| Datos existentes | `count(*)` desde el rol super admin = inventario real (sin pérdida) |
-
-**GATE:** DO que valida RLS en todas las tablas, nº de políticas y una muestra de lecturas/escrituras (usuario restringido + super admin). Fallo → `RAISE EXCEPTION 'GATE 3.6 BLOQUEO: …'`; éxito → `RAISE NOTICE 'GATE 3.6 OK: RLS activa en N tablas'`.
-
----
-
-## 8. IDEMPOTENCIA / ROLLBACK
-
-- **Idempotencia:** `ENABLE ROW LEVEL SECURITY` / `CREATE POLICY IF NOT EXISTS` / pre-DROP de políticas existentes con validación previa.
-- **Rollback:** `ALTER TABLE public.<tabla> DISABLE ROW LEVEL SECURITY;` por tabla (+ `DROP POLICY IF EXISTS` si se desea revertir por completo).
-
----
-
-## 9. FRONTERAS EXPLÍCITAS (NO en 3.6)
-
-1. **Filtros de app** — ya implementados en 3.5 (la app no se vuelve a tocar aquí salvo ajustes menores de rol).
-2. **Reglas de negocio UI** (reversa, conciliados, `numero`, `concepto`) — FASE 3.7.
-3. **Trigger de saldos** — FASE 3.8.
-4. **Panel GRUPO C** — FASE 3.9.
-5. **Autorización en Auth (provider)** — RLS cubre la capa Postgres; no se modifica Auth.
-
----
-
-## 10. RIESGOS
-
-| Riesgo | Nivel | Mitigación |
+| Verificación | Rol | Esperado |
 |---|---|---|
-| Bloquear acceso legítimo (política mal escrita) | ALTO | Validación por tabla en subtransacciones + usuario de prueba + rollback `DISABLE RLS` |
-| Recursión RLS | Alto | D3: tablas de autorización con `auth.uid()`/`es_super_admin()`, nunca `empresas_autorizadas()` |
-| Tabla olvidada sin política (fuga) | Medio | PC2 inventario real + GATE `relrowsecurity=true` en todas |
-| Prueba con usuario real tocando datos | Bajo | Todo en subtransacciones revertidas (`TZ001`) + patrón t1_result |
-| Costo de las RPC por fila | Bajo | `empresas_autorizadas()` estable(es) y STABLE; pocas filas |
+| `relrowsecurity=true` en TODAS las tablas objetivo | OWNER | sí |
+| `pg_policies` solo `tz36_*`, sin duplicados/collisiones | OWNER | sí |
+| T1a/T2pos/T3/T4/T5 con JWT real | authenticated | PASS |
+| T1b/T2neg con empresa ajena real | authenticated | 0 filas / error, **o pendiente** si no hay empresa ajena |
+| Escritura admin solo super admin | authenticated | vanessa error, galheroa OK |
+| Sin recursión | authenticated/USER | sin errores |
+| Datos existentes | OWNER (super admin) | `count(*)` = inventario real (sin pérdida) |
+
+**GATE:** `GATE-ESTRUCTURAL` (DO en la transacción; fallo → `RAISE EXCEPTION`) + evidencias funcionales B (JWT real) + `POST` C. Éxito → `RAISE NOTICE 'GATE 3.6 OK: RLS activa en N tablas, pruebas JWT reales PASS'`.
+
+---
+
+## 8. IDEMPOTENCIA / ROLLBACK (R3)
+
+- **Idempotencia policies:** `DROP POLICY IF EXISTS tz36_<tabla>_<cmd>` + `CREATE POLICY` (nunca `IF NOT EXISTS`). La auditoría PC3 previa bloquea ante políticas desconocidas (no se borran en silencio).
+- **ENABLE/DISABLE ROW LEVEL SECURITY:** idempotentes (re-ejecución válida).
+- **Rollback de emergencia (post-commit):** `ALTER TABLE public.<tabla> DISABLE ROW LEVEL SECURITY;` (+ `DROP POLICY IF EXISTS tz36_*` si se quiere revertir por completo). **Uso único de emergencia** (R3), no como mecanismo normal de prueba.
+
+---
+
+## 9. FRONTERAS EXPLÍCITAS (NO en 3.6) — confirmado en R3
+
+1. **Filtros de app** — ya implementados en 3.5; R3 confirmó que **no se requieren cambios de frontend** para soportar RLS (fetcher JWT 3.1 + filtros 3.5 + login sin consultas anónimas). Cero cambios de app en 3.6.
+2. **Reglas de negocio UI** (reversa, conciliados, `numero`, `concepto`) — FASE 3.7 (NO tocar aquí).
+3. **Trigger de saldos** — FASE 3.8 (NO tocar aquí).
+4. **Panel GRUPO C** — FASE 3.9 (NO tocar aquí).
+5. **Auth** — no se modifica; RLS cubre la capa Postgres.
+6. RLS en estos momentos filtra a nivel app (3.5); 3.6 añade la capa servidor sin cambiar UI.
+
+---
+
+## 10. RIESGOS (revisión R3)
+
+| Riesgo | Nivel | Mitigación (R3) |
+|---|---|---|
+| Bloquear acceso legítimo (política mal escrita) | ALTO | Migración ÚNICA transacción (nada parcial) + pruebas funcionales con JWT real pre-cierre + `DISABLE RLS` SOLO emergencia |
+| Recursión RLS | Alto | D3: tablas de autorización con `auth.uid()`/`es_super_admin()`, nunca `empresas_autorizadas()`; verificación estática STR-3 |
+| Tabla olvidada sin policy (fuga) | Medio | Inventario dinámico PC1 + GATE `relrowsecurity=true` en todas |
+| Policy desconocida borrada en silencio | Medio | PC3 bloquea cualquier policy no `tz36_*` (R3) |
+| Prueba como OWNER tratada como evidencia de `authenticated` | Medio | Bloques A/B/C separados; evidencia funcional SOLO con JWT real (R3) |
+| No existe empresa ajena real | Bajo | T1b/T2neg pasan a **pendiente** documentado; no se fabrican datos (R3) |
+| Costo de RPC por fila | Bajo | `empresas_autorizadas()` STABLE; pocas filas |
 
 ---
 
 ## 11. ORDEN DE EJECUCIÓN
 
-1. **Revisión humana** de este plan (aprobación).
-2. **PRE-FLIGHT owner:** PC1–PC6 (lecturas) + confirmación de las PUERTAS (3.1/3.4/3.5 cerradas).
-3. **Escribir** `sql/migracion_fase_3_6.sql` (enable + políticas + pruebas subtransaccionales + GATE) y aprobar.
-4. **Ejecutar ENTERO** como OWNER; pegando las salidas (para una segunda corrida, las pruebas corren de nuevo; RLS ya activa se valida de nuevo).
-5. **Rollback disponible:** `DISABLE ROW LEVEL SECURITY` por tabla si fallara la demo.
-6. **Cerrar FASE 3.6** y NO avanzar (3.7+) sin nueva aprobación.
+1. **Revisión R3 de este plan** (aprobación del usuario).
+2. **PRE-FLIGHT owner:** PC0–PC7 (lecturas; inventario dinámico) + confirmación PUERTAS 3.1/3.4/3.5.
+3. **Escribir** `sql/migracion_fase_3_6.sql` (auditoría + inventario + policies `tz36_*` + ENABLE + GATE-ESTRUCTURAL) y aprobar.
+4. **Ejecutar ENTERO** como OWNER (una transacción; pegar salidas).
+5. **Pruebas funcionales B** con JWT real de vanessa/galheroa (REST/curl) + **POST-checks C**.
+6. Consolidar en `FASE3.6_INFORME.md` y **cerrar FASE 3.6** (NO avanzar a 3.7+ sin aprobación).
 
 ---
 
 ## 12. ENTREGABLES
 
-- `FASE3.6_PLAN_DETALLADO.md` (este documento) — plan, sin ejecutar.
-- Tras aprobación: `sql/migracion_fase_3_6.sql` + `FASE3.6_INFORME.md` (inventario de tablas/políticas y salidas de pruebas).
+- `FASE3.6_PLAN_DETALLADO.md` (este documento, revisión R3) — plan.
+- Tras aprobación: `sql/migracion_fase_3_6.sql` + `FASE3.6_INFORME.md` (inventario real clasificado y exclusiones documentadas, policies emitidas, salidas A/B/C, pendientes).
 
 ---
 
-**ESTADO: PREPARADO PARA REVISIÓN — BLOQUEADO por las PUERTAS 3.1/3.4/3.5 (pendientes) y aprobación del usuario. Sin SQL ejecutado.**
+**ESTADO: REVISIÓN R3 COMPLETADA — LISTO PARA GENERAR `sql/migracion_fase_3_6.sql`. Sin SQL ejecutado. Pendiente aprobación del usuario.**
