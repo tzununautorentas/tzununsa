@@ -8,20 +8,63 @@
 -- Politicas:  prefijo tz36_ (namespace propio); NO existen politicas previas
 --             desconocidas permitidas (PC3 bloquea). Idempotente bajo auditoria.
 --
--- DISENO (Revision R3):
---   * ATOMICIDAD: sin BEGIN/COMMIT internos. En el SQL Editor el archivo se envia
---     como UN solo query (protocolo simple) → transaccion implicita UNICA de
---     PostgreSQL: cualquier RAISE EXCEPTION revierte TODO (policies + ENABLE +
---     evidencia). No existe activacion parcial de RLS.
---     OJO (operador): la garantia "todo o nada" solo aplica cuando el archivo se
---     ejecuta COMPLETO en una unica corrida del SQL Editor (o migracion CLI).
---     psql en modo autocommit por sentencia NO preserva esta garantia.
+-- DISENO (Revision R3 / R3.3 FINAL):
+--   * ATOMICIDAD (R3.3 FINAL): el paquete se envuelve AHORA en un BLOQUE EXPLICITO
+--     "BEGIN; ... COMMIT;" (unico par; nada se ejecuta por fuera). Garantia REAL
+--     doble, documentada y verificada por fuentes de PostgreSQL:
+--       (a) Protocolo simple: "when a simple Query message contains more than one
+--           SQL statement (separated by semicolons), those statements are executed
+--           as a single transaction" (docs PG /protocol-flow). El SQL Editor de
+--           Supabase (pg-meta POST /query) envia TODO el buffer en UN mensaje
+--           query: transaccion implicita unica.
+--       (b) BLOQUE EXPLICITO BEGIN/COMMIT: hace la atomicidad INDEPENDIENTE del
+--           transporte. Aun en "psql -f" (que envia por sentencia) el bloque
+--           agrupa todo; y en SQL Editor el COMMIT final ejecuta commit (o rollback
+--           automatico si hubo error).
+--     Comportamiento ante error (documentado): si cualquier sentencia o DO falla
+--     (PCx/GATE RAISE EXCEPTION o DDL invalido), la transaccion queda ABORTED; las
+--     sentencias siguientes del script generan "current transaction is aborted" y
+--     el COMMIT final actua como ROLLBACK -> NADA queda aplicado (policies, ENABLE
+--     RLS, tz36_inventario). DDL es transaccional en PostgreSQL: CREATE POLICY,
+--     DROP POLICY, ALTER TABLE ... ENABLE ROW LEVEL SECURITY, CREATE TABLE y REVOKE
+--     revierten por completo.
+--     Matriz de transporte:
+--       SQL Editor de Supabase (1 corrida del buffer completo) -> ATOMICO.
+--       "psql -c '<script>'": 1 request -> ATOMICO.
+--       "psql -f <archivo>"  : ATOMICO por el BEGIN/COMMIT explicito (sin -1).
+--       psql interactivo     : ATOMICO SOLO si se pega el archivo COMPLETO en un
+--                              solo paso (una sola query); NO ejecutar por fragmentos.
 --   * IDEMPOTENCIA: SOLO "DROP POLICY IF EXISTS tz36_<t>_<cmd>" + "CREATE POLICY".
---     PostgreSQL NO admite CREATE POLICY IF NOT EXISTS.
---   * PC3: audita pg_policies por tabla objetivo; cualquier policy NO tz36_*
---     bloquea la corrida (jamás se elimina en silencio).
---   * SIN RECURSION: tablas de autorizacion usan auth.uid()/authz.es_super_admin()
---     (SECURITY DEFINER, bypass interno); nunca authz.empresas_autorizadas().
+--     PostgreSQL NO admite CREATE POLICY IF NOT EXISTS. El prefijo tz36_ se
+--     compara por LITERAL con starts_with(nombre, 'tz36_'), sin depender del
+--     escape de '_' en LIKE (escapado ambiguo, corregido en R3.3). Los nombres se
+--     generan con format('tz36_%I_%s', tabla, cmd) que produce literalmente
+--     'tz36_<tabla>_<cmd>' (el prefijo tz36_ es un literal del formato; NO hay
+--     barra invertida). El GATE (R3.3 FINAL) verifica el CONJUNTO EXACTO de nombres por
+--     igualdad con el mismo format(): cualquier nombre generado con mangling
+--     (barra, comilla, sufijo extra) queda fuera del set esperado y BLOQUEA.
+--   * PC3/GATE: auditan pg_policies de TODO public por INVENTARIO (nombre-
+--     agnostico); cualquier policy cuyo prefijo NO sea tz36_* bloquea la corrida
+--     y queda listada con su nombre real (jamás se elimina en silencio).
+--   * RECURSION (R3.3 FINAL): demostrable por construccion, no por texto:
+--       authz.empresas_autorizadas() y authz.es_super_admin() estan definidas
+--       SECURITY DEFINER (FASE 3.2B, pg_proc.prosecdef) -> al evaluarse una policy
+--       que las invoca, las consultas internas corren como el definidor (owner,
+--       Bypass de RLS) -> el ciclo usuario_empresas -> usuarios_sistema -> authz
+--       TERMINA en 1-2 niveles; no hay recursion. El GATE lo comprueba verificando
+--       prosecdef=true (estructural) + relforcerowsecurity=false en las tablas
+--       objetivo (si hubiera FORCE RLS el definidor NO haria bypass) + scan textual
+--       de authz.empresas_autorizadas() en policies de tablas de autorizacion.
+--   * CLASIFICACIONES (R3.3 FINAL): negocio (empresa_id, sin filas NULL), hibrido
+--     (empresa_id, con filas NULL maestras), autorizacion (usuarios_sistema,
+--     usuario_empresas, roles; SIN recursion), gerencia (public.empresas: tabla
+--     raiz de tenant cuya clave es id, NO empresa_id; politica especial) y
+--     excluida (sin clave de tenant: global/tecnica/evidencia, sin RLS en 3.6).
+--       empresas        -> gerencia (id IN (empresas_autorizadas()) OR super_admin).
+--       usuarios_sistema-> autorizacion: su columna empresa_id NO es frontera de
+--                          seguridad por decision de FASE 3.2B (rol por vinculo).
+--       backup_facturas_saldos -> excluida (evidencia 3.3, sin empresa_id); se le
+--                          REVOCAN los GRANT a anon/authenticated (solo owner).
 --   * USUARIOS REALES de prueba (NO se crean datos): galheroa (super_admin) y
 --     vanessa (admin) con sus vinculos reales en usuario_empresas.
 --
@@ -34,37 +77,80 @@
 -- PROHIBIDO en 3.6: FASE 3.7/3.8/3.9, Auth, frontend, RPC nuevas, DISABLE RLS
 -- en el flujo normal (DISABLE = rollback de EMERGENCIA post-commit, Seccion 7).
 --
--- ESTADO LEGACY DETECTADO EN EL REPOSITORIO (no se modifica en silencio):
---   * 'usuarios_sistema' RLS YA ACTIVA + 4 policies ("Lectura/Insercion/
---     Actualizacion/Eliminacion para autenticados", todas USING/WITH CHECK true)
---     creadas por sql/configuracion_roles_series.sql.
---   * 'ubicaciones_personalizadas' RLS YA ACTIVA + 6 policies
---     (CONFIRMADAS en vivo 2026-09-28): "Lectura/Insercion/Eliminacion para
---     usuarios autenticados" y sus duplicados "Lectura/Insercion/Eliminacion
---     usuarios autenticados" (sin 'para'), todas USING/WITH CHECK true.
---     sql/crear_ubicaciones_personalizadas.sql solo definia las 3 "para";
---     las 3 adicionales existen en la BD real (total 6).
---   Total legacy en public: 10 (4 + 6).
---   Ambas son policies PREEXISTENTES NO-tz36_*: PC3 BLOQUEARA la corrida y
---   NO se eliminan aqui. RESOLUCION HUMANA (antes de ejecutar este archivo,
---   como OWNER, SOLO si realmente existen en la BD):
---     DROP POLICY "Lectura para autenticados"        ON public.usuarios_sistema;
---     DROP POLICY "Insercion para autenticados"      ON public.usuarios_sistema;
---     DROP POLICY "Actualizacion para autenticados"  ON public.usuarios_sistema;
---     DROP POLICY "Eliminacion para autenticados"    ON public.usuarios_sistema;
---     DROP POLICY "Lectura para usuarios autenticados"      ON public.ubicaciones_personalizadas;
---     DROP POLICY "Insercion para usuarios autenticados"    ON public.ubicaciones_personalizadas;
---     DROP POLICY "Eliminacion para usuarios autenticados"  ON public.ubicaciones_personalizadas;
---     DROP POLICY IF EXISTS "Lectura usuarios autenticados"   ON public.ubicaciones_personalizadas;
---     DROP POLICY IF EXISTS "Insercion usuarios autenticados" ON public.ubicaciones_personalizadas;
---     DROP POLICY IF EXISTS "Eliminacion usuarios autenticados" ON public.ubicaciones_personalizadas;
---   (10 DROP POLICY en total; PC3 exige public sin ninguna policy no-tz36_*.)
+-- ESTADO REAL CONFIRMADO POR PRECHECK (Supabase, antes de esta corrida):
+--   * policies en public: 0 (pg_policies sin filas).
+--   * policies tz36_*: 0.
+--   * usuarios_sistema:             RLS ON, 0 policies.
+--   * ubicaciones_personalizadas:   RLS ON, 0 policies.
+--   * resto de tablas public:       RLS OFF, 0 policies.
+--   Por tanto NO existen las 10 legacy documentadas ("Lectura/Insercion/
+--   Actualizacion/Eliminacion para autenticados" en usuarios_sistema; "Lectura/
+--   Insercion/Eliminacion para usuarios autenticados" y sus duplicados sin 'para'
+--   en ubicaciones_personalizadas). Esas names eran las definidas por
+--   sql/configuracion_roles_series.sql y sql/crear_ubicaciones_personalizadas.sql.
+-- RESOLUCION LEGACY (R3.3): los 10 DROP se CONSERVAN SOLO como red de seguridad
+--   idempotente con "IF EXISTS" (no-op ante la ausencia real de las policies).
+--   NO existe logica que asuma su presencia y NADA bloquea por su ausencia.
+--   La garantia de "cero policies no-tz36_*" la dan PC3 + V3 + GATE por
+--   inventario real (nombre-agnostico), no por nombres historicos.
+--   Si en el futuro apareciera alguna legacy con OTRO nombre, PC3 la lista y
+--   BLOQUEA: el operador agrega su nombre a la Seccion 1.0 y reejecuta
+--   (la corrida es idempotente).
+-- RESOLUCION LEGACY EJECUTABLE (Seccion 1.0, DROP POLICY IF EXISTS x 10):
+--   usuarios_sistema:  "Lectura para autenticados", "Insercion para autenticados",
+--                      "Actualizacion para autenticados", "Eliminacion para autenticados".
+--   ubicaciones_personalizadas: "Lectura/Insercion/Eliminacion para usuarios
+--                      autenticados" y "Lectura/Insercion/Eliminacion
+--                      usuarios autenticados" (sin 'para').
+--   (10 DROP POLICY IF EXISTS; PC3/GATE exigen public sin ninguna policy no-tz36_*.)
 --   (PC2 ya acepta el RLS ON legacy de esas 2 tablas en cualquier estado.)
+--   Precaucion coherente con PC2: usuarios_sistema y ubicaciones_personalizadas
+--   estan HOY RLS ON sin policies (fail-closed); esta corrida restaura cobertura
+--   completa (tz36_*) dentro de la MISMA transaccion atomica.
 -- ============================================================================
 
 -- ============================================================================
--- SECCION 1: PRE-CHECKS (solo lectura; cualquier fallo detiene con EXCEPTION)
+-- APERTURA DE TRANSACCION EXPLICITA (R3.3 FINAL) — atomicidad autocontenida.
+--   Todo el paquete se ejecuta dentro de ESTE unico bloque; el COMMIT final
+--   (Seccion 7.0) confirma todo o, ante CUALQUIER error (PCx/GATE/DDL), la
+--   transaccion queda aborted y el COMMIT actua como ROLLBACK (nada aplicado).
 -- ============================================================================
+BEGIN;
+
+-- ============================================================================
+-- SECCION 1: RESOLUCION LEGACY + PRE-CHECKS
+--   La resolucion legacy es idempotente (DROP POLICY IF EXISTS x 10). Cualquier
+--   fallo posterior detiene con EXCEPTION (transaccion unica: todo se revierte).
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1.0 RESOLUCION DE POLICIES LEGACY (quirurgica, idempotente)
+--   Nombres explicitos (repo / verificacion operativa). IF EXISTS: no-op si la
+--   policy ya no existe (absorbe el ERROR 42704 de la corrida anterior).
+--   NUNCA se eliminan policies tz36_* ni policies de otras tablas por comodin.
+-- ----------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Lectura para autenticados"        ON public.usuarios_sistema;
+DROP POLICY IF EXISTS "Insercion para autenticados"      ON public.usuarios_sistema;
+DROP POLICY IF EXISTS "Actualizacion para autenticados"  ON public.usuarios_sistema;
+DROP POLICY IF EXISTS "Eliminacion para autenticados"    ON public.usuarios_sistema;
+DROP POLICY IF EXISTS "Lectura para usuarios autenticados"     ON public.ubicaciones_personalizadas;
+DROP POLICY IF EXISTS "Insercion para usuarios autenticados"   ON public.ubicaciones_personalizadas;
+DROP POLICY IF EXISTS "Eliminacion para usuarios autenticados" ON public.ubicaciones_personalizadas;
+DROP POLICY IF EXISTS "Lectura usuarios autenticados"          ON public.ubicaciones_personalizadas;
+DROP POLICY IF EXISTS "Insercion usuarios autenticados"        ON public.ubicaciones_personalizadas;
+DROP POLICY IF EXISTS "Eliminacion usuarios autenticados"      ON public.ubicaciones_personalizadas;
+
+-- ----------------------------------------------------------------------------
+-- 1.1 HARDENING DE EVIDENCIA (R3.3 FINAL) — backup_facturas_saldos (snapshot 3.3) NO
+--     tiene empresa_id (no es tenant) y SIN RLS quedaria legible por cualquier
+--     authenticated via REST. No se le aplica RLS (clave inexistente); se le
+--     REVOCAN los grants de escritura/lectura a anon/authenticated: queda
+--     accesible SOLO para el owner (postgres). Reversible: REVOKE es DDL
+--     transaccional (se revierte con el resto si la corrida falla).
+-- ----------------------------------------------------------------------------
+REVOKE ALL ON public.backup_facturas_saldos FROM PUBLIC;
+REVOKE ALL ON public.backup_facturas_saldos FROM anon;
+REVOKE ALL ON public.backup_facturas_saldos FROM authenticated;
 
 -- ----------------------------------------------------------------------------
 -- TEMPORALES de la corrida (inventario dinamico real de public)
@@ -87,6 +173,7 @@ DECLARE
   v_fn_sa  text;
   v_vin    bigint;
   v_rolsa  bigint;
+  r_col    RECORD;
 BEGIN
   SELECT to_regprocedure('authz.empresas_autorizadas()')::text INTO v_fn_emp;
   SELECT to_regprocedure('authz.es_super_admin()')::text   INTO v_fn_sa;
@@ -94,17 +181,30 @@ BEGIN
   IF v_fn_sa  IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta authz.es_super_admin()'; END IF;
 
   -- Existencia real de tablas y columnas de autorizacion usadas por las policies
-  -- (R3: nunca crear policies sobre tablas/columnas inexistentes)
+  -- (R3: nunca crear policies sobre tablas/columnas inexistentes).
+  -- OJO PG 17.6: to_regcolumn() de DOS argumentos NO existe (error 42883); la
+  -- existencia de columnas se valida via information_schema.columns (comprobacion
+  -- portable y robusta). Se verifican las mismas 7 columnas con la misma semantica.
   IF to_regclass('public.usuarios_sistema') IS NULL      THEN RAISE EXCEPTION 'PC0 BLOQUEO: no existe public.usuarios_sistema'; END IF;
   IF to_regclass('public.usuario_empresas') IS NULL      THEN RAISE EXCEPTION 'PC0 BLOQUEO: no existe public.usuario_empresas'; END IF;
   IF to_regclass('public.roles')             IS NULL      THEN RAISE EXCEPTION 'PC0 BLOQUEO: no existe public.roles'; END IF;
-  IF to_regcolumn('public.usuarios_sistema','id')        IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta usuarios_sistema.id'; END IF;
-  IF to_regcolumn('public.usuarios_sistema','auth_id')   IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta usuarios_sistema.auth_id'; END IF;
-  IF to_regcolumn('public.usuarios_sistema','activo')    IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta usuarios_sistema.activo'; END IF;
-  IF to_regcolumn('public.usuario_empresas','usuario_id') IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta usuario_empresas.usuario_id'; END IF;
-  IF to_regcolumn('public.usuario_empresas','empresa_id') IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta usuario_empresas.empresa_id'; END IF;
-  IF to_regcolumn('public.usuario_empresas','activo')     IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta usuario_empresas.activo'; END IF;
-  IF to_regcolumn('public.roles','nombre')                IS NULL THEN RAISE EXCEPTION 'PC0 BLOQUEO: falta roles.nombre'; END IF;
+  FOR r_col IN SELECT * FROM (VALUES
+    ('usuarios_sistema','id'),
+    ('usuarios_sistema','auth_id'),
+    ('usuarios_sistema','activo'),
+    ('usuario_empresas','usuario_id'),
+    ('usuario_empresas','empresa_id'),
+    ('usuario_empresas','activo'),
+    ('roles','nombre')
+  ) AS t (tabla, columna)
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema='public' AND table_name=r_col.tabla AND column_name=r_col.columna
+    ) THEN
+      RAISE EXCEPTION 'PC0 BLOQUEO: falta %.%', r_col.tabla, r_col.columna;
+    END IF;
+  END LOOP;
 
   SELECT count(*) INTO v_vin FROM public.usuario_empresas WHERE activo;
   IF v_vin < 1 THEN RAISE EXCEPTION 'PC0 BLOQUEO: usuario_empresas sin vinculos activos (se espera >=1 real)'; END IF;
@@ -120,7 +220,15 @@ END $$;
 --   negocio      : tiene empresa_id y NO hay filas maestras NULL
 --   hibrido      : tiene empresa_id Y existen filas con empresa_id IS NULL
 --   autorizacion : usuarios_sistema / usuario_empresas / roles (sin recursión)
---   excluida     : sin empresa_id (global/tecnica) o evidencia (se documenta)
+--   gerencia     : public.empresas (tabla raiz de tenant; clave = id, no
+--                  empresa_id) — politica especial (Seccion 2.1B)
+--   excluida     : sin clave de tenant (global/tecnica) o evidencia (documentada)
+--   R3.3 FINAL: 'empresas' se clasifica ANTES de la regla generica v_has porque su clave
+--   de tenant es la columna 'id' (todo el repo referencia empresas(id)); si se
+--   dejara al criterio generico y NO existiera columna 'empresa_id' en la BD real,
+--   empresas quedaria 'excluida' SIN RLS (fuga de toda la tabla raiz).
+--   usuarios_sistema TIENE empresa_id pero NO es frontera de seguridad (FASE 3.2B:
+--   el rol se resuelve por vinculo en usuario_empresas); se fuerza 'autorizacion'.
 -- ----------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -132,7 +240,7 @@ DECLARE
   v_emp_act uuid := 'adc5f324-a108-49ad-875c-779afe3b9f7f';
   v_clas  text;
   v_motivo text;
-  v_n_neg int := 0; v_n_hib int := 0; v_n_auth int := 0; v_n_exc int := 0;
+  v_n_neg int := 0; v_n_hib int := 0; v_n_auth int := 0; v_n_ger int := 0; v_n_exc int := 0;
 BEGIN
   -- tz36_inventario (evidencia permanente) se crea en Seccion 5 (anti-sobrescritura).
   FOR r IN
@@ -153,6 +261,14 @@ BEGIN
 
     IF r.tabla IN ('usuarios_sistema','usuario_empresas','roles') THEN
       v_clas := 'autorizacion';
+    ELSIF r.tabla = 'empresas' THEN
+      -- Gerencia: raiz de tenant; clave = id (no empresa_id). Conteo por id de la
+      -- empresa activa de la corrida (id NOT NULL: nunca hay filas maestras NULL).
+      v_clas := 'gerencia';
+      EXECUTE format('SELECT count(*), count(*) FILTER (WHERE id IS NULL) FROM public.%I', r.tabla)
+        INTO v_total, v_nulls;
+      EXECUTE format('SELECT count(*) FROM public.%I WHERE id = %L', r.tabla, v_emp_act)
+        INTO v_ctrmp;
     ELSIF v_has THEN
       -- Conteos reales (OWNER bypasses RLS)
       EXECUTE format('SELECT count(*), count(*) FILTER (WHERE empresa_id IS NULL) FROM public.%I', r.tabla)
@@ -167,7 +283,7 @@ BEGIN
     ELSE
       -- Sin empresa_id: global/tecnica o evidencia → incluir inventario con motivo
       IF r.tabla IN ('backup_facturas_saldos') THEN
-        v_motivo := 'evidencia de FASE 3.3 (snapshot); excluida de RLS';
+        v_motivo := 'evidencia de FASE 3.3 (snapshot); sin empresa_id; grants revocados a anon/authenticated (R3.3 FINAL)';
       ELSIF r.tabla = 'tz36_inventario' THEN
         v_motivo := 'evidencia de FASE 3.6 (inventario materializado); excluida de RLS';
       ELSE
@@ -181,10 +297,11 @@ BEGIN
     IF v_clas='negocio' THEN v_n_neg := v_n_neg + 1;
     ELSIF v_clas='hibrido' THEN v_n_hib := v_n_hib + 1;
     ELSIF v_clas='autorizacion' THEN v_n_auth := v_n_auth + 1;
+    ELSIF v_clas='gerencia' THEN v_n_ger := v_n_ger + 1;
     ELSE v_n_exc := v_n_exc + 1; END IF;
   END LOOP;
 
-  RAISE NOTICE 'PC1 OK: inventario dinamico = % negocio, % hibrido, % autorizacion, % excluidas', v_n_neg, v_n_hib, v_n_auth, v_n_exc;
+  RAISE NOTICE 'PC1 OK: inventario dinamico = % negocio, % hibrido, % autorizacion, % gerencia, % excluidas', v_n_neg, v_n_hib, v_n_auth, v_n_ger, v_n_exc;
 END $$;
 
 -- ----------------------------------------------------------------------------
@@ -196,8 +313,8 @@ END $$;
 --     Se aceptan en CUALQUIER estado. Si aun conservan policies legacy, PC3
 --     bloqueará y el humano las eliminara explicitamente (cond R3 n.7; nunca
 --     se borran en silencio).
---   Resto de tablas objetivo: todas OFF (primera corrida) o todas ON con
---   tz36_* (re-ejecucion/validacion); cualquier mezcla BLOQUEA.
+--   Resto de tablas objetivo (incl. empresas=gerencia): todas OFF (primera
+--   corrida) o todas ON con tz36_* (re-ejecucion/validacion); mezcla BLOQUEA.
 -- ----------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -211,7 +328,7 @@ BEGIN
     FROM tz36_inv_run i
     JOIN pg_class c ON c.relname = i.tabla
     JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname='public'
-   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion')
+   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
      AND i.tabla NOT IN ('usuarios_sistema','ubicaciones_personalizadas');
 
   IF v_on > 0 AND v_off > 0 THEN
@@ -232,17 +349,21 @@ END $$;
 DO $$
 DECLARE
   r RECORD;
+  v_tot bigint;
+  v_tz  bigint;
 BEGIN
+  SELECT count(*) INTO v_tot FROM pg_policies WHERE schemaname='public';
+  SELECT count(*) INTO v_tz  FROM pg_policies WHERE schemaname='public' AND starts_with(policyname::text, 'tz36_');
   FOR r IN
     SELECT DISTINCT p.tablename AS tabla, p.policyname AS policy
       FROM pg_policies p
      WHERE p.schemaname='public'
-       AND p.policyname NOT LIKE 'tz36\_%'
+       AND NOT starts_with(p.policyname::text, 'tz36_')
      ORDER BY p.tablename, p.policyname
   LOOP
     RAISE EXCEPTION 'PC3 BLOQUEO: policy preexistente desconocida % ON public.% (no se elimina en silencio)', r.policy, r.tabla;
   END LOOP;
-  RAISE NOTICE 'PC3 OK: sin policies desconocidas en public (solo tz36_* manejables)';
+  RAISE NOTICE 'PC3 OK: % policies en public (0 legacy desconocidas, % tz36_*)', v_tot, v_tz;
 END $$;
 
 -- ----------------------------------------------------------------------------
@@ -334,7 +455,7 @@ DECLARE
 BEGIN
   RAISE NOTICE 'PC6 OK: baseline por tabla (tabla | clase | filas | filas_empresa_activa):';
   FOR r IN SELECT tabla, clasificacion, filas_totales, filas_empresa_act FROM tz36_inv_run
-           WHERE clasificacion IN ('negocio','hibrido') ORDER BY tabla
+           WHERE clasificacion IN ('negocio','hibrido','gerencia') ORDER BY tabla
   LOOP
     RAISE NOTICE '  % | % | % | %', r.tabla, r.clasificacion, r.filas_totales, r.filas_empresa_act;
   END LOOP;
@@ -387,6 +508,29 @@ BEGIN
 END $$;
 
 -- ----------------------------------------------------------------------------
+-- 2.1B Tabla GERENCIA (public.empresas, R3.3 FINAL) — tabla raiz de tenant.
+--   Clave de tenant = id (NO empresa_id). Politicas especificas:
+--     SELECT : id autorizada (mis empresas) o super_admin (todas).
+--     INSERT/UPDATE/DELETE : solo super_admin (catalogo raiz; no se auto-crea
+--                            empresa desde un cliente authenticated).
+--   El modo generico (empresa_id IN ...) NO se aplica a empresas: no puede
+--   probarse con el inventario (id != empresa_id) y dejarla 'excluida' abriria
+--   toda la tabla raiz. Al ser esta su UNICA fuente, se maneja determinista.
+-- ----------------------------------------------------------------------------
+DO $$
+BEGIN
+  EXECUTE 'DROP POLICY IF EXISTS tz36_empresas_select ON public.empresas';
+  EXECUTE 'DROP POLICY IF EXISTS tz36_empresas_insert ON public.empresas';
+  EXECUTE 'DROP POLICY IF EXISTS tz36_empresas_update ON public.empresas';
+  EXECUTE 'DROP POLICY IF EXISTS tz36_empresas_delete ON public.empresas';
+  EXECUTE 'CREATE POLICY tz36_empresas_select ON public.empresas FOR SELECT TO authenticated USING (id IN (SELECT authz.empresas_autorizadas()) OR authz.es_super_admin())';
+  EXECUTE 'CREATE POLICY tz36_empresas_insert ON public.empresas FOR INSERT TO authenticated WITH CHECK (authz.es_super_admin())';
+  EXECUTE 'CREATE POLICY tz36_empresas_update ON public.empresas FOR UPDATE TO authenticated USING (authz.es_super_admin()) WITH CHECK (authz.es_super_admin())';
+  EXECUTE 'CREATE POLICY tz36_empresas_delete ON public.empresas FOR DELETE TO authenticated USING (authz.es_super_admin())';
+  RAISE NOTICE 'POLICIES OK: 4 policies tz36_* en public.empresas (gerencia, politica especial)';
+END $$;
+
+-- ----------------------------------------------------------------------------
 -- 2.2 Tablas de AUTORIZACION (SIN recursión; auth.uid() + es_super_admin())
 -- ----------------------------------------------------------------------------
 DO $$
@@ -436,7 +580,7 @@ DECLARE
 BEGIN
   FOR v_c IN
     SELECT i.tabla AS tabla FROM tz36_inv_run i
-     WHERE i.clasificacion IN ('negocio','hibrido','autorizacion')
+     WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
      ORDER BY i.tabla
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', v_c.tabla);
@@ -454,61 +598,132 @@ SELECT i.tabla, c.relrowsecurity
   FROM tz36_inv_run i
   JOIN pg_class c ON c.relname = i.tabla
   JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname='public'
- WHERE i.clasificacion IN ('negocio','hibrido','autorizacion')
+ WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
    AND NOT c.relrowsecurity;
 
--- V2 — Policies por tabla (solo tz36_*)
+-- V2 — Policies por tabla (solo prefijo literal tz36_)
 SELECT tablename, count(*) AS policies
   FROM pg_policies
- WHERE schemaname='public' AND policyname LIKE 'tz36\_%'
+ WHERE schemaname='public' AND starts_with(policyname::text, 'tz36_')
  GROUP BY tablename ORDER BY tablename;
 
 -- V3 — Ninguna policy desconocida (re-auditoria integra)
 SELECT tablename, policyname
   FROM pg_policies
- WHERE schemaname='public' AND policyname NOT LIKE 'tz36\_%';
+ WHERE schemaname='public' AND NOT starts_with(policyname::text, 'tz36_');
 
 -- ----------------------------------------------------------------------------
--- GATE ESTRUCTURAL 3.6 — bloqueo de cierre dentro de la transaccion
+-- GATE ESTRUCTURAL 3.6 (R3.3 FINAL) — cierre dentro de la transaccion. Verifica:
+--   (1) RLS activa en TODAS las tablas objetivo.
+--   (2) CERO policies no-tz36_* en TODO public.
+--   (3) CONJUNTO EXACTO de policies tz36_* por tabla: las 4 esperadas por
+--       igualdad literal con format('tz36_%I_%s', tabla, cmd). Cualquier nombre
+--       generado con mangling (barra invertida, comilla, sufijo extra), policy
+--       repetida, faltante o extra queda FUERA del set y BLOQUEA. Esto prueba
+--       ademas que 'tz36_' se materializo literal y sin caracteres de escape.
+--   (4) Estructura por comando: SELECT/UPDATE/DELETE con USING, INSERT/UPDATE
+--       con WITH CHECK, todas PERMISSIVE.
+--   (5) Anti-recursion ESTRUCTURAL: authz.empresas_autorizadas() y
+--       authz.es_super_admin() deben ser SECURITY DEFINER (Bypass de RLS del
+--       definidor => el grafo usuario_empresas->usuarios_sistema->authz TERMINA);
+--       ninguna tabla objetivo con FORCE ROW LEVEL SECURITY (que romperia ese
+--       bypass); y ninguna policy de tablas de autorizacion invoca
+--       empresas_autorizadas() (scan textual adicional de defensa).
 -- ----------------------------------------------------------------------------
 DO $$
 DECLARE
   v_off   int;
-  v_ok    boolean := true;
   v_total int;
-  v_pol   bigint;
   v_unk   bigint;
+  v_dup   bigint;
+  v_extra bigint;
+  v_falt  bigint;
+  v_bad   bigint;
+  v_def   bigint;
+  v_force bigint;
   r RECORD;
 BEGIN
+  -- (1) RLS activa en todas las tablas objetivo
   SELECT count(*) INTO v_off
     FROM tz36_inv_run i
     JOIN pg_class c ON c.relname = i.tabla
     JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname='public'
-   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion') AND NOT c.relrowsecurity;
+   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia') AND NOT c.relrowsecurity;
   IF v_off <> 0 THEN
     RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: % tablas objetivo sin RLS', v_off;
   END IF;
 
-  SELECT count(*) INTO v_total FROM tz36_inv_run WHERE clasificacion IN ('negocio','hibrido','autorizacion');
+  SELECT count(*) INTO v_total
+    FROM tz36_inv_run i
+   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia');
 
-  -- Cada tabla objetivo debe tener >=4 policies tz36_* (3 de escritura + 1 select; authz tambien 4)
-  FOR r IN
-    SELECT i.tabla FROM tz36_inv_run i WHERE i.clasificacion IN ('negocio','hibrido','autorizacion')
-  LOOP
-    SELECT count(*) INTO v_pol FROM pg_policies
-     WHERE schemaname='public' AND tablename=r.tabla AND policyname LIKE 'tz36\_%';
-    IF v_pol < 4 THEN
-      RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: public.% tiene solo % policies tz36_*', r.tabla, v_pol;
-    END IF;
-  END LOOP;
-
+  -- (2) Ninguna policy no-tz36_*
   SELECT count(*) INTO v_unk FROM pg_policies
-   WHERE schemaname='public' AND policyname NOT LIKE 'tz36\_%';
+   WHERE schemaname='public' AND NOT starts_with(policyname::text, 'tz36_');
   IF v_unk <> 0 THEN
     RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: % policies no-tz36_* presentes', v_unk;
   END IF;
 
-  -- Sin recursion: nada de empresas_autorizadas() en definiciones de authz
+  -- (3) Conjunto EXACTO: sin duplicados, sin extras, sin faltantes
+  SELECT count(*) INTO v_dup FROM (
+    SELECT p.policyname FROM pg_policies p
+     WHERE p.schemaname='public' AND starts_with(p.policyname::text, 'tz36_')
+     GROUP BY p.policyname HAVING count(*) > 1
+  ) d;
+  IF v_dup <> 0 THEN
+    RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: % policyname tz36_* duplicado(s) en public', v_dup;
+  END IF;
+
+  SELECT count(*) INTO v_extra FROM pg_policies p
+   WHERE p.schemaname='public' AND starts_with(p.policyname::text, 'tz36_')
+     AND NOT EXISTS (
+       SELECT 1 FROM tz36_inv_run i
+       CROSS JOIN (VALUES ('select'),('insert'),('update'),('delete')) AS c(cmd)
+       WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
+         AND format('tz36_%I_%s', i.tabla, c.cmd) = p.policyname::text
+     );
+  IF v_extra <> 0 THEN
+    RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: % policy tz36_* NO esperada(s) (fuera del set exacto por tabla) — posible nombre con mangling o policy adicional', v_extra;
+  END IF;
+
+  SELECT count(*) INTO v_falt
+    FROM tz36_inv_run i
+   CROSS JOIN (VALUES ('select'),('insert'),('update'),('delete')) AS c(cmd)
+   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
+     AND NOT EXISTS (
+       SELECT 1 FROM pg_policies p
+        WHERE p.schemaname='public' AND p.policyname::text = format('tz36_%I_%s', i.tabla, c.cmd)
+     );
+  IF v_falt <> 0 THEN
+    RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: faltan % de las % policies exactas tz36_<tabla>_<comando> (set %=4 por tabla)', v_falt, v_total * 4, v_total;
+  END IF;
+
+  -- (4) Estructura por comando + permissive
+  SELECT count(*) INTO v_bad FROM pg_policies p
+   WHERE p.schemaname='public' AND starts_with(p.policyname::text, 'tz36_')
+     AND ((p.cmd IN ('SELECT','UPDATE','DELETE') AND p.qual IS NULL)
+       OR (p.cmd IN ('INSERT','UPDATE') AND p.with_check IS NULL)
+       OR p.permissive <> 'PERMISSIVE');
+  IF v_bad <> 0 THEN
+    RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: % policy tz36_* con estructura invalida (USING/WITH CHECK/PERMISSIVE)', v_bad;
+  END IF;
+
+  -- (5) Anti-recursion ESTRUCTURAL
+  SELECT count(*) INTO v_def FROM pg_proc pp
+   WHERE pp.oid IN (to_regprocedure('authz.empresas_autorizadas()'), to_regprocedure('authz.es_super_admin()'))
+     AND pp.prosecdef;
+  IF v_def <> 2 THEN
+    RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: las funciones authz.* NO son SECURITY DEFINER (se esperaban 2: empresas_autorizadas y es_super_admin). El bypass del definidor es lo que evita la recursion RLS';
+  END IF;
+
+  SELECT count(*) INTO v_force
+    FROM tz36_inv_run i
+    JOIN pg_class c ON c.relname = i.tabla AND c.relnamespace = 'public'::regnamespace
+   WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia') AND c.relforcerowsecurity;
+  IF v_force <> 0 THEN
+    RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: % tabla(s) objetivo con FORCE ROW LEVEL SECURITY (rompe el bypass del definidor y reintroduce recursion)', v_force;
+  END IF;
+
   FOR r IN
     SELECT p.polname AS policyname, c.relname AS tablename,
            pg_get_expr(polqual, polrelid) AS expr,
@@ -516,15 +731,15 @@ BEGIN
       FROM pg_policy p
       JOIN pg_class c ON c.oid = p.polrelid
       JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname='public'
-     WHERE p.polname LIKE 'tz36\_%'
+     WHERE starts_with(p.polname::text, 'tz36_')
        AND c.relname IN ('usuarios_sistema','usuario_empresas','roles')
-       AND (pg_get_expr(polqual, polrelid) LIKE '%empresas_autorizadas%'
-         OR pg_get_expr(polwithcheck, polrelid) LIKE '%empresas_autorizadas%')
+       AND (position('empresas_autorizadas' in pg_get_expr(polqual, polrelid)) > 0
+         OR position('empresas_autorizadas' in pg_get_expr(polwithcheck, polrelid)) > 0)
   LOOP
     RAISE EXCEPTION 'GATE-ESTRUCTURAL 3.6 BLOQUEO: recursion detectada en public.%.%', r.tablename, r.policyname;
   END LOOP;
 
-  RAISE NOTICE 'GATE-ESTRUCTURAL 3.6 OK: RLS activa en % tablas objetivo, policies tz36_* coherentes, sin policies desconocidas, sin recursion', v_total;
+  RAISE NOTICE 'GATE-ESTRUCTURAL 3.6 OK: RLS activa en % tablas objetivo; set EXACTO de % policies tz36_* (4 por tabla); 0 policies desconocidas; estructura por comando valida; authz SECURITY DEFINER sin recursion', v_total, v_total * 4;
 END $$;
 
 -- ----------------------------------------------------------------------------
@@ -563,6 +778,15 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- SECCION 5.9: COMMIT — cierre de la transaccion EXPLICITA (apertura al inicio).
+--   Si CUALQUIER sentencia/DO anterior fallo (PCx/GATE/DDL invalido), la
+--   transaccion quedo ABORTED y este COMMIT actua como ROLLBACK: NADA de lo
+--   ejecutado antes (policies, ENABLE RLS, tz36_inventario, REVOKE) queda
+--   aplicado ni persistido. Sin error previo -> COMMIT confirma TODO en bloque.
+-- ============================================================================
+COMMIT;
+
+-- ============================================================================
 -- SECCION 6: PRUEBAS FUNCIONALES (Bloque B) y VERIFICACIONES FINALES (C)
 --            NO se ejecutan en este archivo: requieren JWT real. Guia manual.
 -- ============================================================================
@@ -589,23 +813,47 @@ END $$;
 -- ----------------------------------------------------------------------------
 -- Bloque C — verificaciones estructurales finales (OWNER, post B):
 --   C-1: SELECT tablename, relrowsecurity ... todas = true
---   C-2: SELECT tablename, count(*) FROM pg_policies WHERE policyname LIKE 'tz36_%' GROUP BY 1
+--   C-2: SELECT tablename, count(*) FROM pg_policies
+--        WHERE schemaname='public' AND starts_with(policyname::text, 'tz36_') GROUP BY 1
 --   C-3: counts desde super admin = inventario PC6 (sin perdida)
 -- ----------------------------------------------------------------------------
 
 -- ============================================================================
 -- SECCION 7: ROLLBACK DE EMERGENCIA (SOLO post-commit; NO ejecutar en esta
 --            corrida ni en el flujo normal de prueba)
+--   Estado PRE-FASE 3.6 (PRECHECK real confirmado):
+--     usuarios_sistema           -> RLS ON (0 policies)
+--     ubicaciones_personalizadas -> RLS ON (0 policies)
+--     resto de public            -> RLS OFF (0 policies)
+--   El rollback DEBE devolver EXACTAMENTE ese estado:
+--     (a) DROP POLICY IF EXISTS tz36_<tabla>_<cmd> x4 en cada tabla objetivo
+--         (incluye empresas=gerencia y las 3 de autorizacion).
+--     (b) DISABLE ROW LEVEL SECURITY SOLO en las tablas objetivo que estaban
+--         OFF antes de FASE 3.6 (TODAS excepto usuarios_sistema y
+--         ubicaciones_personalizadas); esas 2 quedan RLS ON con 0 policies
+--         (estado original).
+--     (c) tz36_inventario se CONSERVA como evidencia (no se elimina; es el
+--         diseno aprobado). backup_facturas_saldos: los REVOKE de la Seccion
+--         1.1 se RESTABLECEN solo si se desea reabrir su lectura (default: se
+--         mantienen revocados).
+--   Generador de los comandos exactos (ejecutar como OWNER, post-commit):
+--     SELECT 'DROP POLICY IF EXISTS tz36_' || i.tabla || '_select ON public.' || i.tabla || ';'
+--       FROM public.tz36_inventario i
+--      WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
+--     UNION ALL SELECT '... _insert ...' / '_update' / '_delete'  (idem, 4 comandos)
+--     ORDER BY 1; THEN:
+--     SELECT 'ALTER TABLE public.' || i.tabla || ' DISABLE ROW LEVEL SECURITY;'
+--       FROM public.tz36_inventario i
+--      WHERE i.clasificacion IN ('negocio','hibrido','autorizacion','gerencia')
+--        AND i.tabla NOT IN ('usuarios_sistema','ubicaciones_personalizadas')
+--      ORDER BY 1;
+--   (Los 4 DROPs por tabla tambien pueden escribirse estaticamente; el generador
+--    evita omisiones y cubre el inventario real materializado.)
+--   Uso unico de emergencia post-commit (R3.3 FINAL); el mecanismo normal de validacion
+--   es el Bloque B con JWT real + esta corrida atomica (nada parcial queda
+--   aplicado: COMMIT final confirma todo o revierte todo).
 -- ============================================================================
---   ALTER TABLE public.<tabla> DISABLE ROW LEVEL SECURITY;   -- por cada tabla objetivo
---   DROP POLICY IF EXISTS tz36_<tabla>_select   ON public.<tabla>;
---   DROP POLICY IF EXISTS tz36_<tabla>_insert   ON public.<tabla>;
---   DROP POLICY IF EXISTS tz36_<tabla>_update   ON public.<tabla>;
---   DROP POLICY IF EXISTS tz36_<tabla>_delete   ON public.<tabla>;
---   -- tz36_inventario se CONSERVA como evidencia (no se elimina).
---   -- Uso unico de emergencia post-commit (R3); el mecanismo normal de prueba es
---   -- el Bloque B con JWT real dentro de la transaccion original (nada parcial).
 
 -- ============================================================================
--- FIN DE MIGRACION FASE 3.6
+-- FIN DE MIGRACION FASE 3.6 — FASE 3.6 — LISTA PARA EJECUCION MANUAL COMO OWNER
 -- ============================================================================
