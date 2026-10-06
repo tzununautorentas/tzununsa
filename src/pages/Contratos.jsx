@@ -63,32 +63,29 @@ const CLAUSULAS = {
     rolArrendatario:   'EL ARRENDATARIO',
     introProveedor:    "EL ARRENDADOR (Tz'unun AutoRentas) se compromete a:",
     obligacionesProveedor: [
-      'Entregar el vehiculo en condiciones adecuadas de funcionamiento, seguridad y limpieza, de conformidad con el estado registrado en el documento o checklist de entrega correspondiente.',
-      'Proporcionar la documentacion vigente que corresponda al vehiculo durante el periodo del arrendamiento.',
-      'Mantener vigente el seguro correspondiente al vehiculo durante el periodo del arrendamiento, sujeto a las condiciones, limites, exclusiones y demas disposiciones establecidas por la compania aseguradora.',
-      'Informar a EL ARRENDATARIO sobre las condiciones generales de la cobertura y los deducibles que resulten aplicables.',
+      'Entregar el vehiculo en condiciones adecuadas de funcionamiento, seguridad y limpieza, con su documentacion vigente, de conformidad con el estado registrado en el documento o checklist de entrega correspondiente.',
+      'Mantener vigente el seguro correspondiente al vehiculo durante el periodo del arrendamiento, conforme a las condiciones, limites, exclusiones, procedimientos y demas disposiciones establecidas en la poliza, e informar a EL ARRENDATARIO sobre las condiciones generales de la cobertura y los deducibles que resulten aplicables.',
       'Recibir el vehiculo al finalizar el arrendamiento y documentar, cuando corresponda, su estado de devolucion mediante checklist, fotografias u otros medios de verificacion.',
       'Coordinar y dar seguimiento ante la compania aseguradora a los reclamos o eventos que correspondan, sin que ello implique que EL ARRENDADOR asuma los deducibles que contractualmente correspondan a EL ARRENDATARIO.',
+      'Atender las demas obligaciones que legal y contractualmente correspondan a EL ARRENDADOR en este contrato.',
+      'Responder por los incumplimientos que le sean directamente imputables. Esta responsabilidad queda sujeta a las condiciones, limites, exclusiones y determinaciones de la poliza de seguro y a las circunstancias concretas del evento, sin que se entienda como una garantia ilimitada.',
     ],
     introCliente:      'EL ARRENDATARIO se compromete a:',
     obligacionesCliente: [
-      'Utilizar el vehiculo diligentemente, para fines licitos y de acuerdo con su capacidad, caracteristicas y finalidad de uso.',
+      'Utilizar el vehiculo diligentemente, para fines licitos y de acuerdo con su capacidad, caracteristicas y finalidad de uso, bajo su responsabilidad de custodia durante todo el periodo contratado.',
       'Respetar las leyes y reglamentos de transito vigentes de la Republica de Guatemala.',
       'Mantener bajo su custodia el vehiculo, sus documentos, llaves, accesorios, herramientas y demas elementos entregados con el mismo.',
       'Informar inmediatamente a EL ARRENDADOR sobre cualquier accidente, dano, robo, perdida, falla relevante o evento que pueda generar un reclamo ante la aseguradora.',
-      'Devolver el vehiculo en la fecha, hora y lugar acordados, en condiciones equivalentes a las de entrega, salvo el desgaste normal derivado de su uso ordinario.',
-      'Asumir los cargos que contractualmente le correspondan por hechos atribuibles a EL ARRENDATARIO, incluyendo multas, combustible faltante, limpieza extraordinaria, kilometraje adicional u otros conceptos expresamente establecidos en el contrato.',
+      'Devolver el vehiculo en la fecha, hora y lugar acordados, en las condiciones pactadas de entrega, salvo el desgaste normal derivado de su uso ordinario.',
+      'Asumir los cargos que contractualmente le correspondan por hechos atribuibles a EL ARRENDATARIO, conforme a la clausula de Danos, multas, cargos y responsabilidades.',
+      'Asumir el deducible que, conforme a las condiciones de la poliza y a las circunstancias del evento, proceda aplicar, conforme a la clausula de Seguro, cobertura y deducibles.',
       'Responder por la perdida de documentos, el robo derivado de negligencia y el uso indebido del vehiculo.',
-    ],
-    usoCustodia: [
-      'EL ARRENDATARIO recibe el vehiculo bajo su responsabilidad de custodia durante el periodo contratado y debera utilizarlo diligentemente, conforme a su capacidad, caracteristicas y finalidad de uso.',
-      'Debera conservar los documentos, llaves, accesorios, herramientas y demas elementos entregados con el vehiculo, y comunicar de inmediato a EL ARRENDADOR cualquier incidente relevante durante el arrendamiento.',
-      'Finalizado el periodo, el vehiculo debera ser devuelto en las condiciones pactadas, en la fecha, hora y lugar acordados, salvo el desgaste normal derivado de su uso ordinario.',
     ],
     seguroParrafos: [
       "Todos los vehiculos de Tz'unun AutoRentas cuentan con seguro vigente con cobertura integral, conforme a las condiciones, limites, exclusiones y demas disposiciones establecidas por la compania aseguradora. La tarifa del arrendamiento incluye dicha cobertura de seguro.",
-      'En caso de accidente, dano, robo u otro evento cubierto que genere la aplicacion de un deducible conforme a la poliza, dicho deducible sera responsabilidad de EL ARRENDATARIO. La tarifa del arrendamiento no contempla la absorcion, eliminacion ni reduccion del deducible.',
-      'EL ARRENDADOR coordinara y dara seguimiento al proceso correspondiente ante la aseguradora. La determinacion de la cobertura y del monto del deducible aplicable correspondra a las condiciones de la poliza y a la evaluacion de la aseguradora.',
+      'En caso de accidente, dano, robo u otro evento cubierto que genere la aplicacion de un deducible conforme a la poliza, dicho deducible sera responsabilidad de EL ARRENDATARIO. La existencia de cobertura de seguro no elimina esta responsabilidad cuando, conforme a las condiciones de la poliza y a las circunstancias del evento, proceda su aplicacion. La tarifa del arrendamiento no contempla la absorcion, eliminacion ni reduccion del deducible.',
+      'La determinacion de la cobertura, de las exclusiones aplicables y del monto del deducible correspondiente corresponde a las condiciones de la poliza y a la evaluacion de la aseguradora.',
+      'Las situaciones no cubiertas se rigen por las exclusiones de la poliza. Cuando un evento quede fuera de cobertura, la responsabilidad de las partes se determinara conforme a este contrato y a las circunstancias concretas del evento.',
     ],
     cargosParrafos: [
       'Los cargos adicionales que correspondan por danos atribuibles a EL ARRENDATARIO, multas, combustible faltante, kilometraje adicional, limpieza extraordinaria u otros conceptos expresamente previstos en este contrato seran cobrados adicionalmente al valor inicial del contrato.',
@@ -489,7 +486,6 @@ function buildContratoHTML(contrato) {
   // Numeración de secciones para contratos de renta (los servicios conservan su numeración original)
   const romano     = (n) => ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'][n-1] || String(n);
   let secN         = 4; // I–IV son fijos (partes, objeto, plazo, pago)
-  const usoTexto   = C.usoCustodia || [];
   const seguroTxt  = C.seguroParrafos || [];
   const cargosTxt  = C.cargosParrafos || [];
   const logoURL    = window.location.origin + '/icons/Logo_Tzunun_Transp.png';
@@ -639,19 +635,10 @@ function buildContratoHTML(contrato) {
     </div>
   </div>` : ''}
 
-  <!-- V-VII. OBLIGACIONES Y USO (renta) / V. RESPONSABILIDADES (servicios) -->
+  <!-- V-VI. RESPONSABILIDADES (renta) / V. RESPONSABILIDADES (servicios) -->
   ${!esServicio ? `
   <div class="section">
-    <div class="section-title">${romano(++secN)}. Obligaciones del arrendador</div>
-    <div class="clausula">
-      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introProveedor}</p>
-      <ol>
-        ${C.obligacionesProveedor.map(x => `<li>${x}</li>`).join('')}
-      </ol>
-    </div>
-  </div>
-  <div class="section">
-    <div class="section-title">${romano(++secN)}. Obligaciones del arrendatario</div>
+    <div class="section-title">${romano(++secN)}. Responsabilidades del arrendatario</div>
     <div class="clausula">
       <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introCliente}</p>
       <ol>
@@ -659,13 +646,15 @@ function buildContratoHTML(contrato) {
       </ol>
     </div>
   </div>
-  ${usoTexto.length ? `
   <div class="section">
-    <div class="section-title">${romano(++secN)}. Uso, custodia y devolucion</div>
+    <div class="section-title">${romano(++secN)}. Responsabilidades del arrendador</div>
     <div class="clausula">
-      ${usoTexto.map(p => `<p style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.6">${p}</p>`).join('')}
+      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introProveedor}</p>
+      <ol>
+        ${C.obligacionesProveedor.map(x => `<li>${x}</li>`).join('')}
+      </ol>
     </div>
-  </div>` : ''}` : `
+  </div>` : `
   <div class="section">
     <div class="section-title">V. ${C.tituloPartes}</div>
     <div class="clausula">
@@ -698,7 +687,7 @@ function buildContratoHTML(contrato) {
       </tbody>
     </table>
     <p style="font-size:10px;color:#64748B;margin-top:6px">
-      Todos los conductores deberan contar con licencia de conducir vigente. ${esServicio ? 'Conducir sin autorizacion anula toda cobertura.' : 'Conducir sin autorizacion podra afectar la aplicacion de la cobertura del seguro conforme a las condiciones, exclusiones y limites establecidos en la poliza.'}
+      Todos los conductores deberan contar con licencia de conducir vigente. ${esServicio ? 'Conducir sin autorizacion podra generar responsabilidad y afectar la aplicacion de la cobertura unicamente en la medida en que asi lo establezcan la poliza, sus exclusiones y las determinaciones de la aseguradora.' : 'Conducir sin autorizacion podra afectar la aplicacion de la cobertura del seguro conforme a las condiciones, exclusiones y limites establecidos en la poliza.'}
     </p>
   </div>` : ''}
 
@@ -728,7 +717,7 @@ function buildContratoHTML(contrato) {
         ${C.restricciones.map(x => `<li>${x}</li>`).join('')}
       </ul>
       <p style="font-size:10px;color:#DC2626;margin-top:6px;font-style:italic">
-        ${esServicio ? 'El incumplimiento de estas restricciones anula cualquier cobertura o beneficio y genera responsabilidad legal.' : C.cierreRestriccion}
+        ${esServicio ? 'El incumplimiento de estas restricciones podra generar responsabilidad y afectar la aplicacion de la cobertura unicamente en la medida en que asi lo establezcan la poliza, sus exclusiones y las determinaciones de la aseguradora.' : C.cierreRestriccion}
       </p>
     </div>
   </div>
