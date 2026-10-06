@@ -58,32 +58,63 @@ const esServicioTipo = (tipo) => ['traslado', 'corporativo', 'logistica'].includ
 // Cláusulas configurables por tipo de servicio (revisables con asesoría legal)
 const CLAUSULAS = {
   renta: {
-    tituloPartes:      'Responsabilidades del arrendatario',
+    tituloPartes:      'Obligaciones de las partes',
     rolArrendador:     'EL ARRENDADOR',
     rolArrendatario:   'EL ARRENDATARIO',
-    introProveedor:    '',
-    obligacionesProveedor: [],
+    introProveedor:    "EL ARRENDADOR (Tz'unun AutoRentas) se compromete a:",
+    obligacionesProveedor: [
+      'Entregar el vehiculo en condiciones adecuadas de funcionamiento, seguridad y limpieza, de conformidad con el estado registrado en el documento o checklist de entrega correspondiente.',
+      'Proporcionar la documentacion vigente que corresponda al vehiculo durante el periodo del arrendamiento.',
+      'Mantener vigente el seguro correspondiente al vehiculo durante el periodo del arrendamiento, sujeto a las condiciones, limites, exclusiones y demas disposiciones establecidas por la compania aseguradora.',
+      'Informar a EL ARRENDATARIO sobre las condiciones generales de la cobertura y los deducibles que resulten aplicables.',
+      'Recibir el vehiculo al finalizar el arrendamiento y documentar, cuando corresponda, su estado de devolucion mediante checklist, fotografias u otros medios de verificacion.',
+      'Coordinar y dar seguimiento ante la compania aseguradora a los reclamos o eventos que correspondan, sin que ello implique que EL ARRENDADOR asuma los deducibles que contractualmente correspondan a EL ARRENDATARIO.',
+    ],
     introCliente:      'EL ARRENDATARIO se compromete a:',
     obligacionesCliente: [
-      'Utilizar el vehiculo unicamente para fines licitos.',
-      'No conducir bajo efectos de alcohol, drogas o sustancias prohibidas.',
-      'Respetar las leyes de transito vigentes de la Republica de Guatemala.',
-      'No subarrendar ni ceder el vehiculo a terceros no autorizados.',
-      'No sacar el vehiculo del pais sin autorizacion escrita de EL ARRENDADOR.',
-      'No sobrecargar el vehiculo mas alla de su capacidad.',
-      'Devolver el vehiculo en las mismas condiciones en que lo recibe.',
+      'Utilizar el vehiculo diligentemente, para fines licitos y de acuerdo con su capacidad, caracteristicas y finalidad de uso.',
+      'Respetar las leyes y reglamentos de transito vigentes de la Republica de Guatemala.',
+      'Mantener bajo su custodia el vehiculo, sus documentos, llaves, accesorios, herramientas y demas elementos entregados con el mismo.',
+      'Informar inmediatamente a EL ARRENDADOR sobre cualquier accidente, dano, robo, perdida, falla relevante o evento que pueda generar un reclamo ante la aseguradora.',
+      'Devolver el vehiculo en la fecha, hora y lugar acordados, en condiciones equivalentes a las de entrega, salvo el desgaste normal derivado de su uso ordinario.',
+      'Asumir los cargos que contractualmente le correspondan por hechos atribuibles a EL ARRENDATARIO, incluyendo multas, combustible faltante, limpieza extraordinaria, kilometraje adicional u otros conceptos expresamente establecidos en el contrato.',
+      'Responder por la perdida de documentos, el robo derivado de negligencia y el uso indebido del vehiculo.',
     ],
-    responsablePor: ['Danos al vehiculo, danos a terceros, multas de transito', 'Perdida de documentos, robo por negligencia, uso indebido'],
+    usoCustodia: [
+      'EL ARRENDATARIO recibe el vehiculo bajo su responsabilidad de custodia durante el periodo contratado y debera utilizarlo diligentemente, conforme a su capacidad, caracteristicas y finalidad de uso.',
+      'Debera conservar los documentos, llaves, accesorios, herramientas y demas elementos entregados con el vehiculo, y comunicar de inmediato a EL ARRENDADOR cualquier incidente relevante durante el arrendamiento.',
+      'Finalizado el periodo, el vehiculo debera ser devuelto en las condiciones pactadas, en la fecha, hora y lugar acordados, salvo el desgaste normal derivado de su uso ordinario.',
+    ],
+    seguroParrafos: [
+      "Todos los vehiculos de Tz'unun AutoRentas cuentan con seguro vigente con cobertura integral, conforme a las condiciones, limites, exclusiones y demas disposiciones establecidas por la compania aseguradora. La tarifa del arrendamiento incluye dicha cobertura de seguro.",
+      'En caso de accidente, dano, robo u otro evento cubierto que genere la aplicacion de un deducible conforme a la poliza, dicho deducible sera responsabilidad de EL ARRENDATARIO. La tarifa del arrendamiento no contempla la absorcion, eliminacion ni reduccion del deducible.',
+      'EL ARRENDADOR coordinara y dara seguimiento al proceso correspondiente ante la aseguradora. La determinacion de la cobertura y del monto del deducible aplicable correspondra a las condiciones de la poliza y a la evaluacion de la aseguradora.',
+    ],
+    cargosParrafos: [
+      'Los cargos adicionales que correspondan por danos atribuibles a EL ARRENDATARIO, multas, combustible faltante, kilometraje adicional, limpieza extraordinaria u otros conceptos expresamente previstos en este contrato seran cobrados adicionalmente al valor inicial del contrato.',
+      'Los deducibles se regiran especificamente por la clausula de Seguro, cobertura y deducibles.',
+    ],
+    cierreRestriccion: 'El incumplimiento de estas restricciones podra generar cargos y responsabilidad contractual y, cuando corresponda, afectar la aplicacion de la cobertura del seguro conforme a las condiciones, exclusiones y limites establecidos en la poliza.',
+    responsablePor: [],
     restricciones: [
       'Conducir bajo efectos de alcohol, drogas o sustancias prohibidas',
       'Utilizar el vehiculo para actos ilicitos o transporte de mercancia prohibida',
+      'Subarrendar, ceder o entregar el vehiculo a terceros no autorizados',
+      'Permitir la conduccion por personas no autorizadas o que no cumplan los requisitos legales correspondientes',
       'Fumar dentro del vehiculo',
-      'Cruzar fronteras internacionales sin autorizacion escrita',
-      'Sobrecargar el vehiculo o participar en competencias',
-      'Realizar modificaciones al vehiculo sin autorizacion',
+      'Cruzar fronteras internacionales sin autorizacion escrita de EL ARRENDADOR',
+      'Sobrecargar el vehiculo o utilizarlo para competencias, carreras o actividades incompatibles con su finalidad',
+      'Realizar modificaciones al vehiculo sin autorizacion previa',
     ],
     muestraDeducibles: true,
-    terminacion: ['Incumplimiento de cualquier clausula contractual', 'Uso indebido o actos ilicitos con el vehiculo', 'Falsedad de informacion proporcionada', 'Riesgo inminente para el vehiculo o terceros'],
+    terminacion: [
+      'Incumplimiento de obligaciones esenciales o de cualquier clausula contractual',
+      'Uso ilicito, prohibido o no autorizado del vehiculo',
+      'Conduccion por persona no autorizada o sin licencia vigente',
+      'Falsedad u ocultamiento de informacion relevante',
+      'Falta de pago de las obligaciones contractuales',
+      'Riesgo inminente para el vehiculo, las personas o terceros',
+    ],
   },
   traslado: {
     tituloPartes:    'Obligaciones de las partes',
@@ -447,6 +478,12 @@ function buildContratoHTML(contrato) {
   const C          = getContractClauses(tipo);
   const F          = getContractFields(tipo);
   const tituloDoc  = getContractTitle(tipo);
+  // Numeración de secciones para contratos de renta (los servicios conservan su numeración original)
+  const romano     = (n) => ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'][n-1] || String(n);
+  let secN         = 4; // I–IV son fijos (partes, objeto, plazo, pago)
+  const usoTexto   = C.usoCustodia || [];
+  const seguroTxt  = C.seguroParrafos || [];
+  const cargosTxt  = C.cargosParrafos || [];
   const logoURL    = window.location.origin + '/icons/Logo_Tzunun_Transp.png';
   const svcList    = listaServicios(contrato);
   const saldo      = (parseFloat(contrato.total_gtq) || 0) - (parseFloat(contrato.anticipo) || 0);
@@ -576,7 +613,7 @@ function buildContratoHTML(contrato) {
     <p style="font-size:10px;color:#64748B;margin-top:8px">
       ${esServicio
         ? 'El pago se realiza segun lo pactado en la cotizacion aprobada. Los costos no incluidos seran informados y autorizados previamente por EL CLIENTE.'
-        : 'Los cargos adicionales por danos, multas, combustible, kilometraje adicional, limpieza o deducibles seran cobrados adicionalmente al valor inicial del contrato.'}
+        : 'Los cargos adicionales que correspondan conforme a este contrato se encuentran detallados en la clausula de Danos, multas, cargos y responsabilidades.'}
     </p>
     ${contrato.condiciones_cancelacion ? `
     <p style="font-size:10px;color:#64748B;margin-top:6px"><strong>Condiciones de cancelacion:</strong> ${contrato.condiciones_cancelacion}</p>` : ''}
@@ -594,7 +631,33 @@ function buildContratoHTML(contrato) {
     </div>
   </div>` : ''}
 
-  <!-- V. RESPONSABILIDADES -->
+  <!-- V-VII. OBLIGACIONES Y USO (renta) / V. RESPONSABILIDADES (servicios) -->
+  ${!esServicio ? `
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Obligaciones del arrendador</div>
+    <div class="clausula">
+      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introProveedor}</p>
+      <ol>
+        ${C.obligacionesProveedor.map(x => `<li>${x}</li>`).join('')}
+      </ol>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Obligaciones del arrendatario</div>
+    <div class="clausula">
+      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introCliente}</p>
+      <ol>
+        ${C.obligacionesCliente.map(x => `<li>${x}</li>`).join('')}
+      </ol>
+    </div>
+  </div>
+  ${usoTexto.length ? `
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Uso, custodia y devolucion</div>
+    <div class="clausula">
+      ${usoTexto.map(p => `<p style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.6">${p}</p>`).join('')}
+    </div>
+  </div>` : ''}` : `
   <div class="section">
     <div class="section-title">V. ${C.tituloPartes}</div>
     <div class="clausula">
@@ -614,12 +677,12 @@ function buildContratoHTML(contrato) {
         ${C.responsablePor.map(x => `<li>${x}</li>`).join('')}
       </ul>` : ''}
     </div>
-  </div>
+  </div>`}
 
   <!-- VI. CONDUCTORES -->
   ${conductores.length > 0 ? `
   <div class="section">
-    <div class="section-title">VI. Conductores autorizados</div>
+    <div class="section-title">${esServicio ? 'VI' : romano(++secN)}. Conductores autorizados</div>
     <table>
       <thead><tr><th>Nombre completo</th><th>DPI / Pasaporte</th><th>No. Licencia</th><th>Tipo licencia</th></tr></thead>
       <tbody>
@@ -627,29 +690,15 @@ function buildContratoHTML(contrato) {
       </tbody>
     </table>
     <p style="font-size:10px;color:#64748B;margin-top:6px">
-      Todos los conductores deberan contar con licencia de conducir vigente. Conducir sin autorizacion anula toda cobertura.
+      Todos los conductores deberan contar con licencia de conducir vigente. ${esServicio ? 'Conducir sin autorizacion anula toda cobertura.' : 'Conducir sin autorizacion podra afectar la aplicacion de la cobertura del seguro conforme a las condiciones, exclusiones y limites establecidos en la poliza.'}
     </p>
   </div>` : ''}
 
-  <!-- VII. RESTRICCIONES -->
-  <div class="page-break-before"></div>
-  <div class="section">
-    <div class="section-title">VII. Restricciones</div>
-    <div class="clausula">
-      <p style="font-size:10px;color:#475569;margin-bottom:4px">Queda terminantemente prohibido:</p>
-      <ul>
-        ${C.restricciones.map(x => `<li>${x}</li>`).join('')}
-      </ul>
-      <p style="font-size:10px;color:#DC2626;margin-top:6px;font-style:italic">
-        El incumplimiento de estas restricciones anula cualquier cobertura o beneficio y genera responsabilidad legal.
-      </p>
-    </div>
-  </div>
-
-  <!-- VIII. DEDUCIBLES (solo renta) -->
+  <!-- SEGURO, COBERTURA Y DEDUCIBLES (solo renta) -->
   ${C.muestraDeducibles ? `
   <div class="section">
-    <div class="section-title">VIII. Deducibles y seguro</div>
+    <div class="section-title">${romano(++secN)}. Seguro, cobertura y deducibles</div>
+    ${seguroTxt[0] ? `<p style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.6">${seguroTxt[0]}</p>` : ''}
     <table>
       <thead><tr><th>Tipo de siniestro</th><th>Deducible a cargo del arrendatario</th></tr></thead>
       <tbody>
@@ -658,9 +707,31 @@ function buildContratoHTML(contrato) {
         <tr><td>Danos a terceros</td><td style="font-weight:700">Q ${fmt(contrato.deducible_terceros||3000)}</td></tr>
       </tbody>
     </table>
-    <p style="font-size:10px;color:#64748B;margin-top:6px">
-      Los danos seran evaluados por EL ARRENDADOR y/o la aseguradora correspondiente.
-    </p>
+    ${seguroTxt.slice(1).map(p => `<p style="font-size:10px;color:#64748B;margin-top:6px;line-height:1.6">${p}</p>`).join('')}
+  </div>` : ''}
+
+  <!-- RESTRICCIONES -->
+  <div class="page-break-before"></div>
+  <div class="section">
+    <div class="section-title">${esServicio ? 'VII' : romano(++secN)}. ${esServicio ? 'Restricciones' : 'Restricciones y usos no permitidos'}</div>
+    <div class="clausula">
+      <p style="font-size:10px;color:#475569;margin-bottom:4px">Queda terminantemente prohibido:</p>
+      <ul>
+        ${C.restricciones.map(x => `<li>${x}</li>`).join('')}
+      </ul>
+      <p style="font-size:10px;color:#DC2626;margin-top:6px;font-style:italic">
+        ${esServicio ? 'El incumplimiento de estas restricciones anula cualquier cobertura o beneficio y genera responsabilidad legal.' : C.cierreRestriccion}
+      </p>
+    </div>
+  </div>
+
+  <!-- DANOS, MULTAS Y CARGOS (solo renta) -->
+  ${!esServicio && cargosTxt.length ? `
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Danos, multas, cargos y responsabilidades</div>
+    <div class="clausula">
+      ${cargosTxt.map(p => `<p style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.6">${p}</p>`).join('')}
+    </div>
   </div>` : ''}
 
   <!-- CHECKLIST SALIDA -->
@@ -678,7 +749,7 @@ function buildContratoHTML(contrato) {
 
   <!-- IX. OBJETOS PERSONALES -->
   <div class="section">
-    <div class="section-title">IX. Objetos personales y facturacion</div>
+    <div class="section-title">${esServicio ? 'IX' : romano(++secN)}. Objetos personales y facturacion</div>
     <p style="font-size:10px;color:#475569;margin-bottom:8px">
       ${C.rolArrendador} no se hace responsable por objetos olvidados dentro del vehiculo.
       ${C.rolArrendatario} debera revisar el vehiculo antes de retirarse.
@@ -694,7 +765,7 @@ function buildContratoHTML(contrato) {
 
   <!-- X. TERMINACION -->
   <div class="section">
-    <div class="section-title">X. Terminacion del contrato</div>
+    <div class="section-title">${esServicio ? 'X' : romano(++secN)}. Terminacion del contrato</div>
     <div class="clausula">
       <p style="font-size:10px;color:#475569;margin-bottom:4px">${C.rolArrendador} podra dar por terminado el contrato de forma inmediata en caso de:</p>
       <ul>
@@ -714,7 +785,7 @@ function buildContratoHTML(contrato) {
 
   <!-- XI. ACEPTACION Y FIRMAS -->
   <div class="section">
-    <div class="section-title">XI. Aceptacion</div>
+    <div class="section-title">${esServicio ? 'XI' : romano(++secN)}. Aceptacion</div>
     <p style="font-size:10px;color:#475569;margin-bottom:16px">
       Ambas partes manifiestan haber leido, entendido y aceptado integra y voluntariamente
       todas las clausulas del presente contrato, el cual se suscribe en la ciudad de
