@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, api } from '../config.js';
-import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDF, generarPDFEditable } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDFEditable } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── Estados ─────────────────────────────────────────────────────
@@ -470,7 +470,15 @@ function buildContratoHTML(contrato) {
     .firma-title{font-size:9px;color:#64748B}
     /* Footer */
     .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
-    @media print{body{padding:20px 24px}.no-print{display:none}@page{size:A4;margin:15mm}}
+    /* Impresion / PDF editable: los margenes los define @page, sin padding extra */
+    @media print{body{margin:0;padding:0;background:#fff}.no-print{display:none}}
+    @page{size:letter;margin:18mm 20mm}
+    /* Paginacion: nada se corta ni queda suelto al final/inicio de pagina */
+    .header,.data-box,.fin-box,.check-grid,.firmas,.firma-box{page-break-inside:avoid}
+    .section-title{page-break-after:avoid}
+    .clausula li,tr{page-break-inside:avoid}
+    thead{display:table-header-group}
+    p{orphans:3;widows:3}
     .page-break-before{display:block;height:0;page-break-before:always}
   `;
   const tipo       = getContractType(contrato.tipo);
@@ -820,16 +828,14 @@ function buildContratoHTML(contrato) {
   return { html, css };
 }
 
+// Genera el contrato como PDF editable (texto seleccionable, no imagenes).
+// Abre el documento en una pestana e invoca window.print(): para guardar el
+// archivo se elige "Guardar como PDF" en el dialogo. Los margenes y la
+// paginacion los controla la hoja de estilos de la plantilla (ver @page/print).
 const generarPDFContrato = (contrato) => {
   const { html, css } = buildContratoHTML(contrato);
   const numero = contrato.numero || 'S-N';
-  generarPDF({ html, css, filename: `Contrato_${numero}.pdf` });
-};
-
-const generarPDFContratoEditable = (contrato) => {
-  const { html, css } = buildContratoHTML(contrato);
-  const numero = contrato.numero || 'S-N';
-  generarPDFEditable({ html, css, filename: `Contrato_${numero}_editable.pdf` });
+  generarPDFEditable({ html, css, filename: `Contrato_${numero}.pdf` });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1412,10 +1418,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => generarPDFContrato(f)} style={{ ...S.btn('blue'), flex: 1 }}>
-                Ver PDF completo
-              </button>
-              <button onClick={() => generarPDFContratoEditable(f)} style={{ ...S.btn('green'), flex: 1 }}>
-                PDF editable (texto)
+                Generar PDF editable
               </button>
               <button onClick={() => navigator.clipboard?.writeText(f.numero).then(() => showToast('Numero copiado'))}
                 style={{ ...S.btn('ghost'), fontSize: 11 }}>
@@ -1548,10 +1551,6 @@ export default function PageContratos({ showToast, empId }) {
                   <button onClick={() => generarPDFContrato(r)}
                     style={{ ...S.btn("blue"), padding: "3px 7px", fontSize: 10 }}>
                     PDF
-                  </button>
-                  <button onClick={() => generarPDFContratoEditable(r)}
-                    style={{ ...S.btn("green"), padding: "3px 7px", fontSize: 10 }}>
-                    PDF editable
                   </button>
                   <button onClick={() => { setEditItem(r); setVista('form'); }}
                     style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
