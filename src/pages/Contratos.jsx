@@ -422,7 +422,7 @@ function buildContratoHTML(contrato) {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Arial',sans-serif;font-size:10.5px;color:#1E293B;background:#fff;padding:32px 40px}
     /* Header */
-    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:3px solid #1B2D5C;margin-bottom:22px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #1B2D5C;margin-bottom:16px}
     .brand h1{color:#1B2D5C;font-size:22px;font-weight:800;letter-spacing:-0.5px}
     .brand p{color:#64748B;font-size:9px;margin-top:2px}
     .doc-info{text-align:right}
@@ -430,53 +430,53 @@ function buildContratoHTML(contrato) {
     .doc-info p{font-size:9px;color:#64748B;margin-top:2px}
     .badge{display:inline-block;padding:3px 10px;border-radius:12px;background:#00D4AA22;color:#00D4AA;font-size:9px;font-weight:700;margin-top:4px}
     /* Secciones */
-    .section{margin-bottom:18px;page-break-inside:avoid}
-    .section-title{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#94A3B8;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+    .section{margin-bottom:10px;page-break-inside:auto}
+    .section-title{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#94A3B8;margin-bottom:6px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
     .section-title::after{content:'';flex:1;height:1px;background:#E2E8F0}
     /* Cajas de datos */
-    .data-box{background:#F8FAFC;border-radius:8px;padding:14px 16px;border-left:3px solid #1B2D5C}
+    .data-box{background:#F8FAFC;border-radius:8px;padding:11px 14px;border-left:3px solid #1B2D5C}
     .data-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .data-item label{font-size:8px;font-weight:700;color:#94A3B8;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:2px}
     .data-item span{font-size:11px;color:#1E293B;font-weight:500}
     .data-item.full{grid-column:1/-1}
     /* Tablas */
-    table{width:100%;border-collapse:collapse;margin-top:8px}
+    table{width:100%;border-collapse:collapse;margin-top:6px}
     th{background:#1B2D5C;color:#fff;padding:7px 10px;text-align:left;font-size:9px;font-weight:600;letter-spacing:0.5px}
     td{padding:7px 10px;border-bottom:1px solid #F1F5F9;font-size:10px}
     tr:nth-child(even) td{background:#F8FAFC}
     /* Checklist */
-    .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
-    .check-item{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:#F8FAFC}
+    .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+    .check-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#F8FAFC}
     .check-ok{color:#16A34A;font-weight:700;font-size:11px}
     .check-no{color:#DC2626;font-weight:700;font-size:11px}
     /* Clausulas */
-    .clausula{margin-bottom:14px}
+    .clausula{margin-bottom:10px}
     .clausula h3{font-size:10px;font-weight:700;color:#1B2D5C;margin-bottom:6px;text-transform:uppercase}
     .clausula ol,.clausula ul{padding-left:16px}
     .clausula li{font-size:10px;color:#475569;margin-bottom:3px;line-height:1.5}
     /* Financiero */
-    .fin-box{background:#1B2D5C;color:#fff;border-radius:10px;padding:16px 20px;margin-top:8px}
+    .fin-box{background:#1B2D5C;color:#fff;border-radius:10px;padding:14px 18px;margin-top:8px}
     .fin-row{display:flex;justify-content:space-between;padding:4px 0;font-size:10px;color:#CBD5E1}
     .fin-total{display:flex;justify-content:space-between;padding:10px 0 0;border-top:1px solid rgba(255,255,255,.3);font-size:16px;font-weight:800;color:#00D4AA}
     /* Firmas */
-    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px}
+    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:16px}
     .firma-box{text-align:center;padding-top:8px}
-    .firma-img{width:100%;height:90px;border:1px dashed #CBD5E1;border-radius:6px;margin-bottom:8px;object-fit:contain;background:#F8FAFC}
+    .firma-img{width:100%;height:80px;border:1px dashed #CBD5E1;border-radius:6px;margin-bottom:8px;object-fit:contain;background:#F8FAFC}
     .firma-line{border-top:1.5px solid #1B2D5C;padding-top:6px;margin-top:8px}
     .firma-name{font-weight:700;font-size:10px;color:#1B2D5C}
     .firma-title{font-size:9px;color:#64748B}
     /* Footer */
-    .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
+    .footer{margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8;break-before:avoid;page-break-before:avoid}
     /* Impresion / PDF editable: los margenes los define @page, sin padding extra */
     @media print{body{margin:0;padding:0;background:#fff}.no-print{display:none}}
     @page{size:letter;margin:18mm 20mm}
-    /* Paginacion: nada se corta ni queda suelto al final/inicio de pagina */
-    .header,.data-box,.fin-box,.check-grid,.firmas,.firma-box{page-break-inside:avoid}
-    .section-title{page-break-after:avoid}
+    /* Paginacion: el contenido fluye entre paginas; nada se corta ni queda suelto */
+    .header,.data-box,.fin-box,.check-grid,.firmas,.firma-box,table,.footer{page-break-inside:avoid}
+    .section-final{page-break-inside:avoid}
+    .section-title{break-after:avoid;page-break-after:avoid}
     .clausula li,tr{page-break-inside:avoid}
     thead{display:table-header-group}
     p{orphans:3;widows:3}
-    .page-break-before{display:block;height:0;page-break-before:always}
   `;
   const tipo       = getContractType(contrato.tipo);
   const esServicio = tipo !== 'renta';
@@ -593,7 +593,6 @@ function buildContratoHTML(contrato) {
   </div>` : ''}
 
   <!-- IV. PAGO -->
-  <div class="page-break-before"></div>
   <div class="section">
     <div class="section-title">IV. Valor del servicio y forma de pago</div>
     <div class="fin-box">
@@ -708,7 +707,6 @@ function buildContratoHTML(contrato) {
   </div>` : ''}
 
   <!-- RESTRICCIONES -->
-  <div class="page-break-before"></div>
   <div class="section">
     <div class="section-title">${esServicio ? 'VII' : romano(++secN)}. ${esServicio ? 'Restricciones' : 'Restricciones y usos no permitidos'}</div>
     <div class="clausula">
@@ -780,8 +778,8 @@ function buildContratoHTML(contrato) {
     </div>
   </div>` : ''}
 
-  <!-- XI. ACEPTACION Y FIRMAS -->
-  <div class="section">
+  <!-- ACEPTACION Y FIRMAS -->
+  <div class="section section-final">
     <div class="section-title">${esServicio ? 'XI' : romano(++secN)}. Aceptacion</div>
     <p style="font-size:10px;color:#475569;margin-bottom:16px">
       Ambas partes manifiestan haber leido, entendido y aceptado integra y voluntariamente
