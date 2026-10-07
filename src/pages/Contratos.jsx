@@ -1385,9 +1385,16 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
             <div style={{ fontSize: 12, fontWeight: 700, color: T.txt, marginBottom: 4 }}>
               Estado del contrato
             </div>
-            <select style={S.sel} value={f.estado} onChange={e => sf('estado', e.target.value)}>
-              {Object.entries(ESTADOS).map(([k,v]) => <option key={k} value={k}>{v.l}</option>)}
-            </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Fld label="ESTADO">
+                <select style={S.sel} value={f.estado} onChange={e => sf('estado', e.target.value)}>
+                  {Object.entries(ESTADOS).map(([k,v]) => <option key={k} value={k}>{v.l}</option>)}
+                </select>
+              </Fld>
+              <Fld label="FECHA DE ELABORACIÓN">
+                <input style={S.inp} type="date" value={f.fecha || ''} onChange={e => sf('fecha', e.target.value)} />
+              </Fld>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={S.card}>
