@@ -91,7 +91,16 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       alert("Cliente y fecha inicio son requeridos"); return;
     }
     setSaving(true);
-    const numero = initial?.numero || await siguienteNumero("RES-", "reservas", empId);
+    let numero = initial?.numero;
+    if (!numero) {
+      try {
+        numero = await siguienteNumero("reservas", empId);
+      } catch (e) {
+        alert("No se pudo asignar el número de reserva: " + e.message);
+        setSaving(false);
+        return;
+      }
+    }
     const nextVersion = (parseInt(f.version) || 1) + 1;
     const payload = {
       empresa_id: empId,

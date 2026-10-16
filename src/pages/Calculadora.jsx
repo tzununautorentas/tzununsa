@@ -189,9 +189,9 @@ export default function PageCalculadora({ showToast, empId }) {
   const guardar = async (estado) => {
     const cn = tab === "renta" ? cli : tf.cliente;
     if (!cn.trim()) { showToast("Ingresa el nombre del cliente", "err"); return; }
+    if (!empId) { showToast("No se puede guardar la cotización porque la empresa activa todavía no está disponible. Espera unos segundos y vuelve a intentarlo", "err"); return; }
     setSaving(true);
-    const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
-    if (!eId) { showToast("Error: no se encontro empresa", "err"); setSaving(false); return; }
+    const eId = empId;
     const fi = tab === "renta" ? fechaInicio : tf.fechaInicio;
     const ff = tab === "renta" ? fechaFin : tf.fechaFin;
     const orig = tab === "renta" ? origenRenta : tf.origen;
@@ -205,6 +205,14 @@ export default function PageCalculadora({ showToast, empId }) {
       descripcion_servicio = `Renta de${vehs.length > 0 ? " " + vehs.join(" y ") : " vehículo(s)"} del ${fi ? fmtDate(fi) : "—"} a las ${horaEntrega} al ${ff ? fmtDate(ff) : "—"} a las ${horaRegreso}, por ${diasCalc} día(s) de servicio.${extras.length > 0 ? " Incluye " + extras.join(", ") + "." : ""}`;
     } else {
       descripcion_servicio = tf.descripcion_servicio || generarDescripcionDesdeItinerario(tf.itinerario) || `Traslado desde ${orig || "—"} hacia ${dest || "—"}, programado del ${fi ? fmtDate(fi) : "—"} al ${ff ? fmtDate(ff) : "—"} por ${d2} día(s) de servicio.`;
+    }
+    let numero;
+    try {
+      numero = await siguienteNumero("cotizaciones", eId);
+    } catch (e) {
+      showToast("No se pudo asignar el número de cotización: " + e.message, "err");
+      setSaving(false);
+      return;
     }
     const p = {
       empresa_id: eId, tipo: tab, cliente_nombre: cn,
@@ -221,7 +229,7 @@ export default function PageCalculadora({ showToast, empId }) {
       origen: orig, destino: dest, ruta: tab === "renta" ? "" : tf.ruta,
       observaciones_ruta: tab === "renta" ? "" : tf.observaciones_ruta,
       version: 1,
-      numero: await siguienteNumero("COT-", "cotizaciones", empId),
+      numero,
       dias: tab === "renta" ? diasCalc : d2,
       tasa_iva: tab === "renta" ? iva : parseFloat(tf.iva) || 5,
       metodo_pago: tab === "renta" ? pago : tf.pago,

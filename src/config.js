@@ -1,8 +1,11 @@
 // --- SUPABASE ---
 import { initAuth, getAccessToken, refreshSession, signIn, logout, getUserId } from "./services/session.js";
 
-export const SB = "https://fmijbpatkddkbxlkfoza.supabase.co";
-export const SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtaWpicGF0a2Rka2J4bGtmb3phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTQ3NDAsImV4cCI6MjA5MDQ5MDc0MH0.zEVmDgLUQWv9gnQrJggGhAmTuqRcQyhGbMvcL_i8joA";
+export const SB = import.meta.env.VITE_SB_URL;
+export const SK = import.meta.env.VITE_SB_KEY;
+if (!SB || !SK) {
+  throw new Error("Faltan VITE_SB_URL / VITE_SB_KEY (definelas en .env.local para pruebas)");
+}
 
 initAuth(SB, SK);
 
@@ -58,6 +61,50 @@ export async function api(path, opts = {}) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+// --- EDGE FUNCTIONS (FASE 3.7) ---
+// Invoca una Edge Function del proyecto configurado usando el JWT de la sesión
+// actual (nunca service_role desde el navegador). La autorizacion real la impone
+// la funcion server-side; aqui solo se adjunta el token.
+// Devuelve { data } en exito o { error: { code, status, mensaje } } en fallo.
+export async function invokeFuncion(nombre, payload) {
+  const token = await getAccessToken();
+  if (!token) {
+    return { error: { code: "SIN_SESION", status: 401, mensaje: "Inicia sesión para continuar." } };
+  }
+  try {
+    const res = await fetch(`${SB}/functions/v1/${nombre}`, {
+      method: "POST",
+      headers: {
+        apikey: SK,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch {}
+    if (!res.ok) {
+      const map = {
+        401: "Sesión no válida o expirada. Inicia sesión nuevamente.",
+        403: "No autorizado para esta operación.",
+        429: "Demasiados intentos. Intenta más tarde.",
+        500: "Error interno del servidor.",
+      };
+      return {
+        error: {
+          code: data?.error || `HTTP_${res.status}`,
+          status: res.status,
+          mensaje: data?.detalle || data?.message || map[res.status] || `Error ${res.status}`,
+        },
+      };
+    }
+    return { data };
+  } catch (e) {
+    return { error: { code: "SIN_CONEXION", status: 0, mensaje: e.message || "Sin conexión" } };
+  }
+}
+
 // --- DB HELPERS ---
 export async function dbGet(table, query = "") {
   try {
@@ -85,35 +132,28 @@ export async function dbIns(table, data, timeoutMs) {
   } catch (e) { return { error: e.message || "Timeout" }; }
 }
 
-export async function siguienteNumero(prefijo, tabla, empId) {
-  // Usa el contador almacenado en empresas (serie editable)
-  if (empId) {
-    try {
-      const campo = tabla === 'cotizaciones' ? 'ultima_cotizacion'
-        : tabla === 'reservas' ? 'ultima_reserva' : 'ultima_factura';
-      const r = await apiFetch(`/empresas?select=${campo}&id=eq.${empId}`);
-      const d = await r.json();
-      const actual = Array.isArray(d) && d.length > 0 ? d[0][campo] || '' : '';
-      const num = actual.startsWith(prefijo) ? parseInt(actual.slice(prefijo.length), 10) || 0 : 0;
-      const nuevo = prefijo + String(num + 1).padStart(6, '0');
-      await apiFetch(`/empresas?id=eq.${empId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ [campo]: nuevo }),
-      });
-      return nuevo;
-    } catch {}
+export async function siguienteNumero(tabla, empId) {
+  // Reserva ATOMICA del correlativo por empresa via RPC (una sola sentencia
+  // UPDATE ... RETURNING en el servidor; sin MAX(numero), sin PATCH silencioso).
+  // Si falla o no devuelve un correlativo valido, LANZA: el llamador NO debe
+  // insertar el registro.
+  if (!empId) {
+    throw new Error("No se puede asignar el correlativo porque la empresa activa todavía no está disponible. Espera unos segundos y vuelve a intentarlo");
   }
-  // Fallback: max desde la tabla
-  try {
-    const r = await apiFetch(`/${tabla}?select=numero&order=numero.desc&limit=1`);
-    if (!r.ok) return prefijo + '000001';
-    const d = await r.json();
-    const last = Array.isArray(d) && d.length > 0 ? d[0].numero || '' : '';
-    const num = last.startsWith(prefijo) ? parseInt(last.slice(prefijo.length), 10) || 0 : 0;
-    return prefijo + String(num + 1).padStart(6, '0');
-  } catch {
-    return prefijo + '000001';
+  const r = await apiFetch(`/rpc/api_siguiente_numero`, {
+    method: "POST",
+    body: JSON.stringify({ p_modulo: tabla, p_empresa: empId }),
+  });
+  let data = null;
+  try { data = await r.json(); } catch { data = null; }
+  if (!r.ok) {
+    const msg = (data && (data.message || data.hint)) || `Error ${r.status} al asignar el correlativo`;
+    throw new Error(msg);
   }
+  if (typeof data !== "string" || !data.trim()) {
+    throw new Error("El servidor no devolvió un correlativo válido");
+  }
+  return data;
 }
 
 export async function dbUpd(table, id, data) {

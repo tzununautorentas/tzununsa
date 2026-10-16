@@ -4,6 +4,7 @@ import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, CATALOGO, siguiente
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 import ItinerarioServicio from '../components/ItinerarioServicio.jsx';
+import { resolverNumeroReserva } from '../services/numeracionReserva.js';
 
 // ─── Autocomplete local ───────────────────────────────────────────────────────
 function ClienteAC({ value, onChange, onSelect, clientes }) {
@@ -805,16 +806,18 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
 
   const guardar = async (estado) => {
     if (!f.cliente_nombre.trim()) { showToast("Ingresa el nombre del cliente", "err"); return; }
+    if (!empId) { showToast("No se puede guardar la cotización porque la empresa activa todavía no está disponible. Espera unos segundos y vuelve a intentarlo", "err"); return; }
     setSaving(true);
     try {
-      const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
+      const eId = empId;
+      const esEdicion = !!(initial?.id && !isClone);
       const nextVersion = (parseInt(f.version) || 1) + 1;
       const payload = {
-        empresa_id: eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
+        empresa_id: esEdicion ? initial.empresa_id : eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
         tipo: f.tipo || "renta", cliente_tipo: f.cliente_tipo || "", cliente_contacto: f.cliente_contacto || "",
         cliente_email: f.cliente_email || "", cliente_telefono: f.cliente_telefono || "",
-        numero: (!initial?.id || isClone) ? await siguienteNumero("COT-", "cotizaciones", eId) : initial.numero,
+        numero: (!initial?.id || isClone) ? await siguienteNumero("cotizaciones", eId) : initial.numero,
         dias, vehiculo_nombre: f.vehiculo_nombre || "",
         precio_personalizado: parseFloat(f.precio_custom) || 0, costo_vehiculo: rate,
         saludo: f.saludo || "", descripcion_servicio: f.descripcion_servicio || "",
@@ -1245,10 +1248,19 @@ export default function PageCotizaciones({ showToast, empId }) {
   };
 
   const convertirAReserva = async (cot) => {
+    if (!empId) { showToast("No se puede convertir la cotización porque la empresa activa todavía no está disponible. Espera unos segundos y vuelve a intentarlo", "err"); return; }
     if (!confirm(`Convertir ${cot.numero} en Reserva confirmada?`)) return;
-    const eId = empId || (await dbGet("empresas", "&select=id&limit=1").then(d => d?.[0]?.id || null));
-    const cotNum = (cot.numero || '').match(/(\d+)/);
-    const numero = cotNum ? 'RES-' + cotNum[1].padStart(6, '0') : await siguienteNumero("RES-", "reservas", eId);
+    const eId = empId;
+    // El numero de reserva SIEMPRE se reserva con api_siguiente_numero (atomico).
+    // Nunca se deriva de cot.numero en el cliente. Si falla, se detiene la
+    // conversion sin insertar la reserva.
+    let numero;
+    try {
+      numero = await resolverNumeroReserva(siguienteNumero, eId);
+    } catch (e) {
+      showToast("No se pudo asignar el número de reserva: " + e.message, "err");
+      return;
+    }
 
     let svc = {};
     try { svc = JSON.parse(cot.servicios_incluidos || "{}"); } catch {}
