@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Component } from "react";
-import { T, S, getEmpresasAutorizadas, getEmpresaFallback } from "./config.js";
+import { T, S, getEmpresasAutorizadas, getEsSuperAdminUI } from "./config.js";
 import { getSession, onAuth, signIn, logout, getUserEmail } from "./services/session.js";
 import { ThemeProvider, useTheme } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
@@ -224,8 +224,8 @@ function ModIcon({ mod, size = 52 }) {
 }
 
 // ─── Render de pagina ─────────────────────────────────────────────
-function RenderPage({ pag, empId, showToast, userEmail }) {
-  const p = { showToast, empId, userEmail };
+function RenderPage({ pag, empId, showToast, userEmail, esSuperAdmin, notifyEmpresasCambiaron, onChangeEmpresa }) {
+  const p = { showToast, empId, userEmail, esSuperAdmin, notifyEmpresasCambiaron, onChangeEmpresa };
   const pages = {
     dashboard:     <PageDashboard     {...p} />,
     calculadora:   <PageCalculadora   {...p} />,
@@ -346,7 +346,7 @@ function LeftDrawer({ open, pag, onSelect, onClose, userName, onLogout }) {
 }
 
 // ─── Layout Movil ─────────────────────────────────────────────────
-function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail, empresasAutorizadas, empresaActiva, onChangeEmpresa }) {
+function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userEmail, empresasAutorizadas, empresaActiva, onChangeEmpresa, esSuperAdmin, notifyEmpresasCambiaron }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [onHome,     setOnHome]     = useState(true);
   const userName  = userEmail.split("@")[0];
@@ -396,7 +396,7 @@ function LayoutMovil({ pag, setPag, empId, showToast, toast, handleLogout, userE
       <div style={{ flex: 1, overflowY: "auto", padding: "14px" }}>
         {onHome
           ? <PageDashboard empId={empId} />
-          : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} /></ErrBoundary>
+          : <ErrBoundary><RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} esSuperAdmin={esSuperAdmin} notifyEmpresasCambiaron={notifyEmpresasCambiaron} onChangeEmpresa={onChangeEmpresa} /></ErrBoundary>
         }
       </div>
 
@@ -467,7 +467,7 @@ function LoginScreen({ onLogin }) {
 }
 
 // ─── Layout Desktop ───────────────────────────────────────────────
-function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, userEmail, empresasAutorizadas, empresaActiva, onChangeEmpresa }) {
+function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, userEmail, empresasAutorizadas, empresaActiva, onChangeEmpresa, esSuperAdmin, notifyEmpresasCambiaron }) {
   const [collapsed, setCollapsed] = useState(false);
   const userName = userEmail.split("@")[0];
 
@@ -613,7 +613,7 @@ function LayoutDesktop({ pag, setPag, empId, showToast, toast, handleLogout, use
         {/* Pagina activa */}
         <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
           <ErrBoundary>
-            <RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} />
+            <RenderPage pag={pag} empId={empId} showToast={showToast} userEmail={userEmail} esSuperAdmin={esSuperAdmin} notifyEmpresasCambiaron={notifyEmpresasCambiaron} onChangeEmpresa={onChangeEmpresa} />
           </ErrBoundary>
         </div>
       </div>
@@ -634,6 +634,8 @@ function AppContent() {
   const [empId,    setEmpId]    = useState(null);
   const [empresaActiva, setEmpresaActiva] = useState(null);   // { id, nombre } de la empresa activa
   const [empresasAutorizadas, setEmpresasAutorizadas] = useState([]); // empresa activa + opciones del selector
+  const [esSuperAdmin, setEsSuperAdmin] = useState(false);
+  const [empresasVersion, setEmpresasVersion] = useState(0);
   const [toast,    setToast]    = useState(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth < 768
@@ -681,18 +683,12 @@ function AppContent() {
     if (!authed) return;
     let cancel = false;
     (async () => {
-      // 1) Empresas autorizadas del usuario autenticado (RPC authz replicada vía REST)
-      let autorizadas = await getEmpresasAutorizadas();
+      // Empresas autorizadas del usuario autenticado (RPC authz replicada vía REST).
+      // Sin fallback global: si no hay vínculos, no hay empresa activa.
+      const lista = (await getEmpresasAutorizadas()) || [];
       if (cancel) return;
-      // 2) Fallback LEGACY (secundario) cuando no hay autorizadas
-      let lista = autorizadas && autorizadas.length ? autorizadas : null;
-      if (!lista) {
-        const fb = await getEmpresaFallback();
-        if (cancel) return;
-        lista = fb ? [fb] : [];
-      }
       setEmpresasAutorizadas(lista);
-      // 3) Restaurar la empresa activa persistida si aún está autorizada; si no, primera
+      // Restaurar la empresa activa persistida si aún está autorizada; si no, primera
       let persistida = null;
       try { persistida = localStorage.getItem(EMPRESA_CLAVE); } catch {}
       const activa = lista.find(e => String(e.id) === String(persistida)) || lista[0] || null;
@@ -701,7 +697,14 @@ function AppContent() {
       if (activa) { try { localStorage.setItem(EMPRESA_CLAVE, activa.id); } catch {} }
     })();
     return () => { cancel = true; };
-  }, [authed]);
+  }, [authed, empresasVersion]);
+
+  useEffect(() => {
+    if (!authed) { setEsSuperAdmin(false); return; }
+    let cancel = false;
+    getEsSuperAdminUI().then(v => { if (!cancel) setEsSuperAdmin(!!v); }).catch(() => {});
+    return () => { cancel = true; };
+  }, [authed, empresasVersion]);
 
   useEffect(() => {
     let unsub;
@@ -745,20 +748,23 @@ function AppContent() {
     setAuthed(false);
   };
 
-  const onChangeEmpresa = (empIdSel) => {
-    const nex = empresasAutorizadas.find(e => String(e.id) === String(empIdSel));
-    if (!nex) return;
+  const onChangeEmpresa = (sel) => {
+    const id = sel && typeof sel === "object" ? sel.id : sel;
+    const nex = (sel && typeof sel === "object" ? sel : empresasAutorizadas.find(e => String(e.id) === String(sel)));
+    if (!nex || !id) return;
     setEmpresaActiva(nex);
-    setEmpId(nex.id);
-    try { localStorage.setItem(EMPRESA_CLAVE, nex.id); } catch {}
+    setEmpId(id);
+    try { localStorage.setItem(EMPRESA_CLAVE, id); } catch {}
   };
+
+  const notifyEmpresasCambiaron = () => setEmpresasVersion(v => v + 1);
 
   if (checking) return null;
   if (!authed) return <LoginScreen onLogin={handleLogin} />;
 
   const props = {
     pag, setPag, empId, showToast, toast, handleLogout, userEmail,
-    empresasAutorizadas, empresaActiva, onChangeEmpresa,
+    empresasAutorizadas, empresaActiva, onChangeEmpresa, esSuperAdmin, notifyEmpresasCambiaron,
   };
 
   return isMobile

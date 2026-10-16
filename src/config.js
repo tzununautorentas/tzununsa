@@ -105,6 +105,60 @@ export async function invokeFuncion(nombre, payload) {
   }
 }
 
+// --- RPC (FASE 3.7) ---
+// Invoca funciones public.api_* expuestas por PostgREST con el JWT de la sesión.
+// La autorizacion real la impone el servidor (RPC SECURITY DEFINER); aqui solo se
+// transporta la llamada. Nombres de parametro EXACTOS con prefijo p_.
+// Devuelve { data } en exito o { error: { code, status, hint, mensaje } } en fallo.
+export const MENSAJES_F3D7 = {
+  F3D7_NO_AUTORIZADO: "No tienes permisos para esta operación.",
+  F3D7_ROL_NO_VALIDO: "No puedes asignar ese rol.",
+  F3D7_AUTO_GESTION: "No puedes gestionar tu propio vínculo.",
+  F3D7_USUARIO_INEXISTENTE: "El usuario no existe.",
+  F3D7_USUARIO_NO_ENCONTRADO: "No existe un perfil con ese correo: crea primero el usuario.",
+  F3D7_EMPRESA_INEXISTENTE: "La empresa no existe.",
+  F3D7_ROL_INEXISTENTE: "El rol indicado no existe.",
+  F3D7_DATOS_INVALIDOS: "Los datos enviados no son válidos.",
+  F3D7_EMPRESA_SIN_NOMBRE: "La empresa requiere un nombre.",
+  F3D7_EMPRESA_NOMBRE_DUPLICADO: "Ya existe una empresa con ese nombre.",
+  F3D7_AUTH_YA_REGISTRADO: "Esa identidad de acceso ya tiene perfil.",
+  F3D7_EMAIL_YA_REGISTRADO: "Ese correo ya está registrado.",
+};
+
+export function mensajeF3D7(error) {
+  const token = error?.hint || error?.code;
+  if (token && MENSAJES_F3D7[token]) return MENSAJES_F3D7[token];
+  return error?.mensaje || error?.message || error?.hint || "No se pudo completar la operación.";
+}
+
+export async function rpc(fn, params = {}) {
+  try {
+    const r = await apiFetch(`/rpc/${fn}`, {
+      method: "POST",
+      extraHeaders: { Prefer: "return=representation" },
+      body: JSON.stringify(params || {}),
+    });
+    if (r.status === 204) return { data: null };
+    const text = await r.text();
+    let j = null;
+    try { j = text ? JSON.parse(text) : null; } catch {}
+    if (!r.ok) {
+      const code = j?.hint || j?.code || `HTTP_${r.status}`;
+      return {
+        error: {
+          code,
+          status: r.status,
+          hint: j?.hint,
+          mensaje: MENSAJES_F3D7[j?.hint] || j?.message || j?.hint || `Error ${r.status}`,
+        },
+      };
+    }
+    return { data: j };
+  } catch (e) {
+    return { error: { code: "SIN_CONEXION", status: 0, mensaje: e.message || "Sin conexión" } };
+  }
+}
+
 // --- DB HELPERS ---
 export async function dbGet(table, query = "") {
   try {
@@ -217,20 +271,73 @@ export async function getEmpresasAutorizadas() {
   } catch { return []; }
 }
 
-// Fallback LEGACY (secundario): primera empresa del catálogo global.
-export async function getEmpresaFallback() {
+// Rol del usuario autenticado EN UNA empresa (FASE 3.7b, solo UI).
+// Devuelve el nombre del rol ('super_admin'|'admin') si el vinculo activo
+// concede administracion, o null. La autorizacion real la impone el servidor.
+export async function getMiRolEnEmpresa(empId) {
   try {
-    const ent = await apiFetch(`/empresas?select=id,nombre&limit=1`);
-    const ej = ent.ok ? await ent.json() : [];
-    return Array.isArray(ej) && ej.length ? ej[0] : null;
+    if (!empId) return null;
+    const authId = getUserId();
+    if (!authId) return null;
+    const usr = await apiFetch(`/usuarios_sistema?select=id&auth_id=eq.${authId}&activo=eq.true&limit=1`);
+    const us = usr.ok ? await usr.json() : [];
+    const perfilId = Array.isArray(us) && us.length ? us[0].id : null;
+    if (!perfilId) return null;
+    const rel = await apiFetch(`/usuario_empresas?select=rol_id&usuario_id=eq.${perfilId}&empresa_id=eq.${empId}&activo=eq.true&limit=1`);
+    const rj = rel.ok ? await rel.json() : [];
+    const rolId = Array.isArray(rj) && rj.length ? rj[0].rol_id : null;
+    if (!rolId) return null;
+    const rol = await apiFetch(`/roles?select=nombre,permisos&id=eq.${rolId}&limit=1`);
+    const robj = rol.ok ? await rol.json() : [];
+    if (!Array.isArray(robj) || !robj.length) return null;
+    const r = robj[0];
+    const permisos = r.permisos || {};
+    const esAdmin = r.nombre === "admin" || r.nombre === "super_admin" || permisos.todo === true;
+    return esAdmin ? (r.nombre || "admin") : null;
   } catch { return null; }
+}
+
+// ¿El usuario autenticado resuelve super_admin? (FASE 3.7b, solo UI).
+// Replica authz.es_super_admin() / decidirSuperAdmin (logic.ts): (a) vinculo
+// activo con rol super_admin/permisos.todo y perfil activo; o (b) fallback por
+// usuarios_sistema.rol_id SOLO si el perfil NO tiene NINGUN vinculo.
+export async function getEsSuperAdminUI() {
+  try {
+    const authId = getUserId();
+    if (!authId) return false;
+    const usr = await apiFetch(`/usuarios_sistema?select=id,rol_id,activo&auth_id=eq.${authId}`);
+    const perfiles = usr.ok ? await usr.json() : [];
+    if (!Array.isArray(perfiles) || perfiles.length === 0) return false;
+    const ids = perfiles.map(p => p.id).filter(Boolean);
+    if (ids.length === 0) return false;
+    const rel = await apiFetch(`/usuario_empresas?select=usuario_id,rol_id,activo&usuario_id=in.(${ids.map(encodeURIComponent).join(",")})`);
+    const vinculos = rel.ok ? await rel.json() : [];
+    const vl = Array.isArray(vinculos) ? vinculos : [];
+    const rolIds = Array.from(new Set([
+      ...perfiles.map(p => p.rol_id).filter(Boolean),
+      ...vl.map(v => v.rol_id).filter(Boolean),
+    ]));
+    const roles = rolIds.length
+      ? await (async () => {
+          const rr = await apiFetch(`/roles?select=id,nombre,permisos&id=in.(${rolIds.map(encodeURIComponent).join(",")})`);
+          const rj = rr.ok ? await rr.json() : [];
+          return Array.isArray(rj) ? rj : [];
+        })()
+      : [];
+    const activoPorPerfil = new Map(perfiles.map(p => [p.id, p.activo === true]));
+    const rolMap = new Map(roles.map(r => [r.id, r]));
+    const esSuper = (rol) => !!rol && (rol.nombre === "super_admin" || (rol.permisos && rol.permisos.todo === true));
+    if (vl.some(v => v.activo && activoPorPerfil.get(v.usuario_id) === true && esSuper(rolMap.get(v.rol_id)))) return true;
+    return perfiles.some(p => {
+      const tieneVinculo = vl.some(v => v.usuario_id === p.id);
+      return !tieneVinculo && p.activo && esSuper(rolMap.get(p.rol_id));
+    });
+  } catch { return false; }
 }
 
 export async function getEmpId() {
   const autorizadas = await getEmpresasAutorizadas();
-  if (autorizadas && autorizadas.length > 0) return autorizadas[0].id;
-  const fb = await getEmpresaFallback();
-  return fb ? fb.id : null;
+  return autorizadas && autorizadas.length > 0 ? autorizadas[0].id : null;
 }
 
 // --- SUPABASE AUTH (delegado al SDK) ---

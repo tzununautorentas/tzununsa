@@ -15,12 +15,15 @@ function setUserFromSession(session) {
 
 export function initAuth(sbUrl, sbKey) {
   if (_inited) return _sb;
+  const m = String(sbUrl || "").match(/^https:\/\/([a-z0-9]+)\.supabase\.co/i);
+  const ref = m ? m[1] : "default";
+  const storageKey = ref === "fmijbpatkddkbxlkfoza" ? "tzunun_auth" : `tzunun_auth_${ref}`;
   _sb = createClient(sbUrl, sbKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      storageKey: "tzunun_auth",
+      storageKey,
     },
   });
   try { localStorage.removeItem("tzunun_session"); } catch {}

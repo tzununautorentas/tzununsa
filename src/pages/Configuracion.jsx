@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { T, S, fmt, dbGet, dbIns, dbUpd, dbDel, CATALOGO } from '../config.js';
+import { T, S, fmt, dbGet, dbIns, dbUpd, dbDel, CATALOGO, invokeFuncion, rpc, getMiRolEnEmpresa, mensajeF3D7 } from '../config.js';
 import { Spinner, Fld } from '../components/shared.jsx';
 
 const SECCIONES = [
@@ -267,45 +267,437 @@ function PanelSuscripcion({ empId }) {
   );
 }
 
-function PanelUsuarios({ showToast, empId }) {
-  const [usuarios, setUsuarios] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const cargar = () => {
-    setCargando(true);
-    dbGet("usuarios_sistema", `&select=*,rol:rol_id(*)&empresa_id=eq.${empId}`).then(d => {
-      setUsuarios(Array.isArray(d) ? d : []);
-      setCargando(false);
-    });
-  };
-  useEffect(() => { if (empId) cargar(); }, [empId]);
-  if (cargando) return <Spinner />;
+const humanRol = (nombre) => {
+  if (nombre === "super_admin") return "Super admin";
+  if (nombre === "admin") return "Administrador";
+  if (nombre === "usuario") return "Usuario";
+  return nombre || "—";
+};
+
+const badgeStyle = (ok) => ({
+  display: "inline-block", padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600,
+  background: ok ? T.greenDim : T.redDim, color: ok ? T.green : T.red,
+});
+
+async function cambiarRolVinculo(usuarioId, empresaId, rolId) {
+  return rpc("api_actualizar_vinculo", { p_usuario_id: usuarioId, p_empresa: empresaId, p_rol: rolId });
+}
+async function cambiarActivoVinculo(usuarioId, empresaId, activo) {
+  return rpc("api_actualizar_vinculo", { p_usuario_id: usuarioId, p_empresa: empresaId, p_activo: activo });
+}
+async function desactivarPerfil(usuarioId) {
+  return rpc("api_desactivar_perfil", { p_usuario_id: usuarioId });
+}
+
+function SinEmpresa() {
   return (
-    <div style={{ maxWidth: 700 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>Usuarios del sistema ({usuarios.length})</div>
+    <div style={S.card}>
+      <div style={{ textAlign: "center", padding: 20, color: T.mut, fontSize: 13 }}>
+        No hay empresa activa. Selecciona una empresa para administrar sus usuarios.
       </div>
-      <div style={S.card}>
-        {usuarios.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
-            No hay usuarios registrados en esta empresa.
-            <div style={{ marginTop: 8, fontSize: 11 }}>Los usuarios se vinculan desde Supabase Auth con la tabla usuarios_sistema.</div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {usuarios.map(u => (
-              <div key={u.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: T.surf, borderRadius: 10 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: T.txt }}>{u.nombre}</div>
-                  <div style={{ fontSize: 11, color: T.sub }}>{u.email} · {u.rol?.nombre || "—"}</div>
-                </div>
-                <span style={{ padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600, background: u.activo ? T.greenDim : T.redDim, color: u.activo ? T.green : T.red }}>
-                  {u.activo ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-            ))}
+    </div>
+  );
+}
+
+function useRoster(empId, showToast) {
+  const [filas, setFilas] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const cargar = async () => {
+    if (!empId) { setFilas([]); return; }
+    setCargando(true);
+    const { data, error } = await rpc("api_roster_empresa", { p_empresa: empId });
+    setCargando(false);
+    if (error) { showToast(mensajeF3D7(error), "err"); setFilas([]); return; }
+    setFilas(Array.isArray(data) ? data : []);
+  };
+  useEffect(() => { cargar(); }, [empId]);
+  return { filas, cargando, recargar: cargar };
+}
+
+function RosterTabla({ filas, roles, esSuperAdmin, empId, showToast, onChanged, userEmail }) {
+  const [ocupado, setOcupado] = useState(null);
+  const miEmail = (userEmail || "").toLowerCase();
+
+  const opcionesRol = (rolActualId) => {
+    const base = esSuperAdmin ? roles : roles.filter(r => r.nombre === "usuario");
+    const incluyeActual = base.some(r => Number(r.id) === Number(rolActualId));
+    const extra = !incluyeActual ? roles.filter(r => Number(r.id) === Number(rolActualId)) : [];
+    return [...base, ...extra];
+  };
+
+  const accion = async (u, fn, confirmar) => {
+    if (confirmar && !window.confirm(confirmar)) return;
+    setOcupado(u.usuario_id);
+    const { error } = await fn();
+    setOcupado(null);
+    if (error) { showToast(mensajeF3D7(error), "err"); return; }
+    showToast("Actualizado");
+    onChanged && onChanged();
+  };
+
+  if (filas.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>
+        No hay usuarios vinculados a esta empresa.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+        <thead>
+          <tr>
+            <th style={S.th}>Usuario</th>
+            <th style={S.th}>Rol en la empresa</th>
+            <th style={S.th}>Perfil</th>
+            <th style={S.th}>Vínculo</th>
+            <th style={S.th}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map(u => {
+            const esMiPerfil = miEmail && (u.email || "").toLowerCase() === miEmail;
+            const ocupada = ocupado === u.usuario_id;
+            return (
+              <tr key={u.usuario_id}>
+                <td style={S.td}>
+                  <div style={{ fontWeight: 600, color: T.txt }}>{u.nombre || "—"}{esMiPerfil ? " (tú)" : ""}</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{u.email || "—"}</div>
+                </td>
+                <td style={S.td}>
+                  <select style={{ ...S.sel, minWidth: 160 }} disabled={ocupada} value={u.rol_id}
+                    onChange={e => {
+                      const nuevo = Number(e.target.value);
+                      if (nuevo === Number(u.rol_id)) return;
+                      const nom = (roles.find(r => Number(r.id) === nuevo) || {}).nombre;
+                      accion(u, () => cambiarRolVinculo(u.usuario_id, empId, nuevo),
+                        `¿Cambiar el rol de ${u.nombre || u.email} a "${humanRol(nom)}"?`);
+                    }}>
+                    {opcionesRol(u.rol_id).map(r => <option key={r.id} value={r.id}>{humanRol(r.nombre)}</option>)}
+                  </select>
+                </td>
+                <td style={S.td}><span style={badgeStyle(u.activo_usuario)}>{u.activo_usuario ? "Activo" : "Inactivo"}</span></td>
+                <td style={S.td}><span style={badgeStyle(u.activo_vinculo)}>{u.activo_vinculo ? "Activo" : "Inactivo"}</span></td>
+                <td style={S.td}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button disabled={ocupada}
+                      onClick={() => accion(u, () => cambiarActivoVinculo(u.usuario_id, empId, !u.activo_vinculo))}
+                      style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>
+                      {u.activo_vinculo ? "Desactivar vínculo" : "Activar vínculo"}
+                    </button>
+                    {esSuperAdmin && !esMiPerfil && u.activo_usuario && (
+                      <button disabled={ocupada}
+                        onClick={() => accion(u, () => desactivarPerfil(u.usuario_id),
+                          `¿Desactivar el perfil de ${u.nombre || u.email}? Se desactivarán también todos sus vínculos.`)}
+                        style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px", color: T.red }}>
+                        Desactivar perfil
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PanelUsuarios({ showToast, empId, esSuperAdmin, userEmail }) {
+  const { filas, cargando, recargar } = useRoster(empId, showToast);
+  const [roles, setRoles] = useState([]);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [credencial, setCredencial] = useState(null);
+
+  useEffect(() => { dbGet("roles", "&order=id.asc").then(d => setRoles(Array.isArray(d) ? d : [])); }, []);
+
+  if (!empId) return <SinEmpresa />;
+
+  const rolDef = roles.find(r => r.nombre === "usuario") || roles[0];
+  const abrirForm = (accion) => { setError(""); setCredencial(null); setForm({ accion, email: "", nombre: "", rol_id: rolDef?.id ?? "" }); };
+  const sf = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const enviar = async () => {
+    setError(""); setCredencial(null);
+    const email = (form.email || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Correo no válido."); return; }
+    const rol_id = parseInt(form.rol_id, 10);
+    if (!Number.isInteger(rol_id) || rol_id <= 0) { setError("Selecciona un rol válido."); return; }
+
+    setSaving(true);
+    const { data, error: err } = await invokeFuncion("gestion-usuarios", {
+      accion: form.accion,
+      email,
+      nombre: (form.nombre || "").trim() || undefined,
+      empresa_id: empId,
+      rol_id,
+    });
+    setSaving(false);
+
+    if (err) { setError(err.mensaje || "No se pudo completar la operación."); return; }
+    if (form.accion === "crear_usuario" && data?.password_temporal) {
+      setCredencial({ email: data.email || email, password: data.password_temporal });
+    } else {
+      showToast("Usuario vinculado correctamente");
+    }
+    setForm(null);
+    recargar();
+  };
+
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(credencial.password); showToast("Contraseña copiada"); }
+    catch { showToast("No se pudo copiar", "err"); }
+  };
+
+  return (
+    <div style={{ maxWidth: 760, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Usuarios de la empresa ({filas.length})</div>
+        {esSuperAdmin && !form && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => abrirForm("crear_usuario")} style={{ ...S.btn("primary"), fontSize: 11 }}>+ Crear usuario</button>
+            <button onClick={() => abrirForm("vincular_existente")} style={{ ...S.btn("ghost"), fontSize: 11 }}>Vincular existente</button>
           </div>
         )}
       </div>
+
+      {credencial && (
+        <div style={{ ...S.card, borderColor: T.acc }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.acc, marginBottom: 6 }}>Contraseña temporal (se muestra una sola vez)</div>
+          <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Entrega esta contraseña a <strong>{credencial.email}</strong>. No volverá a mostrarse.</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <code style={{ flex: 1, background: T.surf, borderRadius: 8, padding: "9px 12px", color: T.txt, fontSize: 13, fontFamily: "monospace", border: `1px solid ${T.bord}` }}>{credencial.password}</code>
+            <button onClick={copiar} style={{ ...S.btn("primary"), fontSize: 11 }}>Copiar</button>
+          </div>
+        </div>
+      )}
+
+      {form && (
+        <div style={S.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>
+            {form.accion === "crear_usuario" ? "Crear usuario nuevo" : "Vincular usuario existente"}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+            <Fld label="CORREO">
+              <input style={S.inp} type="email" value={form.email} onChange={e => sf("email", e.target.value)} placeholder="usuario@dominio.com" />
+            </Fld>
+            <Fld label="NOMBRE (OPCIONAL)">
+              <input style={S.inp} value={form.nombre} onChange={e => sf("nombre", e.target.value)} placeholder={form.accion === "crear_usuario" ? "Nombre (si se omite, se usa el correo)" : "Solo aplica si el perfil aún no existe"} />
+            </Fld>
+            <Fld label="ROL">
+              <select style={S.sel} value={form.rol_id} onChange={e => sf("rol_id", e.target.value)}>
+                {roles.map(r => <option key={r.id} value={r.id}>{humanRol(r.nombre)}</option>)}
+              </select>
+            </Fld>
+            {error && <div style={{ fontSize: 12, color: T.red, background: T.redDim, borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={enviar} disabled={saving} style={{ ...S.btn("primary") }}>{saving ? "Procesando..." : "Guardar"}</button>
+              <button onClick={() => { setForm(null); setError(""); }} style={{ ...S.btn("ghost") }}>Cancelar</button>
+            </div>
+            <div style={{ fontSize: 10, color: T.mut }}>Operación ejecutada por la función segura del servidor; disponible solo para el super administrador.</div>
+          </div>
+        </div>
+      )}
+
+      <div style={S.card}>
+        {cargando ? <Spinner /> : (
+          <RosterTabla filas={filas} roles={roles} esSuperAdmin={esSuperAdmin} empId={empId}
+            showToast={showToast} onChanged={recargar} userEmail={userEmail} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PanelEmpresasAdmin({ showToast, onChangeEmpresa, notifyEmpresasCambiaron }) {
+  const [empresas, setEmpresas] = useState([]);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const cargar = async () => {
+    const { data, error } = await rpc("api_lista_empresas");
+    if (error) { showToast(mensajeF3D7(error), "err"); setEmpresas([]); return; }
+    setEmpresas(Array.isArray(data) ? data : []);
+  };
+  useEffect(() => { cargar(); }, []);
+
+  const sf = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const crear = async () => {
+    setError("");
+    if (!form.nombre.trim()) { setError("El nombre de la empresa es obligatorio."); return; }
+    setSaving(true);
+    const { error: err } = await rpc("api_crear_empresa", {
+      p_datos: {
+        nombre: form.nombre.trim(),
+        nit: form.nit.trim() || null,
+        telefono: form.telefono.trim() || null,
+        email: form.email.trim() || null,
+        eslogan: form.eslogan.trim() || null,
+      },
+      p_admin_email: form.admin_email.trim() || null,
+    });
+    setSaving(false);
+    if (err) { setError(err.mensaje || "No se pudo crear la empresa."); return; }
+    showToast("Empresa creada");
+    setForm(null);
+    cargar();
+    notifyEmpresasCambiaron && notifyEmpresasCambiaron();
+  };
+
+  return (
+    <div style={{ maxWidth: 720, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Empresas ({empresas.length})</div>
+        {!form && <button onClick={() => { setError(""); setForm({ nombre: "", nit: "", telefono: "", email: "", eslogan: "", admin_email: "" }); }} style={{ ...S.btn("primary"), fontSize: 11 }}>+ Nueva empresa</button>}
+      </div>
+
+      {form && (
+        <div style={S.card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Nueva empresa</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+            <Fld label="NOMBRE *"><input style={S.inp} value={form.nombre} onChange={e => sf("nombre", e.target.value)} placeholder="Tz'unun AutoRentas" /></Fld>
+            <Fld label="NIT"><input style={S.inp} value={form.nit} onChange={e => sf("nit", e.target.value)} placeholder="16693949" /></Fld>
+            <Fld label="TELÉFONO"><input style={S.inp} value={form.telefono} onChange={e => sf("telefono", e.target.value)} placeholder="502-31221538" /></Fld>
+            <Fld label="EMAIL"><input style={S.inp} value={form.email} onChange={e => sf("email", e.target.value)} placeholder="empresa@dominio.com" /></Fld>
+            <Fld label="ESLOGAN"><input style={S.inp} value={form.eslogan} onChange={e => sf("eslogan", e.target.value)} placeholder="Movilidad corporativa" /></Fld>
+            <Fld label="ADMIN (CORREO, OPCIONAL)"><input style={S.inp} value={form.admin_email} onChange={e => sf("admin_email", e.target.value)} placeholder="admin@dominio.com" /></Fld>
+          </div>
+          {error && <div style={{ fontSize: 11, color: T.red, marginTop: 10 }}>{error}</div>}
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <button onClick={crear} disabled={saving} style={{ ...S.btn("primary") }}>{saving ? "Creando..." : "Crear empresa"}</button>
+            <button onClick={() => { setForm(null); setError(""); }} style={{ ...S.btn("ghost") }}>Cancelar</button>
+          </div>
+          <div style={{ fontSize: 10, color: T.mut, marginTop: 8 }}>
+            Si indicas un correo de admin, debe pertenecer a un perfil ya existente; de lo contrario créalo primero desde Usuarios.
+          </div>
+        </div>
+      )}
+
+      <div style={S.card}>
+        {empresas.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>No hay empresas registradas.</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+              <thead>
+                <tr>
+                  <th style={S.th}>Empresa</th>
+                  <th style={S.th}>NIT</th>
+                  <th style={S.th}>Contacto</th>
+                  <th style={S.th}>Usuarios</th>
+                  <th style={S.th}>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {empresas.map(e => (
+                  <tr key={e.id}>
+                    <td style={{ ...S.td, fontWeight: 600, color: T.acc }}>{e.nombre}</td>
+                    <td style={S.td}>{e.nit || "—"}</td>
+                    <td style={S.td}>{e.email || e.telefono || "—"}</td>
+                    <td style={S.td}>{e.usuarios ?? "—"}</td>
+                    <td style={S.td}>
+                      <button onClick={() => onChangeEmpresa && onChangeEmpresa({ id: e.id, nombre: e.nombre })}
+                        style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>
+                        Usar esta empresa
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PanelVinculos({ showToast, esSuperAdmin, userEmail }) {
+  const [empresas, setEmpresas] = useState([]);
+  const [empSel, setEmpSel] = useState("");
+  const [roles, setRoles] = useState([]);
+  const { filas, cargando, recargar } = useRoster(empSel, showToast);
+
+  useEffect(() => {
+    rpc("api_lista_empresas").then(({ data, error }) => {
+      if (error) { showToast(mensajeF3D7(error), "err"); return; }
+      setEmpresas(Array.isArray(data) ? data : []);
+    });
+    dbGet("roles", "&order=id.asc").then(d => setRoles(Array.isArray(d) ? d : []));
+  }, []);
+
+  return (
+    <div style={{ maxWidth: 760, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={S.card}>
+        <Fld label="EMPRESA">
+          <select style={S.sel} value={empSel} onChange={e => setEmpSel(e.target.value)}>
+            <option value="">— Seleccionar empresa —</option>
+            {empresas.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+          </select>
+        </Fld>
+      </div>
+      <div style={S.card}>
+        {!empSel ? (
+          <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>Selecciona una empresa para ver y gestionar sus vínculos.</div>
+        ) : cargando ? <Spinner /> : (
+          <RosterTabla filas={filas} roles={roles} esSuperAdmin={esSuperAdmin} empId={empSel}
+            showToast={showToast} onChanged={recargar} userEmail={userEmail} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PanelBitacora({ showToast }) {
+  const [filas, setFilas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    rpc("api_bitacora").then(({ data, error }) => {
+      setCargando(false);
+      if (error) { showToast(mensajeF3D7(error), "err"); return; }
+      setFilas(Array.isArray(data) ? data : []);
+    });
+  }, []);
+
+  if (cargando) return <Spinner />;
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Bitácora de gestión</div>
+      {filas.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 24, color: T.mut, fontSize: 13 }}>Sin registros.</div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+            <thead>
+              <tr>
+                <th style={S.th}>Fecha</th>
+                <th style={S.th}>Actor</th>
+                <th style={S.th}>Acción</th>
+                <th style={S.th}>Entidad</th>
+                <th style={S.th}>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map(r => (
+                <tr key={r.id}>
+                  <td style={S.td}>{r.creada ? new Date(r.creada).toLocaleString("es-GT") : "—"}</td>
+                  <td style={S.td}>{r.actor_email || "—"}</td>
+                  <td style={S.td}>{r.accion || "—"}</td>
+                  <td style={S.td}>{r.entidad || "—"}{r.entidad_id ? ` #${r.entidad_id}` : ""}</td>
+                  <td style={{ ...S.td, fontFamily: "monospace", fontSize: 11, color: T.sub }}>{r.detalle ? JSON.stringify(r.detalle) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -864,6 +1256,7 @@ function PanelNotif() {
 const PANELS = {
   empresa: PanelEmpresa, perfil: PanelPerfil, marca: PanelMarca, suscripcion: PanelSuscripcion,
   usuarios: PanelUsuarios, roles: PanelRoles,
+  empresasAdmin: PanelEmpresasAdmin, vinculos: PanelVinculos, bitacora: PanelBitacora,
   impuestos: PanelImpuestos,
   general: PanelGeneral, monedas: PanelMonedas, terminos: PanelTerminos, recordatorios: PanelRecordatorios,
   portal: PanelPortal,
@@ -873,12 +1266,21 @@ const PANELS = {
   notif: PanelNotif,
 };
 
-export default function PageConfiguracion({ showToast, empId: empIdProp }) {
+const SUB_ADMIN = [
+  { id: "empresasAdmin", label: "Empresas" },
+  { id: "usuarios",      label: "Usuarios" },
+  { id: "vinculos",      label: "Vínculos" },
+  { id: "bitacora",      label: "Bitácora" },
+];
+const PANELES_GLOBALES = ["empresasAdmin", "vinculos", "bitacora"];
+
+export default function PageConfiguracion({ showToast, empId: empIdProp, userEmail, esSuperAdmin, notifyEmpresasCambiaron, onChangeEmpresa }) {
   const [sec, setSec] = useState("org");
   const [sub, setSub] = useState("empresa");
   const [emp, setEmp] = useState({});
   const [empId, setEmpId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [rolEmpresa, setRolEmpresa] = useState(null);
   const [theme, setThemeState] = useState({
     acc: "#5EEAD4", sec: "#FCD34D", red: "#FCA5A5", blue: "#93C5FD", green: "#86EFAC", purple: "#C4B5FD",
   });
@@ -890,11 +1292,24 @@ export default function PageConfiguracion({ showToast, empId: empIdProp }) {
         if (d && d[0]) { setEmp(d[0]); setEmpId(eId); }
       });
     } else {
-      dbGet("empresas", "&select=*&limit=1").then(d => {
-        if (d && d[0]) { setEmp(d[0]); setEmpId(d[0].id); }
-      });
+      setEmp({});
+      setEmpId(null);
     }
   }, [empIdProp]);
+
+  useEffect(() => {
+    let cancel = false;
+    if (esSuperAdmin || !empId) { setRolEmpresa(null); return; }
+    getMiRolEnEmpresa(empId).then(r => { if (!cancel) setRolEmpresa(r); });
+    return () => { cancel = true; };
+  }, [empId, esSuperAdmin]);
+
+  const subAdminPermitidos = esSuperAdmin
+    ? SUB_ADMIN
+    : (rolEmpresa ? SUB_ADMIN.filter(s => s.id === "usuarios") : []);
+  const secciones = (esSuperAdmin || rolEmpresa)
+    ? [...SECCIONES, { id: "admin", label: "Administración", icon: "🛡️", sub: subAdminPermitidos }]
+    : SECCIONES;
 
   const guardarEmp = async () => {
     if (!emp.nombre?.trim()) { showToast("Nombre requerido", "err"); return; }
@@ -920,9 +1335,12 @@ export default function PageConfiguracion({ showToast, empId: empIdProp }) {
     document.documentElement.style.setProperty(`--theme-${key}`, val);
   };
 
-  const seccion = SECCIONES.find(s => s.id === sec);
   const Panel = PANELS[sub] || PanelEmpresa;
-  const panelProps = { emp, setEmp, guardarEmp, saving, showToast, empId, theme, setTheme };
+  const panelProps = {
+    emp, setEmp, guardarEmp, saving, showToast, empId, theme, setTheme,
+    esSuperAdmin, userEmail, notifyEmpresasCambiaron, onChangeEmpresa,
+  };
+  const contenido = (!empId && !PANELES_GLOBALES.includes(sub)) ? <SinEmpresa /> : <Panel {...panelProps} />;
 
   return (
     <div style={{ display: "flex", gap: 0, minHeight: "calc(100vh - 100px)" }}>
@@ -931,7 +1349,7 @@ export default function PageConfiguracion({ showToast, empId: empIdProp }) {
         width: 240, flexShrink: 0, background: T.surf, borderRadius: 12,
         border: `1px solid ${T.bord}`, overflow: "hidden", alignSelf: "flex-start",
       }}>
-        {SECCIONES.map(s => (
+        {secciones.map(s => (
           <div key={s.id}>
             {sec === s.id && (
               <div style={{ background: T.accDim, borderLeft: `3px solid ${T.acc}` }}>
@@ -970,7 +1388,7 @@ export default function PageConfiguracion({ showToast, empId: empIdProp }) {
 
       {/* Content */}
       <div style={{ flex: 1, marginLeft: 20, overflow: "auto" }}>
-        <Panel {...panelProps} />
+        {contenido}
       </div>
     </div>
   );
