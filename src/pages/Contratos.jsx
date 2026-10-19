@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, api } from '../config.js';
-import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDF, generarPDFEditable } from '../components/shared.jsx';
+import { Spinner, Empty, Fld, Badge, Paginador, Buscador, generarPDFEditable } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
 
 // ─── Estados ─────────────────────────────────────────────────────
@@ -58,32 +58,60 @@ const esServicioTipo = (tipo) => ['traslado', 'corporativo', 'logistica'].includ
 // Cláusulas configurables por tipo de servicio (revisables con asesoría legal)
 const CLAUSULAS = {
   renta: {
-    tituloPartes:      'Responsabilidades del arrendatario',
+    tituloPartes:      'Obligaciones de las partes',
     rolArrendador:     'EL ARRENDADOR',
     rolArrendatario:   'EL ARRENDATARIO',
-    introProveedor:    '',
-    obligacionesProveedor: [],
+    introProveedor:    "EL ARRENDADOR (Tz'unun AutoRentas) se compromete a:",
+    obligacionesProveedor: [
+      'Entregar el vehiculo en condiciones adecuadas de funcionamiento, seguridad y limpieza, con su documentacion vigente, de conformidad con el estado registrado en el documento o checklist de entrega correspondiente.',
+      'Mantener vigente el seguro correspondiente al vehiculo durante el periodo del arrendamiento, conforme a las condiciones, limites, exclusiones, procedimientos y demas disposiciones establecidas en la poliza, e informar a EL ARRENDATARIO sobre las condiciones generales de la cobertura y los deducibles que resulten aplicables.',
+      'Recibir el vehiculo al finalizar el arrendamiento y documentar, cuando corresponda, su estado de devolucion mediante checklist, fotografias u otros medios de verificacion.',
+      'Coordinar y dar seguimiento ante la compania aseguradora a los reclamos o eventos que correspondan, sin que ello implique que EL ARRENDADOR asuma los deducibles que contractualmente correspondan a EL ARRENDATARIO.',
+      'Atender las demas obligaciones que legal y contractualmente correspondan a EL ARRENDADOR en este contrato.',
+      'Responder por los incumplimientos que le sean directamente imputables. Esta responsabilidad queda sujeta a las condiciones, limites, exclusiones y determinaciones de la poliza de seguro y a las circunstancias concretas del evento, sin que se entienda como una garantia ilimitada.',
+    ],
     introCliente:      'EL ARRENDATARIO se compromete a:',
     obligacionesCliente: [
-      'Utilizar el vehiculo unicamente para fines licitos.',
-      'No conducir bajo efectos de alcohol, drogas o sustancias prohibidas.',
-      'Respetar las leyes de transito vigentes de la Republica de Guatemala.',
-      'No subarrendar ni ceder el vehiculo a terceros no autorizados.',
-      'No sacar el vehiculo del pais sin autorizacion escrita de EL ARRENDADOR.',
-      'No sobrecargar el vehiculo mas alla de su capacidad.',
-      'Devolver el vehiculo en las mismas condiciones en que lo recibe.',
+      'Utilizar el vehiculo diligentemente, para fines licitos y de acuerdo con su capacidad, caracteristicas y finalidad de uso, bajo su responsabilidad de custodia durante todo el periodo contratado.',
+      'Respetar las leyes y reglamentos de transito vigentes de la Republica de Guatemala.',
+      'Mantener bajo su custodia el vehiculo, sus documentos, llaves, accesorios, herramientas y demas elementos entregados con el mismo.',
+      'Informar inmediatamente a EL ARRENDADOR sobre cualquier accidente, dano, robo, perdida, falla relevante o evento que pueda generar un reclamo ante la aseguradora.',
+      'Devolver el vehiculo en la fecha, hora y lugar acordados, en las condiciones pactadas de entrega, salvo el desgaste normal derivado de su uso ordinario.',
+      'Asumir los cargos que contractualmente le correspondan por hechos atribuibles a EL ARRENDATARIO, conforme a la clausula de Danos, multas, cargos y responsabilidades.',
+      'Asumir el deducible que, conforme a las condiciones de la poliza y a las circunstancias del evento, proceda aplicar, conforme a la clausula de Seguro, cobertura y deducibles.',
+      'Responder por la perdida de documentos, el robo derivado de negligencia y el uso indebido del vehiculo.',
     ],
-    responsablePor: ['Danos al vehiculo, danos a terceros, multas de transito', 'Perdida de documentos, robo por negligencia, uso indebido'],
+    seguroParrafos: [
+      "Todos los vehiculos de Tz'unun AutoRentas cuentan con seguro vigente con cobertura integral, conforme a las condiciones, limites, exclusiones y demas disposiciones establecidas por la compania aseguradora. La tarifa del arrendamiento incluye dicha cobertura de seguro.",
+      'En caso de accidente, dano, robo u otro evento cubierto que genere la aplicacion de un deducible conforme a la poliza, dicho deducible sera responsabilidad de EL ARRENDATARIO. La existencia de cobertura de seguro no elimina esta responsabilidad cuando, conforme a las condiciones de la poliza y a las circunstancias del evento, proceda su aplicacion. La tarifa del arrendamiento no contempla la absorcion, eliminacion ni reduccion del deducible.',
+      'La determinacion de la cobertura, de las exclusiones aplicables y del monto del deducible correspondiente corresponde a las condiciones de la poliza y a la evaluacion de la aseguradora.',
+      'Las situaciones no cubiertas se rigen por las exclusiones de la poliza. Cuando un evento quede fuera de cobertura, la responsabilidad de las partes se determinara conforme a este contrato y a las circunstancias concretas del evento.',
+    ],
+    cargosParrafos: [
+      'Los cargos adicionales que correspondan por danos atribuibles a EL ARRENDATARIO, multas, combustible faltante, kilometraje adicional, limpieza extraordinaria u otros conceptos expresamente previstos en este contrato seran cobrados adicionalmente al valor inicial del contrato.',
+      'Los deducibles se regiran especificamente por la clausula de Seguro, cobertura y deducibles.',
+    ],
+    cierreRestriccion: 'El incumplimiento de estas restricciones podra generar cargos y responsabilidad contractual y, cuando corresponda, afectar la aplicacion de la cobertura del seguro conforme a las condiciones, exclusiones y limites establecidos en la poliza.',
+    responsablePor: [],
     restricciones: [
       'Conducir bajo efectos de alcohol, drogas o sustancias prohibidas',
       'Utilizar el vehiculo para actos ilicitos o transporte de mercancia prohibida',
+      'Subarrendar, ceder o entregar el vehiculo a terceros no autorizados',
+      'Permitir la conduccion por personas no autorizadas o que no cumplan los requisitos legales correspondientes',
       'Fumar dentro del vehiculo',
-      'Cruzar fronteras internacionales sin autorizacion escrita',
-      'Sobrecargar el vehiculo o participar en competencias',
-      'Realizar modificaciones al vehiculo sin autorizacion',
+      'Cruzar fronteras internacionales sin autorizacion escrita de EL ARRENDADOR',
+      'Sobrecargar el vehiculo o utilizarlo para competencias, carreras o actividades incompatibles con su finalidad',
+      'Realizar modificaciones al vehiculo sin autorizacion previa',
     ],
     muestraDeducibles: true,
-    terminacion: ['Incumplimiento de cualquier clausula contractual', 'Uso indebido o actos ilicitos con el vehiculo', 'Falsedad de informacion proporcionada', 'Riesgo inminente para el vehiculo o terceros'],
+    terminacion: [
+      'Incumplimiento de obligaciones esenciales o de cualquier clausula contractual',
+      'Uso ilicito, prohibido o no autorizado del vehiculo',
+      'Conduccion por persona no autorizada o sin licencia vigente',
+      'Falsedad u ocultamiento de informacion relevante',
+      'Falta de pago de las obligaciones contractuales',
+      'Riesgo inminente para el vehiculo, las personas o terceros',
+    ],
   },
   traslado: {
     tituloPartes:    'Obligaciones de las partes',
@@ -394,7 +422,7 @@ function buildContratoHTML(contrato) {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Arial',sans-serif;font-size:10.5px;color:#1E293B;background:#fff;padding:32px 40px}
     /* Header */
-    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:3px solid #1B2D5C;margin-bottom:22px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #1B2D5C;margin-bottom:16px}
     .brand h1{color:#1B2D5C;font-size:22px;font-weight:800;letter-spacing:-0.5px}
     .brand p{color:#64748B;font-size:9px;margin-top:2px}
     .doc-info{text-align:right}
@@ -402,51 +430,64 @@ function buildContratoHTML(contrato) {
     .doc-info p{font-size:9px;color:#64748B;margin-top:2px}
     .badge{display:inline-block;padding:3px 10px;border-radius:12px;background:#00D4AA22;color:#00D4AA;font-size:9px;font-weight:700;margin-top:4px}
     /* Secciones */
-    .section{margin-bottom:18px;page-break-inside:avoid}
-    .section-title{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#94A3B8;margin-bottom:8px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+    .section{margin-bottom:10px;page-break-inside:auto}
+    .section-title{font-size:9px;font-weight:700;letter-spacing:1.5px;color:#94A3B8;margin-bottom:6px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
     .section-title::after{content:'';flex:1;height:1px;background:#E2E8F0}
     /* Cajas de datos */
-    .data-box{background:#F8FAFC;border-radius:8px;padding:14px 16px;border-left:3px solid #1B2D5C}
+    .data-box{background:#F8FAFC;border-radius:8px;padding:11px 14px;border-left:3px solid #1B2D5C}
     .data-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .data-item label{font-size:8px;font-weight:700;color:#94A3B8;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:2px}
     .data-item span{font-size:11px;color:#1E293B;font-weight:500}
     .data-item.full{grid-column:1/-1}
     /* Tablas */
-    table{width:100%;border-collapse:collapse;margin-top:8px}
+    table{width:100%;border-collapse:collapse;margin-top:6px}
     th{background:#1B2D5C;color:#fff;padding:7px 10px;text-align:left;font-size:9px;font-weight:600;letter-spacing:0.5px}
     td{padding:7px 10px;border-bottom:1px solid #F1F5F9;font-size:10px}
     tr:nth-child(even) td{background:#F8FAFC}
     /* Checklist */
-    .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
-    .check-item{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:#F8FAFC}
+    .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+    .check-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#F8FAFC}
     .check-ok{color:#16A34A;font-weight:700;font-size:11px}
     .check-no{color:#DC2626;font-weight:700;font-size:11px}
     /* Clausulas */
-    .clausula{margin-bottom:14px}
+    .clausula{margin-bottom:10px}
     .clausula h3{font-size:10px;font-weight:700;color:#1B2D5C;margin-bottom:6px;text-transform:uppercase}
     .clausula ol,.clausula ul{padding-left:16px}
     .clausula li{font-size:10px;color:#475569;margin-bottom:3px;line-height:1.5}
     /* Financiero */
-    .fin-box{background:#1B2D5C;color:#fff;border-radius:10px;padding:16px 20px;margin-top:8px}
+    .fin-box{background:#1B2D5C;color:#fff;border-radius:10px;padding:14px 18px;margin-top:8px}
     .fin-row{display:flex;justify-content:space-between;padding:4px 0;font-size:10px;color:#CBD5E1}
     .fin-total{display:flex;justify-content:space-between;padding:10px 0 0;border-top:1px solid rgba(255,255,255,.3);font-size:16px;font-weight:800;color:#00D4AA}
     /* Firmas */
-    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px}
+    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:16px}
     .firma-box{text-align:center;padding-top:8px}
-    .firma-img{width:100%;height:90px;border:1px dashed #CBD5E1;border-radius:6px;margin-bottom:8px;object-fit:contain;background:#F8FAFC}
+    .firma-img{width:100%;height:80px;border:1px dashed #CBD5E1;border-radius:6px;margin-bottom:8px;object-fit:contain;background:#F8FAFC}
     .firma-line{border-top:1.5px solid #1B2D5C;padding-top:6px;margin-top:8px}
     .firma-name{font-weight:700;font-size:10px;color:#1B2D5C}
     .firma-title{font-size:9px;color:#64748B}
     /* Footer */
-    .footer{margin-top:24px;padding-top:14px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8}
-    @media print{body{padding:20px 24px}.no-print{display:none}@page{size:A4;margin:15mm}}
-    .page-break-before{display:block;height:0;page-break-before:always}
+    .footer{margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;text-align:center;font-size:9px;color:#94A3B8;break-before:avoid;page-break-before:avoid}
+    /* Impresion / PDF editable: los margenes los define @page, sin padding extra */
+    @media print{body{margin:0;padding:0;background:#fff}.no-print{display:none}}
+    @page{size:letter;margin:18mm 20mm}
+    /* Paginacion: el contenido fluye entre paginas; nada se corta ni queda suelto */
+    .header,.data-box,.fin-box,.check-grid,.firmas,.firma-box,table,.footer{page-break-inside:avoid}
+    .section-final{page-break-inside:avoid}
+    .section-title{break-after:avoid;page-break-after:avoid}
+    .clausula li,tr{page-break-inside:avoid}
+    thead{display:table-header-group}
+    p{orphans:3;widows:3}
   `;
   const tipo       = getContractType(contrato.tipo);
   const esServicio = tipo !== 'renta';
   const C          = getContractClauses(tipo);
   const F          = getContractFields(tipo);
   const tituloDoc  = getContractTitle(tipo);
+  // Numeración de secciones para contratos de renta (los servicios conservan su numeración original)
+  const romano     = (n) => ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'][n-1] || String(n);
+  let secN         = 4; // I–IV son fijos (partes, objeto, plazo, pago)
+  const seguroTxt  = C.seguroParrafos || [];
+  const cargosTxt  = C.cargosParrafos || [];
   const logoURL    = window.location.origin + '/icons/Logo_Tzunun_Transp.png';
   const svcList    = listaServicios(contrato);
   const saldo      = (parseFloat(contrato.total_gtq) || 0) - (parseFloat(contrato.anticipo) || 0);
@@ -552,7 +593,6 @@ function buildContratoHTML(contrato) {
   </div>` : ''}
 
   <!-- IV. PAGO -->
-  <div class="page-break-before"></div>
   <div class="section">
     <div class="section-title">IV. Valor del servicio y forma de pago</div>
     <div class="fin-box">
@@ -576,7 +616,7 @@ function buildContratoHTML(contrato) {
     <p style="font-size:10px;color:#64748B;margin-top:8px">
       ${esServicio
         ? 'El pago se realiza segun lo pactado en la cotizacion aprobada. Los costos no incluidos seran informados y autorizados previamente por EL CLIENTE.'
-        : 'Los cargos adicionales por danos, multas, combustible, kilometraje adicional, limpieza o deducibles seran cobrados adicionalmente al valor inicial del contrato.'}
+        : 'Los cargos adicionales que correspondan conforme a este contrato se encuentran detallados en la clausula de Danos, multas, cargos y responsabilidades.'}
     </p>
     ${contrato.condiciones_cancelacion ? `
     <p style="font-size:10px;color:#64748B;margin-top:6px"><strong>Condiciones de cancelacion:</strong> ${contrato.condiciones_cancelacion}</p>` : ''}
@@ -594,7 +634,26 @@ function buildContratoHTML(contrato) {
     </div>
   </div>` : ''}
 
-  <!-- V. RESPONSABILIDADES -->
+  <!-- V-VI. RESPONSABILIDADES (renta) / V. RESPONSABILIDADES (servicios) -->
+  ${!esServicio ? `
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Responsabilidades del arrendatario</div>
+    <div class="clausula">
+      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introCliente}</p>
+      <ol>
+        ${C.obligacionesCliente.map(x => `<li>${x}</li>`).join('')}
+      </ol>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Responsabilidades del arrendador</div>
+    <div class="clausula">
+      <p style="font-size:10px;color:#475569;margin-bottom:6px">${C.introProveedor}</p>
+      <ol>
+        ${C.obligacionesProveedor.map(x => `<li>${x}</li>`).join('')}
+      </ol>
+    </div>
+  </div>` : `
   <div class="section">
     <div class="section-title">V. ${C.tituloPartes}</div>
     <div class="clausula">
@@ -614,12 +673,12 @@ function buildContratoHTML(contrato) {
         ${C.responsablePor.map(x => `<li>${x}</li>`).join('')}
       </ul>` : ''}
     </div>
-  </div>
+  </div>`}
 
   <!-- VI. CONDUCTORES -->
   ${conductores.length > 0 ? `
   <div class="section">
-    <div class="section-title">VI. Conductores autorizados</div>
+    <div class="section-title">${esServicio ? 'VI' : romano(++secN)}. Conductores autorizados</div>
     <table>
       <thead><tr><th>Nombre completo</th><th>DPI / Pasaporte</th><th>No. Licencia</th><th>Tipo licencia</th></tr></thead>
       <tbody>
@@ -627,29 +686,15 @@ function buildContratoHTML(contrato) {
       </tbody>
     </table>
     <p style="font-size:10px;color:#64748B;margin-top:6px">
-      Todos los conductores deberan contar con licencia de conducir vigente. Conducir sin autorizacion anula toda cobertura.
+      Todos los conductores deberan contar con licencia de conducir vigente. ${esServicio ? 'Conducir sin autorizacion podra generar responsabilidad y afectar la aplicacion de la cobertura unicamente en la medida en que asi lo establezcan la poliza, sus exclusiones y las determinaciones de la aseguradora.' : 'Conducir sin autorizacion podra afectar la aplicacion de la cobertura del seguro conforme a las condiciones, exclusiones y limites establecidos en la poliza.'}
     </p>
   </div>` : ''}
 
-  <!-- VII. RESTRICCIONES -->
-  <div class="page-break-before"></div>
-  <div class="section">
-    <div class="section-title">VII. Restricciones</div>
-    <div class="clausula">
-      <p style="font-size:10px;color:#475569;margin-bottom:4px">Queda terminantemente prohibido:</p>
-      <ul>
-        ${C.restricciones.map(x => `<li>${x}</li>`).join('')}
-      </ul>
-      <p style="font-size:10px;color:#DC2626;margin-top:6px;font-style:italic">
-        El incumplimiento de estas restricciones anula cualquier cobertura o beneficio y genera responsabilidad legal.
-      </p>
-    </div>
-  </div>
-
-  <!-- VIII. DEDUCIBLES (solo renta) -->
+  <!-- SEGURO, COBERTURA Y DEDUCIBLES (solo renta) -->
   ${C.muestraDeducibles ? `
   <div class="section">
-    <div class="section-title">VIII. Deducibles y seguro</div>
+    <div class="section-title">${romano(++secN)}. Seguro, cobertura y deducibles</div>
+    ${seguroTxt[0] ? `<p style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.6">${seguroTxt[0]}</p>` : ''}
     <table>
       <thead><tr><th>Tipo de siniestro</th><th>Deducible a cargo del arrendatario</th></tr></thead>
       <tbody>
@@ -658,9 +703,30 @@ function buildContratoHTML(contrato) {
         <tr><td>Danos a terceros</td><td style="font-weight:700">Q ${fmt(contrato.deducible_terceros||3000)}</td></tr>
       </tbody>
     </table>
-    <p style="font-size:10px;color:#64748B;margin-top:6px">
-      Los danos seran evaluados por EL ARRENDADOR y/o la aseguradora correspondiente.
-    </p>
+    ${seguroTxt.slice(1).map(p => `<p style="font-size:10px;color:#64748B;margin-top:6px;line-height:1.6">${p}</p>`).join('')}
+  </div>` : ''}
+
+  <!-- RESTRICCIONES -->
+  <div class="section">
+    <div class="section-title">${esServicio ? 'VII' : romano(++secN)}. ${esServicio ? 'Restricciones' : 'Restricciones y usos no permitidos'}</div>
+    <div class="clausula">
+      <p style="font-size:10px;color:#475569;margin-bottom:4px">Queda terminantemente prohibido:</p>
+      <ul>
+        ${C.restricciones.map(x => `<li>${x}</li>`).join('')}
+      </ul>
+      <p style="font-size:10px;color:#DC2626;margin-top:6px;font-style:italic">
+        ${esServicio ? 'El incumplimiento de estas restricciones podra generar responsabilidad y afectar la aplicacion de la cobertura unicamente en la medida en que asi lo establezcan la poliza, sus exclusiones y las determinaciones de la aseguradora.' : C.cierreRestriccion}
+      </p>
+    </div>
+  </div>
+
+  <!-- DANOS, MULTAS Y CARGOS (solo renta) -->
+  ${!esServicio && cargosTxt.length ? `
+  <div class="section">
+    <div class="section-title">${romano(++secN)}. Danos, multas, cargos y responsabilidades</div>
+    <div class="clausula">
+      ${cargosTxt.map(p => `<p style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.6">${p}</p>`).join('')}
+    </div>
   </div>` : ''}
 
   <!-- CHECKLIST SALIDA -->
@@ -678,7 +744,7 @@ function buildContratoHTML(contrato) {
 
   <!-- IX. OBJETOS PERSONALES -->
   <div class="section">
-    <div class="section-title">IX. Objetos personales y facturacion</div>
+    <div class="section-title">${esServicio ? 'IX' : romano(++secN)}. Objetos personales y facturacion</div>
     <p style="font-size:10px;color:#475569;margin-bottom:8px">
       ${C.rolArrendador} no se hace responsable por objetos olvidados dentro del vehiculo.
       ${C.rolArrendatario} debera revisar el vehiculo antes de retirarse.
@@ -694,7 +760,7 @@ function buildContratoHTML(contrato) {
 
   <!-- X. TERMINACION -->
   <div class="section">
-    <div class="section-title">X. Terminacion del contrato</div>
+    <div class="section-title">${esServicio ? 'X' : romano(++secN)}. Terminacion del contrato</div>
     <div class="clausula">
       <p style="font-size:10px;color:#475569;margin-bottom:4px">${C.rolArrendador} podra dar por terminado el contrato de forma inmediata en caso de:</p>
       <ul>
@@ -712,9 +778,9 @@ function buildContratoHTML(contrato) {
     </div>
   </div>` : ''}
 
-  <!-- XI. ACEPTACION Y FIRMAS -->
-  <div class="section">
-    <div class="section-title">XI. Aceptacion</div>
+  <!-- ACEPTACION Y FIRMAS -->
+  <div class="section section-final">
+    <div class="section-title">${esServicio ? 'XI' : romano(++secN)}. Aceptacion</div>
     <p style="font-size:10px;color:#475569;margin-bottom:16px">
       Ambas partes manifiestan haber leido, entendido y aceptado integra y voluntariamente
       todas las clausulas del presente contrato, el cual se suscribe en la ciudad de
@@ -749,16 +815,14 @@ function buildContratoHTML(contrato) {
   return { html, css };
 }
 
+// Genera el contrato como PDF editable (texto seleccionable, no imagenes).
+// Abre el documento en una pestana e invoca window.print(): para guardar el
+// archivo se elige "Guardar como PDF" en el dialogo. Los margenes y la
+// paginacion los controla la hoja de estilos de la plantilla (ver @page/print).
 const generarPDFContrato = (contrato) => {
   const { html, css } = buildContratoHTML(contrato);
   const numero = contrato.numero || 'S-N';
-  generarPDF({ html, css, filename: `Contrato_${numero}.pdf` });
-};
-
-const generarPDFContratoEditable = (contrato) => {
-  const { html, css } = buildContratoHTML(contrato);
-  const numero = contrato.numero || 'S-N';
-  generarPDFEditable({ html, css, filename: `Contrato_${numero}_editable.pdf` });
+  generarPDFEditable({ html, css, filename: `Contrato_${numero}.pdf` });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1321,9 +1385,16 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
             <div style={{ fontSize: 12, fontWeight: 700, color: T.txt, marginBottom: 4 }}>
               Estado del contrato
             </div>
-            <select style={S.sel} value={f.estado} onChange={e => sf('estado', e.target.value)}>
-              {Object.entries(ESTADOS).map(([k,v]) => <option key={k} value={k}>{v.l}</option>)}
-            </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Fld label="ESTADO">
+                <select style={S.sel} value={f.estado} onChange={e => sf('estado', e.target.value)}>
+                  {Object.entries(ESTADOS).map(([k,v]) => <option key={k} value={k}>{v.l}</option>)}
+                </select>
+              </Fld>
+              <Fld label="FECHA DE ELABORACIÓN">
+                <input style={S.inp} type="date" value={f.fecha || ''} onChange={e => sf('fecha', e.target.value)} />
+              </Fld>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={S.card}>
@@ -1341,10 +1412,7 @@ function FormContrato({ initial, empId, onSave, onCancel, showToast }) {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => generarPDFContrato(f)} style={{ ...S.btn('blue'), flex: 1 }}>
-                Ver PDF completo
-              </button>
-              <button onClick={() => generarPDFContratoEditable(f)} style={{ ...S.btn('green'), flex: 1 }}>
-                PDF editable (texto)
+                Generar PDF editable
               </button>
               <button onClick={() => navigator.clipboard?.writeText(f.numero).then(() => showToast('Numero copiado'))}
                 style={{ ...S.btn('ghost'), fontSize: 11 }}>
@@ -1477,10 +1545,6 @@ export default function PageContratos({ showToast, empId }) {
                   <button onClick={() => generarPDFContrato(r)}
                     style={{ ...S.btn("blue"), padding: "3px 7px", fontSize: 10 }}>
                     PDF
-                  </button>
-                  <button onClick={() => generarPDFContratoEditable(r)}
-                    style={{ ...S.btn("green"), padding: "3px 7px", fontSize: 10 }}>
-                    PDF editable
                   </button>
                   <button onClick={() => { setEditItem(r); setVista('form'); }}
                     style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>
