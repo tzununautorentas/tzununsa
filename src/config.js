@@ -1,5 +1,5 @@
 // --- SUPABASE ---
-import { initAuth, getAccessToken, refreshSession, signIn, logout, getUserId } from "./services/session.js";
+import { initAuth, getAccessToken, refreshSession, signIn, logout, getUserId, resetPasswordForEmail, updatePassword, hasRecoverySession, procesarEnlaceRecuperacion, onAuth } from "./services/session.js";
 
 export const SB = import.meta.env.VITE_SB_URL;
 export const SK = import.meta.env.VITE_SB_KEY;
@@ -349,7 +349,7 @@ export async function sbLogout(token) {
   await logout();
 }
 
-export { getAccessToken, refreshSession, logout, getUserId };
+export { getAccessToken, refreshSession, logout, getUserId, resetPasswordForEmail, updatePassword, hasRecoverySession, procesarEnlaceRecuperacion, onAuth };
 
 // --- THEME (reactivo via CSS Variables) ---
 // Cualquier propiedad accedida en T se resuelve como var(--theme-<prop>)

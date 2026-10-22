@@ -812,6 +812,17 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       const eId = empId;
       const esEdicion = !!(initial?.id && !isClone);
       const nextVersion = (parseInt(f.version) || 1) + 1;
+      let svcPrev = {};
+      try { svcPrev = JSON.parse(initial?.servicios_incluidos || "{}") || {}; } catch { svcPrev = {}; }
+      const serviciosIncluidos = {
+        ...svcPrev,
+        piloto: f.incl_piloto,
+        combustible: f.incl_combustible,
+        peajes: f.incl_peajes,
+        hospedaje: f.incl_hospedaje,
+        alimentacion: f.incl_alimentacion,
+        seguro: f.incl_seguro,
+      };
       const payload = {
         empresa_id: esEdicion ? initial.empresa_id : eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
         cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
@@ -829,7 +840,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       exch_eur: parseFloat(f.exch_eur) || 8.50,
       itinerario: f.itinerario || "",
       cuentas_pago: Array.isArray(f.cuentas_pago) ? JSON.stringify(f.cuentas_pago.map(String)) : '[]',
-        servicios_incluidos: JSON.stringify({ piloto: f.incl_piloto, combustible: f.incl_combustible, peajes: f.incl_peajes, hospedaje: f.incl_hospedaje, alimentacion: f.incl_alimentacion, seguro: f.incl_seguro }),
+        servicios_incluidos: JSON.stringify(serviciosIncluidos),
         costo_piloto: cp, costo_hospedaje: ch, costo_alimentacion: ca,
         km_total: parseFloat(f.km_total) || 0, km_por_galon: kmpg, precio_galon: pgal,
         peajes: sub_peajes, extras: sub_extras,

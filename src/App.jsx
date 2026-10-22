@@ -1,6 +1,8 @@
 import React, { useState, useEffect, Component } from "react";
 import { T, S, getEmpresasAutorizadas, getEsSuperAdminUI } from "./config.js";
-import { getSession, onAuth, signIn, logout, getUserEmail } from "./services/session.js";
+import { getSession, onAuth, signIn, logout, getUserEmail, resetPasswordForEmail, updatePassword, hasRecoverySession, procesarEnlaceRecuperacion } from "./services/session.js";
+import { esEmailValido, mensajeSolicitudNeutral, RECOVERY_PATH } from "./services/recuperacion.js";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import { ThemeProvider, useTheme } from "./config/theme.jsx";
 import { NotificacionesBell } from "./components/Notificaciones.jsx";
 import {
@@ -415,6 +417,13 @@ function LoginScreen({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
 
+  // Flujo "¿Olvidaste tu contraseña?"
+  const [vista,    setVista]    = useState("login"); // login|recuperar
+  const [rEmail,   setREmail]   = useState("");
+  const [rError,   setRError]   = useState("");
+  const [rMsg,     setRMsg]     = useState("");
+  const [rSending, setRSending] = useState(false);
+
   const login = async (e) => {
     e.preventDefault();
     if (!email || !pwd) { setError("Ingresa correo y contrasena"); return; }
@@ -423,6 +432,28 @@ function LoginScreen({ onLogin }) {
     const res = await onLogin(email, pwd);
     if (res?.error) setError("Credenciales incorrectas");
     setLoading(false);
+  };
+
+  const abrirRecuperar = () => {
+    setVista("recuperar"); setRError(""); setRMsg("");
+    setREmail((email || "").trim());
+  };
+
+  const enviarRecuperacion = async (e) => {
+    e.preventDefault();
+    if (rSending) return;
+    setRError(""); setRMsg("");
+    const correo = (rEmail || "").trim();
+    if (!esEmailValido(correo)) { setRError("Ingresa un correo válido."); return; }
+    setRSending(true);
+    const redirectTo = `${window.location.origin}${RECOVERY_PATH}`;
+    const res = await resetPasswordForEmail(correo, redirectTo);
+    setRSending(false);
+    // Mensaje NEUTRAL siempre: no revela si el correo está registrado.
+    // Si hay un error de RED (conexión), se informa aparte para poder reintentar.
+    const red = res?.error && /conex|network|fetch|failed to fetch|timeout/i.test(String(res.error));
+    if (red) { setRError("No se pudo conectar. Revisa tu conexión e intenta de nuevo."); return; }
+    setRMsg(mensajeSolicitudNeutral());
   };
 
   return (
@@ -436,28 +467,71 @@ function LoginScreen({ onLogin }) {
             style={{ width: "100%", maxWidth: 280, height: "auto", margin: "0 auto 20px", display: "block" }} />
           <div style={{ fontSize: 13, color: T.sub, marginTop: -8, marginBottom: 20, textAlign: "center" }}>Sistema de Gestion</div>
         </div>
-        <form onSubmit={login} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={S.lbl}>CORREO</label>
-            <input style={S.inp} type="email" value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="correo@empresa.com" autoFocus />
-          </div>
-          <div>
-            <label style={S.lbl}>CONTRASENA</label>
-            <input style={S.inp} type="password" value={pwd}
-              onChange={e => setPwd(e.target.value)} placeholder="........" />
-          </div>
-          {error && (
-            <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red }}>
-              {error}
+
+        {vista === "login" && (
+          <form onSubmit={login} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={S.lbl}>CORREO</label>
+              <input style={S.inp} type="email" value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="correo@empresa.com" autoFocus />
             </div>
-          )}
-          <button type="submit" disabled={loading}
-            style={{ ...S.btn("primary"), padding: 14, fontSize: 14 }}>
-            {loading ? "Ingresando..." : "Entrar"}
-          </button>
-        </form>
+            <div>
+              <label style={S.lbl}>CONTRASENA</label>
+              <input style={S.inp} type="password" value={pwd}
+                onChange={e => setPwd(e.target.value)} placeholder="........" />
+            </div>
+            {error && (
+              <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red }}>
+                {error}
+              </div>
+            )}
+            <button type="submit" disabled={loading}
+              style={{ ...S.btn("primary"), padding: 14, fontSize: 14 }}>
+              {loading ? "Ingresando..." : "Entrar"}
+            </button>
+            <button type="button" onClick={abrirRecuperar}
+              style={{ background: "transparent", border: "none", cursor: "pointer",
+                color: T.acc, fontSize: 12, fontWeight: 600, padding: 4 }}>
+              ¿Olvidaste tu contraseña?
+            </button>
+          </form>
+        )}
+
+        {vista === "recuperar" && (
+          <form onSubmit={enviarRecuperacion} style={{ ...S.card, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.txt }}>Recuperar contraseña</div>
+            <div style={{ fontSize: 12, color: T.sub }}>
+              Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
+            </div>
+            <div>
+              <label style={S.lbl}>CORREO</label>
+              <input style={S.inp} type="email" value={rEmail}
+                onChange={e => setREmail(e.target.value)}
+                placeholder="correo@empresa.com" autoFocus />
+            </div>
+            {rError && (
+              <div style={{ background: T.redDim, border: `1px solid ${T.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.red }}>
+                {rError}
+              </div>
+            )}
+            {rMsg && (
+              <div style={{ background: T.accDim, border: `1px solid ${T.acc}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: T.acc }}>
+                {rMsg}
+              </div>
+            )}
+            <button type="submit" disabled={rSending}
+              style={{ ...S.btn("primary"), padding: 14, fontSize: 14, opacity: rSending ? 0.6 : 1 }}>
+              {rSending ? "Enviando..." : "Enviar enlace"}
+            </button>
+            <button type="button" onClick={() => { setVista("login"); setRMsg(""); setRError(""); }}
+              style={{ background: "transparent", border: "none", cursor: "pointer",
+                color: T.sub, fontSize: 12, fontWeight: 600, padding: 4 }}>
+              Volver al inicio de sesión
+            </button>
+          </form>
+        )}
+
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: T.mut }}>
           tzununsa.vercel.app
         </div>
@@ -637,6 +711,7 @@ function AppContent() {
   const [esSuperAdmin, setEsSuperAdmin] = useState(false);
   const [empresasVersion, setEmpresasVersion] = useState(0);
   const [toast,    setToast]    = useState(null);
+  const [recovery, setRecovery] = useState(false); // true si estamos en /reset-password
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth < 768
   );
@@ -708,13 +783,28 @@ function AppContent() {
 
   useEffect(() => {
     let unsub;
+    // Detección de la ruta pública de recuperación. Si el path (o el propio
+    // fragmento de Auth) indica recuperación, NO entramos al ERP: mostramos la
+    // pantalla de restablecimiento, que valida la sesión de recuperación.
+    const enRutaRecuperacion = () => {
+      try {
+        const p = window.location.pathname.replace(/\/+$/, "");
+        if (p === RECOVERY_PATH) return true;
+        const frag = String(window.location.hash || "");
+        return /type=recovery/.test(frag);
+      } catch { return false; }
+    };
     (async () => {
       try {
         const s = await getSession();
+        // Con una sesión de recuperación vigente no debe abrirse el ERP.
+        setRecovery(enRutaRecuperacion());
         setUserEmail(s?.user?.email || "");
         setAuthed(!!s);
-      } catch { /* sin sesión */ }
+      } catch { setRecovery(enRutaRecuperacion()); }
       const sub = onAuth((event, session) => {
+        // Si Supabase emite PASSWORD_RECOVERY, mostramos la pantalla dedicada.
+        if (event === "PASSWORD_RECOVERY") { setRecovery(true); }
         setUserEmail(session?.user?.email || "");
         if (event === "SIGNED_OUT") setAuthed(false);
         else if (session) setAuthed(true);
@@ -759,7 +849,26 @@ function AppContent() {
 
   const notifyEmpresasCambiaron = () => setEmpresasVersion(v => v + 1);
 
+  // Al terminar (o cancelar) la recuperación se cierra la sesión de recuperación
+  // y se vuelve al login, para no dejar una pantalla que permita otro cambio.
+  const salirDeRecuperacion = async () => {
+    try { await logout(); } catch {}
+    setRecovery(false);
+    setAuthed(false);
+    try { window.history.replaceState(null, "", "/"); } catch {}
+  };
+
   if (checking) return null;
+  if (recovery) {
+    return (
+      <ResetPassword
+        onDone={salirDeRecuperacion}
+        procesarEnlace={procesarEnlaceRecuperacion}
+        hasSession={hasRecoverySession}
+        updatePassword={updatePassword}
+      />
+    );
+  }
   if (!authed) return <LoginScreen onLogin={handleLogin} />;
 
   const props = {
