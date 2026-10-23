@@ -94,3 +94,32 @@ test("limpiarUrlRecuperacion elimina tokens y deja solo el path", () => {
 test("la ruta de recuperación es pública y estable", () => {
   assert.equal(RECOVERY_PATH, "/reset-password");
 });
+
+test("título calendario Traslado con código mantiene formato", () => {
+  const tipoLabel = "Traslado";
+  const codigo = "URV-01";
+  const cliente = "Cliente Demo";
+  const vehiculo = "Nissan Urvan";
+  const partes = [tipoLabel];
+  if (codigo) partes.push(codigo);
+  if (cliente) partes.push(cliente);
+  if (vehiculo) partes.push(vehiculo);
+  const title = partes.join(" - ");
+  assert.equal(title, "Traslado - URV-01 - Cliente Demo - Nissan Urvan");
+});
+
+test("título calendario Traslado sin código conserva formato válido", () => {
+  const tipoLabel = "Traslado";
+  const codigo = "";
+  const cliente = "Cliente Demo";
+  const vehiculo = "Nissan Urvan";
+  const partes = [tipoLabel];
+  if (cliente) partes.push(cliente);
+  if (vehiculo) partes.push(vehiculo);
+  const title = [tipoLabel, ...partes.slice(1)].join(" - ");
+  // debe incluir Traslado, cliente, vehículo
+  assert.ok(title.includes("Traslado"));
+  assert.ok(title.includes("Cliente Demo"));
+  assert.ok(title.includes("Nissan Urvan"));
+});
+

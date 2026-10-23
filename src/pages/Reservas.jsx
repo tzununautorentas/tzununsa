@@ -436,6 +436,9 @@ export default function PageReservas({ showToast, empId }) {
   // Código operativo real del vehículo: por vehiculo_id si existe; si no, por
   // marca+modelo (que es lo que guarda la reserva). Sin código => "" (sin inventar).
   const codigoVehiculo = (r) => {
+    // Algunos registros pueden traer el código directamente
+    if (r.vehiculo_codigo && String(r.vehiculo_codigo).trim()) return String(r.vehiculo_codigo).trim();
+    if (r.codigo_vehiculo && String(r.codigo_vehiculo).trim()) return String(r.codigo_vehiculo).trim();
     if (r.vehiculo_id) {
       const byId = vehiculosFlota.find(v => v.id === r.vehiculo_id);
       if (byId?.codigo) return byId.codigo;
@@ -443,6 +446,17 @@ export default function PageReservas({ showToast, empId }) {
     if (r.vehiculo_nombre) {
       const byNombre = vehiculosFlota.find(v => `${v.marca || ""} ${v.modelo || ""}`.trim() === r.vehiculo_nombre);
       if (byNombre?.codigo) return byNombre.codigo;
+      // Intento más flexible por coincidencia parcial ÚNICAMENTE si inequívoco
+      const nombreLower = r.vehiculo_nombre.toLowerCase();
+      const candidatos = vehiculosFlota.filter(v => {
+        const full = `${v.marca || ""} ${v.modelo || ""}`.trim().toLowerCase();
+        if (!full || !nombreLower) return false;
+        return full === nombreLower || full.includes(nombreLower) || nombreLower.includes(full);
+      }).filter(v => v.codigo && String(v.codigo).trim());
+      if (candidatos.length === 1) {
+        return candidatos[0].codigo;
+      }
+      // Si hay ambigüedad o más de uno, NO usar fallback parcial para evitar asignación errónea.
     }
     return "";
   };
@@ -453,7 +467,7 @@ export default function PageReservas({ showToast, empId }) {
     table: 'reservas',
     query,
     search: busqueda,
-    columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
+    columns: ['cliente_nombre', 'numero', 'vehiculo_nombre', 'vehiculo_id', 'destino', 'origen', 'departamento', 'municipio', 'conductor_nombre', 'notas'],
     order: 'created_at.desc.nullslast',
     empresaId: empId,
   });
