@@ -12,12 +12,17 @@ const toGCal = (dateStr, hora = "080000") => {
   return solo + "T" + hora;
 };
 
-const abrirGoogleCalendar = (r) => {
+const abrirGoogleCalendar = (r, vehiculoCodigo = "") => {
   const inicio = toGCal(r.fecha_inicio, "080000");
   const fin    = toGCal(r.fecha_fin || r.fecha_inicio, "180000");
   if (!inicio) { alert("La reserva no tiene fecha de inicio"); return; }
-  const tipoLabel = r.tipo === "traslado" ? "Traslado" : "Renta de vehículo";
-  const title = encodeURIComponent(`${tipoLabel} — ${r.cliente_nombre}${r.vehiculo_nombre ? ` — ${r.vehiculo_nombre}` : ""}`);
+  const tipoLabel = r.tipo === "traslado" ? "Traslado" : "Renta";
+  const codigo = String(vehiculoCodigo || "").trim();
+  const partes = [tipoLabel];
+  if (codigo) partes.push(codigo);
+  if (r.cliente_nombre) partes.push(r.cliente_nombre);
+  if (r.vehiculo_nombre) partes.push(r.vehiculo_nombre);
+  const title = encodeURIComponent(partes.join(" - "));
   const det   = encodeURIComponent(
     `Cliente: ${r.cliente_nombre}\nVehiculo: ${r.vehiculo_nombre || "—"}\nTotal: Q ${fmt(r.total_gtq || 0)}\nEstado: ${r.estado}`
   );
@@ -44,13 +49,15 @@ const EMPTY_R = {
   anticipo: "", total_gtq: "", notas: "", tasa_iva: 5,
   metodo_pago: "efectivo", tasa_cambio: 7.70, estado: "pendiente",
   saludo: "", cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
+  cliente_nit: "", cliente_dir: "", cliente_codigo: "", cliente_id: "",
+  cliente_departamento: "", cliente_municipio: "",
   descripcion_servicio: "", servicios_incluidos: "{}",
   ruta: "", observaciones_ruta: "", version: 1, carta_poder: false, carta_poder_costo: 0, itinerario: "",
 };
 
 // ─── Formulario de Reserva ────────────────────────────────────────
 function FormReserva({ initial, onSave, onCancel, empId }) {
-  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0, itinerario: initial.itinerario || "", hora_entrega: initial.hora_entrega || "09:00", hora_regreso: initial.hora_regreso || "09:00" } : { ...EMPTY_R });
+  const [f, setF]         = useState(initial ? { ...EMPTY_R, ...initial, saludo: initial.saludo || "", cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "", cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "", cliente_nit: initial.cliente_nit || "", cliente_dir: initial.cliente_dir || "", cliente_codigo: initial.cliente_codigo || "", cliente_id: initial.cliente_id || "", cliente_departamento: initial.cliente_departamento || initial.departamento_fiscal || "", cliente_municipio: initial.cliente_municipio || initial.municipio_fiscal || "", tasa_iva: initial.tasa_iva || 5, tasa_cambio: initial.tasa_cambio || 7.70, origen: initial.origen || "", destino: initial.destino || "", ruta: initial.ruta || "", observaciones_ruta: initial.observaciones_ruta || "", descripcion_servicio: initial.descripcion_servicio || "", version: parseInt(initial.version) || 1, carta_poder: initial.carta_poder || false, carta_poder_costo: parseFloat(initial.carta_poder_costo) || 0, itinerario: initial.itinerario || "", hora_entrega: initial.hora_entrega || "09:00", hora_regreso: initial.hora_regreso || "09:00" } : { ...EMPTY_R });
   const [flotaVehiculos, setFlotaVehiculos] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -123,6 +130,12 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
       cliente_contacto: f.cliente_contacto || "",
       cliente_email: f.cliente_email || "",
       cliente_telefono: f.cliente_telefono || "",
+      cliente_nit: f.cliente_nit || "",
+      cliente_dir: f.cliente_dir || "",
+      cliente_codigo: f.cliente_codigo || "",
+      cliente_id: f.cliente_id && String(f.cliente_id).trim() ? f.cliente_id : null,
+      cliente_departamento: f.cliente_departamento || "",
+      cliente_municipio: f.cliente_municipio || "",
       descripcion_servicio: f.descripcion_servicio || "",
       servicios_incluidos: typeof f.servicios_incluidos === "string" ? (f.servicios_incluidos || "{}") : JSON.stringify(f.servicios_incluidos || {}),
       ruta: f.ruta || "",
@@ -185,8 +198,46 @@ function FormReserva({ initial, onSave, onCancel, empId }) {
                 </div>
               </Fld>
               <Fld label="CLIENTE *">
-                <BuscadorCliente value={f.cliente_nombre} onChange={v => sf("cliente_nombre", v)} empId={empId} />
+                <BuscadorCliente value={f.cliente_nombre} onChange={v => sf("cliente_nombre", v)} onSelect={(c) => {
+                  if (!c) return;
+                  sf("cliente_nombre", c.nombre || "");
+                  sf("cliente_codigo", c.codigo || "");
+                  sf("cliente_nit", c.nit || "");
+                  sf("cliente_dir", c.direccion || "");
+                  sf("cliente_email", c.email || "");
+                  sf("cliente_telefono", c.telefono || "");
+                  sf("cliente_contacto", c.contacto || "");
+                  sf("cliente_id", c.id || "");
+                  if (c.departamento) sf("cliente_departamento", c.departamento);
+                  if (c.municipio) sf("cliente_municipio", c.municipio);
+                }} empId={empId} />
               </Fld>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+                <Fld label="CÓDIGO CLIENTE">
+                  <input style={S.inp} value={f.cliente_codigo || ""} onChange={e => sf("cliente_codigo", e.target.value)} placeholder="Código" />
+                </Fld>
+                <Fld label="NIT / DPI">
+                  <input style={S.inp} value={f.cliente_nit || ""} onChange={e => sf("cliente_nit", e.target.value)} placeholder="CF o NIT" />
+                </Fld>
+              </div>
+              <Fld label="DIRECCIÓN FISCAL">
+                <input style={S.inp} value={f.cliente_dir || ""} onChange={e => sf("cliente_dir", e.target.value)} placeholder="Dirección fiscal" />
+              </Fld>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+                <Fld label="DEPARTAMENTO FISCAL">
+                  <select style={S.sel} value={f.cliente_departamento || ""} onChange={e => { sf("cliente_departamento", e.target.value); sf("cliente_municipio", ""); }}>
+                    <option value="">Seleccionar...</option>
+                    {deptos.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </Fld>
+                <Fld label="MUNICIPIO FISCAL">
+                  <select style={S.sel} value={f.cliente_municipio || ""} onChange={e => sf("cliente_municipio", e.target.value)} disabled={!f.cliente_departamento}>
+                    <option value="">Seleccionar...</option>
+                    {(GT[f.cliente_departamento] || []).map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </Fld>
+              </div>
+              {f.cliente_id ? <div style={{ fontSize: 10, color: T.mut }}>cliente_id: {String(f.cliente_id).slice(0,8)}…</div> : null}
               <Fld label="VEHICULO">
                 <select style={S.sel} value={f.vehiculo_nombre} onChange={e => sf("vehiculo_nombre", e.target.value)}>
                   <option value="">Sin asignar</option>
@@ -371,6 +422,30 @@ export default function PageReservas({ showToast, empId }) {
   const [filtro, setFiltro]     = useState("todos");
   const [busqueda, setBusqueda] = useState("");
   const [exportar, setExportar] = useState(false);
+  const [vehiculosFlota, setVehiculosFlota] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dbGet("vehiculos", `&empresa_id=eq.${empId}&select=id,codigo,marca,modelo&limit=500`);
+        if (res) setVehiculosFlota(res);
+      } catch {}
+    })();
+  }, [empId]);
+
+  // Código operativo real del vehículo: por vehiculo_id si existe; si no, por
+  // marca+modelo (que es lo que guarda la reserva). Sin código => "" (sin inventar).
+  const codigoVehiculo = (r) => {
+    if (r.vehiculo_id) {
+      const byId = vehiculosFlota.find(v => v.id === r.vehiculo_id);
+      if (byId?.codigo) return byId.codigo;
+    }
+    if (r.vehiculo_nombre) {
+      const byNombre = vehiculosFlota.find(v => `${v.marca || ""} ${v.modelo || ""}`.trim() === r.vehiculo_nombre);
+      if (byNombre?.codigo) return byNombre.codigo;
+    }
+    return "";
+  };
 
   const query = filtro !== 'todos' ? 'estado=eq.'+filtro : '';
 
@@ -489,7 +564,7 @@ export default function PageReservas({ showToast, empId }) {
                     <button key={accion.v} onClick={() => cambiarEstado(r.id, accion.v)}
                       style={{ ...S.btn(accion.s), fontSize: 11, padding: "4px 9px" }}>{accion.l}</button>
                   ))}
-                  <button onClick={() => abrirGoogleCalendar(r)}
+                  <button onClick={() => abrirGoogleCalendar(r, codigoVehiculo(r))}
                     style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Calendario</button>
                   <button onClick={() => { setEditItem(r); setVista("form"); }}
                     style={{ ...S.btn("ghost"), fontSize: 11, padding: "4px 9px" }}>Editar</button>

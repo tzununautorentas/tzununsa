@@ -634,7 +634,7 @@ function makePDFData(r) {
 // ─── Estado inicial formulario ────────────────────────────────────────────────
 const EMPTY_F = {
   tipo: "renta",
-  cliente_nombre: "", cliente_nit: "", cliente_dir: "", cliente_codigo: "",
+  cliente_nombre: "", cliente_nit: "", cliente_dir: "", cliente_codigo: "", cliente_id: "",
   cliente_tipo: "", cliente_contacto: "", cliente_email: "", cliente_telefono: "",
   saludo: "", descripcion_servicio: "",
   vehiculo_nombre: "", dias: 1, precio_custom: "",
@@ -662,7 +662,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       ...EMPTY_F,
       tipo: initial.tipo || "renta",
       cliente_nombre: initial.cliente_nombre || "", cliente_nit: initial.cliente_nit || "",
-      cliente_dir: initial.cliente_dir || "", cliente_codigo: initial.cliente_codigo || "",
+      cliente_dir: initial.cliente_dir || "", cliente_codigo: initial.cliente_codigo || "", cliente_id: initial.cliente_id || "",
       cliente_tipo: initial.cliente_tipo || "", cliente_contacto: initial.cliente_contacto || "",
       cliente_email: initial.cliente_email || "", cliente_telefono: initial.cliente_telefono || "",
       saludo: initial.saludo || "", descripcion_servicio: initial.descripcion_servicio || "",
@@ -825,7 +825,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
       };
       const payload = {
         empresa_id: esEdicion ? initial.empresa_id : eId, cliente_nombre: f.cliente_nombre, cliente_nit: f.cliente_nit || "",
-        cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",
+        cliente_dir: f.cliente_dir || "", cliente_codigo: f.cliente_codigo || "",       cliente_id: f.cliente_id && String(f.cliente_id).trim() ? f.cliente_id : null,
         tipo: f.tipo || "renta", cliente_tipo: f.cliente_tipo || "", cliente_contacto: f.cliente_contacto || "",
         cliente_email: f.cliente_email || "", cliente_telefono: f.cliente_telefono || "",
         numero: (!initial?.id || isClone) ? await siguienteNumero("cotizaciones", eId) : initial.numero,
@@ -925,6 +925,7 @@ function FormCotizacion({ initial, empId, clientes, onSave, onCancel, showToast 
                 <ClienteAC value={f.cliente_nombre} onChange={v => sf("cliente_nombre", v)}
                   onSelect={c => {
                     sf("cliente_nombre", c.nombre); sf("cliente_nit", c.nit || ""); sf("cliente_dir", c.direccion || ""); sf("cliente_codigo", c.codigo || "");
+                    sf("cliente_id", c.id || "");
                     sf("cliente_tipo", c.tipo || ""); sf("cliente_contacto", c.contacto || "");
                     sf("cliente_email", c.email || ""); sf("cliente_telefono", c.telefono || "");
                     const nom = c.nombre || "";
@@ -1310,6 +1311,10 @@ export default function PageCotizaciones({ showToast, empId }) {
       cliente_contacto: cot.cliente_contacto || "",
       cliente_email: cot.cliente_email || "",
       cliente_telefono: cot.cliente_telefono || "",
+      cliente_nit: cot.cliente_nit || "",
+      cliente_dir: cot.cliente_dir || "",
+      cliente_codigo: cot.cliente_codigo || "",
+      cliente_id: cot.cliente_id || null,
       costo_vehiculo: parseFloat(cot.costo_vehiculo) || 0,
       costo_piloto: parseFloat(cot.costo_piloto) || 0,
       costo_hospedaje: parseFloat(cot.costo_hospedaje) || 0,
