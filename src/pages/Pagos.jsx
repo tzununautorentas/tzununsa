@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today } from '../config.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { T, S, fmt, fmtD, dbGet, rpc, today } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
+import { crearParametrosPagoRecibido, obtenerPagoIdIntento, registrarPagoRecibido } from '../services/pagosCore.js';
 
 const METODOS = ["efectivo","transferencia","deposito","tarjeta","cheque"];
 const MC = { efectivo:T.acc, transferencia:T.blue, deposito:T.green, tarjeta:T.purple, cheque:T.sec };
@@ -19,12 +20,14 @@ export default function PagePagos({ showToast, empId, userEmail }) {
   const [cuentas,  setCuentas]  = useState([]);
   const [emisores, setEmisores] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [editId,   setEditId]   = useState(null);
   const [saving,   setSaving]   = useState(false);
   const [exportar, setExportar] = useState(false);
   const [filtroM,  setFiltroM]  = useState("todos");
   const [busqueda, setBusqueda] = useState('');
   const [f, setF] = useState({...EF});
+  // Reutiliza el identificador cuando se reintenta exactamente la misma operación.
+  const intentoPagoRef = useRef(null);
+  const savingRef = useRef(false);
   const sf = (k,v) => setF(p=>({...p,[k]:v}));
 
   const query = filtroM && filtroM !== 'todos' ? 'metodo=eq.'+filtroM : '';
@@ -83,63 +86,72 @@ dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`),
     if (co) { sf("cliente_nombre", co.cliente_nombre||""); sf("concepto","Anticipo cotizacion "+co.numero); sf("monto",""); }
   };
 
+  const nuevoPagoId = () => {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    if (!globalThis.crypto?.getRandomValues) {
+      throw new Error("Este navegador no permite generar un identificador seguro para el pago.");
+    }
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  };
+
+  const cancelarRegistro = () => {
+    if (savingRef.current) return;
+    intentoPagoRef.current = null;
+    setShowForm(false);
+    setF({...EF});
+  };
+
   const guardar = async () => {
+    if (savingRef.current) return;
     if (!f.cliente_nombre.trim() || !(parseFloat(f.monto)>0)) {
       showToast("Cliente y monto son requeridos","err"); return;
+    }
+    if (!empId) {
+      showToast("No hay una empresa autorizada activa para registrar el pago.","err"); return;
     }
     if (!f.cuenta_bancaria_id) {
       showToast("Selecciona la cuenta bancaria que recibe el pago","err"); return;
     }
-    setSaving(true);
-    const monto = parseFloat(f.monto);
-    const payload = {
-      empresa_id:empId, fecha:f.fecha, cliente_nombre:f.cliente_nombre,
-      monto, metodo:f.metodo, referencia:f.referencia||"",
-      concepto:f.concepto||"", reserva_id:f.reserva_id||null,
-      factura_id:f.factura_id||null, cotizacion_id:f.cotizacion_id||null,
-      cuenta_bancaria_id:f.cuenta_bancaria_id||null, emisor_id:f.emisor_id||null,
-      notas:f.notas||"",
-    };
-    let result;
-    if (editId) result = await dbUpd("pagos_recibidos", editId, payload);
-    else        result = await dbIns("pagos_recibidos", payload);
-    if (result?.error) { showToast("Error: "+result.error,"err"); setSaving(false); return; }
-
-    if (!editId) {
-      // Crear movimiento bancario automático
-      const cuenta = cuentas.find(c=>c.id===f.cuenta_bancaria_id);
-      if (cuenta) {
-        await dbIns("movimientos_bancarios",{
-          empresa_id:empId, cuenta_id:f.cuenta_bancaria_id,
-          fecha:f.fecha, tipo:"ingreso",
-          descripcion:(f.concepto||"Pago de "+f.cliente_nombre),
-          monto, referencia:f.referencia||"", categoria:"ventas",
-          conciliado:false,
-        });
-        const nuevoSaldo = (parseFloat(cuenta.saldo_actual)||0) + monto;
-        await dbUpd("cuentas_bancarias", cuenta.id, {saldo_actual:nuevoSaldo});
-      }
-      // Actualizar saldo de factura vinculada
-      if (f.factura_id) {
-        const fac = facturas.find(x=>x.id===f.factura_id);
-        if (fac) {
-          const ns = Math.max(0,(parseFloat(fac.saldo_pendiente)||parseFloat(fac.total)||0)-monto);
-          await dbUpd("facturas",f.factura_id,{saldo_pendiente:ns, estado:ns<=0?"pagada":"parcial"});
-        }
-      }
+    if (!METODOS.includes(f.metodo)) {
+      showToast("El método de pago seleccionado no es compatible con el registro transaccional.","err"); return;
     }
-    showToast(editId?"Pago actualizado":"Pago registrado — movimiento creado en Banca");
-    setSaving(false); setShowForm(false); setEditId(null); setF({...EF}); pag.reload();
-  };
 
-  const abrirEditar = r => {
-    setEditId(r.id);
-    setF({fecha:r.fecha||today(),cliente_nombre:r.cliente_nombre||"",monto:r.monto||"",metodo:r.metodo||"efectivo",referencia:r.referencia||"",concepto:r.concepto||"",reserva_id:r.reserva_id||"",factura_id:r.factura_id||"",cotizacion_id:r.cotizacion_id||"",cuenta_bancaria_id:r.cuenta_bancaria_id||"",emisor_id:r.emisor_id||"",notas:r.notas||""});
-    setShowForm(true);
-  };
-  const del = async id => {
-    if(!confirm("Eliminar este pago?"))return;
-    await dbDel("pagos_recibidos",id); showToast("Eliminado"); pag.reload();
+    let parametrosBase;
+    let pagoId;
+    try {
+      parametrosBase = crearParametrosPagoRecibido({ pagoId: null, empresaId: empId, formulario: f });
+      pagoId = obtenerPagoIdIntento(intentoPagoRef, parametrosBase, nuevoPagoId);
+    } catch (error) {
+      showToast("No se pudieron preparar los datos del pago: " + error.message,"err"); return;
+    }
+    const parametros = { ...parametrosBase, p_pago_id: pagoId };
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const resultado = await registrarPagoRecibido(rpc, parametros);
+      pag.reload();
+      const [facturasActualizadas, cuentasActualizadas] = await Promise.all([
+        dbGet("facturas",`&empresa_id=eq.${empId}&estado=not.in.(anulada,borrador)&select=id,numero,nombre_receptor,total,saldo_pendiente,emisor_id`),
+        dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`),
+      ]);
+      if (Array.isArray(facturasActualizadas)) setFacturas(facturasActualizadas);
+      if (Array.isArray(cuentasActualizadas)) setCuentas(cuentasActualizadas);
+      showToast(resultado.creado
+        ? "Pago registrado correctamente de forma transaccional."
+        : "Este pago ya estaba registrado; no se duplicó.");
+      intentoPagoRef.current = null;
+      setShowForm(false);
+      setF({...EF});
+    } catch (error) {
+      showToast("No se pudo registrar el pago: " + error.message,"err");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
 
   const totalGral = pag.data.reduce((s,r)=>s+(parseFloat(r.monto)||0),0);
@@ -182,17 +194,18 @@ dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`),
             <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar pago..." />
             <button onClick={pag.reload} style={{...S.btn("ghost"),fontSize:11}}>Actualizar</button>
             <button onClick={()=>setExportar(true)} style={{...S.btn("ghost"),fontSize:11}}>Exportar</button>
-            <button onClick={()=>{if(showForm&&!editId){setShowForm(false);}else{setEditId(null);setF({...EF});setShowForm(true);}}}
-              style={{...S.btn(showForm&&!editId?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>
-              {showForm&&!editId?"Cancelar":"+ Registrar pago"}
+            <button disabled={saving} onClick={()=>{if(showForm){cancelarRegistro();}else{intentoPagoRef.current=null;setF({...EF});setShowForm(true);}}}
+              style={{...S.btn(showForm?"warn":"primary"),fontSize:12,marginLeft:"auto"}}>
+              {showForm?"Cancelar":"+ Registrar pago"}
             </button>
           </div>
 
           {/* Formulario */}
           {showForm&&(
             <div style={{...S.card,marginBottom:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>{editId?"Editar pago":"Registrar pago recibido"}</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
+              <div style={{fontSize:13,fontWeight:700,color:T.acc,marginBottom:14}}>Registrar pago recibido</div>
+              <fieldset disabled={saving} style={{border:0,padding:0,margin:0,minWidth:0}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11}}>
 
                 {/* Vincular origen */}
                 <div style={{gridColumn:"span 2"}}>
@@ -285,17 +298,18 @@ dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`),
 
                 <div style={{gridColumn:"span 2",display:"flex",gap:8,marginTop:4}}>
                   <button onClick={guardar} disabled={saving} style={{...S.btn("primary"),flex:1}}>
-                    {saving?"Guardando...":editId?"Actualizar pago":"Registrar pago + mover a Banca"}
+                    {saving?"Guardando...":"Registrar pago + mover a Banca"}
                   </button>
-                  <button onClick={()=>{setShowForm(false);setEditId(null);}} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
+                  <button onClick={cancelarRegistro} disabled={saving} style={{...S.btn("ghost"),flex:1}}>Cancelar</button>
                 </div>
-              </div>
+                </div>
+              </fieldset>
             </div>
           )}
 
           {/* Cards */}
           {pag.loading?<Spinner/>:pag.data.length===0?(
-            <Empty icon="P" msg="Sin pagos registrados" action="+ Registrar primer pago" onAction={()=>{setEditId(null);setF({...EF});setShowForm(true);}}/>
+            <Empty icon="P" msg="Sin pagos registrados" action="+ Registrar primer pago" onAction={()=>{intentoPagoRef.current=null;setF({...EF});setShowForm(true);}}/>
           ):(
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {pag.data.map(r=>{
@@ -326,9 +340,12 @@ dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`),
                         ):null)}
                       </div>
                       <div style={{display:"flex",gap:4}}>
-                        <button onClick={()=>abrirEditar(r)} style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10}}>Editar</button>
-                        <button onClick={()=>del(r.id)} style={{...S.btn("danger"),padding:"3px 8px",fontSize:10}}>Eliminar</button>
+                        <button disabled title="La edición de pagos registrados requiere una operación transaccional aprobada." style={{...S.btn("ghost"),padding:"3px 8px",fontSize:10,opacity:0.6,cursor:"not-allowed"}}>Edición no disponible</button>
+                        <button disabled title="No se permite borrar físicamente pagos con efectos contables. La anulación requiere un flujo aprobado." style={{...S.btn("danger"),padding:"3px 8px",fontSize:10,opacity:0.6,cursor:"not-allowed"}}>Anulación pendiente</button>
                       </div>
+                    </div>
+                    <div style={{fontSize:10,color:T.mut,marginTop:8}}>
+                      Los pagos registrados no se pueden editar ni eliminar físicamente. La anulación estará disponible cuando exista un flujo aprobado.
                     </div>
                   </div>
                 );

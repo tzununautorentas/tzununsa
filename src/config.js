@@ -131,7 +131,7 @@ export function mensajeF3D7(error) {
   return error?.mensaje || error?.message || error?.hint || "No se pudo completar la operación.";
 }
 
-export async function rpc(fn, params = {}) {
+export async function rpc(fn, params = {}, { includePostgresDiagnostics = false } = {}) {
   try {
     const r = await apiFetch(`/rpc/${fn}`, {
       method: "POST",
@@ -144,13 +144,30 @@ export async function rpc(fn, params = {}) {
     try { j = text ? JSON.parse(text) : null; } catch {}
     if (!r.ok) {
       const code = j?.hint || j?.code || `HTTP_${r.status}`;
+      const error = {
+        code,
+        status: r.status,
+        hint: j?.hint,
+        mensaje: MENSAJES_F3D7[j?.hint] || j?.message || j?.hint || `Error ${r.status}`,
+      };
+      if (includePostgresDiagnostics) {
+        error.postgresDiagnostics = {
+          sqlstate: j?.code ?? null,
+          message: j?.message ?? null,
+          detail: j?.details ?? j?.detail ?? null,
+          hint: j?.hint ?? null,
+          context: j?.context ?? j?.where ?? j?.pg_exception_context ?? null,
+          schema: j?.schema ?? null,
+          table: j?.table ?? null,
+          column: j?.column ?? null,
+          constraint: j?.constraint ?? null,
+          routine: j?.routine ?? null,
+          line: j?.line ?? null,
+          file: j?.file ?? null,
+        };
+      }
       return {
-        error: {
-          code,
-          status: r.status,
-          hint: j?.hint,
-          mensaje: MENSAJES_F3D7[j?.hint] || j?.message || j?.hint || `Error ${r.status}`,
-        },
+        error,
       };
     }
     return { data: j };
@@ -251,24 +268,36 @@ export function filtroEmpresa(empId) {
 //   auth_id (JWT) -> usuarios_sistema.id -> usuario_empresas (activo=true) -> empresas.
 // La RPC authz no está expuesta por PostgREST (solo public/graphql_public), por eso
 // se resuelve desde las relaciones existentes. FASE 3.6 endurecerá con RLS.
-export async function getEmpresasAutorizadas() {
+export async function getEmpresasAutorizadasResultado() {
   try {
     const authId = getUserId();
-    if (!authId) return [];
+    if (!authId) return { data: [], error: null };
     const usr = await apiFetch(`/usuarios_sistema?select=id&auth_id=eq.${authId}&limit=1`);
-    const us = usr.ok ? await usr.json() : [];
+    if (!usr.ok) return { data: null, error: "No se pudieron consultar los perfiles autorizados." };
+    const us = await usr.json();
+    if (!Array.isArray(us)) return { data: null, error: "La respuesta de perfiles no es válida." };
     const usuario = Array.isArray(us) && us.length ? us[0] : null;
-    if (!usuario?.id) return [];
+    if (!usuario?.id) return { data: [], error: null };
     const rels = await apiFetch(`/usuario_empresas?select=empresa_id&usuario_id=eq.${usuario.id}&activo=eq.true`);
-    if (!rels.ok) return [];
+    if (!rels.ok) return { data: null, error: "No se pudieron consultar las empresas vinculadas." };
     const rj = await rels.json();
+    if (!Array.isArray(rj)) return { data: null, error: "La respuesta de empresas vinculadas no es válida." };
     const ids = Array.isArray(rj) ? rj.map(r => r.empresa_id).filter(Boolean) : [];
-    if (ids.length === 0) return [];
+    if (ids.length === 0) return { data: [], error: null };
     const ent = await apiFetch(`/empresas?select=id,nombre&id=in.(${ids.map(encodeURIComponent).join(",")})`);
-    if (!ent.ok) return [];
+    if (!ent.ok) return { data: null, error: "No se pudieron cargar los datos de las empresas autorizadas." };
     const ej = await ent.json();
-    return Array.isArray(ej) ? ej : [];
-  } catch { return []; }
+    if (!Array.isArray(ej)) return { data: null, error: "La respuesta de empresas autorizadas no es válida." };
+    return { data: ej, error: null };
+  } catch {
+    return { data: null, error: "No se pudieron cargar las empresas autorizadas. Verifica tu conexión e intenta de nuevo." };
+  }
+}
+
+// Compatibilidad con consumidores existentes que solo necesitan la lista.
+export async function getEmpresasAutorizadas() {
+  const resultado = await getEmpresasAutorizadasResultado();
+  return resultado.error ? [] : resultado.data;
 }
 
 // Rol del usuario autenticado EN UNA empresa (FASE 3.7b, solo UI).

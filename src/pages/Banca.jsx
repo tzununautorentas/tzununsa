@@ -1,15 +1,102 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { T, S, fmt, fmtD, dbGet, dbIns, dbUpd, dbDel, today, apiFetch } from '../config.js';
+import { T, S, SB, fmt, fmtD, dbGet, dbIns, dbUpd, today, apiFetch, rpc } from '../config.js';
 import { Spinner, Empty, Fld, Badge, ModalExportar, Paginador, Buscador } from '../components/shared.jsx';
 import { usePaginacion } from '../hooks/usePaginacion.js';
+import {
+  crearPayloadCuentaBancaria,
+  crearParametrosMovimientoBancario,
+  crearParametrosTransferencia,
+  ejecutarRpcBancaria,
+  ejecutarUnaVez,
+  obtenerOperacionId,
+  TIPOS_FLUJO_BANCARIO,
+} from '../services/bancaCore.js';
 
 const CATS = ["ventas", "combustible", "mantenimiento", "salarios", "seguros", "servicios", "oficina", "otros"];
 const CC = { ventas: T.acc, combustible: T.sec, mantenimiento: T.blue, salarios: T.green, seguros: T.purple, servicios: T.acc, oficina: T.mut, otros: T.sub };
 
-const EFM = { fecha: today(), tipo: "ingreso", descripcion: "", monto: "", referencia: "", categoria: "ventas", conciliado: false, notas: "" };
+const EFM = { fecha: today(), tipo: "ingreso", tipo_flujo: "OPERATIVA", descripcion: "", monto: "", referencia: "", categoria: "ventas", notas: "" };
 const EFC = { banco: "", numero_cuenta: "", tipo_cuenta: "monetaria", moneda: "GTQ", saldo_inicial: "", saldo_actual: "", notas: "", titular: "" };
+const EFT = { cuenta_origen_id: "", cuenta_destino_id: "", fecha: today(), monto: "", descripcion: "", referencia: "" };
+const DIAGNOSTICO_RPC_MOVIMIENTO_HABILITADO =
+  import.meta.env.DEV
+  && /^https:\/\/eyojdedlxfgtcnvyqinr\.supabase\.co(?:\/|$)/i.test(SB);
+const DIAGNOSTICO_RPC_PROYECTO = DIAGNOSTICO_RPC_MOVIMIENTO_HABILITADO
+  ? new URL(SB).hostname.split(".")[0]
+  : null;
 
-function DetalleMovimiento({ mov, onClose, onEditar }) {
+function sanitizarDiagnosticoVisible(valor, valoresOperacion = []) {
+  if (valor == null) return null;
+  let texto = String(valor);
+  for (const valorOperacion of valoresOperacion) {
+    const sensible = valorOperacion == null ? "" : String(valorOperacion);
+    if (sensible.length >= 3) texto = texto.split(sensible).join("[REDACTED_OPERATION_DATA]");
+  }
+  return texto
+    .replace(/SQL statement "[\s\S]*?"/gi, 'SQL statement "[contenido omitido]"')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [REDACTED]")
+    .replace(/\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED_TOKEN]")
+    .replace(/\bsb_(?:publishable|secret)_[A-Za-z0-9_-]+\b/gi, "[REDACTED_API_KEY]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]")
+    .replace(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/gi, "[REDACTED_UUID]")
+    .replace(/\b(?:numero[_ ]?de[_ ]?cuenta|cuenta[_ ]?bancaria|account[_ ]?number|iban|swift|clabe)\b(?:\s*[:=#-]\s*|\s+)(?=[A-Z0-9 -]{0,32}\d)[A-Z0-9][A-Z0-9 -]{3,}/gi, "[REDACTED_BANK_DATA]")
+    .replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{8,30}\b/gi, "[REDACTED_BANK_DATA]")
+    .replace(/\b\d(?:[\d -]{4,}\d)\b/g, "[REDACTED_BANK_DATA]")
+    .replace(/\b\d{5,}\b/g, "[REDACTED_NUMBER]")
+    .replace(/((?:password|token|secret|api[_-]?key|authorization)\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi, "$1[REDACTED]")
+    .trim();
+}
+
+function crearDiagnosticoVisibleMovimiento({ etapa, error, postgresDiagnostics, valoresOperacion }) {
+  const causa = error?.cause;
+  const httpStatus = Number.isInteger(causa?.status) && causa.status > 0
+    ? causa.status
+    : null;
+  const diagnostico = postgresDiagnostics || causa?.postgresDiagnostics || {};
+  const contexto = sanitizarDiagnosticoVisible(diagnostico.context, valoresOperacion);
+  const sqlstate = diagnostico.sqlstate
+    || (/^[0-9A-Z]{5}$/.test(causa?.code || "") ? causa.code : null);
+  let etapaDetectada = etapa;
+  if (contexto && /PL\/pgSQL function|trigger function/i.test(contexto)) {
+    etapaDetectada = "Ejecución dentro de función o trigger PostgreSQL";
+  } else if (httpStatus) {
+    etapaDetectada = "Respuesta HTTP de PostgREST";
+  } else if (causa?.code === "SIN_CONEXION" || causa?.status === 0) {
+    etapaDetectada = "Transporte de la llamada RPC";
+  }
+
+  return {
+    rpc: "api_crear_movimiento_bancario",
+    proyecto: DIAGNOSTICO_RPC_PROYECTO,
+    operacion: etapa === "Llamada RPC api_crear_movimiento_bancario"
+      ? "api_crear_movimiento_bancario"
+      : etapa,
+    estadoHttp: httpStatus,
+    sqlstate: /^[0-9A-Z]{5}$/.test(sqlstate || "") ? sqlstate : null,
+    mensaje: sanitizarDiagnosticoVisible(diagnostico.message || causa?.mensaje || error?.message, valoresOperacion),
+    detail: sanitizarDiagnosticoVisible(diagnostico.detail, valoresOperacion),
+    hint: sanitizarDiagnosticoVisible(diagnostico.hint, valoresOperacion),
+    context: contexto,
+    etapa: etapaDetectada,
+  };
+}
+
+function serializarDiagnosticoVisible(diagnostico) {
+  return [
+    `RPC: ${diagnostico.rpc}`,
+    `Proyecto Supabase: ${diagnostico.proyecto}`,
+    `Operación: ${diagnostico.operacion}`,
+    `Estado HTTP: ${diagnostico.estadoHttp ?? "No disponible"}`,
+    `SQLSTATE: ${diagnostico.sqlstate || "No disponible"}`,
+    `Mensaje: ${diagnostico.mensaje || "No disponible"}`,
+    `DETAIL: ${diagnostico.detail || "No disponible"}`,
+    `HINT: ${diagnostico.hint || "No disponible"}`,
+    `CONTEXT: ${diagnostico.context || "No disponible"}`,
+    `Etapa: ${diagnostico.etapa || "No determinada"}`,
+  ].join("\n");
+}
+
+function DetalleMovimiento({ mov, onClose }) {
   if (!mov) return null;
   let extra = {};
   try { if (mov.notas && mov.notas.startsWith("{")) extra = JSON.parse(mov.notas); } catch {}
@@ -20,7 +107,6 @@ function DetalleMovimiento({ mov, onClose, onEditar }) {
         <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.bord}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>Detalle del movimiento</div>
           <div style={{ display: "flex", gap: 6 }}>
-            {onEditar && <button onClick={() => { onClose(); onEditar(mov); }} style={{ ...S.btn("ghost"), padding: "4px 10px", fontSize: 11 }}>Editar</button>}
             <button onClick={onClose} style={{ ...S.btn("ghost"), padding: "4px 10px" }}>X</button>
           </div>
         </div>
@@ -56,14 +142,12 @@ function DetalleMovimiento({ mov, onClose, onEditar }) {
   );
 }
 
-function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }) {
+function ImportadorBancario({ showToast, onClose }) {
   const [archivo, setArchivo] = useState(null);
   const [preview, setPreview] = useState([]);
   const [todasFilas, setTodasFilas] = useState([]);
   const [procesando, setProcesando] = useState(false);
-  const [progreso, setProgreso] = useState(null);
   const [cols, setCols] = useState({ fecha: "", descripcion: "", monto: "", tipo: "", referencia: "", debito: "", credito: "", oficina: "", secuencial: "", cheque: "", saldo_contable: "", saldo_disponible: "" });
-  const [resultado, setResultado] = useState(null);
   const refFile = useRef(null);
 
   const parsearCSV = (lineas, separador) => {
@@ -173,76 +257,6 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
     setProcesando(false);
   };
 
-  const convertirFecha = (str) => {
-    if (!str) return "";
-    const s = str.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-    return s;
-  };
-
-  const importar = async () => {
-    if (todasFilas.length === 0) { showToast("Selecciona un archivo valido", "err"); return; }
-    setProgreso(null);
-    setProcesando(true);
-    try {
-      const colsIdx = Object.keys(todasFilas[0] || {});
-      const col = (idx) => idx !== "" ? colsIdx[parseInt(idx)] : "";
-      const iF = col(cols.fecha), iD = col(cols.descripcion), iM = col(cols.monto), iT = col(cols.tipo), iR = col(cols.referencia);
-      const iDeb = col(cols.debito), iCred = col(cols.credito);
-      const iOf = col(cols.oficina), iSec = col(cols.secuencial), iCheq = col(cols.cheque), iSalC = col(cols.saldo_contable), iSalD = col(cols.saldo_disponible);
-      const total = todasFilas.length;
-      let ok = 0, err = 0;
-      for (let idx = 0; idx < total; idx++) {
-        const row = todasFilas[idx];
-        setProgreso(`${idx + 1}/${total}`);
-        const fecha = convertirFecha(iF ? (row[iF] || "") : "");
-        const descripcion = iD ? (row[iD] || "") : "";
-        const oficina = iOf ? (row[iOf] || "") : "";
-        const secuencial = iSec ? (row[iSec] || "") : "";
-        const cheque = iCheq ? (row[iCheq] || "") : "";
-        const saldoC = iSalC ? (row[iSalC] || "") : "";
-        const saldoD = iSalD ? (row[iSalD] || "") : "";
-        let monto = 0, tipo = "ingreso";
-        if (iM) {
-          let raw = (row[iM] || "0").replace(/["']/g, "").trim();
-          raw = raw.replace(",", ".");
-          monto = parseFloat(raw.replace(/[^0-9.\-]/g, "")) || 0;
-          if (iT) {
-            const tv = (row[iT] || "").toLowerCase();
-            tipo = tv.includes("egr") || tv.includes("sal") ? "egreso" : "ingreso";
-          } else {
-            tipo = monto >= 0 ? "ingreso" : "egreso";
-          }
-        } else if (iDeb || iCred) {
-          let d = iDeb ? (row[iDeb] || "0").replace(/["']/g, "").trim() : "0";
-          let c = iCred ? (row[iCred] || "0").replace(/["']/g, "").trim() : "0";
-          d = d.replace(",", "."); c = c.replace(",", ".");
-          const deb = parseFloat(d.replace(/[^0-9.\-]/g, "")) || 0;
-          const cred = parseFloat(c.replace(/[^0-9.\-]/g, "")) || 0;
-          if (deb > 0) { monto = deb; tipo = "egreso"; }
-          else if (cred > 0) { monto = cred; tipo = "ingreso"; }
-          else { err++; continue; }
-        }
-        const referencia = iR ? (row[iR] || "") : "";
-        if (!descripcion || monto === 0) { err++; continue; }
-        const extra = { oficina, secuencial, cheque, saldo_contable: saldoC, saldo_disponible: saldoD };
-        const notas = JSON.stringify(extra);
-        const payload = { empresa_id: empId, cuenta_id: cuentaAct.id, fecha, tipo, descripcion, monto, referencia, categoria: "otros", conciliado: false, notas };
-        const r = await dbIns("movimientos_bancarios", payload, 30000);
-        if (r?.error) { err++; if (err === 1) showToast("Error Supabase: " + r.error, "err"); continue; }
-        ok++;
-      }
-      setResultado({ ok, err });
-      showToast(`${ok > 0 ? "Importacion completada" : "Error en importacion"}: ${ok} exitosos, ${err} errores`);
-      onImported();
-    } finally {
-      setProgreso(null);
-      setProcesando(false);
-    }
-  };
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ ...S.card, width: "100%", maxWidth: 580, maxHeight: "90vh", overflowY: "auto" }}>
@@ -259,7 +273,7 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
             <input ref={refFile} type="file" accept=".csv,.xlsx,.txt" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
           </div>
         </div>
-        {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc, fontSize: 13 }}>{progreso ? `Importando ${progreso} registros...` : "Procesando..."}</div>}
+        {procesando && <div style={{ textAlign: "center", padding: 12, color: T.acc, fontSize: 13 }}>Procesando archivo...</div>}
         {Object.keys(cols).length > 0 && (
           <div style={{ fontSize: 11, color: T.sub, marginBottom: 10 }}>Columnas detectadas: {Object.entries(cols).filter(([,v]) => v !== "").map(([k]) => k).join(", ") || "ninguna"}</div>
         )}
@@ -282,14 +296,12 @@ function ImportadorBancario({ showToast, empId, cuentaAct, onImported, onClose }
             </table>
           </div>
         )}
-        {resultado && (
-          <div style={{ padding: "10px 14px", background: resultado.err > 0 ? (resultado.ok > 0 ? T.secDim : T.redDim) : T.greenDim, borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
-            {resultado.ok} importados, {resultado.err} omitidos
-          </div>
-        )}
+        <div style={{ padding: "10px 14px", background: T.secDim, borderRadius: 8, marginBottom: 14, fontSize: 12, color: T.txt }}>
+          La vista previa está disponible. El registro y la conciliación de estados de cuenta estarán disponibles en FASE 4.3.
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={importar} disabled={procesando || todasFilas.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
-            {procesando ? "Importando..." : `Importar ${todasFilas.length} registros`}
+          <button onClick={() => showToast("El registro y la conciliación de estados de cuenta estarán disponibles en FASE 4.3.", "err")} disabled={procesando || todasFilas.length === 0} style={{ ...S.btn("primary"), flex: 2 }}>
+            Registro y conciliación · FASE 4.3
           </button>
           <button onClick={onClose} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
         </div>
@@ -303,47 +315,36 @@ export default function PageBanca({ showToast, empId }) {
   const [cuentaAct,  setCuentaAct]  = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [showForm,   setShowForm]   = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
   const [showCuenta, setShowCuenta] = useState(false);
   const [editCuentaId, setEditCuentaId] = useState(null);
-  const [editMovId,  setEditMovId]  = useState(null);
   const [saving,     setSaving]     = useState(false);
   const [filtroT,    setFiltroT]    = useState("todos");
   const [filtroC,    setFiltroC]    = useState("todos");
   const [exportar,   setExportar]   = useState(false);
   const [importar,   setImportar]   = useState(false);
   const [detalleMov, setDetalleMov] = useState(null);
-  const [confirmDel, setConfirmDel] = useState(null);
+  const [diagnosticoMovimiento, setDiagnosticoMovimiento] = useState(null);
+  const [diagnosticoCopiado, setDiagnosticoCopiado] = useState("");
   const [busqueda,   setBusqueda]   = useState("");
-  const [recalcMsg,  setRecalcMsg]  = useState(null);
   const [allMovs,    setAllMovs]    = useState([]);
 
   const [f,  setF]  = useState({ ...EFM });
   const [fc, setFc]  = useState({ ...EFC });
+  const [ft, setFt] = useState({ ...EFT });
+  const intentoMovimientoRef = useRef(null);
+  const intentoTransferenciaRef = useRef(null);
+  const movimientoEnCursoRef = useRef(false);
+  const transferenciaEnCursoRef = useRef(false);
   const sf  = (k, v) => setF(p => ({ ...p, [k]: v }));
   const sfc = (k, v) => setFc(p => ({ ...p, [k]: v }));
-
-  const recalcularSaldo = async (cuentaId) => {
-    const todo = await dbGet("movimientos_bancarios", `&cuenta_id=eq.${cuentaId}&select=monto,tipo`);
-    const movsArr = Array.isArray(todo) ? todo : [];
-    const cta = await dbGet("cuentas_bancarias", `&id=eq.${cuentaId}`);
-    const ctaArr = Array.isArray(cta) ? cta : [cta];
-    if (!ctaArr || ctaArr.length === 0) return parseFloat(cuentaAct?.saldo_inicial || 0);
-    const saldoInicial = parseFloat(ctaArr[0].saldo_inicial) || 0;
-    const ingresos = movsArr.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
-    const egresos = movsArr.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
-    const nuevoSaldo = saldoInicial + ingresos - egresos;
-    await dbUpd("cuentas_bancarias", cuentaId, { saldo_actual: nuevoSaldo });
-    setCuentaAct(p => p?.id === cuentaId ? { ...p, saldo_actual: nuevoSaldo } : p);
-    setCuentas(p => p.map(c => c.id === cuentaId ? { ...c, saldo_actual: nuevoSaldo } : c));
-    return nuevoSaldo;
-  };
 
   const loadCuentas = async () => {
     setLoading(true);
     const c = await dbGet("cuentas_bancarias", `&empresa_id=eq.${empId}`);
     const arr = Array.isArray(c) ? c : [];
     setCuentas(arr);
-    setCuentaAct(arr.length > 0 ? arr[0] : null);
+    setCuentaAct(actual => arr.find(cuenta => cuenta.id === actual?.id) || arr[0] || null);
     setLoading(false);
   };
 
@@ -372,15 +373,30 @@ export default function PageBanca({ showToast, empId }) {
 
   useEffect(() => { loadAllMovs(); }, [loadAllMovs]);
 
+  const recargarDatosBancarios = async () => {
+    await Promise.all([loadCuentas(), reloadMovs(), loadAllMovs()]);
+  };
+
+  const nuevoOperacionId = () => {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    if (!globalThis.crypto?.getRandomValues) {
+      throw new Error("Este navegador no permite generar un identificador seguro para la operación.");
+    }
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  };
+
   const guardarCuenta = async () => {
     if (!fc.banco.trim()) { showToast("Nombre del banco requerido", "err"); return; }
     setSaving(true);
-    const saldoInicial = parseFloat(fc.saldo_inicial) || 0;
-    const payload = { ...fc, empresa_id: empId, saldo_inicial: saldoInicial, saldo_actual: saldoInicial };
+    const payload = crearPayloadCuentaBancaria({ empresaId: empId, formulario: fc });
     let r;
     if (editCuentaId) {
-      const { saldo_actual, ...upd } = payload;
-      r = await dbUpd("cuentas_bancarias", editCuentaId, upd);
+      const { empresa_id: _empresaId, ...payloadUpdate } = payload;
+      r = await dbUpd("cuentas_bancarias", editCuentaId, payloadUpdate);
       if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
       showToast("Cuenta actualizada");
     } else {
@@ -404,60 +420,112 @@ export default function PageBanca({ showToast, empId }) {
 
   const cerrarCuenta = () => { setShowCuenta(false); setEditCuentaId(null); setFc({ ...EFC }); };
 
-  const abrirEditarMov = (mov) => {
-    setEditMovId(mov.id);
-    setF({
-      fecha: mov.fecha || today(),
-      tipo: mov.tipo || "ingreso",
-      descripcion: mov.descripcion || "",
-      monto: mov.monto || "",
-      referencia: mov.referencia || "",
-      categoria: mov.categoria || "ventas",
-      conciliado: mov.conciliado || false,
-      notas: mov.notas || "",
-    });
-    setShowForm(true);
+  const cerrarForm = () => {
+    if (saving) return;
+    intentoMovimientoRef.current = null;
+    setShowForm(false);
+    setF({ ...EFM });
   };
 
-  const guardarMov = async () => {
-    if (!f.descripcion.trim() || !(parseFloat(f.monto) > 0)) {
-      showToast("Descripcion y monto requeridos", "err"); return;
-    }
+  const guardarMov = async () => ejecutarUnaVez(movimientoEnCursoRef, async () => {
     setSaving(true);
-    const payload = {
-      empresa_id: empId, cuenta_id: cuentaAct.id,
-      fecha: f.fecha, tipo: f.tipo, descripcion: f.descripcion,
-      monto: parseFloat(f.monto), referencia: f.referencia,
-      categoria: f.categoria, conciliado: f.conciliado, notas: f.notas,
-    };
-    if (editMovId) {
-      const r = await dbUpd("movimientos_bancarios", editMovId, payload);
-      if (r?.error) { showToast("Error: " + r.error, "err"); setSaving(false); return; }
-      showToast("Movimiento actualizado");
-    } else {
-      const mov = await dbIns("movimientos_bancarios", payload);
-      if (mov?.error) { showToast("Error: " + mov.error, "err"); setSaving(false); return; }
-      showToast("Guardado");
+    let etapa = "Preparación y validación de parámetros";
+    let diagnosticoRpc = null;
+    let valoresOperacion = [];
+    if (DIAGNOSTICO_RPC_MOVIMIENTO_HABILITADO) {
+      setDiagnosticoMovimiento(null);
+      setDiagnosticoCopiado("");
     }
-    setSaving(false); setShowForm(false); setEditMovId(null);
-    setF({ ...EFM }); await recalcularSaldo(cuentaAct.id); reloadMovs(); loadAllMovs();
+    try {
+      const base = crearParametrosMovimientoBancario({
+        operacionId: null,
+        empresaId: empId,
+        cuentaId: cuentaAct?.id,
+        formulario: f,
+      });
+      const operacionId = obtenerOperacionId(intentoMovimientoRef, base, nuevoOperacionId);
+      valoresOperacion = [...Object.values(base), operacionId];
+      etapa = "Llamada RPC api_crear_movimiento_bancario";
+      const resultado = await ejecutarRpcBancaria(
+        (nombreFuncion, parametros) => rpc(nombreFuncion, parametros, {
+          includePostgresDiagnostics: true,
+        }),
+        "api_crear_movimiento_bancario",
+        {
+          ...base,
+          p_operacion_id: operacionId,
+        },
+        diagnostico => {
+          diagnosticoRpc = diagnostico;
+        }
+      );
+      showToast(resultado.creado
+        ? "Movimiento bancario registrado correctamente."
+        : "Este movimiento ya estaba registrado; no se duplicó.");
+      intentoMovimientoRef.current = null;
+      setShowForm(false);
+      setF({ ...EFM });
+      etapa = "Recarga de datos bancarios después del registro";
+      await recargarDatosBancarios();
+    } catch (error) {
+      if (DIAGNOSTICO_RPC_MOVIMIENTO_HABILITADO) {
+        setDiagnosticoMovimiento(crearDiagnosticoVisibleMovimiento({
+          etapa,
+          error,
+          postgresDiagnostics: diagnosticoRpc,
+          valoresOperacion,
+        }));
+      }
+      const mensajeError = DIAGNOSTICO_RPC_MOVIMIENTO_HABILITADO
+        ? sanitizarDiagnosticoVisible(error.message, valoresOperacion)
+        : error.message;
+      showToast("No se pudo registrar el movimiento: " + mensajeError, "err");
+    } finally {
+      setSaving(false);
+    }
+  });
+
+  const abrirTransferencia = () => {
+    intentoTransferenciaRef.current = null;
+    setFt({ ...EFT, cuenta_origen_id: cuentaAct?.id || "" });
+    setShowForm(false);
+    setShowTransfer(true);
   };
 
-  const conciliar = async (id, val) => {
-    await dbUpd("movimientos_bancarios", id, { conciliado: val });
-    reloadMovs(); loadAllMovs();
+  const cerrarTransferencia = () => {
+    if (saving) return;
+    intentoTransferenciaRef.current = null;
+    setFt({ ...EFT });
+    setShowTransfer(false);
   };
 
-  const delMov = async id => {
-    const mov = movs.find(m => m.id === id);
-    if (!mov) return;
-    await dbDel("movimientos_bancarios", id);
-    showToast("Eliminado");
-    await recalcularSaldo(cuentaAct.id);
-    reloadMovs(); loadAllMovs();
-  };
-
-  const cerrarForm = () => { setShowForm(false); setEditMovId(null); setF({ ...EFM }); };
+  const guardarTransferencia = async () => ejecutarUnaVez(transferenciaEnCursoRef, async () => {
+    setSaving(true);
+    try {
+      const base = crearParametrosTransferencia({
+        operacionId: null,
+        empresaId: empId,
+        formulario: ft,
+        cuentas,
+      });
+      const operacionId = obtenerOperacionId(intentoTransferenciaRef, base, nuevoOperacionId);
+      const resultado = await ejecutarRpcBancaria(rpc, "api_crear_transferencia_interna", {
+        ...base,
+        p_operacion_id: operacionId,
+      });
+      showToast(resultado.creado
+        ? "Transferencia interna registrada correctamente."
+        : "Esta transferencia ya estaba registrada; no se duplicó.");
+      intentoTransferenciaRef.current = null;
+      setFt({ ...EFT });
+      setShowTransfer(false);
+      await recargarDatosBancarios();
+    } catch (error) {
+      showToast("No se pudo registrar la transferencia: " + error.message, "err");
+    } finally {
+      setSaving(false);
+    }
+  });
 
   const movsFil = movs.filter(m => {
     if (filtroT !== "todos" && m.tipo !== filtroT) return false;
@@ -466,73 +534,117 @@ export default function PageBanca({ showToast, empId }) {
     return true;
   });
 
-  const saldoCalculado = cuentaAct
-    ? (parseFloat(cuentaAct.saldo_inicial) || 0)
-      + allMovs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
-      - allMovs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
-    : 0;
   const saldoAlmacenado = parseFloat(cuentaAct?.saldo_actual || 0);
-  const saldoOK = Math.abs(saldoCalculado - saldoAlmacenado) < 0.01;
   const saldoTotal  = cuentas.reduce((s, c) => s + (parseFloat(c.saldo_actual) || 0), 0);
   const ingTotal    = allMovs.filter(m => m.tipo === "ingreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
   const egTotal     = allMovs.filter(m => m.tipo === "egreso").reduce((s, m) => s + (parseFloat(m.monto) || 0), 0);
   const sinConciliar = allMovs.filter(m => !m.conciliado).length;
+  const cuentaOrigenTransferencia = cuentas.find(cuenta => cuenta.id === ft.cuenta_origen_id);
+  const cuentaDestinoTransferencia = cuentas.find(cuenta => cuenta.id === ft.cuenta_destino_id);
+  const monedasTransferenciaDistintas = Boolean(
+    cuentaOrigenTransferencia && cuentaDestinoTransferencia &&
+    (!cuentaOrigenTransferencia.moneda || !cuentaDestinoTransferencia.moneda ||
+      cuentaOrigenTransferencia.moneda.toUpperCase() !== cuentaDestinoTransferencia.moneda.toUpperCase())
+  );
+  const monedaTransferenciaNoDisponible = Boolean(
+    cuentaOrigenTransferencia && cuentaDestinoTransferencia &&
+    (!cuentaOrigenTransferencia.moneda || !cuentaDestinoTransferencia.moneda)
+  );
 
   return (
     <div>
       {exportar && (
         <ModalExportar titulo="Estado de Cuenta Bancario" onClose={() => setExportar(false)}
           extraEncabezado={`Cuenta: ${cuentaAct.nombre} (${cuentaAct.banco || "N/A"}) · ${allMovs.length} movimientos · Generado ${new Date().toLocaleDateString("es-GT", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`}
-          datos={(() => {
-            let run = parseFloat(cuentaAct?.saldo_inicial || 0);
-            const sMap = {};
-            allMovs.forEach(m => {
-              run += m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto);
-              sMap[m.id] = run;
-            });
-            return allMovs.map(m => ({
-              ...m,
-              _debito: m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "",
-              _credito: m.tipo === "ingreso" ? `Q ${fmt(m.monto)}` : "",
-              _saldo: `Q ${fmt(sMap[m.id])}`,
-            }));
-          })()}
+          datos={allMovs.map(m => ({
+            ...m,
+            _debito: m.tipo === "egreso" ? `Q ${fmt(m.monto)}` : "",
+            _credito: m.tipo === "ingreso" ? `Q ${fmt(m.monto)}` : "",
+          }))}
           campos={[
             { label: "Fecha", key: "fecha" },
             { label: "Descripcion", key: "descripcion" },
             { label: "Referencia", key: "referencia" },
             { label: "Debito (-)", render: r => r._debito, cls: "der" },
             { label: "Credito (+)", render: r => r._credito, cls: "der" },
-            { label: "Saldo", render: r => r._saldo, cls: "der" },
           ]} />
       )}
 
       {importar && (
-        <ImportadorBancario showToast={showToast} empId={empId} cuentaAct={cuentaAct}
-          onImported={() => { setImportar(false); recalcularSaldo(cuentaAct.id); reloadMovs(); loadAllMovs(); }}
-          onClose={() => setImportar(false)} />
+        <ImportadorBancario showToast={showToast} onClose={() => setImportar(false)} />
       )}
 
-      {confirmDel && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ ...S.card, maxWidth: 400, width: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Eliminar movimiento?</div>
-            <div style={{ fontSize: 13, color: T.sub, marginBottom: 18 }}>Se eliminara permanentemente.</div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              <button onClick={async () => { await delMov(confirmDel); setConfirmDel(null); }}
-                style={{ ...S.btn("danger"), flex: 1 }}>Eliminar</button>
-              <button onClick={() => setConfirmDel(null)} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+      <DetalleMovimiento mov={detalleMov} onClose={() => setDetalleMov(null)} />
+
+      {DIAGNOSTICO_RPC_MOVIMIENTO_HABILITADO && diagnosticoMovimiento && (
+        <section
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...S.card,
+            marginBottom: 18,
+            border: `1px solid ${T.red}`,
+            background: T.redDim || T.card,
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <strong style={{ color: T.red, fontSize: 14 }}>Diagnóstico temporal del movimiento bancario</strong>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(serializarDiagnosticoVisible(diagnosticoMovimiento));
+                    setDiagnosticoCopiado("copiado");
+                  } catch {
+                    setDiagnosticoCopiado("error");
+                  }
+                }}
+                style={S.btn("ghost")}
+              >
+                {diagnosticoCopiado === "copiado"
+                  ? "Copiado"
+                  : diagnosticoCopiado === "error"
+                    ? "No se pudo copiar"
+                    : "Copiar diagnóstico"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiagnosticoMovimiento(null)}
+                aria-label="Cerrar diagnóstico"
+                style={S.btn("ghost")}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      <DetalleMovimiento mov={detalleMov} onClose={() => setDetalleMov(null)} onEditar={abrirEditarMov} />
-
-      {recalcMsg && (
-        <div style={{ background: T.greenDim, border: `1px solid ${T.green}44`, borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 12, color: T.txt }}>
-          {recalcMsg}
-        </div>
+          <dl style={{ display: "grid", gridTemplateColumns: "minmax(110px, 150px) minmax(0, 1fr)", gap: "7px 12px", margin: 0, fontSize: 12, color: T.txt }}>
+            {[
+              ["RPC", diagnosticoMovimiento.rpc],
+              ["Proyecto Supabase", diagnosticoMovimiento.proyecto],
+              ["Operación", diagnosticoMovimiento.operacion],
+              ["Estado HTTP", diagnosticoMovimiento.estadoHttp ?? "No disponible"],
+              ["SQLSTATE", diagnosticoMovimiento.sqlstate || "No disponible"],
+              ["Mensaje", diagnosticoMovimiento.mensaje || "No disponible"],
+              ["DETAIL", diagnosticoMovimiento.detail || "No disponible"],
+              ["HINT", diagnosticoMovimiento.hint || "No disponible"],
+              ["CONTEXT", diagnosticoMovimiento.context || "No disponible"],
+              ["Etapa", diagnosticoMovimiento.etapa || "No determinada"],
+            ].map(([label, valor]) => (
+              <React.Fragment key={label}>
+                <dt style={{ color: T.sub, fontWeight: 700 }}>{label}</dt>
+                <dd style={{ margin: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{valor}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+          {diagnosticoCopiado !== "copiado" && (
+            <div style={{ marginTop: 8, color: T.sub, fontSize: 11 }}>
+              {diagnosticoCopiado === "error"
+                ? "El navegador no permitió copiar. El diagnóstico mostrado sigue sanitizado."
+                : "El diagnóstico mostrado está sanitizado; no incluye tokens ni el payload de la operación."}
+            </div>
+          )}
+        </section>
       )}
 
       {/* Cuentas bancarias: horizontal */}
@@ -622,33 +734,99 @@ export default function PageBanca({ showToast, empId }) {
                   <div style={{ fontSize: 15, fontWeight: 700, color: T.txt }}>{cuentaAct.banco}</div>
                   <div style={{ fontSize: 12, color: T.sub }}>{cuentaAct.numero_cuenta}</div>
                   <div style={{ fontSize: 12, color: T.mut }}>Saldo inicial: Q {fmt(cuentaAct.saldo_inicial)}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: saldoOK ? T.green : T.red, marginTop: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.green, marginTop: 2 }}>
                     Saldo actual: Q {fmt(saldoAlmacenado)}
-                    {!saldoOK && <span style={{ fontSize: 11, color: T.red, marginLeft: 8 }}>
-                      (deberia ser Q {fmt(saldoCalculado)})
-                    </span>}
+                  </div>
+                  <div style={{ fontSize: 10, color: T.mut, marginTop: 3 }}>
+                    La base de datos actualiza el saldo automáticamente; no se permite reiniciarlo desde esta pantalla.
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={async () => { const s = await recalcularSaldo(cuentaAct.id); setRecalcMsg(`Saldo recalculado: Q ${fmt(s)}`); setTimeout(() => setRecalcMsg(null), 4000); }}
-                    style={{ ...S.btn("warn"), fontSize: 11 }}>Recalcular</button>
-                  <button onClick={async () => { await dbUpd("cuentas_bancarias", cuentaAct.id, { saldo_actual: 0 }); setCuentaAct(p => ({ ...p, saldo_actual: 0 })); setCuentas(p => p.map(c => c.id === cuentaAct.id ? { ...c, saldo_actual: 0 } : c)); setRecalcMsg("Saldo reseteado a Q 0.00"); setTimeout(() => setRecalcMsg(null), 4000); }}
-                    style={{ ...S.btn("danger"), fontSize: 11 }}>Resetear saldo</button>
                   <button onClick={() => setExportar(true)} style={{ ...S.btn("ghost"), fontSize: 11 }}>Exportar</button>
                   <button onClick={() => setImportar(true)} style={{ ...S.btn("blue"), fontSize: 11 }}>Importar</button>
-                  <button onClick={() => { cerrarForm(); setShowForm(!showForm); }}
+                  <button disabled={saving} onClick={() => {
+                    if (showTransfer) cerrarTransferencia();
+                    setShowTransfer(false);
+                    if (showForm) cerrarForm();
+                    else { intentoMovimientoRef.current = null; setF({ ...EFM }); setShowForm(true); }
+                  }}
                     style={{ ...S.btn(showForm ? "warn" : "primary"), fontSize: 12 }}>
                     {showForm ? "Cancelar" : "+ Movimiento"}
+                  </button>
+                  <button disabled={saving} onClick={() => {
+                    if (showForm) cerrarForm();
+                    setShowForm(false);
+                    if (showTransfer) cerrarTransferencia();
+                    else abrirTransferencia();
+                  }} style={{ ...S.btn(showTransfer ? "warn" : "blue"), fontSize: 12 }}>
+                    {showTransfer ? "Cancelar transferencia" : "Transferir"}
                   </button>
                 </div>
               </div>
 
+              {showTransfer && (
+                <div style={{ ...S.card, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Transferencia entre cuentas propias</div>
+                  <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+                      <Fld label="CUENTA DE ORIGEN">
+                        <select style={S.sel} value={ft.cuenta_origen_id} onChange={event => {
+                          const cuenta_origen_id = event.target.value;
+                          setFt(actual => ({
+                            ...actual,
+                            cuenta_origen_id,
+                            cuenta_destino_id: actual.cuenta_destino_id === cuenta_origen_id ? "" : actual.cuenta_destino_id,
+                          }));
+                        }}>
+                          <option value="">Seleccionar cuenta de origen...</option>
+                          {cuentas.map(cuenta => (
+                            <option key={cuenta.id} value={cuenta.id}>{cuenta.banco} — {cuenta.numero_cuenta} ({cuenta.moneda})</option>
+                          ))}
+                        </select>
+                      </Fld>
+                      <Fld label="CUENTA DE DESTINO">
+                        <select style={S.sel} value={ft.cuenta_destino_id} onChange={event => setFt(actual => ({ ...actual, cuenta_destino_id: event.target.value }))}>
+                          <option value="">Seleccionar cuenta de destino...</option>
+                          {cuentas.filter(cuenta => cuenta.id !== ft.cuenta_origen_id).map(cuenta => (
+                            <option key={cuenta.id} value={cuenta.id}>{cuenta.banco} — {cuenta.numero_cuenta} ({cuenta.moneda})</option>
+                          ))}
+                        </select>
+                      </Fld>
+                      <Fld label="FECHA">
+                        <input style={S.inp} type="date" value={ft.fecha} onChange={event => setFt(actual => ({ ...actual, fecha: event.target.value }))} />
+                      </Fld>
+                      <Fld label="MONTO">
+                        <input style={S.inp} type="number" min="0" step="0.01" value={ft.monto} onChange={event => setFt(actual => ({ ...actual, monto: event.target.value }))} placeholder="0.00" />
+                      </Fld>
+                      <Fld label="DESCRIPCIÓN" span2>
+                        <input style={S.inp} value={ft.descripcion} onChange={event => setFt(actual => ({ ...actual, descripcion: event.target.value }))} placeholder="Descripción de la transferencia..." />
+                      </Fld>
+                      <Fld label="REFERENCIA (OPCIONAL)" span2>
+                        <input style={S.inp} value={ft.referencia} onChange={event => setFt(actual => ({ ...actual, referencia: event.target.value }))} placeholder="Referencia..." />
+                      </Fld>
+                      {monedasTransferenciaDistintas && (
+                        <div style={{ gridColumn: "span 2", color: T.red, fontSize: 12 }}>
+                          {monedaTransferenciaNoDisponible
+                            ? "No se pudo determinar la moneda de ambas cuentas."
+                            : "Las cuentas deben utilizar la misma moneda para transferir."}
+                        </div>
+                      )}
+                      <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
+                        <button onClick={guardarTransferencia} disabled={saving || monedasTransferenciaDistintas} style={{ ...S.btn("primary"), flex: 2 }}>
+                          {saving ? "Procesando..." : "Registrar transferencia"}
+                        </button>
+                        <button onClick={cerrarTransferencia} disabled={saving} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+                      </div>
+                    </div>
+                  </fieldset>
+                </div>
+              )}
+
               {showForm && (
                 <div style={{ ...S.card, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>
-                    {editMovId ? "Editar movimiento" : "Nuevo movimiento"}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.acc, marginBottom: 12 }}>Nuevo movimiento bancario</div>
+                  <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
                     <Fld label="FECHA">
                       <input style={S.inp} type="date" value={f.fecha} onChange={e => sf("fecha", e.target.value)} />
                     </Fld>
@@ -673,26 +851,31 @@ export default function PageBanca({ showToast, empId }) {
                         {CATS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
                       </select>
                     </Fld>
+                    <Fld label="TIPO DE FLUJO">
+                      <select style={S.sel} value={f.tipo_flujo} onChange={e => sf("tipo_flujo", e.target.value)}>
+                        {TIPOS_FLUJO_BANCARIO.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
+                      </select>
+                    </Fld>
                     <Fld label="REFERENCIA">
                       <input style={S.inp} value={f.referencia} onChange={e => sf("referencia", e.target.value)} placeholder="No. factura, doc..." />
                     </Fld>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 18 }}>
-                      <input type="checkbox" checked={f.conciliado} onChange={e => sf("conciliado", e.target.checked)} style={{ width: 16, height: 16 }} />
-                      <label style={{ ...S.lbl, marginBottom: 0 }}>CONCILIADO</label>
-                    </div>
                     <div style={{ gridColumn: "span 2" }}>
                       <Fld label="NOTAS">
                         <textarea style={{ ...S.inp, minHeight: 50, resize: "vertical" }} value={f.notas}
                           onChange={e => sf("notas", e.target.value)} placeholder="Observaciones..." />
                       </Fld>
                     </div>
+                    <div style={{ gridColumn: "span 2", color: T.mut, fontSize: 11 }}>
+                      Los movimientos manuales se registran como no conciliados. La conciliación estará disponible en FASE 4.3.
+                    </div>
                     <div style={{ gridColumn: "span 2", display: "flex", gap: 8 }}>
                       <button onClick={guardarMov} disabled={saving} style={{ ...S.btn("primary"), flex: 2 }}>
-                        {saving ? "Guardando..." : editMovId ? "Actualizar movimiento" : "Guardar movimiento"}
+                        {saving ? "Guardando..." : "Guardar movimiento"}
                       </button>
-                      <button onClick={cerrarForm} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
+                      <button onClick={cerrarForm} disabled={saving} style={{ ...S.btn("ghost"), flex: 1 }}>Cancelar</button>
                     </div>
                   </div>
+                  </fieldset>
                 </div>
               )}
 
@@ -714,18 +897,16 @@ export default function PageBanca({ showToast, empId }) {
               </div>
 
               {movsFil.length === 0 ? (
-                <Empty icon="B" msg="Sin movimientos" action="+ Registrar" onAction={() => { cerrarForm(); setShowForm(true); }} />
+                <Empty icon="B" msg="Sin movimientos" action="+ Registrar" onAction={() => {
+                  if (saving) return;
+                  cerrarTransferencia();
+                  setShowTransfer(false);
+                  cerrarForm();
+                  setShowForm(true);
+                }} />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {(() => {
-                    let run = parseFloat(cuentaAct?.saldo_inicial || 0);
-                    const sMap = {};
-                    allMovs.forEach(m => {
-                      run += m.tipo === "ingreso" ? parseFloat(m.monto) : -parseFloat(m.monto);
-                      sMap[m.id] = run;
-                    });
-                    return movsFil.map(m => ({ ...m, __saldo: sMap[m.id] }));
-                  })().map(m => (
+                  {movsFil.map(m => (
                     <div key={m.id} style={S.card}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                         <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setDetalleMov(m)}>
@@ -741,7 +922,6 @@ export default function PageBanca({ showToast, empId }) {
                             ? <span style={{ fontSize: 15, fontWeight: 800, color: T.red }}>- Q {fmt(m.monto)}</span>
                             : <span style={{ fontSize: 15, fontWeight: 800, color: T.green }}>+ Q {fmt(m.monto)}</span>
                           }
-                          <span style={{ fontSize: 11, fontWeight: 600, color: T.acc }}>Saldo: Q {fmt(m.__saldo)}</span>
                           {m.conciliado
                             ? <span style={{ fontSize: 9, color: T.green }}>Conciliado</span>
                             : <span style={{ fontSize: 9, color: T.sec }}>Pendiente</span>
@@ -753,9 +933,14 @@ export default function PageBanca({ showToast, empId }) {
                         <div style={{ display: "flex", gap: 4 }}>
                           <button onClick={() => setDetalleMov(m)}
                             style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10 }}>Ver</button>
-                          <button onClick={() => setConfirmDel(m.id)}
-                            style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10 }}>Eliminar</button>
+                          <button disabled title="La edición de movimientos requiere una operación financiera aprobada."
+                            style={{ ...S.btn("ghost"), padding: "3px 7px", fontSize: 10, opacity: 0.6, cursor: "not-allowed" }}>Edición no disponible</button>
+                          <button disabled title="No se permite borrar físicamente operaciones financieras. La anulación requiere un flujo aprobado."
+                            style={{ ...S.btn("danger"), padding: "3px 7px", fontSize: 10, opacity: 0.6, cursor: "not-allowed" }}>Anulación pendiente</button>
                         </div>
+                      </div>
+                      <div style={{ fontSize: 10, color: T.mut, marginTop: 8 }}>
+                        Los movimientos, pagos y transferencias no se pueden editar ni eliminar físicamente desde esta pantalla.
                       </div>
                     </div>
                   ))}
